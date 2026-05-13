@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Clarity Systems — L'IA au service de votre temps</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+:root {
+  --white: #ffffff;
+  --off: #f5f5f7;
+  --off2: #fafafa;
+  --lg: #e8e8ed;
+  --mg: #c7c7cc;
+  --tg: #6e6e73;
+  --dark: #1d1d1f;
+  --black: #000000;
+  --accent: #1d1d1f;
+  --r: 20px;
+}
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--white);
+  color: var(--dark);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* NAV */
+nav {
+position: fixed; top: 0; left: 0; right: 0; height: 52px;
+z-index: 200;
+display: flex; align-items: center; justify-content: space-between;
+padding: 0 40px;
+background: rgba(255,255,255,0.88);
+backdrop-filter: saturate(180%) blur(24px);
+-webkit-backdrop-filter: saturate(180%) blur(24px);
+border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.nav-logo {
+font-size: 1rem; font-weight: 600;
+color: var(–dark); letter-spacing: -0.01em;
+}
+.nav-links { display: flex; gap: 32px; list-style: none; }
+.nav-links a {
+font-size: 0.78rem; font-weight: 400;
+color: var(–dark); text-decoration: none;
+opacity: 0.72; transition: opacity .2s;
+}
+.nav-links a:hover { opacity: 1; }
+.nav-cta {
+font-size: 0.78rem !important; font-weight: 500 !important;
+background: var(–dark); color: white !important;
+opacity: 1 !important; padding: 7px 18px;
+border-radius: 100px; text-decoration: none;
+transition: background .2s !important;
+}
+.nav-cta:hover { background: #333 !important; }
+
+/* HERO */
+.hero {
+padding: 148px 24px 90px;
+text-align: center;
+background: var(–white);
+}
+.hero-eye {
+display: inline-block;
+font-size: 0.72rem; font-weight: 600;
+letter-spacing: 0.12em; text-transform: uppercase;
+color: var(–tg); margin-bottom: 24px;
+animation: fu .7s ease both;
+}
+.hero h1 {
+font-size: clamp(2.8rem, 6.5vw, 5.2rem);
+font-weight: 700; line-height: 1.05;
+letter-spacing: -0.03em; color: var(–dark);
+margin-bottom: 22px;
+animation: fu .7s .08s ease both;
+}
+.hero h1 em {
+font-style: normal;
+background: linear-gradient(135deg, #1d1d1f 0%, #555 100%);
+-webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+font-size: clamp(.95rem, 2vw, 1.2rem);
+font-weight: 300; color: var(–tg);
+max-width: 500px; margin: 0 auto 44px; line-height: 1.7;
+animation: fu .7s .16s ease both;
+}
+.hero-btns {
+display: flex; gap: 14px; justify-content: center;
+flex-wrap: wrap; animation: fu .7s .24s ease both;
+}
+.btn-dark {
+background: var(–dark); color: white;
+padding: 14px 30px; border-radius: 100px;
+text-decoration: none; font-weight: 500; font-size: .88rem;
+transition: background .2s, transform .2s; display: inline-block;
+}
+.btn-dark:hover { background: #333; transform: scale(1.02); }
+.btn-light {
+background: var(–off); color: var(–dark);
+padding: 14px 30px; border-radius: 100px;
+text-decoration: none; font-weight: 500; font-size: .88rem;
+transition: background .2s; display: inline-block;
+border: 1px solid var(–lg);
+}
+.btn-light:hover { background: var(–lg); }
+
+/* HERO CARD */
+.hero-vis { margin-top: 68px; display: flex; justify-content: center; animation: fu .9s .32s ease both; }
+.hcard {
+background: var(–off);
+border-radius: 24px; padding: 28px 32px;
+width: 100%; max-width: 540px; text-align: left;
+box-shadow: 0 2px 32px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
+}
+.hcard-lbl {
+font-size: .65rem; font-weight: 600; letter-spacing: .12em;
+text-transform: uppercase; color: var(–tg); margin-bottom: 18px;
+display: flex; align-items: center; gap: 8px;
+}
+.hcard-lbl::before { content: ‘’; width: 6px; height: 6px; border-radius: 50%; background: #30d158; animation: blink 1.8s infinite; }
+.vbubble {
+background: white; border-radius: 16px 16px 16px 4px;
+padding: 14px 18px; font-size: .875rem; color: var(–dark);
+margin-bottom: 12px; display: inline-block; max-width: 85%;
+line-height: 1.6; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.abubble {
+background: var(–dark); border-radius: 16px 16px 4px 16px;
+padding: 14px 18px; font-size: .855rem; color: white;
+margin-left: auto; display: block; max-width: 92%; line-height: 1.65;
+}
+.hcard-ft { margin-top: 14px; font-size: .7rem; color: var(–tg); display: flex; align-items: center; gap: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: #30d158; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+@keyframes fu { from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)} }
+
+/* STATS */
+.stats {
+background: var(–off); border-top: 1px solid var(–lg); border-bottom: 1px solid var(–lg);
+padding: 44px 24px; display: flex; justify-content: center; flex-wrap: wrap;
+}
+.stat { flex: 1; min-width: 140px; text-align: center; padding: 0 32px; border-right: 1px solid var(–lg); }
+.stat:last-child { border-right: none; }
+.stat-n { font-size: 2.4rem; font-weight: 700; letter-spacing: -.04em; color: var(–dark); line-height: 1; margin-bottom: 6px; }
+.stat-l { font-size: .75rem; color: var(–tg); font-weight: 400; letter-spacing: .01em; }
+
+/* SECTION */
+.sec { padding: 96px 24px; max-width: 1080px; margin: 0 auto; }
+.eye { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(–tg); margin-bottom: 14px; }
+.stitle { font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 700; letter-spacing: -.028em; line-height: 1.08; color: var(–dark); margin-bottom: 14px; }
+.ssub { font-size: .95rem; color: var(–tg); font-weight: 300; max-width: 460px; line-height: 1.7; margin-bottom: 52px; }
+
+/* TABS */
+.tabs-wrap { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 28px; }
+.tab-pill {
+padding: 8px 18px; border-radius: 100px;
+border: 1px solid var(–lg); background: white;
+font-size: .75rem; font-weight: 500; color: var(–tg);
+cursor: pointer; transition: all .2s; font-family: ‘Inter’, sans-serif;
+letter-spacing: .01em;
+}
+.tab-pill:hover { border-color: var(–dark); color: var(–dark); }
+.tab-pill.active { background: var(–dark); border-color: var(–dark); color: white; }
+
+/* AGENTS GRID */
+.agents-grid {
+display: grid; grid-template-columns: repeat(3,1fr);
+gap: 2px; border-radius: var(–r); overflow: hidden;
+background: var(–lg); border: 1px solid var(–lg);
+}
+.atile {
+background: var(–off2); padding: 32px 28px;
+transition: background .22s; cursor: default;
+}
+.atile:hover { background: white; }
+.atile-ico { font-size: 1.6rem; display: block; margin-bottom: 16px; }
+.atile-name { font-size: .9rem; font-weight: 600; color: var(–dark); margin-bottom: 8px; letter-spacing: -.01em; }
+.atile-desc { font-size: .82rem; color: var(–tg); line-height: 1.7; font-weight: 300; }
+.atile-badge { display: inline-block; margin-top: 14px; font-size: .67rem; font-weight: 600; color: var(–tg); letter-spacing: .04em; text-transform: uppercase; }
+.badge-req { color: #bf8800; }
+
+/* HOW */
+.how-bg { background: var(–off); border-top: 1px solid var(–lg); border-bottom: 1px solid var(–lg); padding: 96px 24px; }
+.how-in { max-width: 1080px; margin: 0 auto; }
+.steps { display: grid; grid-template-columns: repeat(4,1fr); gap: 40px; margin-top: 56px; }
+.step { border-top: 1px solid var(–mg); padding-top: 24px; }
+.step-n { font-size: .68rem; font-weight: 700; color: var(–tg); letter-spacing: .1em; margin-bottom: 14px; }
+.step-t { font-size: .9rem; font-weight: 600; color: var(–dark); margin-bottom: 8px; letter-spacing: -.01em; }
+.step-b { font-size: .82rem; color: var(–tg); font-weight: 300; line-height: 1.7; }
+
+/* PRICING */
+.pgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 52px; align-items: start; }
+.pcard {
+border: 1px solid var(–lg); border-radius: var(–r);
+padding: 36px 30px; background: white;
+transition: box-shadow .3s, transform .3s; position: relative;
+}
+.pcard:hover { box-shadow: 0 16px 56px rgba(0,0,0,0.08); transform: translateY(-3px); }
+.pcard.feat { background: var(–dark); border-color: var(–dark); }
+.pcard.feat .pname { color: rgba(255,255,255,.5); }
+.pcard.feat .pprice, .pcard.feat .pper { color: white; }
+.pcard.feat .pdiv { background: rgba(255,255,255,.12); }
+.pcard.feat .pli { color: rgba(255,255,255,.7); }
+.pcard.feat .pli::before { color: #30d158; }
+.pop-tag {
+position: absolute; top: -1px; right: 24px;
+background: white; color: var(–dark);
+font-size: .62rem; font-weight: 700; letter-spacing: .08em;
+text-transform: uppercase; padding: 5px 14px;
+border-radius: 0 0 10px 10px;
+}
+.pname { font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(–tg); margin-bottom: 20px; }
+.pprice { font-size: 3.2rem; font-weight: 700; letter-spacing: -.04em; color: var(–dark); line-height: 1; margin-bottom: 4px; }
+.pprice sup { font-size: 1.1rem; vertical-align: super; font-weight: 500; }
+.pprice.devis { font-size: 1.5rem; padding-top: 8px; }
+.pper { font-size: .75rem; color: var(–tg); margin-bottom: 28px; }
+.pdiv { height: 1px; background: var(–lg); margin-bottom: 22px; }
+.pfeats { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+.pli { font-size: .82rem; color: var(–tg); display: flex; gap: 10px; }
+.pli::before { content: ‘✓’; color: var(–dark); font-weight: 700; flex-shrink: 0; }
+.btn-dark-full {
+display: block; text-align: center; background: var(–dark); color: white;
+padding: 13px; border-radius: 100px; font-weight: 600; font-size: .82rem;
+text-decoration: none; transition: background .2s; cursor: pointer;
+border: none; font-family: ‘Inter’, sans-serif; letter-spacing: .01em;
+}
+.btn-dark-full:hover { background: #333; }
+.btn-white-full {
+display: block; text-align: center; background: white; color: var(–dark);
+padding: 13px; border-radius: 100px; font-weight: 600; font-size: .82rem;
+text-decoration: none; transition: background .2s; cursor: pointer;
+border: none; font-family: ‘Inter’, sans-serif;
+}
+.btn-white-full:hover { background: var(–off); }
+.btn-outline-full {
+display: block; text-align: center; background: transparent; color: var(–dark);
+padding: 12px; border-radius: 100px; font-weight: 500; font-size: .82rem;
+text-decoration: none; border: 1px solid var(–mg);
+transition: border-color .2s, background .2s; cursor: pointer;
+font-family: ‘Inter’, sans-serif;
+}
+.btn-outline-full:hover { border-color: var(–dark); background: var(–off); }
+.pricing-note { margin-top: 24px; text-align: center; font-size: .78rem; color: var(–tg); }
+.pricing-note strong { color: var(–dark); }
+
+/* CTA */
+.cta { padding: 100px 24px; text-align: center; background: var(–dark); color: white; }
+.cta h2 { font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin-bottom: 16px; }
+.cta p { font-size: 1rem; color: rgba(255,255,255,.55); font-weight: 300; max-width: 420px; margin: 0 auto 36px; line-height: 1.7; }
+.btn-white-lg {
+display: inline-block; background: white; color: var(–dark);
+padding: 14px 32px; border-radius: 100px; font-weight: 600; font-size: .9rem;
+text-decoration: none; transition: background .2s, transform .2s;
+}
+.btn-white-lg:hover { background: var(–off); transform: scale(1.02); }
+
+/* FOOTER */
+footer { background: var(–off); border-top: 1px solid var(–lg); padding: 44px 24px; text-align: center; }
+.flogo { font-size: .9rem; font-weight: 600; color: var(–dark); margin-bottom: 14px; letter-spacing: -.01em; }
+.flinks { display: flex; justify-content: center; gap: 28px; list-style: none; margin-bottom: 18px; }
+.flinks a { font-size: .75rem; color: var(–tg); text-decoration: none; }
+.flinks a:hover { color: var(–dark); }
+.fcopy { font-size: .7rem; color: var(–tg); }
+
+/* MODAL */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.48); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity .28s; }
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: white; border-radius: 22px; padding: 44px 40px; width: 100%; max-width: 420px; position: relative; transform: scale(.96) translateY(10px); transition: transform .28s; box-shadow: 0 32px 80px rgba(0,0,0,.18); }
+.overlay.open .modal { transform: scale(1) translateY(0); }
+.mcls { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; border-radius: 50%; background: var(–off); border: none; cursor: pointer; font-size: .82rem; color: var(–tg); transition: background .2s; display: flex; align-items: center; justify-content: center; }
+.mcls:hover { background: var(–lg); }
+.mlogo { font-size: .82rem; font-weight: 600; color: var(–dark); margin-bottom: 8px; }
+.mtitle { font-size: 1.6rem; font-weight: 700; letter-spacing: -.025em; color: var(–dark); margin-bottom: 6px; }
+.msub { font-size: .82rem; color: var(–tg); margin-bottom: 26px; font-weight: 300; }
+.tab-row { display: flex; background: var(–off); border-radius: 10px; padding: 3px; gap: 3px; margin-bottom: 22px; }
+.tbtn { flex: 1; padding: 9px; border-radius: 8px; border: none; background: transparent; font-size: .8rem; font-weight: 500; color: var(–tg); cursor: pointer; font-family: ‘Inter’, sans-serif; transition: all .2s; }
+.tbtn.active { background: white; color: var(–dark); box-shadow: 0 1px 4px rgba(0,0,0,.1); font-weight: 600; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: .7rem; font-weight: 600; color: var(–dark); margin-bottom: 5px; letter-spacing: .01em; }
+.field input { width: 100%; background: var(–off); border: 1px solid transparent; border-radius: 10px; padding: 12px 14px; font-size: .875rem; font-family: ‘Inter’, sans-serif; color: var(–dark); outline: none; transition: border-color .2s, background .2s; }
+.field input:focus { border-color: var(–dark); background: white; }
+.field input::placeholder { color: var(–mg); }
+.btn-sub { width: 100%; padding: 14px; background: var(–dark); color: white; border: none; border-radius: 100px; font-size: .875rem; font-weight: 600; font-family: ‘Inter’, sans-serif; cursor: pointer; transition: background .2s; margin-top: 8px; }
+.btn-sub:hover { background: #333; }
+
+/* REVEAL */
+.rv { opacity: 0; transform: translateY(20px); transition: opacity .65s ease, transform .65s ease; }
+.rv.on { opacity: 1; transform: translateY(0); }
+
+/* RESPONSIVE */
+@media(max-width:900px) {
+.agents-grid { grid-template-columns: repeat(2,1fr); }
+.steps { grid-template-columns: repeat(2,1fr); }
+.pgrid { grid-template-columns: 1fr; }
+.stat { border-right: none; border-bottom: 1px solid var(–lg); padding: 18px 0; }
+.stat:last-child { border-bottom: none; }
+}
+@media(max-width:600px) {
+nav { padding: 0 16px; }
+.nav-links { display: none; }
+.agents-grid { grid-template-columns: 1fr; }
+.steps { grid-template-columns: 1fr; }
+.modal { padding: 30px 20px; }
+}
+</style>
+
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Clarity Systems</div>
+  <ul class="nav-links">
+    <li><a href="#agents">Agents</a></li>
+    <li><a href="#how">Fonctionnement</a></li>
+    <li><a href="#pricing">Tarifs</a></li>
+    <li><a href="#" class="nav-cta" onclick="openModal(event)">Commencer</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-eye">Automatisation IA pour professionnels</div>
+  <h1>Vos tâches répétitives,<br/><em>automatisées.</em></h1>
+  <p class="hero-sub">Dictez simplement ce que vous voulez faire. Clarity Systems s'occupe du reste — en quelques secondes.</p>
+  <div class="hero-btns">
+    <a href="#" class="btn-dark" onclick="openModal(event)">Commencer gratuitement</a>
+    <a href="#agents" class="btn-light">Découvrir les agents ↓</a>
+  </div>
+  <div class="hero-vis">
+    <div class="hcard">
+      <div class="hcard-lbl">Dictée vocale en cours</div>
+      <div class="vbubble">« Envoie un mail à Anthony, demande-lui s'il peut passer me voir cette semaine. Notre dernier rendez-vous s'est très bien passé. »</div>
+      <div class="abubble">Objet : Suite à notre rendez-vous<br/><br/>Bonjour Anthony,<br/>Notre dernier échange a été très enrichissant. Seriez-vous disponible pour nous retrouver cette semaine ?<br/><br/>Cordialement</div>
+      <div class="hcard-ft"><span class="dot"></span>Mail envoyé via Gmail · il y a 2 secondes</div>
+    </div>
+  </div>
+</section>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n">15+</div><div class="stat-l">Agents disponibles</div></div>
+  <div class="stat"><div class="stat-n">2 h</div><div class="stat-l">Économisées par jour</div></div>
+  <div class="stat"><div class="stat-n">100%</div><div class="stat-l">Vocal & intuitif</div></div>
+  <div class="stat"><div class="stat-n">0</div><div class="stat-l">Compétence requise</div></div>
+</div>
+
+<section class="sec" id="agents">
+  <div class="eye rv">Nos agents</div>
+  <h2 class="stitle rv">Ce que nos agents<br/>font pour vous.</h2>
+  <p class="ssub rv">Parlez naturellement. Chaque agent comprend le contexte et agit immédiatement.</p>
+  <div class="tabs-wrap rv">
+    <button class="tab-pill active" onclick="filterAgents('all',this)">Tous les agents</button>
+    <button class="tab-pill" onclick="filterAgents('universal',this)">✅ Universels</button>
+    <button class="tab-pill" onclick="filterAgents('conditional',this)">⚙️ Avec prérequis</button>
+  </div>
+  <div class="agents-grid rv" id="agentsGrid">
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">✉️</span>
+      <div class="atile-name">Agent Mails</div>
+      <p class="atile-desc">Dictez votre intention. L'agent rédige un mail professionnel et l'envoie immédiatement depuis votre Gmail.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">🔁</span>
+      <div class="atile-name">Agent Relance Clients</div>
+      <p class="atile-desc">L'agent vous demande : "Avez-vous eu un retour de M. Dupont ?" Oui → dossier clôturé. Non → relance envoyée. Zéro risque de doublon.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">🎯</span>
+      <div class="atile-name">Agent Prospects</div>
+      <p class="atile-desc">Fournissez une liste. L'agent envoie un message de prise de contact personnalisé à chaque prospect, adapté à votre secteur.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">✍️</span>
+      <div class="atile-name">Agent Contenu</div>
+      <p class="atile-desc">Dictez une idée. L'agent génère un post LinkedIn professionnel et vous l'envoie par mail, prêt à copier-coller.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">💬</span>
+      <div class="atile-name">Chat Interactif</div>
+      <p class="atile-desc">Agent intelligent sur votre site. Répond, qualifie vos prospects et collecte leurs coordonnées — 24h/24, sans vous.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="universal">
+      <span class="atile-ico">📥</span>
+      <div class="atile-name">Agent Collecte</div>
+      <p class="atile-desc">Envoie des questionnaires à vos clients et relance automatiquement les non-répondants jusqu'à obtenir ce dont vous avez besoin.</p>
+      <span class="atile-badge">✅ Universel</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">📅</span>
+      <div class="atile-name">Agent Planning</div>
+      <p class="atile-desc">Créez des événements vocalement et envoyez des confirmations automatiques à vos clients.</p>
+      <span class="atile-badge badge-req">⚙️ Google Calendar requis</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">🔔</span>
+      <div class="atile-name">Agent Rappel RDV</div>
+      <p class="atile-desc">Rappel automatique envoyé à votre client la veille du rendez-vous. Réduisez les absences à zéro.</p>
+      <span class="atile-badge badge-req">⚙️ Google Calendar requis</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">📄</span>
+      <div class="atile-name">Agent Devis</div>
+      <p class="atile-desc">Dictez les éléments de votre prestation. Le devis est généré et envoyé directement au client. Template inclus.</p>
+      <span class="atile-badge badge-req">⚙️ Template validé requis</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">📊</span>
+      <div class="atile-name">Agent Suivi</div>
+      <p class="atile-desc">Mettez à jour vocalement vos dossiers. L'agent enregistre et vous alerte si quelque chose prend du retard.</p>
+      <span class="atile-badge badge-req">⚙️ Google Sheets requis</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">⏰</span>
+      <div class="atile-name">Agent Suivi Échéances</div>
+      <p class="atile-desc">Surveille contrats, renouvellements, paiements. Vous alerte avant qu'il soit trop tard.</p>
+      <span class="atile-badge badge-req">⚙️ Google Sheets requis</span>
+    </div>
+    <div class="atile" data-cat="conditional">
+      <span class="atile-ico">🛠️</span>
+      <div class="atile-name">Agent Interventions</div>
+      <p class="atile-desc">"Intervention chez Martin vendredi, fuite d'eau." L'agent crée la fiche et notifie. Idéal pour les métiers terrain.</p>
+      <span class="atile-badge badge-req">⚙️ Google Sheets requis</span>
+    </div>
+    <div class="atile" data-cat="conditional" style="grid-column:span 3">
+      <span class="atile-ico">🎒</span>
+      <div class="atile-name">Pack Artisan</div>
+      <p class="atile-desc">Bundle clé en main pour les métiers du terrain — Mails, Devis, Rappel RDV, Interventions et Relance Clients réunis en une souscription à tarif préférentiel.</p>
+      <span class="atile-badge badge-req">⚙️ Gmail + Google Calendar requis</span>
+    </div>
+  </div>
+</section>
+
+<div class="how-bg" id="how">
+  <div class="how-in">
+    <div class="eye rv">Fonctionnement</div>
+    <h2 class="stitle rv">Simple comme<br/>une conversation.</h2>
+    <div class="steps">
+      <div class="step rv"><div class="step-n">01</div><div class="step-t">Créez votre compte</div><p class="step-b">Inscription en 2 minutes. Connectez Gmail et importez vos contacts.</p></div>
+      <div class="step rv"><div class="step-n">02</div><div class="step-t">Choisissez un agent</div><p class="step-b">Sélectionnez l'action parmi vos agents disponibles selon votre plan.</p></div>
+      <div class="step rv"><div class="step-n">03</div><div class="step-t">Dictez votre intention</div><p class="step-b">Parlez naturellement. L'IA comprend le contexte et les détails.</p></div>
+      <div class="step rv"><div class="step-n">04</div><div class="step-t">L'agent agit</div><p class="step-b">En quelques secondes, c'est fait. Vous n'avez rien fait.</p></div>
+    </div>
+  </div>
+</div>
+
+<section class="sec" id="pricing">
+  <div class="eye rv">Tarifs</div>
+  <h2 class="stitle rv">Choisissez votre plan.</h2>
+  <p class="ssub rv">Sans engagement. Annulez à tout moment.</p>
+  <div class="pgrid">
+    <div class="pcard rv">
+      <div class="pname">Starter</div>
+      <div class="pprice"><sup>€</sup>49</div>
+      <div class="pper">par mois</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">3 agents universels au choix</li>
+        <li class="pli">Agent Mails inclus</li>
+        <li class="pli">Carnet de contacts</li>
+        <li class="pli">Connexion Gmail</li>
+        <li class="pli">Support par email</li>
+      </ul>
+      <button class="btn-outline-full" onclick="openModal(event)">Commencer</button>
+    </div>
+    <div class="pcard feat rv">
+      <div class="pop-tag">Le plus populaire</div>
+      <div class="pname">Pro</div>
+      <div class="pprice"><sup>€</sup>89</div>
+      <div class="pper">par mois</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">Tous les agents universels</li>
+        <li class="pli">3 agents conditionnels au choix</li>
+        <li class="pli">Chat Interactif inclus</li>
+        <li class="pli">Nouveaux agents en priorité</li>
+        <li class="pli">Gmail + Google intégré</li>
+        <li class="pli">Support prioritaire</li>
+      </ul>
+      <button class="btn-white-full" onclick="openModal(event)">Commencer</button>
+    </div>
+    <div class="pcard rv">
+      <div class="pname">Business</div>
+      <div class="pprice devis">Sur devis</div>
+      <div class="pper">setup + abonnement mensuel</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">Tout le plan Pro</li>
+        <li class="pli">Agents 100% personnalisés</li>
+        <li class="pli">Intégration à vos outils</li>
+        <li class="pli">Accompagnement dédié</li>
+        <li class="pli">Formation de vos équipes</li>
+        <li class="pli">Support téléphonique direct</li>
+      </ul>
+      <a href="mailto:contact@clarity-systems.fr" class="btn-dark-full">Nous contacter →</a>
+    </div>
+  </div>
+  <p class="pricing-note rv">🎁 <strong>Offre de lancement</strong> — 7 jours d'essai gratuit, sans carte bancaire.</p>
+</section>
+
+<div class="cta">
+  <h2>Votre temps vaut<br/>mieux que ça.</h2>
+  <p>Rejoignez les professionnels qui ont automatisé leurs tâches répétitives avec Clarity Systems.</p>
+  <a href="#" class="btn-white-lg" onclick="openModal(event)">Créer mon compte gratuitement</a>
+</div>
+
+<footer>
+  <div class="flogo">Clarity Systems</div>
+  <ul class="flinks">
+    <li><a href="#">Mentions légales</a></li>
+    <li><a href="#">Confidentialité</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <div class="fcopy">© 2025 Clarity Systems. Tous droits réservés.</div>
+</footer>
+
+<div class="overlay" id="authModal">
+  <div class="modal">
+    <button class="mcls" onclick="closeModal()">✕</button>
+    <div class="mlogo">Clarity Systems</div>
+    <h2 class="mtitle">Bienvenue.</h2>
+    <p class="msub">7 jours gratuits, sans carte bancaire.</p>
+    <div class="tab-row">
+      <button class="tbtn active" onclick="switchTab('login',this)">Connexion</button>
+      <button class="tbtn" onclick="switchTab('register',this)">Créer un compte</button>
+    </div>
+    <div id="loginForm">
+      <div class="field"><label>Email</label><input type="email" placeholder="vous@exemple.fr"/></div>
+      <div class="field"><label>Mot de passe</label><input type="password" placeholder="••••••••"/></div>
+      <button class="btn-sub">Se connecter</button>
+    </div>
+    <div id="registerForm" style="display:none">
+      <div class="field"><label>Prénom</label><input type="text" placeholder="Jean"/></div>
+      <div class="field"><label>Email</label><input type="email" placeholder="vous@exemple.fr"/></div>
+      <div class="field"><label>Mot de passe</label><input type="password" placeholder="Minimum 8 caractères"/></div>
+      <button class="btn-sub">Démarrer mon essai gratuit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(e) { if(e) e.preventDefault(); document.getElementById('authModal').classList.add('open'); }
+function closeModal() { document.getElementById('authModal').classList.remove('open'); }
+document.getElementById('authModal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tbtn').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab==='register' ? 'block' : 'none';
+}
+function filterAgents(cat, btn) {
+  document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.atile').forEach(t => {
+    t.style.display = (cat==='all' || t.dataset.cat===cat) ? 'block' : 'none';
+  });
+  const pack = document.querySelector('.atile[style*="grid-column"]');
+  if(pack) pack.style.gridColumn = (cat==='all'||cat==='conditional') ? 'span 3' : '';
+}
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('on'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+</script>
+
+</body>
+</html>
