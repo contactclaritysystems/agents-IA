@@ -1255,6 +1255,56 @@ const io = new IntersectionObserver(entries => {
   entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('on'); });
 }, { threshold: 0.08 });
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
+
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+async function signUp() {
+  const prenom = document.querySelector('#registerForm input[type="text"]').value;
+  const email = document.querySelector('#registerForm input[type="email"]').value;
+  const password = document.querySelector('#registerForm input[type="password"]').value;
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { prenom }
+    }
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  window.location.href = "dashboard.html";
+}
+
+async function signIn() {
+  const email = document.querySelector('#loginForm input[type="email"]').value;
+  const password = document.querySelector('#loginForm input[type="password"]').value;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  window.location.href = "dashboard.html";
+}
+</script>
 </script>
 
 </body>
