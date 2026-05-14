@@ -1235,16 +1235,8 @@ footer {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
-
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
-
 function openModal(e) {
-  if(e) e.preventDefault();
+  if (e) e.preventDefault();
   document.getElementById('authModal').classList.add('open');
 }
 
@@ -1253,14 +1245,18 @@ function closeModal() {
 }
 
 document.getElementById('authModal').addEventListener('click', function(e) {
-  if(e.target === this) closeModal();
+  if (e.target === this) closeModal();
 });
 
 function switchTab(tab, btn) {
   document.querySelectorAll('.tbtn').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+
+  document.getElementById('loginForm').style.display =
+    tab === 'login' ? 'block' : 'none';
+
+  document.getElementById('registerForm').style.display =
+    tab === 'register' ? 'block' : 'none';
 }
 
 function filterAgents(cat, btn) {
@@ -1268,32 +1264,58 @@ function filterAgents(cat, btn) {
   btn.classList.add('active');
 
   document.querySelectorAll('.atile').forEach(t => {
-    t.style.display = (cat === 'all' || t.dataset.cat === cat) ? 'block' : 'none';
+    t.style.display =
+      (cat === 'all' || t.dataset.cat === cat)
+        ? 'block'
+        : 'none';
   });
 
   const pack = document.querySelector('.atile[style*="grid-column"]');
-  if(pack) pack.style.gridColumn = (cat === 'all' || cat === 'conditional') ? 'span 3' : '';
+
+  if (pack) {
+    pack.style.gridColumn =
+      (cat === 'all' || cat === 'conditional')
+        ? 'span 3'
+        : '';
+  }
 }
 
 const io = new IntersectionObserver(entries => {
   entries.forEach(e => {
-    if(e.isIntersecting) e.target.classList.add('on');
+    if (e.isIntersecting) {
+      e.target.classList.add('on');
+    }
   });
 }, { threshold: 0.08 });
 
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
 
+const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
+
+const SUPABASE_ANON_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
 async function signUp() {
-  const prenom = document.querySelector('#registerForm input[type="text"]').value;
-  const email = document.querySelector('#registerForm input[type="email"]').value;
-  const password = document.querySelector('#registerForm input[type="password"]').value;
+  const prenom =
+    document.querySelector('#registerForm input[type="text"]').value;
+
+  const email =
+    document.querySelector('#registerForm input[type="email"]').value;
+
+  const password =
+    document.querySelector('#registerForm input[type="password"]').value;
 
   if (!prenom || !email || !password) {
     alert("Merci de remplir tous les champs.");
     return;
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: {
@@ -1310,15 +1332,18 @@ async function signUp() {
 }
 
 async function signIn() {
-  const email = document.querySelector('#loginForm input[type="email"]').value;
-  const password = document.querySelector('#loginForm input[type="password"]').value;
+  const email =
+    document.querySelector('#loginForm input[type="email"]').value;
+
+  const password =
+    document.querySelector('#loginForm input[type="password"]').value;
 
   if (!email || !password) {
     alert("Merci de renseigner votre email et votre mot de passe.");
     return;
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabaseClient.auth.signInWithPassword({
     email,
     password
   });
