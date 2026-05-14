@@ -1363,19 +1363,18 @@ async function logout() {
 }
 
 function toggleCard(id) {
-  const card = document.getElementById('card-' + id);
-  card.classList.toggle('open');
+  const card = document.getElementById("card-" + id);
+  card.classList.toggle("open");
 }
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = '✓ ' + msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  const t = document.getElementById("toast");
+  t.textContent = "✓ " + msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
 async function saveAgent(id, btn) {
-
   const { data: { user } } = await supabaseClient.auth.getUser();
 
   if (!user) {
@@ -1387,53 +1386,48 @@ async function saveAgent(id, btn) {
   let config = {};
 
   if (id === "mails") {
-
     config = {
-      prenom: document.getElementById('mails-prenom').value,
-      secteur: document.getElementById('mails-secteur').value,
-      tel: document.getElementById('mails-tel').value,
-      sheet: document.getElementById('mails-sheet').value
+      prenom: document.getElementById("mails-prenom").value,
+      secteur: document.getElementById("mails-secteur").value,
+      tel: document.getElementById("mails-tel").value,
+      sheet: document.getElementById("mails-sheet").value
     };
-
   } else {
     alert("Agent non encore connecté à la base.");
     return;
   }
 
   const original = btn.innerHTML;
-
   btn.disabled = true;
-  btn.innerHTML = '⏳ Enregistrement...';
+  btn.innerHTML = "⏳ Enregistrement...";
 
   const { error } = await supabaseClient
-    .from('agent_configs')
+    .from("agent_configs")
     .upsert({
       user_id: user.id,
       agent_name: id,
       config: config,
-      updated_at: new Date()
+      updated_at: new Date().toISOString()
     });
 
   if (error) {
     console.error(error);
-    alert("Erreur lors de l'enregistrement.");
+    alert("Erreur Supabase : " + error.message);
     btn.disabled = false;
     btn.innerHTML = original;
     return;
   }
 
-  btn.innerHTML = '✓ Enregistré';
+  btn.innerHTML = "✓ Enregistré";
 
-  const card = document.getElementById('card-' + id);
+  const card = document.getElementById("card-" + id);
+  const statusEl = card.querySelector(".agent-status");
 
-  const statusEl = card.querySelector('.agent-status');
+  statusEl.className = "agent-status ok";
+  statusEl.textContent = "Actif";
+  card.classList.add("configured");
 
-  statusEl.className = 'agent-status ok';
-  statusEl.textContent = 'Actif';
-
-  card.classList.add('configured');
-
-  showToast('Configuration enregistrée');
+  showToast("Configuration enregistrée");
 
   setTimeout(() => {
     btn.disabled = false;
@@ -1441,38 +1435,28 @@ async function saveAgent(id, btn) {
   }, 2500);
 }
 
-  setTimeout(() => {
-    btn.innerHTML = '✓ Enregistré';
-    const card = document.getElementById('card-' + id);
-    const statusEl = card.querySelector('.agent-status');
-    statusEl.className = 'agent-status ok';
-    statusEl.textContent = 'Actif';
-    card.classList.add('configured');
-    showToast('Agent ' + id + ' configuré avec succès');
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = original;
-    }, 3000);
-  }, 900);
-}
-
 function connectGmail() {
-  const btn = document.getElementById('gmail-btn');
-  btn.innerHTML = '⏳ Connexion en cours…';
+  const btn = document.getElementById("gmail-btn");
+  btn.innerHTML = "⏳ Connexion en cours…";
   btn.disabled = true;
+
   setTimeout(() => {
-    btn.style.display = 'none';
-    document.getElementById('gmail-badge').style.display = 'flex';
-    showToast('Gmail connecté avec succès');
+    btn.style.display = "none";
+    document.getElementById("gmail-badge").style.display = "flex";
+    showToast("Gmail connecté avec succès");
   }, 1200);
 }
 
 function connectCalendar() {
-  showToast('Google Calendar connecté');
+  showToast("Google Calendar connecté");
 }
 
 function openTemplate(name) {
-  showToast('Ouverture du template ' + name + '…');
+  showToast("Ouverture du template " + name + "…");
+}
+
+function showSection(section) {
+  showToast("Section " + section + " bientôt disponible");
 }
 
 checkUser();
