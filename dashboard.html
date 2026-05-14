@@ -1374,11 +1374,72 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-function saveAgent(id, btn) {
+async function saveAgent(id, btn) {
+
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    alert("Session expirée.");
+    window.location.href = "index.html";
+    return;
+  }
+
+  let config = {};
+
+  if (id === "mails") {
+
+    config = {
+      prenom: document.getElementById('mails-prenom').value,
+      secteur: document.getElementById('mails-secteur').value,
+      tel: document.getElementById('mails-tel').value,
+      sheet: document.getElementById('mails-sheet').value
+    };
+
+  } else {
+    alert("Agent non encore connecté à la base.");
+    return;
+  }
+
   const original = btn.innerHTML;
+
   btn.disabled = true;
   btn.innerHTML = '⏳ Enregistrement...';
-  btn.classList.add('saved');
+
+  const { error } = await supabaseClient
+    .from('agent_configs')
+    .upsert({
+      user_id: user.id,
+      agent_name: id,
+      config: config,
+      updated_at: new Date()
+    });
+
+  if (error) {
+    console.error(error);
+    alert("Erreur lors de l'enregistrement.");
+    btn.disabled = false;
+    btn.innerHTML = original;
+    return;
+  }
+
+  btn.innerHTML = '✓ Enregistré';
+
+  const card = document.getElementById('card-' + id);
+
+  const statusEl = card.querySelector('.agent-status');
+
+  statusEl.className = 'agent-status ok';
+  statusEl.textContent = 'Actif';
+
+  card.classList.add('configured');
+
+  showToast('Configuration enregistrée');
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }, 2500);
+}
 
   setTimeout(() => {
     btn.innerHTML = '✓ Enregistré';
