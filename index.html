@@ -251,6 +251,25 @@ font-family: ‘Inter’, sans-serif;
 .pricing-note { margin-top: 24px; text-align: center; font-size: .78rem; color: var(–tg); }
 .pricing-note strong { color: var(–dark); }
 
+  .btn-sub {
+  width: 100%;
+  padding: 14px;
+  background: var(--dark);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  font-size: .875rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: background .2s;
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+}
+
 /* CTA */
 .cta { padding: 100px 24px; text-align: center; background: var(–dark); color: white; }
 .cta h2 { font-size: clamp(2rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin-bottom: 16px; }
@@ -543,7 +562,7 @@ nav { padding: 0 16px; }
       <div class="field"><label>Prénom</label><input type="text" placeholder="Jean"/></div>
       <div class="field"><label>Email</label><input type="email" placeholder="vous@exemple.fr"/></div>
       <div class="field"><label>Mot de passe</label><input type="password" placeholder="Minimum 8 caractères"/></div>
-      <button class="btn-sub">Démarrer mon essai gratuit</button>
+     <a href="dashboard.html" class="btn-sub">Démarrer mon essai gratuit</a>
     </div>
   </div>
 </div>
