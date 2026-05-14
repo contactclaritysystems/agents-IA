@@ -1459,7 +1459,39 @@ function showSection(section) {
   showToast("Section " + section + " bientôt disponible");
 }
 
-checkUser();
+async function loadAgentConfigs() {
+  const { data, error } = await supabaseClient
+    .from("agent_configs")
+    .select("*")
+    .eq("agent_name", "mails")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (!data || !data.config) return;
+
+  document.getElementById("mails-prenom").value = data.config.prenom || "";
+  document.getElementById("mails-secteur").value = data.config.secteur || "";
+  document.getElementById("mails-tel").value = data.config.tel || "";
+  document.getElementById("mails-sheet").value = data.config.sheet || "";
+
+  const card = document.getElementById("card-mails");
+  const statusEl = card.querySelector(".agent-status");
+
+  statusEl.className = "agent-status ok";
+  statusEl.textContent = "Actif";
+  card.classList.add("configured");
+}
+
+async function initDashboard() {
+  await checkUser();
+  await loadAgentConfigs();
+}
+
+initDashboard();
 </script>
 
 </body>
