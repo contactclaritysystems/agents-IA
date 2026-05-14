@@ -1319,59 +1319,93 @@ main > div[style*="background:var(--bg2)"] {
 <!-- TOAST -->
 <div class="toast" id="toast">✓ Configuration enregistrée</div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-  function toggleCard(id) {
+const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
+
+const SUPABASE_ANON_KEY =
+"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+
+async function checkUser() {
+  const { data: { user } } = await supabaseClient.auth.getUser();
+
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  const prenom = user.user_metadata?.prenom || "Client";
+  const initials = prenom.substring(0, 2).toUpperCase();
+
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = initials;
+}
+
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
+}
+
+function toggleCard(id) {
+  const card = document.getElementById('card-' + id);
+  card.classList.toggle('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function saveAgent(id, btn) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Enregistrement...';
+  btn.classList.add('saved');
+
+  setTimeout(() => {
+    btn.innerHTML = '✓ Enregistré';
     const card = document.getElementById('card-' + id);
-    card.classList.toggle('open');
-  }
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = '✓ ' + msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2800);
-  }
-
-  function saveAgent(id, btn) {
-    const original = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Enregistrement...';
-    btn.classList.add('saved');
-
+    const statusEl = card.querySelector('.agent-status');
+    statusEl.className = 'agent-status ok';
+    statusEl.textContent = 'Actif';
+    card.classList.add('configured');
+    showToast('Agent ' + id + ' configuré avec succès');
     setTimeout(() => {
-      btn.innerHTML = '✓ Enregistré';
-      const card = document.getElementById('card-' + id);
-      const statusEl = card.querySelector('.agent-status');
-      statusEl.className = 'agent-status ok';
-      statusEl.textContent = 'Actif';
-      card.classList.add('configured');
-      showToast('Agent ' + id + ' configuré avec succès');
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.innerHTML = original;
-      }, 3000);
-    }, 900);
-  }
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }, 3000);
+  }, 900);
+}
 
-  function connectGmail() {
-    const btn = document.getElementById('gmail-btn');
-    btn.innerHTML = '⏳ Connexion en cours…';
-    btn.disabled = true;
-    setTimeout(() => {
-      btn.style.display = 'none';
-      document.getElementById('gmail-badge').style.display = 'flex';
-      showToast('Gmail connecté avec succès');
-    }, 1200);
-  }
+function connectGmail() {
+  const btn = document.getElementById('gmail-btn');
+  btn.innerHTML = '⏳ Connexion en cours…';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.style.display = 'none';
+    document.getElementById('gmail-badge').style.display = 'flex';
+    showToast('Gmail connecté avec succès');
+  }, 1200);
+}
 
-  function connectCalendar() {
-    showToast('Google Calendar connecté');
-  }
+function connectCalendar() {
+  showToast('Google Calendar connecté');
+}
 
-  function openTemplate(name) {
-    showToast('Ouverture du template ' + name + '…');
-    // In prod: window.open('URL_DU_TEMPLATE', '_blank')
-  }
+function openTemplate(name) {
+  showToast('Ouverture du template ' + name + '…');
+}
+
+checkUser();
 </script>
+
 </body>
 </html>
