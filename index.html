@@ -1232,30 +1232,6 @@ footer {
   </div>
 </div>
 
-<script>
-function openModal(e) { if(e) e.preventDefault(); document.getElementById('authModal').classList.add('open'); }
-function closeModal() { document.getElementById('authModal').classList.remove('open'); }
-document.getElementById('authModal').addEventListener('click', function(e) { if(e.target===this) closeModal(); });
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tbtn').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('loginForm').style.display = tab==='login' ? 'block' : 'none';
-  document.getElementById('registerForm').style.display = tab==='register' ? 'block' : 'none';
-}
-function filterAgents(cat, btn) {
-  document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.atile').forEach(t => {
-    t.style.display = (cat==='all' || t.dataset.cat===cat) ? 'block' : 'none';
-  });
-  const pack = document.querySelector('.atile[style*="grid-column"]');
-  if(pack) pack.style.gridColumn = (cat==='all'||cat==='conditional') ? 'span 3' : '';
-}
-const io = new IntersectionObserver(entries => {
-  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('on'); });
-}, { threshold: 0.08 });
-document.querySelectorAll('.rv').forEach(el => io.observe(el));
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <script>
@@ -1267,10 +1243,55 @@ const supabase = window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
+function openModal(e) {
+  if(e) e.preventDefault();
+  document.getElementById('authModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('authModal').classList.remove('open');
+}
+
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tbtn').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+function filterAgents(cat, btn) {
+  document.querySelectorAll('.tab-pill').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  document.querySelectorAll('.atile').forEach(t => {
+    t.style.display = (cat === 'all' || t.dataset.cat === cat) ? 'block' : 'none';
+  });
+
+  const pack = document.querySelector('.atile[style*="grid-column"]');
+  if(pack) pack.style.gridColumn = (cat === 'all' || cat === 'conditional') ? 'span 3' : '';
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting) e.target.classList.add('on');
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
 async function signUp() {
   const prenom = document.querySelector('#registerForm input[type="text"]').value;
   const email = document.querySelector('#registerForm input[type="email"]').value;
   const password = document.querySelector('#registerForm input[type="password"]').value;
+
+  if (!prenom || !email || !password) {
+    alert("Merci de remplir tous les champs.");
+    return;
+  }
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -1292,6 +1313,11 @@ async function signIn() {
   const email = document.querySelector('#loginForm input[type="email"]').value;
   const password = document.querySelector('#loginForm input[type="password"]').value;
 
+  if (!email || !password) {
+    alert("Merci de renseigner votre email et votre mot de passe.");
+    return;
+  }
+
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password
@@ -1305,7 +1331,5 @@ async function signIn() {
   window.location.href = "dashboard.html";
 }
 </script>
-</script>
-
 </body>
 </html>
