@@ -1371,10 +1371,11 @@ async function checkUser() {
     await supabaseClient
       .from("user_integrations")
       .upsert({
-        user_id: currentUser.id,
-        provider: "google",
-        email: gmailEmail,
-        connected: true,
+       user_id: currentUser.id,
+       account_email: currentUser.email,
+       provider: "google",
+       email: gmailEmail,
+       connected: true,
         updated_at: new Date().toISOString()
       }, {
         onConflict: "user_id,provider"
@@ -1384,9 +1385,9 @@ async function checkUser() {
   const { data: integration, error: integrationError } = await supabaseClient
     .from("user_integrations")
     .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("provider", "google")
-    .eq("connected", true)
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google")
+    .eq("connected", true)
     .maybeSingle();
 
   if (integrationError) {
@@ -1436,8 +1437,8 @@ async function disconnectGoogle() {
       connected: false,
       updated_at: new Date().toISOString()
     })
-    .eq("user_id", currentUser.id)
-    .eq("provider", "google");
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google");
 
   if (error) {
     alert("Erreur déconnexion Gmail : " + error.message);
