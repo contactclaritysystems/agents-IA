@@ -1446,32 +1446,6 @@ async function disconnectGoogle() {
 
 window.disconnectGoogle = disconnectGoogle;
 
-async function disconnectGoogle() {
-
-  if (!currentUser) return;
-
-  await supabaseClient
-    .from("user_integrations")
-    .update({
-      connected: false,
-      updated_at: new Date().toISOString()
-    })
-    .eq("user_id", currentUser.id)
-    .eq("provider", "google");
-
-  document.getElementById("gmail-badge").style.display = "none";
-
-  const btn = document.getElementById("gmail-btn");
-
-  btn.style.display = "flex";
-  btn.disabled = false;
-  btn.innerHTML = "Connecter avec Google";
-
-  showToast("Gmail déconnecté");
-}
-  
-}
-
 async function loadAgentConfigs() {
   if (!currentUser) return;
 
