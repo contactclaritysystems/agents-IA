@@ -1555,7 +1555,7 @@ async function connectGmail() {
     btn.disabled = true;
   }
 
-  const { error } = await supabaseClient.auth.signInWithOAuth({
+  const { error } = await supabaseClient.auth.linkIdentity({
     provider: "google",
     options: {
       redirectTo: "https://contactclaritysystems.github.io/agents-IA/dashboard.html",
