@@ -1366,15 +1366,69 @@ async function checkUser() {
     i => i.provider === "google"
   );
 
-  if (googleIdentity) {
-    const email = currentUser.email;
+ if (googleIdentity) {
 
-    document.getElementById("gmail-btn").style.display = "none";
+  const email = currentUser.email;
 
-    const badge = document.getElementById("gmail-badge");
-    badge.style.display = "flex";
-    badge.innerHTML = "✓ " + email;
-  }
+  await supabaseClient
+    .from("user_integrations")
+    .upsert({
+      user_id: currentUser.id,
+      provider: "google",
+      email: email,
+      connected: true,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: "user_id,provider"
+    });
+
+}
+
+  const { data: integration } = await supabaseClient
+  .from("user_integrations")
+  .select("*")
+  .eq("user_id", currentUser.id)
+  .eq("provider", "google")
+  .eq("connected", true)
+  .maybeSingle();
+
+if (integration) {
+
+  document.getElementById("gmail-btn").style.display = "none";
+
+  const badge = document.getElementById("gmail-badge");
+
+  badge.style.display = "flex";
+
+  badge.innerHTML =
+    "✓ " + integration.email +
+    ' <span style="margin-left:10px;cursor:pointer;font-weight:700;" onclick="disconnectGoogle()">×</span>';
+}
+
+async function disconnectGoogle() {
+
+  if (!currentUser) return;
+
+  await supabaseClient
+    .from("user_integrations")
+    .update({
+      connected: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq("user_id", currentUser.id)
+    .eq("provider", "google");
+
+  document.getElementById("gmail-badge").style.display = "none";
+
+  const btn = document.getElementById("gmail-btn");
+
+  btn.style.display = "flex";
+  btn.disabled = false;
+  btn.innerHTML = "Connecter avec Google";
+
+  showToast("Gmail déconnecté");
+}
+  
 }
 
 async function loadAgentConfigs() {
