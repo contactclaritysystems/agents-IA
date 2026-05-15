@@ -1591,8 +1591,12 @@ async function logout() {
 }
 
 async function initDashboard() {
-  await checkUser();
-  await loadAgentConfigs();
+  await supabaseClient.auth.getSession();
+
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  await checkUser();
+  await loadAgentConfigs();
 }
 
 initDashboard();
