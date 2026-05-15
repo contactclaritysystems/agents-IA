@@ -1345,65 +1345,106 @@ const supabaseClient = window.supabase.createClient(
 let currentUser = null;
 
 async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
+  const { data, error } = await supabaseClient.auth.getUser();
 
-  if (error || !data.user) {
-    window.location.href = "index.html";
-    return;
-  }
+  if (error || !data.user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  currentUser = data.user;
+  currentUser = data.user;
 
-  const prenom = currentUser.user_metadata?.prenom || "Client";
-  const initials = prenom.substring(0, 2).toUpperCase();
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  const initials = prenom.substring(0, 2).toUpperCase();
 
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = initials;
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = initials;
 
-  const identities = currentUser.identities || [];
+  const identities = currentUser.identities || [];
+  const googleIdentity = identities.find(i => i.provider === "google");
 
-  const googleIdentity = identities.find(
-    i => i.provider === "google"
-  );
+  if (googleIdentity) {
+    await supabaseClient
+      .from("user_integrations")
+      .upsert({
+        user_id: currentUser.id,
+        provider: "google",
+        email: currentUser.email,
+        connected: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: "user_id,provider"
+      });
+  }
 
- if (googleIdentity) {
-
-  const email = currentUser.email;
-
-  await supabaseClient
+  const { data: integration, error: integrationError } = await supabaseClient
     .from("user_integrations")
-    .upsert({
-      user_id: currentUser.id,
-      provider: "google",
-      email: email,
-      connected: true,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: "user_id,provider"
-    });
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .maybeSingle();
 
+  if (integrationError) {
+    console.error(integrationError);
+    return;
+  }
+
+  if (integration) {
+    showGmailConnected(integration.email);
+  } else {
+    showGmailDisconnected();
+  }
 }
 
-  const { data: integration } = await supabaseClient
-  .from("user_integrations")
-  .select("*")
-  .eq("user_id", currentUser.id)
-  .eq("provider", "google")
-  .eq("connected", true)
-  .maybeSingle();
-
-if (integration) {
-
-  document.getElementById("gmail-btn").style.display = "none";
-
+function showGmailConnected(email) {
+  const btn = document.getElementById("gmail-btn");
   const badge = document.getElementById("gmail-badge");
 
-  badge.style.display = "flex";
+  btn.style.display = "none";
 
-  badge.innerHTML =
-    "✓ " + integration.email +
-    ' <span style="margin-left:10px;cursor:pointer;font-weight:700;" onclick="disconnectGoogle()">×</span>';
+  badge.style.display = "flex";
+  badge.innerHTML = `
+    ✓ ${email}
+    <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">
+      ×
+    </button>
+  `;
 }
+
+function showGmailDisconnected() {
+  const btn = document.getElementById("gmail-btn");
+  const badge = document.getElementById("gmail-badge");
+
+  badge.style.display = "none";
+
+  btn.style.display = "flex";
+  btn.disabled = false;
+  btn.innerHTML = "Connecter avec Google";
+}
+
+async function disconnectGoogle() {
+  if (!currentUser) return;
+
+  const { error } = await supabaseClient
+    .from("user_integrations")
+    .update({
+      connected: false,
+      updated_at: new Date().toISOString()
+    })
+    .eq("user_id", currentUser.id)
+    .eq("provider", "google");
+
+  if (error) {
+    alert("Erreur déconnexion Gmail : " + error.message);
+    return;
+  }
+
+  showGmailDisconnected();
+  showToast("Gmail déconnecté");
+}
+
+window.disconnectGoogle = disconnectGoogle;
 
 async function disconnectGoogle() {
 
