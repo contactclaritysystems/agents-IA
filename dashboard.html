@@ -1437,11 +1437,29 @@ async function saveAgent(id, btn) {
   }, 2500);
 }
 
-function connectGmail() {
-  const btn = document.getElementById("gmail-btn");
-  btn.innerHTML = "⏳ Connexion en cours…";
-  btn.disabled = true;
+async function connectGmail() {
 
+  const btn = document.getElementById("gmail-btn");
+
+  btn.innerHTML = "⏳ Connexion Google...";
+  btn.disabled = true;
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: "https://contactclaritysystems.github.io/agents-IA/dashboard.html",
+      scopes: "email profile https://www.googleapis.com/auth/gmail.send"
+    }
+  });
+
+  if (error) {
+    alert("Erreur Google : " + error.message);
+
+    btn.innerHTML = "Connecter avec Google";
+    btn.disabled = false;
+  }
+}
+  
   setTimeout(() => {
     btn.style.display = "none";
     document.getElementById("gmail-badge").style.display = "flex";
