@@ -1364,12 +1364,16 @@ async function checkUser() {
   const googleIdentity = identities.find(i => i.provider === "google");
 
   if (googleIdentity) {
+    const gmailEmail =
+      googleIdentity.identity_data?.email ||
+      currentUser.email;
+
     await supabaseClient
       .from("user_integrations")
       .upsert({
         user_id: currentUser.id,
         provider: "google",
-        email: currentUser.email,
+        email: gmailEmail,
         connected: true,
         updated_at: new Date().toISOString()
       }, {
@@ -1555,7 +1559,9 @@ async function connectGmail() {
     btn.disabled = true;
   }
 
-  const { error } = await supabaseClient.auth.linkIdentity({
+  sessionStorage.setItem("linking_gmail", "true");
+
+  const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: "https://contactclaritysystems.github.io/agents-IA/dashboard.html",
