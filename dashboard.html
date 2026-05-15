@@ -1338,111 +1338,137 @@ const SUPABASE_ANON_KEY =
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
 
 const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
+let currentUser = null;
+
 async function checkUser() {
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  const { data, error } = await supabaseClient.auth.getUser();
 
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
+  if (error || !data.user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  const prenom = user.user_metadata?.prenom || "Client";
-  const initials = prenom.substring(0, 2).toUpperCase();
+  currentUser = data.user;
 
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = initials;
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  const initials = prenom.substring(0, 2).toUpperCase();
+
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = initials;
 }
 
-async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "index.html";
+async function loadAgentConfigs() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from("agent_configs")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .eq("agent_name", "mails")
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (!data || !data.config) return;
+
+  document.getElementById("mails-prenom").value = data.config.prenom || "";
+  document.getElementById("mails-secteur").value = data.config.secteur || "";
+  document.getElementById("mails-tel").value = data.config.tel || "";
+  document.getElementById("mails-sheet").value = data.config.sheet || "";
+
+  const card = document.getElementById("card-mails");
+  const statusEl = card.querySelector(".agent-status");
+
+  statusEl.className = "agent-status ok";
+  statusEl.textContent = "Actif";
+  card.classList.add("configured");
 }
 
 function toggleCard(id) {
-  const card = document.getElementById("card-" + id);
-  card.classList.toggle("open");
+  const card = document.getElementById("card-" + id);
+  card.classList.toggle("open");
 }
 
 function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = "✓ " + msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2800);
+  const t = document.getElementById("toast");
+  t.textContent = "✓ " + msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
 async function saveAgent(id, btn) {
-  const { data: { user } } = await supabaseClient.auth.getUser();
+  if (!currentUser) {
+    alert("Session expirée.");
+    window.location.href = "index.html";
+    return;
+  }
 
-  if (!user) {
-    alert("Session expirée.");
-    window.location.href = "index.html";
-    return;
-  }
+  if (id !== "mails") {
+    alert("Cet agent n'est pas encore connecté à la base.");
+    return;
+  }
 
-  let config = {};
+  const config = {
+    prenom: document.getElementById("mails-prenom").value,
+    secteur: document.getElementById("mails-secteur").value,
+    tel: document.getElementById("mails-tel").value,
+    sheet: document.getElementById("mails-sheet").value
+  };
 
-  if (id === "mails") {
-    config = {
-      prenom: document.getElementById("mails-prenom").value,
-      secteur: document.getElementById("mails-secteur").value,
-      tel: document.getElementById("mails-tel").value,
-      sheet: document.getElementById("mails-sheet").value
-    };
-  } else {
-    alert("Agent non encore connecté à la base.");
-    return;
-  }
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Enregistrement...";
 
-  const original = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = "⏳ Enregistrement...";
+  const { error } = await supabaseClient
+    .from("agent_configs")
+    .upsert({
+      user_id: currentUser.id,
+      agent_name: id,
+      config: config,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: "user_id,agent_name"
+    });
 
- const { error } = await supabaseClient
-  .from('agent_configs')
-  .upsert({
-    user_id: user.id,
-    agent_name: id,
-    config: config,
-    updated_at: new Date()
-  }, {
-    onConflict: 'user_id,agent_name'
-  });
+  if (error) {
+    console.error(error);
+    alert("Erreur Supabase : " + error.message);
+    btn.disabled = false;
+    btn.innerHTML = original;
+    return;
+  }
 
-  if (error) {
-    console.error(error);
-    alert("Erreur Supabase : " + error.message);
-    btn.disabled = false;
-    btn.innerHTML = original;
-    return;
-  }
+  btn.innerHTML = "✓ Enregistré";
 
-  btn.innerHTML = "✓ Enregistré";
+  const card = document.getElementById("card-" + id);
+  const statusEl = card.querySelector(".agent-status");
 
-  const card = document.getElementById("card-" + id);
-  const statusEl = card.querySelector(".agent-status");
+  statusEl.className = "agent-status ok";
+  statusEl.textContent = "Actif";
+  card.classList.add("configured");
 
-  statusEl.className = "agent-status ok";
-  statusEl.textContent = "Actif";
-  card.classList.add("configured");
+  showToast("Configuration enregistrée");
 
-  showToast("Configuration enregistrée");
-
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.innerHTML = original;
-  }, 2500);
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }, 2500);
 }
 
 async function connectGmail() {
-
   const btn = document.getElementById("gmail-btn");
 
-  btn.innerHTML = "⏳ Connexion Google...";
-  btn.disabled = true;
+  if (btn) {
+    btn.innerHTML = "⏳ Connexion Google...";
+    btn.disabled = true;
+  }
 
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -1455,60 +1481,33 @@ async function connectGmail() {
   if (error) {
     alert("Erreur Google : " + error.message);
 
-    btn.innerHTML = "Connecter avec Google";
-    btn.disabled = false;
+    if (btn) {
+      btn.innerHTML = "Connecter avec Google";
+      btn.disabled = false;
+    }
   }
-}
-  
-  setTimeout(() => {
-    btn.style.display = "none";
-    document.getElementById("gmail-badge").style.display = "flex";
-    showToast("Gmail connecté avec succès");
-  }, 1200);
 }
 
 function connectCalendar() {
-  showToast("Google Calendar connecté");
+  showToast("Google Calendar bientôt disponible");
 }
 
 function openTemplate(name) {
-  showToast("Ouverture du template " + name + "…");
+  showToast("Ouverture du template " + name + " bientôt disponible");
 }
 
 function showSection(section) {
-  showToast("Section " + section + " bientôt disponible");
+  showToast("Section " + section + " bientôt disponible");
 }
 
-async function loadAgentConfigs() {
-  const { data, error } = await supabaseClient
-    .from("agent_configs")
-    .select("*")
-    .eq("agent_name", "mails")
-    .maybeSingle();
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  if (!data || !data.config) return;
-
-  document.getElementById("mails-prenom").value = data.config.prenom || "";
-  document.getElementById("mails-secteur").value = data.config.secteur || "";
-  document.getElementById("mails-tel").value = data.config.tel || "";
-  document.getElementById("mails-sheet").value = data.config.sheet || "";
-
-  const card = document.getElementById("card-mails");
-  const statusEl = card.querySelector(".agent-status");
-
-  statusEl.className = "agent-status ok";
-  statusEl.textContent = "Actif";
-  card.classList.add("configured");
+async function logout() {
+  await supabaseClient.auth.signOut();
+  window.location.href = "index.html";
 }
 
 async function initDashboard() {
-  await checkUser();
-  await loadAgentConfigs();
+  await checkUser();
+  await loadAgentConfigs();
 }
 
 initDashboard();
