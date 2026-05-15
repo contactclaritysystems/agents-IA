@@ -1345,61 +1345,71 @@ const supabaseClient = window.supabase.createClient(
 let currentUser = null;
 
 async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
+  const { data, error } = await supabaseClient.auth.getUser();
 
-  if (error || !data.user) {
-    window.location.href = "index.html";
-    return;
-  }
+  if (error || !data.user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  currentUser = data.user;
+  currentUser = data.user;
 
-  const prenom = currentUser.user_metadata?.prenom || "Client";
-  const initials = prenom.substring(0, 2).toUpperCase();
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  const initials = prenom.substring(0, 2).toUpperCase();
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = initials;
 
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = initials;
+  // Si la session contient une identity Google, on sauvegarde Gmail
+  // SANS écraser un connected: true déjà existant
+  const identities = currentUser.identities || [];
+  const googleIdentity = identities.find(i => i.provider === "google");
 
-  const identities = currentUser.identities || [];
-  const googleIdentity = identities.find(i => i.provider === "google");
+  if (googleIdentity) {
+    const gmailEmail =
+      googleIdentity.identity_data?.email || currentUser.email;
 
-  if (googleIdentity) {
-    const gmailEmail =
-      googleIdentity.identity_data?.email ||
-      currentUser.email;
+    // On vérifie d'abord si une ligne existe déjà
+    const { data: existing } = await supabaseClient
+      .from("user_integrations")
+      .select("connected")
+      .eq("user_id", currentUser.id)
+      .eq("provider", "google")
+      .maybeSingle();
 
-    await supabaseClient
-      .from("user_integrations")
-      .upsert({
-       user_id: currentUser.id,
-       account_email: currentUser.email,
-       provider: "google",
-       email: gmailEmail,
-       connected: true,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: "user_id,provider"
-      });
-  }
+    // On upsert mais on préserve connected si déjà true
+    await supabaseClient
+      .from("user_integrations")
+      .upsert({
+        user_id: currentUser.id,
+        account_email: currentUser.email,
+        provider: "google",
+        email: gmailEmail,
+        connected: existing ? existing.connected : true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: "user_id,provider"
+      });
+  }
 
-  const { data: integration, error: integrationError } = await supabaseClient
-    .from("user_integrations")
-    .select("*")
-    .eq("account_email", currentUser.email)
+  // On cherche par user_id (plus fiable que account_email)
+  const { data: integration, error: integrationError } = await supabaseClient
+    .from("user_integrations")
+    .select("*")
+    .eq("user_id", currentUser.id)
     .eq("provider", "google")
     .eq("connected", true)
-    .maybeSingle();
+    .maybeSingle();
 
-  if (integrationError) {
-    console.error(integrationError);
-    return;
-  }
+  if (integrationError) {
+    console.error(integrationError);
+    return;
+  }
 
-  if (integration) {
-    showGmailConnected(integration.email);
-  } else {
-    showGmailDisconnected();
-  }
+  if (integration) {
+    showGmailConnected(integration.email);
+  } else {
+    showGmailDisconnected();
+  }
 }
 
 function showGmailConnected(email) {
