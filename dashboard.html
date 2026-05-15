@@ -1345,20 +1345,36 @@ const supabaseClient = window.supabase.createClient(
 let currentUser = null;
 
 async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
+  const { data, error } = await supabaseClient.auth.getUser();
 
-  if (error || !data.user) {
-    window.location.href = "index.html";
-    return;
-  }
+  if (error || !data.user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  currentUser = data.user;
+  currentUser = data.user;
 
-  const prenom = currentUser.user_metadata?.prenom || "Client";
-  const initials = prenom.substring(0, 2).toUpperCase();
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  const initials = prenom.substring(0, 2).toUpperCase();
 
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = initials;
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = initials;
+
+  const identities = currentUser.identities || [];
+
+  const googleIdentity = identities.find(
+    i => i.provider === "google"
+  );
+
+  if (googleIdentity) {
+    const email = currentUser.email;
+
+    document.getElementById("gmail-btn").style.display = "none";
+
+    const badge = document.getElementById("gmail-badge");
+    badge.style.display = "flex";
+    badge.innerHTML = "✓ " + email;
+  }
 }
 
 async function loadAgentConfigs() {
