@@ -1343,7 +1343,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let currentUser = null;
 
 async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
+  const { data, error } = await supabaseClient.auth.getUser();
+
+  console.log("=== CHECK USER ===");
+  console.log("Email:", data?.user?.email);
+  console.log("Identities:", JSON.stringify(data?.user?.identities));
+  console.log("LocalStorage:", localStorage.getItem("gmail_connected_" + data?.user?.email));
+
   if (error || !data.user) {
     window.location.href = "index.html";
     return;
