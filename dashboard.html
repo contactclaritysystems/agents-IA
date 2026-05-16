@@ -1337,119 +1337,104 @@ main > div[style*="background:var(--bg2)"] {
 
 <script>
 const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
-
-const SUPABASE_ANON_KEY =
-"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
-
-const supabaseClient = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 
 async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
-  if (error || !data.user) {
-    window.location.href = "index.html";
-    return;
-  }
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error || !data.user) {
+    window.location.href = "index.html";
+    return;
+  }
 
-  currentUser = data.user;
-  const userEmail = currentUser.email;
+  currentUser = data.user;
+  const userEmail = currentUser.email;
 
-  // Affichage nom/avatar
-  const prenom = currentUser.user_metadata?.prenom || "Client";
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = 
-    prenom.substring(0, 2).toUpperCase();
+  // Affichage nom/avatar
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
-  // Si connexion via Google OAuth → on sauvegarde Gmail
-  const identities = currentUser.identities || [];
-  const googleIdentity = identities.find(i => i.provider === "google");
+  // Si la session contient une identity Google → on sauvegarde en base
+  const identities = currentUser.identities || [];
+  const googleIdentity = identities.find(i => i.provider === "google");
 
-  if (googleIdentity) {
-    const gmailEmail = googleIdentity.identity_data?.email || userEmail;
+  if (googleIdentity) {
+    const gmailEmail = googleIdentity.identity_data?.email || userEmail;
 
-    // Vérifier si déjà connecté pour ne pas écraser
-    const { data: existing } = await supabaseClient
-      .from("user_integrations")
-      .select("connected")
-      .eq("account_email", userEmail)
-      .eq("provider", "google")
-      .maybeSingle();
+    const { error: upsertError } = await supabaseClient
+      .from("user_integrations")
+      .upsert({
+        account_email: userEmail,
+        provider: "google",
+        email: gmailEmail,
+        connected: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "account_email,provider" });
 
-    await supabaseClient
-      .from("user_integrations")
-      .upsert({
-        account_email: userEmail,
-        provider: "google",
-        email: gmailEmail,
-        connected: true, // Si on a une identity Google active = connecté
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: "account_email,provider"
-      });
-  }
+    if (!upsertError) {
+      // On mémorise localement pour les reconnexions email/password
+      localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
+    }
+  }
 
-  // Chercher par account_email (stable entre sessions)
-  const { data: integration } = await supabaseClient
-    .from("user_integrations")
-    .select("*")
-    .eq("account_email", userEmail)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .maybeSingle();
+  // 1. Chercher en base
+  const { data: integration } = await supabaseClient
+    .from("user_integrations")
+    .select("*")
+    .eq("account_email", userEmail)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .maybeSingle();
 
-  if (integration) {
-    showGmailConnected(integration.email);
-  } else {
-    showGmailDisconnected();
-  }
+  if (integration) {
+    showGmailConnected(integration.email);
+    return;
+  }
+
+  // 2. Fallback : vérifier localStorage
+  const cachedGmail = localStorage.getItem("gmail_connected_" + userEmail);
+  if (cachedGmail) {
+    showGmailConnected(cachedGmail);
+    return;
+  }
+
+  // 3. Rien trouvé
+  showGmailDisconnected();
 }
 
 function showGmailConnected(email) {
-  const btn = document.getElementById("gmail-btn");
+  document.getElementById("gmail-btn").style.display = "none";
   const badge = document.getElementById("gmail-badge");
-
-  btn.style.display = "none";
-
   badge.style.display = "flex";
-  badge.innerHTML = `
-    ✓ ${email}
-    <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">
-      ×
-    </button>
-  `;
+  badge.innerHTML = `✓ ${email}
+    <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>`;
 }
 
 function showGmailDisconnected() {
   const btn = document.getElementById("gmail-btn");
-  const badge = document.getElementById("gmail-badge");
-
-  badge.style.display = "none";
-
   btn.style.display = "flex";
   btn.disabled = false;
-  btn.innerHTML = "Connecter avec Google";
-}
-
-function showGmailDisconnected() {
-  document.getElementById("gmail-btn").style.display = "flex";
-  document.getElementById("gmail-badge").style.display = "none";
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 5C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z" opacity="0"/><path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.4c-2 1.4-4.5 2.2-7.8 2.2-5.9 0-10.9-4-12.7-9.4H4v5.6C7.7 41.9 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.3 27.9c-.5-1.4-.7-2.8-.7-4.4s.2-3 .7-4.4V13.5H4C2.4 16.6 1.5 20.2 1.5 24s.9 7.4 2.5 10.5l7.3-5.6z"/><path fill="#EA4335" d="M24 9.6c3.3 0 6.3 1.1 8.6 3.4l6.4-6.4C35.2 2.9 30.1.5 24 .5 15.3.5 7.7 4.6 4 11.1l7.3 5.6C13.1 11.4 18.1 9.6 24 9.6z"/></svg>Connecter avec Google`;
+  document.getElementById("gmail-badge").style.display = "none";
 }
 
 async function disconnectGoogle() {
-  if (!currentUser) return;
-  
-  await supabaseClient
-    .from("user_integrations")
-    .update({ connected: false, updated_at: new Date().toISOString() })
-    .eq("account_email", currentUser.email)
-    .eq("provider", "google");
+  if (!currentUser) return;
 
-  showGmailDisconnected();
-  showToast("Gmail déconnecté");
+  await supabaseClient
+    .from("user_integrations")
+    .update({ connected: false, updated_at: new Date().toISOString() })
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google");
+
+  // Supprimer aussi le cache local
+  localStorage.removeItem("gmail_connected_" + currentUser.email);
+
+  showGmailDisconnected();
+  showToast("Gmail déconnecté");
 }
 
 async function loadAgentConfigs() {
@@ -1462,12 +1447,7 @@ async function loadAgentConfigs() {
     .eq("agent_name", "mails")
     .maybeSingle();
 
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  if (!data || !data.config) return;
+  if (error || !data || !data.config) return;
 
   document.getElementById("mails-prenom").value = data.config.prenom || "";
   document.getElementById("mails-secteur").value = data.config.secteur || "";
@@ -1475,16 +1455,13 @@ async function loadAgentConfigs() {
   document.getElementById("mails-sheet").value = data.config.sheet || "";
 
   const card = document.getElementById("card-mails");
-  const statusEl = card.querySelector(".agent-status");
-
-  statusEl.className = "agent-status ok";
-  statusEl.textContent = "Actif";
+  card.querySelector(".agent-status").className = "agent-status ok";
+  card.querySelector(".agent-status").textContent = "Actif";
   card.classList.add("configured");
 }
 
 function toggleCard(id) {
-  const card = document.getElementById("card-" + id);
-  card.classList.toggle("open");
+  document.getElementById("card-" + id).classList.toggle("open");
 }
 
 function showToast(msg) {
@@ -1495,16 +1472,8 @@ function showToast(msg) {
 }
 
 async function saveAgent(id, btn) {
-  if (!currentUser) {
-    alert("Session expirée.");
-    window.location.href = "index.html";
-    return;
-  }
-
-  if (id !== "mails") {
-    alert("Cet agent n'est pas encore connecté à la base.");
-    return;
-  }
+  if (!currentUser) { window.location.href = "index.html"; return; }
+  if (id !== "mails") { alert("Cet agent n'est pas encore connecté à la base."); return; }
 
   const config = {
     prenom: document.getElementById("mails-prenom").value,
@@ -1519,49 +1488,29 @@ async function saveAgent(id, btn) {
 
   const { error } = await supabaseClient
     .from("agent_configs")
-    .upsert({
-      user_id: currentUser.id,
-      agent_name: id,
-      config: config,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: "user_id,agent_name"
-    });
+    .upsert({ user_id: currentUser.id, agent_name: id, config, updated_at: new Date().toISOString() },
+    { onConflict: "user_id,agent_name" });
 
   if (error) {
-    console.error(error);
-    alert("Erreur Supabase : " + error.message);
+    alert("Erreur : " + error.message);
     btn.disabled = false;
     btn.innerHTML = original;
     return;
   }
 
   btn.innerHTML = "✓ Enregistré";
-
   const card = document.getElementById("card-" + id);
-  const statusEl = card.querySelector(".agent-status");
-
-  statusEl.className = "agent-status ok";
-  statusEl.textContent = "Actif";
+  card.querySelector(".agent-status").className = "agent-status ok";
+  card.querySelector(".agent-status").textContent = "Actif";
   card.classList.add("configured");
-
   showToast("Configuration enregistrée");
-
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.innerHTML = original;
-  }, 2500);
+  setTimeout(() => { btn.disabled = false; btn.innerHTML = original; }, 2500);
 }
 
 async function connectGmail() {
   const btn = document.getElementById("gmail-btn");
-
-  if (btn) {
-    btn.innerHTML = "⏳ Connexion Google...";
-    btn.disabled = true;
-  }
-
-  sessionStorage.setItem("linking_gmail", "true");
+  btn.innerHTML = "⏳ Connexion...";
+  btn.disabled = true;
 
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
@@ -1572,36 +1521,27 @@ async function connectGmail() {
   });
 
   if (error) {
-    alert("Erreur Google : " + error.message);
-
-    if (btn) {
-      btn.innerHTML = "Connecter avec Google";
-      btn.disabled = false;
-    }
+    alert("Erreur : " + error.message);
+    btn.innerHTML = "Connecter avec Google";
+    btn.disabled = false;
   }
 }
 
-function connectCalendar() {
-  showToast("Google Calendar bientôt disponible");
-}
-
-function openTemplate(name) {
-  showToast("Ouverture du template " + name + " bientôt disponible");
-}
-
-function showSection(section) {
-  showToast("Section " + section + " bientôt disponible");
-}
+function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
+function openTemplate(name) { showToast("Template " + name + " bientôt disponible"); }
+function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
 
 async function logout() {
+  // On ne supprime PAS le localStorage Gmail au logout
+  // L'utilisateur reste "connecté Gmail" à la prochaine connexion
   await supabaseClient.auth.signOut();
   window.location.href = "index.html";
 }
 
 async function initDashboard() {
-  await supabaseClient.auth.getSession();
-  await checkUser();
-  await loadAgentConfigs();
+  await supabaseClient.auth.getSession();
+  await checkUser();
+  await loadAgentConfigs();
 }
 
 initDashboard();
