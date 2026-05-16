@@ -59,6 +59,10 @@ body {
   color: white;
 }
 
+  #gmail-btn {
+  display: none; /* caché par défaut */
+}
+
 /* SIDEBAR */
 .sidebar {
   width: 270px;
@@ -1436,6 +1440,11 @@ function showGmailDisconnected() {
   btn.style.display = "flex";
   btn.disabled = false;
   btn.innerHTML = "Connecter avec Google";
+}
+
+function showGmailDisconnected() {
+  document.getElementById("gmail-btn").style.display = "flex";
+  document.getElementById("gmail-badge").style.display = "none";
 }
 
 async function disconnectGoogle() {
