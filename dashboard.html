@@ -1381,7 +1381,7 @@ function connectGmail() {
     response_type: "code",
     scope: "https://www.googleapis.com/auth/gmail.send email profile",
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account",
     state: "gmail_connect"
   });
 
@@ -1449,6 +1449,10 @@ console.log("Code brut:", code);
 
      localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
 localStorage.removeItem("clarity_email_before_oauth");
+
+renderGmailConnected(result.gmail_email);
+showToast("Compte Gmail connecté");
+
 return true;
     } else {
       console.error("Champs manquants dans la réponse Make:", result);
@@ -1604,6 +1608,17 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
     await handleUser(session.user);
   }
 });
+
+  (async function init() {
+  const { data } = await supabaseClient.auth.getSession();
+
+  if (!data.session?.user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  await handleUser(data.session.user);
+})();
 </script>
 
 </body>
