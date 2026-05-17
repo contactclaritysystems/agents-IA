@@ -1447,11 +1447,9 @@ console.log("Code brut:", code);
           updated_at: new Date().toISOString()
         }, { onConflict: "account_email,provider" });
 
-      localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
-      localStorage.removeItem("clarity_email_before_oauth");
-      renderGmailConnected(result.gmail_email);
-      showToast("Gmail connecté ✓");
-      return true;
+     localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
+localStorage.removeItem("clarity_email_before_oauth");
+return true;
     } else {
       console.error("Champs manquants dans la réponse Make:", result);
       renderGmailDisconnected();
@@ -1515,14 +1513,8 @@ async function handleUser(user) {
   document.querySelector(".user-name").textContent = prenom;
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
-  const oauthDone = await handleOAuthCallback();
-  
-  // Si OAuth vient de se terminer, pas besoin de checkGmailStatus
-  // car renderGmailConnected a déjà été appelé
-  if (!oauthDone) {
-    await checkGmailStatus();
-  }
-  
+  await handleOAuthCallback();
+  await checkGmailStatus();
   await loadAgentConfigs();
 }
 
