@@ -1390,7 +1390,10 @@ function connectGmail() {
 
 async function handleOAuthCallback() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
+ const code = params.get("code");
+console.log("Code brut:", code);
+// Le code doit commencer par "4/"
+
   const state = params.get("state");
 
   if (!code || state !== "gmail_connect") return false;
