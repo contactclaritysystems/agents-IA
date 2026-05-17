@@ -1331,109 +1331,167 @@ const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.googleusercontent.com";
+const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
+
 let currentUser = null;
 
-function showGmailConnected(email) {
-  const btn = document.getElementById("gmail-btn");
-  const badge = document.getElementById("gmail-badge");
-  if (btn) btn.style.display = "none";
-  if (badge) {
-    badge.style.display = "flex";
-    badge.innerHTML = `✓ ${email} <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>`;
-  }
+// ─── GMAIL UI ────────────────────────────────────────────
+
+function renderGmailConnected(gmailEmail) {
+  document.getElementById("gmail-ui").innerHTML = `
+    <div class="gmail-connected-badge">
+      ✓ ${gmailEmail}
+      <button onclick="disconnectGmail()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
+    </div>`;
 }
 
-function showGmailDisconnected() {
-  const btn = document.getElementById("gmail-btn");
-  const badge = document.getElementById("gmail-badge");
-  if (badge) badge.style.display = "none";
-  if (btn) {
-    btn.style.display = "inline-flex";
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 5C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z" opacity="0"/><path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.4c-2 1.4-4.5 2.2-7.8 2.2-5.9 0-10.9-4-12.7-9.4H4v5.6C7.7 41.9 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.3 27.9c-.5-1.4-.7-2.8-.7-4.4s.2-3 .7-4.4V13.5H4C2.4 16.6 1.5 20.2 1.5 24s.9 7.4 2.5 10.5l7.3-5.6z"/><path fill="#EA4335" d="M24 9.6c3.3 0 6.3 1.1 8.6 3.4l6.4-6.4C35.2 2.9 30.1.5 24 .5 15.3.5 7.7 4.6 4 11.1l7.3 5.6C13.1 11.4 18.1 9.6 24 9.6z"/></svg> Connecter avec Google`;
-  }
+function renderGmailDisconnected() {
+  document.getElementById("gmail-ui").innerHTML = `
+    <button onclick="connectGmail()" class="gmail-connect-btn">
+      <svg width="18" height="18" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 5C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z" opacity="0"/>
+        <path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/>
+        <path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.4c-2 1.4-4.5 2.2-7.8 2.2-5.9 0-10.9-4-12.7-9.4H4v5.6C7.7 41.9 15.3 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.3 27.9c-.5-1.4-.7-2.8-.7-4.4s.2-3 .7-4.4V13.5H4C2.4 16.6 1.5 20.2 1.5 24s.9 7.4 2.5 10.5l7.3-5.6z"/>
+        <path fill="#EA4335" d="M24 9.6c3.3 0 6.3 1.1 8.6 3.4l6.4-6.4C35.2 2.9 30.1.5 24 .5 15.3.5 7.7 4.6 4 11.1l7.3 5.6C13.1 11.4 18.1 9.6 24 9.6z"/>
+      </svg>
+      Connecter avec Google
+    </button>`;
 }
 
-async function disconnectGoogle() {
-  if (!currentUser) return;
+function connectGmail() {
+  // Sauvegarder l'email Clarity avant redirect
+  localStorage.setItem("clarity_email_before_oauth", currentUser.email);
+
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/gmail.send email profile",
+    access_type: "offline",
+    prompt: "consent",
+    state: "gmail_connect"
+  });
+
+  window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
+}
+
+async function handleOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
+  const state = params.get("state");
+
+  if (!code || state !== "gmail_connect") return false;
+
+  // Nettoyer l'URL
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  // Récupérer l'email Clarity sauvegardé
+  const clarityEmail = localStorage.getItem("clarity_email_before_oauth");
+  if (!clarityEmail) return false;
+
+  // Échanger le code contre un token via ton webhook Make
+  // Make va appeler Google Token API et te renvoyer les tokens
+  try {
+    const response = await fetch("https://hook.eu2.make.com/TON_WEBHOOK_ICI", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        code, 
+        redirect_uri: REDIRECT_URI,
+        clarity_email: clarityEmail
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.gmail_email && result.access_token) {
+      // Stocker en Supabase
+      await supabaseClient
+        .from("user_integrations")
+        .upsert({
+          account_email: clarityEmail,
+          provider: "google",
+          email: result.gmail_email,
+          access_token: result.access_token,
+          refresh_token: result.refresh_token || null,
+          token_expiry: result.expires_in ? Date.now() + result.expires_in * 1000 : null,
+          connected: true,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "account_email,provider" });
+
+      localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
+      localStorage.removeItem("clarity_email_before_oauth");
+      showToast("Gmail connecté ✓");
+      return true;
+    }
+  } catch (err) {
+    console.error("OAuth callback error:", err);
+  }
+  return false;
+}
+
+async function checkGmailStatus() {
+  const { data } = await supabaseClient
+    .from("user_integrations")
+    .select("email")
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .maybeSingle();
+
+  if (data?.email) {
+    localStorage.setItem("gmail_" + currentUser.email, data.email);
+    renderGmailConnected(data.email);
+    return;
+  }
+
+  const cached = localStorage.getItem("gmail_" + currentUser.email);
+  if (cached) {
+    renderGmailConnected(cached);
+    return;
+  }
+
+  renderGmailDisconnected();
+}
+
+async function disconnectGmail() {
   await supabaseClient
     .from("user_integrations")
     .update({ connected: false, updated_at: new Date().toISOString() })
     .eq("account_email", currentUser.email)
     .eq("provider", "google");
-  localStorage.removeItem("gmail_connected_" + currentUser.email);
-  showGmailDisconnected();
+
+  localStorage.removeItem("gmail_" + currentUser.email);
+  renderGmailDisconnected();
   showToast("Gmail déconnecté");
 }
 
-async function handleUser(user) {
-  if (!user) { window.location.href = "index.html"; return; }
-  currentUser = user;
-  const userEmail = currentUser.email;
+// ─── USER ────────────────────────────────────────────────
 
-  // Affichage nom/avatar
-  const prenom = currentUser.user_metadata?.prenom || "Client";
+async function handleUser(user) {
+  currentUser = user;
+  const prenom = user.user_metadata?.prenom || "Client";
   document.querySelector(".user-name").textContent = prenom;
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
-  // Identity Google présente dans la session ?
-  const googleIdentity = (currentUser.identities || []).find(i => i.provider === "google");
-
-  if (googleIdentity) {
-    const gmailEmail = googleIdentity.identity_data?.email || userEmail;
-    const { error: upsertError } = await supabaseClient
-      .from("user_integrations")
-      .upsert({
-        account_email: userEmail,
-        provider: "google",
-        email: gmailEmail,
-        connected: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "account_email,provider" });
-
-    console.log("Upsert error:", upsertError);
-
-    if (!upsertError) {
-      localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
-      showGmailConnected(gmailEmail);
-      await loadAgentConfigs();
-      return;
-    }
-  }
-
-  // Pas d'identity Google → chercher en base
-  const { data: integration } = await supabaseClient
-    .from("user_integrations")
-    .select("*")
-    .eq("account_email", userEmail)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .maybeSingle();
-
-  if (integration) {
-    showGmailConnected(integration.email);
-  } else {
-    // Fallback localStorage
-    const cached = localStorage.getItem("gmail_connected_" + userEmail);
-    if (cached) {
-      showGmailConnected(cached);
-    } else {
-      showGmailDisconnected();
-    }
-  }
-
+  // Vérifier si on revient d'un OAuth Google
+  const oauthDone = await handleOAuthCallback();
+  
+  await checkGmailStatus();
   await loadAgentConfigs();
 }
 
 async function loadAgentConfigs() {
   if (!currentUser) return;
-  const { data, error } = await supabaseClient
+  const { data } = await supabaseClient
     .from("agent_configs")
     .select("*")
     .eq("user_id", currentUser.id)
     .eq("agent_name", "mails")
     .maybeSingle();
-  if (error || !data || !data.config) return;
+  if (!data?.config) return;
   document.getElementById("mails-prenom").value = data.config.prenom || "";
   document.getElementById("mails-secteur").value = data.config.secteur || "";
   document.getElementById("mails-tel").value = data.config.tel || "";
@@ -1444,15 +1502,10 @@ async function loadAgentConfigs() {
   card.classList.add("configured");
 }
 
+// ─── AGENTS ──────────────────────────────────────────────
+
 function toggleCard(id) {
   document.getElementById("card-" + id).classList.toggle("open");
-}
-
-function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = "✓ " + msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
 async function saveAgent(id, btn) {
@@ -1486,22 +1539,13 @@ async function saveAgent(id, btn) {
   setTimeout(() => { btn.disabled = false; btn.innerHTML = original; }, 2500);
 }
 
-async function connectGmail() {
-  const btn = document.getElementById("gmail-btn");
-  btn.innerHTML = "⏳ Connexion...";
-  btn.disabled = true;
-  const { error } = await supabaseClient.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: "https://contactclaritysystems.github.io/agents-IA/dashboard.html",
-      scopes: "email profile https://www.googleapis.com/auth/gmail.send"
-    }
-  });
-  if (error) {
-    alert("Erreur : " + error.message);
-    btn.innerHTML = "Connecter avec Google";
-    btn.disabled = false;
-  }
+// ─── UTILS ───────────────────────────────────────────────
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = "✓ " + msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
 function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
@@ -1513,9 +1557,10 @@ async function logout() {
   window.location.href = "index.html";
 }
 
-// Point d'entrée unique et propre
+// ─── INIT ────────────────────────────────────────────────
+
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  console.log("Auth event:", event, "| Email:", session?.user?.email);
+  console.log("Auth:", event, session?.user?.email);
   if (event === "SIGNED_OUT") {
     window.location.href = "index.html";
     return;
