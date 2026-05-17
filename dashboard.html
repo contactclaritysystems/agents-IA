@@ -1407,8 +1407,8 @@ console.log("Code brut:", code);
 
   // Échanger le code contre un token via ton webhook Make
   // Make va appeler Google Token API et te renvoyer les tokens
-  try {
-   const response = await fetch("https://hook.eu1.make.com/80gx7u5bzuxwjb6ku67wsbl9cyjx2aut", {
+ try {
+    const response = await fetch("https://hook.eu1.make.com/80gx7u5bzuxwjb6ku67wsbl9cyjx2aut", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
@@ -1418,10 +1418,23 @@ console.log("Code brut:", code);
       })
     });
 
-    const result = await response.json();
+    // Log la réponse brute pour voir ce que Make renvoie
+    const rawText = await response.text();
+    console.log("Make response raw:", rawText);
+    
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch(e) {
+      console.error("Make n'a pas renvoyé du JSON:", rawText);
+      showToast("Erreur connexion Gmail — réessayez");
+      renderGmailDisconnected();
+      return false;
+    }
+
+    console.log("Make result:", result);
 
     if (result.gmail_email && result.access_token) {
-      // Stocker en Supabase
       await supabaseClient
         .from("user_integrations")
         .upsert({
@@ -1430,21 +1443,25 @@ console.log("Code brut:", code);
           email: result.gmail_email,
           access_token: result.access_token,
           refresh_token: result.refresh_token || null,
-          token_expiry: result.expires_in ? Date.now() + result.expires_in * 1000 : null,
           connected: true,
           updated_at: new Date().toISOString()
         }, { onConflict: "account_email,provider" });
 
       localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
       localStorage.removeItem("clarity_email_before_oauth");
+      renderGmailConnected(result.gmail_email);
       showToast("Gmail connecté ✓");
       return true;
+    } else {
+      console.error("Champs manquants dans la réponse Make:", result);
+      renderGmailDisconnected();
+      return false;
     }
   } catch (err) {
     console.error("OAuth callback error:", err);
+    renderGmailDisconnected();
+    return false;
   }
-  return false;
-}
 
 async function checkGmailStatus() {
   console.log("=== CHECK GMAIL ===");
