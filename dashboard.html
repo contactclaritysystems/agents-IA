@@ -1447,27 +1447,34 @@ console.log("Code brut:", code);
 }
 
 async function checkGmailStatus() {
-  const { data } = await supabaseClient
-    .from("user_integrations")
-    .select("email")
-    .eq("account_email", currentUser.email)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .maybeSingle();
+  console.log("=== CHECK GMAIL ===");
+  console.log("currentUser.email:", currentUser.email);
+  
+  const { data, error } = await supabaseClient
+    .from("user_integrations")
+    .select("email, connected")
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .maybeSingle();
 
-  if (data?.email) {
-    localStorage.setItem("gmail_" + currentUser.email, data.email);
-    renderGmailConnected(data.email);
-    return;
-  }
+  console.log("Data:", data);
+  console.log("Error:", error);
 
-  const cached = localStorage.getItem("gmail_" + currentUser.email);
-  if (cached) {
-    renderGmailConnected(cached);
-    return;
-  }
+  if (data?.email) {
+    localStorage.setItem("gmail_" + currentUser.email, data.email);
+    renderGmailConnected(data.email);
+    return;
+  }
 
-  renderGmailDisconnected();
+  const cached = localStorage.getItem("gmail_" + currentUser.email);
+  console.log("Cached:", cached);
+  if (cached) {
+    renderGmailConnected(cached);
+    return;
+  }
+
+  renderGmailDisconnected();
 }
 
 async function disconnectGmail() {
