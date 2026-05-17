@@ -1338,77 +1338,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 let currentUser = null;
 
-async function checkUser() {
-  const { data, error } = await supabaseClient.auth.getUser();
-
-  console.log("=== CHECK USER ===");
-  console.log("Email:", data?.user?.email);
-  console.log("Identities:", JSON.stringify(data?.user?.identities));
-  console.log("LocalStorage:", localStorage.getItem("gmail_connected_" + data?.user?.email));
-
-  if (error || !data.user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  currentUser = data.user;
-  const userEmail = currentUser.email;
-
-  // Affichage nom/avatar
-  const prenom = currentUser.user_metadata?.prenom || "Client";
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
-
-  // Si la session contient une identity Google → on sauvegarde en base
-const identities = currentUser.identities || [];
-const googleIdentity = identities.find(i => i.provider === "google");
-
-let gmailEmail = null; // ← déclaré ICI, en dehors du if
-
-if (googleIdentity) {
-  gmailEmail = googleIdentity.identity_data?.email || userEmail;
-
-  const { error: upsertError } = await supabaseClient
-    .from("user_integrations")
-    .upsert({
-      account_email: userEmail,
-      provider: "google",
-      email: gmailEmail,
-      connected: true,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "account_email,provider" });
-
-  console.log("Upsert error:", upsertError);
-
-  if (!upsertError) {
-    localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
-  }
-}
-
-// Chercher en base
-const { data: integration } = await supabaseClient
-  .from("user_integrations")
-  .select("*")
-  .eq("account_email", userEmail)
-  .eq("provider", "google")
-  .eq("connected", true)
-  .maybeSingle();
-
-if (integration) {
-  showGmailConnected(integration.email);
-  return;
-}
-
-// Fallback localStorage
-const cachedGmail = localStorage.getItem("gmail_connected_" + userEmail);
-if (cachedGmail) {
-  showGmailConnected(cachedGmail);
-  return;
-}
-
-showGmailDisconnected();
-}
-
 function showGmailConnected(email) {
   const btn = document.getElementById("gmail-btn");
   const badge = document.getElementById("gmail-badge");
@@ -1549,10 +1478,76 @@ async function logout() {
 }
 
 async function initDashboard() {
-  await supabaseClient.auth.getSession();
-  await checkUser();
-  await loadAgentConfigs();
+  // Écouter les changements de session en temps réel
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth event:", event, "Session:", session?.user?.email);
+    
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+      if (session?.user) {
+        currentUser = session.user;
+        const userEmail = currentUser.email;
+        const prenom = currentUser.user_metadata?.prenom || "Client";
+        document.querySelector(".user-name").textContent = prenom;
+        document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
+
+        const identities = currentUser.identities || [];
+        const googleIdentity = identities.find(i => i.provider === "google");
+        let gmailEmail = null;
+
+        if (googleIdentity) {
+          gmailEmail = googleIdentity.identity_data?.email || userEmail;
+          
+          const { error: upsertError } = await supabaseClient
+            .from("user_integrations")
+            .upsert({
+              account_email: userEmail,
+              provider: "google",
+              email: gmailEmail,
+              connected: true,
+              updated_at: new Date().toISOString()
+            }, { onConflict: "account_email,provider" });
+
+          console.log("Upsert error:", upsertError);
+
+          if (!upsertError) {
+            localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
+            showGmailConnected(gmailEmail);
+            await loadAgentConfigs();
+            return;
+          }
+        }
+
+        // Chercher en base
+        const { data: integration } = await supabaseClient
+          .from("user_integrations")
+          .select("*")
+          .eq("account_email", userEmail)
+          .eq("provider", "google")
+          .eq("connected", true)
+          .maybeSingle();
+
+        if (integration) {
+          showGmailConnected(integration.email);
+        } else {
+          // Fallback localStorage
+          const cached = localStorage.getItem("gmail_connected_" + userEmail);
+          if (cached) {
+            showGmailConnected(cached);
+          } else {
+            showGmailDisconnected();
+          }
+        }
+
+        await loadAgentConfigs();
+      }
+    }
+
+    if (event === 'SIGNED_OUT') {
+      window.location.href = "index.html";
+    }
+  });
 }
+
 
 initDashboard();
 </script>
