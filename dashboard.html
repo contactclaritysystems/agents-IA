@@ -1360,64 +1360,53 @@ async function checkUser() {
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
   // Si la session contient une identity Google → on sauvegarde en base
-  const identities = currentUser.identities || [];
-  const googleIdentity = identities.find(i => i.provider === "google");
+const identities = currentUser.identities || [];
+const googleIdentity = identities.find(i => i.provider === "google");
 
-  if (googleIdentity) {
-    const gmailEmail = googleIdentity.identity_data?.email || userEmail;
+let gmailEmail = null; // ← déclaré ICI, en dehors du if
 
-    const { error: upsertError } = await supabaseClient
-      .from("user_integrations")
-      .upsert({
-        account_email: userEmail,
-        provider: "google",
-        email: gmailEmail,
-        connected: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "account_email,provider" });
-
-    if (!upsertError) {
-      // On mémorise localement pour les reconnexions email/password
-      localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
-    }
-  }
+if (googleIdentity) {
+  gmailEmail = googleIdentity.identity_data?.email || userEmail;
 
   const { error: upsertError } = await supabaseClient
+    .from("user_integrations")
+    .upsert({
+      account_email: userEmail,
+      provider: "google",
+      email: gmailEmail,
+      connected: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "account_email,provider" });
+
+  console.log("Upsert error:", upsertError);
+
+  if (!upsertError) {
+    localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
+  }
+}
+
+// Chercher en base
+const { data: integration } = await supabaseClient
   .from("user_integrations")
-  .upsert({
-    account_email: userEmail,
-    provider: "google",
-    email: gmailEmail,
-    connected: true,
-    updated_at: new Date().toISOString()
-  }, { onConflict: "account_email,provider" });
+  .select("*")
+  .eq("account_email", userEmail)
+  .eq("provider", "google")
+  .eq("connected", true)
+  .maybeSingle();
 
-console.log("Upsert error:", upsertError); // ← ajoute cette ligne
+if (integration) {
+  showGmailConnected(integration.email);
+  return;
+}
 
+// Fallback localStorage
+const cachedGmail = localStorage.getItem("gmail_connected_" + userEmail);
+if (cachedGmail) {
+  showGmailConnected(cachedGmail);
+  return;
+}
 
-  // 1. Chercher en base
-  const { data: integration } = await supabaseClient
-    .from("user_integrations")
-    .select("*")
-    .eq("account_email", userEmail)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .maybeSingle();
-
-  if (integration) {
-    showGmailConnected(integration.email);
-    return;
-  }
-
-  // 2. Fallback : vérifier localStorage
-  const cachedGmail = localStorage.getItem("gmail_connected_" + userEmail);
-  if (cachedGmail) {
-    showGmailConnected(cachedGmail);
-    return;
-  }
-
-  // 3. Rien trouvé
-  showGmailDisconnected();
+showGmailDisconnected();
 }
 
 function showGmailConnected(email) {
