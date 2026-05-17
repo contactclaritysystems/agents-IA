@@ -1510,16 +1510,20 @@ async function disconnectGmail() {
 // ─── USER ────────────────────────────────────────────────
 
 async function handleUser(user) {
-  currentUser = user;
-  const prenom = user.user_metadata?.prenom || "Client";
-  document.querySelector(".user-name").textContent = prenom;
-  document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
+  currentUser = user;
+  const prenom = user.user_metadata?.prenom || "Client";
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
-  // Vérifier si on revient d'un OAuth Google
-  const oauthDone = await handleOAuthCallback();
-  
-  await checkGmailStatus();
-  await loadAgentConfigs();
+  const oauthDone = await handleOAuthCallback();
+  
+  // Si OAuth vient de se terminer, pas besoin de checkGmailStatus
+  // car renderGmailConnected a déjà été appelé
+  if (!oauthDone) {
+    await checkGmailStatus();
+  }
+  
+  await loadAgentConfigs();
 }
 
 async function loadAgentConfigs() {
