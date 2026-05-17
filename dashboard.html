@@ -1494,27 +1494,37 @@ async function initDashboard() {
         const googleIdentity = identities.find(i => i.provider === "google");
         let gmailEmail = null;
 
-        if (googleIdentity) {
-          gmailEmail = googleIdentity.identity_data?.email || userEmail;
-          
-          const { error: upsertError } = await supabaseClient
-            .from("user_integrations")
-            .upsert({
-              account_email: userEmail,
-              provider: "google",
-              email: gmailEmail,
-              connected: true,
-              updated_at: new Date().toISOString()
-            }, { onConflict: "account_email,provider" });
+       const identities = currentUser.identities || [];
+const googleIdentity = identities.find(i => i.provider === "google");
 
-          console.log("Upsert error:", upsertError);
+let gmailEmail = null;
 
-          if (!upsertError) {
-            localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
-            showGmailConnected(gmailEmail);
-            await loadAgentConfigs();
-            return;
-          }
+if (googleIdentity) {
+  // L'email Gmail peut être différent de l'email de connexion
+  gmailEmail = googleIdentity.identity_data?.email || userEmail;
+
+  const { error: upsertError } = await supabaseClient
+    .from("user_integrations")
+    .upsert({
+      account_email: userEmail, // ← toujours l'email de connexion Clarity
+      provider: "google",
+      email: gmailEmail,        // ← l'email Gmail (peut être différent)
+      connected: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "account_email,provider" });
+
+  console.log("Upsert error:", upsertError);
+  console.log("account_email (Clarity):", userEmail);
+  console.log("email Gmail:", gmailEmail);
+
+  if (!upsertError) {
+    localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
+    showGmailConnected(gmailEmail);
+    await loadAgentConfigs();
+    return;
+  }
+}
+
         }
 
         // Chercher en base
