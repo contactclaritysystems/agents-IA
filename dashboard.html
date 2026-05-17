@@ -1344,8 +1344,7 @@ function showGmailConnected(email) {
   if (btn) btn.style.display = "none";
   if (badge) {
     badge.style.display = "flex";
-    badge.innerHTML = `✓ ${email}
-      <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>`;
+    badge.innerHTML = `✓ ${email} <button onclick="disconnectGoogle()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>`;
   }
 }
 
@@ -1354,7 +1353,7 @@ function showGmailDisconnected() {
   const badge = document.getElementById("gmail-badge");
   if (badge) badge.style.display = "none";
   if (btn) {
-    btn.style.removeProperty("display"); // remet le display naturel du bouton
+    btn.style.display = "inline-flex";
     btn.disabled = false;
     btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 5C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z" opacity="0"/><path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.4c-2 1.4-4.5 2.2-7.8 2.2-5.9 0-10.9-4-12.7-9.4H4v5.6C7.7 41.9 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.3 27.9c-.5-1.4-.7-2.8-.7-4.4s.2-3 .7-4.4V13.5H4C2.4 16.6 1.5 20.2 1.5 24s.9 7.4 2.5 10.5l7.3-5.6z"/><path fill="#EA4335" d="M24 9.6c3.3 0 6.3 1.1 8.6 3.4l6.4-6.4C35.2 2.9 30.1.5 24 .5 15.3.5 7.7 4.6 4 11.1l7.3 5.6C13.1 11.4 18.1 9.6 24 9.6z"/></svg> Connecter avec Google`;
   }
@@ -1362,37 +1361,88 @@ function showGmailDisconnected() {
 
 async function disconnectGoogle() {
   if (!currentUser) return;
-
   await supabaseClient
     .from("user_integrations")
     .update({ connected: false, updated_at: new Date().toISOString() })
     .eq("account_email", currentUser.email)
     .eq("provider", "google");
-
-  // Supprimer aussi le cache local
   localStorage.removeItem("gmail_connected_" + currentUser.email);
-
   showGmailDisconnected();
   showToast("Gmail déconnecté");
 }
 
+async function handleUser(user) {
+  if (!user) { window.location.href = "index.html"; return; }
+  currentUser = user;
+  const userEmail = currentUser.email;
+
+  // Affichage nom/avatar
+  const prenom = currentUser.user_metadata?.prenom || "Client";
+  document.querySelector(".user-name").textContent = prenom;
+  document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
+
+  // Identity Google présente dans la session ?
+  const googleIdentity = (currentUser.identities || []).find(i => i.provider === "google");
+
+  if (googleIdentity) {
+    const gmailEmail = googleIdentity.identity_data?.email || userEmail;
+    const { error: upsertError } = await supabaseClient
+      .from("user_integrations")
+      .upsert({
+        account_email: userEmail,
+        provider: "google",
+        email: gmailEmail,
+        connected: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "account_email,provider" });
+
+    console.log("Upsert error:", upsertError);
+
+    if (!upsertError) {
+      localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
+      showGmailConnected(gmailEmail);
+      await loadAgentConfigs();
+      return;
+    }
+  }
+
+  // Pas d'identity Google → chercher en base
+  const { data: integration } = await supabaseClient
+    .from("user_integrations")
+    .select("*")
+    .eq("account_email", userEmail)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .maybeSingle();
+
+  if (integration) {
+    showGmailConnected(integration.email);
+  } else {
+    // Fallback localStorage
+    const cached = localStorage.getItem("gmail_connected_" + userEmail);
+    if (cached) {
+      showGmailConnected(cached);
+    } else {
+      showGmailDisconnected();
+    }
+  }
+
+  await loadAgentConfigs();
+}
+
 async function loadAgentConfigs() {
   if (!currentUser) return;
-
   const { data, error } = await supabaseClient
     .from("agent_configs")
     .select("*")
     .eq("user_id", currentUser.id)
     .eq("agent_name", "mails")
     .maybeSingle();
-
   if (error || !data || !data.config) return;
-
   document.getElementById("mails-prenom").value = data.config.prenom || "";
   document.getElementById("mails-secteur").value = data.config.secteur || "";
   document.getElementById("mails-tel").value = data.config.tel || "";
   document.getElementById("mails-sheet").value = data.config.sheet || "";
-
   const card = document.getElementById("card-mails");
   card.querySelector(".agent-status").className = "agent-status ok";
   card.querySelector(".agent-status").textContent = "Actif";
@@ -1413,30 +1463,25 @@ function showToast(msg) {
 async function saveAgent(id, btn) {
   if (!currentUser) { window.location.href = "index.html"; return; }
   if (id !== "mails") { alert("Cet agent n'est pas encore connecté à la base."); return; }
-
   const config = {
     prenom: document.getElementById("mails-prenom").value,
     secteur: document.getElementById("mails-secteur").value,
     tel: document.getElementById("mails-tel").value,
     sheet: document.getElementById("mails-sheet").value
   };
-
   const original = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = "⏳ Enregistrement...";
-
   const { error } = await supabaseClient
     .from("agent_configs")
     .upsert({ user_id: currentUser.id, agent_name: id, config, updated_at: new Date().toISOString() },
     { onConflict: "user_id,agent_name" });
-
   if (error) {
     alert("Erreur : " + error.message);
     btn.disabled = false;
     btn.innerHTML = original;
     return;
   }
-
   btn.innerHTML = "✓ Enregistré";
   const card = document.getElementById("card-" + id);
   card.querySelector(".agent-status").className = "agent-status ok";
@@ -1450,7 +1495,6 @@ async function connectGmail() {
   const btn = document.getElementById("gmail-btn");
   btn.innerHTML = "⏳ Connexion...";
   btn.disabled = true;
-
   const { error } = await supabaseClient.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -1458,7 +1502,6 @@ async function connectGmail() {
       scopes: "email profile https://www.googleapis.com/auth/gmail.send"
     }
   });
-
   if (error) {
     alert("Erreur : " + error.message);
     btn.innerHTML = "Connecter avec Google";
@@ -1471,93 +1514,21 @@ function openTemplate(name) { showToast("Template " + name + " bientôt disponib
 function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
 
 async function logout() {
-  // On ne supprime PAS le localStorage Gmail au logout
-  // L'utilisateur reste "connecté Gmail" à la prochaine connexion
   await supabaseClient.auth.signOut();
   window.location.href = "index.html";
 }
 
-async function initDashboard() {
-  // Écouter les changements de session en temps réel
-  supabaseClient.auth.onAuthStateChange(async (event, session) => {
-    console.log("Auth event:", event, "Session:", session?.user?.email);
-    
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-      if (session?.user) {
-        currentUser = session.user;
-        const userEmail = currentUser.email;
-        const prenom = currentUser.user_metadata?.prenom || "Client";
-        document.querySelector(".user-name").textContent = prenom;
-        document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
-
-        const identities = currentUser.identities || [];
-        const googleIdentity = identities.find(i => i.provider === "google");
-        let gmailEmail = null;
-
-       const identities = currentUser.identities || [];
-const googleIdentity = identities.find(i => i.provider === "google");
-
-let gmailEmail = null;
-
-if (googleIdentity) {
-  // L'email Gmail peut être différent de l'email de connexion
-  gmailEmail = googleIdentity.identity_data?.email || userEmail;
-
-  const { error: upsertError } = await supabaseClient
-    .from("user_integrations")
-    .upsert({
-      account_email: userEmail, // ← toujours l'email de connexion Clarity
-      provider: "google",
-      email: gmailEmail,        // ← l'email Gmail (peut être différent)
-      connected: true,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "account_email,provider" });
-
-  console.log("Upsert error:", upsertError);
-  console.log("account_email (Clarity):", userEmail);
-  console.log("email Gmail:", gmailEmail);
-
-  if (!upsertError) {
-    localStorage.setItem("gmail_connected_" + userEmail, gmailEmail);
-    showGmailConnected(gmailEmail);
-    await loadAgentConfigs();
-    return;
-  }
-}
-
-        // Chercher en base
-        const { data: integration } = await supabaseClient
-          .from("user_integrations")
-          .select("*")
-          .eq("account_email", userEmail)
-          .eq("provider", "google")
-          .eq("connected", true)
-          .maybeSingle();
-
-        if (integration) {
-          showGmailConnected(integration.email);
-        } else {
-          // Fallback localStorage
-          const cached = localStorage.getItem("gmail_connected_" + userEmail);
-          if (cached) {
-            showGmailConnected(cached);
-          } else {
-            showGmailDisconnected();
-          }
-        }
-
-        await loadAgentConfigs();
-      }
-    }
-
-    if (event === 'SIGNED_OUT') {
-      window.location.href = "index.html";
-    }
-  });
-}
-
-
-initDashboard();
+// Point d'entrée unique et propre
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
+  console.log("Auth event:", event, "| Email:", session?.user?.email);
+  if (event === "SIGNED_OUT") {
+    window.location.href = "index.html";
+    return;
+  }
+  if (session?.user) {
+    await handleUser(session.user);
+  }
+});
 </script>
 
 </body>
