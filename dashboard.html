@@ -1049,23 +1049,18 @@ main > div[style*="background:var(--bg2)"] {
 
   <!-- GMAIL -->
   <div class="gmail-section">
-    <div>
-      <div class="gmail-title">
-        <span>📧</span> Connexion Gmail
-        <span class="tag green">✓ Requis pour tous les agents</span>
-      </div>
-      <div class="gmail-desc">
-        Connectez votre Gmail une seule fois. Les agents envoient ensuite les mails <strong>depuis votre adresse</strong>, pas depuis la nôtre. Aucun accès à vos messages existants.
-      </div>
+  <div>
+    <div class="gmail-title">
+      <span>📧</span> Connexion compte mail
+      <span class="tag green">✓ Requis pour tous les agents</span>
     </div>
-    <div>
-      <div class="gmail-connected-badge" id="gmail-badge" style="display:none">✓ jean@gmail.com</div>
-      <button class="gmail-connect-btn" id="gmail-btn" onclick="connectGmail()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 5C13.5 5 5 13.5 5 24s8.5 19 19 19 19-8.5 19-19S34.5 5 24 5z" opacity="0"/><path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/><path fill="#34A853" d="M24 46c6.1 0 11.2-2 14.9-5.5l-7.1-5.4c-2 1.4-4.5 2.2-7.8 2.2-5.9 0-10.9-4-12.7-9.4H4v5.6C7.7 41.9 15.3 46 24 46z"/><path fill="#FBBC05" d="M11.3 27.9c-.5-1.4-.7-2.8-.7-4.4s.2-3 .7-4.4V13.5H4C2.4 16.6 1.5 20.2 1.5 24s.9 7.4 2.5 10.5l7.3-5.6z"/><path fill="#EA4335" d="M24 9.6c3.3 0 6.3 1.1 8.6 3.4l6.4-6.4C35.2 2.9 30.1.5 24 .5 15.3.5 7.7 4.6 4 11.1l7.3 5.6C13.1 11.4 18.1 9.6 24 9.6z"/></svg>
-        Connecter avec Google
-      </button>
+    <div class="gmail-desc">
+      Connectez le compte depuis lequel vos agents enverront les mails. 
+      <strong>Gmail et Outlook acceptés.</strong>
     </div>
   </div>
+  <div id="gmail-ui"></div>
+</div>
 
   <!-- AGENTS -->
   <div class="section-header">
