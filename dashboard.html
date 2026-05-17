@@ -1386,6 +1386,19 @@ async function checkUser() {
     }
   }
 
+  const { error: upsertError } = await supabaseClient
+  .from("user_integrations")
+  .upsert({
+    account_email: userEmail,
+    provider: "google",
+    email: gmailEmail,
+    connected: true,
+    updated_at: new Date().toISOString()
+  }, { onConflict: "account_email,provider" });
+
+console.log("Upsert error:", upsertError); // ← ajoute cette ligne
+
+
   // 1. Chercher en base
   const { data: integration } = await supabaseClient
     .from("user_integrations")
