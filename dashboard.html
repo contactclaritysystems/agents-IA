@@ -1800,10 +1800,11 @@ function startMailDictation() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          user_email: currentUser.email,
-          instruction: instruction
-        })
+       body: JSON.stringify({
+  user_email: currentUser.email,
+  user_id: currentUser.id,
+  instruction: instruction
+})
       });
 
       const text = await response.text();
