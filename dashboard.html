@@ -1466,21 +1466,37 @@ async function checkGmailStatus() {
     return;
   }
 
+  const { data, error } = await supabaseClient
+    .from("user_integrations")
+    .select("email")
+    .eq("account_email", currentUser.email)
+    .eq("provider", "google")
+    .eq("connected", true)
+    .limit(1);
+
+  console.log("GMAIL DATA:", data);
+  console.log("GMAIL ERROR:", error);
+
+  if (!error && data && data.length > 0 && data[0].email) {
+    localStorage.setItem("gmail_" + currentUser.email, data[0].email);
+    renderGmailConnected(data[0].email);
+    return;
+  }
+
   renderGmailDisconnected();
 }
   
 async function disconnectGmail() {
   const email = currentUser?.email;
+  if (!email) return;
 
-  if (email) {
-    await supabaseClient
-      .from("user_integrations")
-      .update({ connected: false, updated_at: new Date().toISOString() })
-      .eq("account_email", email)
-      .eq("provider", "google");
+  localStorage.removeItem("gmail_" + email);
 
-    localStorage.removeItem("gmail_" + email);
-  }
+  await supabaseClient
+    .from("user_integrations")
+    .update({ connected: false, updated_at: new Date().toISOString() })
+    .eq("account_email", email)
+    .eq("provider", "google");
 
   renderGmailDisconnected();
   showToast("Compte mail déconnecté");
@@ -1569,11 +1585,7 @@ function openTemplate(name) { showToast("Template " + name + " bientôt disponib
 function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
 
 async function logout() {
-  localStorage.removeItem("gmail_" + currentUser?.email);
-  localStorage.removeItem("clarity_email_before_oauth");
-
   await supabaseClient.auth.signOut();
-
   window.location.href = "index.html";
 }
 
