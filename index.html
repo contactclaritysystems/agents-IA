@@ -671,10 +671,11 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     </div>
 
     <div class="abubble" id="mailPreview" style="opacity:0; transform:translateY(8px);">
-      Objet : Suite à notre rendez-vous<br/><br/>
-      Bonjour Anthony,<br/>
-      Notre dernier échange a été très enrichissant. Seriez-vous disponible pour nous retrouver cette semaine ?<br/><br/>
-      Cordialement
+      Objet : Point sur le dossier<br/><br/>
+Bonjour Anthony,<br/>
+Je vous propose que nous organisions une réunion mardi matin afin de faire le point sur le dossier et les prochaines étapes.<br/><br/>
+N’hésitez pas à me confirmer si ce créneau vous convient.<br/><br/>
+Bonne journée
     </div>
 
     <div class="hcard-ft" id="mailStatus">
@@ -914,7 +915,7 @@ async function signIn() {
   window.location.href = "dashboard.html";
 }
 
-const dictationSentence = "« Envoie un mail à Anthony, demande-lui s'il peut passer me voir cette semaine. Notre dernier rendez-vous s'est très bien passé. »";
+const dictationSentence = "« Envoie un mail à Anthony pour lui proposer une réunion mardi matin afin de faire le point sur le dossier. »";
 
 function animateHeroDemo() {
   const textEl = document.getElementById("dictationText");
