@@ -1241,7 +1241,7 @@ function recommendAgent(agent) {
     </div>
 
     <div class="chat-options">
-      <button onclick="openModal(event)">
+      <button onclick="openRegisterFromChat(event)">
         Tester ${r.name} gratuitement →
       </button>
       <button onclick="resetChatbot()">
@@ -1251,6 +1251,27 @@ function recommendAgent(agent) {
   `;
 }
 
+function openRegisterFromChat(e) {
+  if (e) e.preventDefault();
+
+  const chat = document.getElementById('chatbotWindow');
+
+  if (chat) {
+    chat.classList.remove('open');
+  }
+
+  openModal(e);
+
+  const buttons = document.querySelectorAll('.tbtn');
+
+  buttons.forEach(t => t.classList.remove('active'));
+
+  buttons[1].classList.add('active');
+
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
+}
+  
   function resetChatbot() {
   const body = document.getElementById('chatbotBody');
 
@@ -1270,6 +1291,22 @@ function recommendAgent(agent) {
       <button onclick="selectNeed('unknown')">🤔 Je ne sais pas</button>
     </div>
   `;
+}
+
+function openRegisterFromChat(e) {
+  if (e) e.preventDefault();
+
+  const chat = document.getElementById('chatbotWindow');
+  if (chat) chat.classList.remove('open');
+
+  openModal(e);
+
+  const buttons = document.querySelectorAll('.tbtn');
+  buttons.forEach(t => t.classList.remove('active'));
+
+  buttons[1].classList.add('active');
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('registerForm').style.display = 'block';
 }
   
 </script>
