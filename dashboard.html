@@ -994,7 +994,7 @@ main > div[style*="background:var(--bg2)"] {
     </a>
   </div>
 
-  <button class="nav-item" onclick="window.logout()" type="button">
+  <button class="nav-item" id="logout-btn" type="button">
   <span class="icon">🚪</span> Déconnexion
 </button>
 
@@ -1353,7 +1353,7 @@ function renderGmailConnected(gmailEmail) {
   document.getElementById("gmail-ui").innerHTML = `
     <div class="gmail-connected-badge">
       ✓ ${gmailEmail}
-      <button type="button" onclick="window.disconnectGmail()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
+    <button id="gmail-disconnect-btn" type="button" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
     </div>`;
 }
 
@@ -1491,15 +1491,16 @@ async function disconnectGmail() {
   if (!email) return;
 
   localStorage.removeItem("gmail_" + email);
+  renderGmailDisconnected();
+  showToast("Compte mail déconnecté");
 
-  await supabaseClient
+  const { error } = await supabaseClient
     .from("user_integrations")
     .update({ connected: false, updated_at: new Date().toISOString() })
     .eq("account_email", email)
     .eq("provider", "google");
 
-  renderGmailDisconnected();
-  showToast("Compte mail déconnecté");
+  if (error) console.error("Erreur déconnexion Gmail:", error);
 }
   
 // ─── USER ────────────────────────────────────────────────
@@ -1615,6 +1616,18 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
   window.disconnectGmail = disconnectGmail;
 window.logout = logout;
+
+  document.addEventListener("click", function(e) {
+  if (e.target.closest("#gmail-disconnect-btn")) {
+    e.preventDefault();
+    disconnectGmail();
+  }
+
+  if (e.target.closest("#logout-btn")) {
+    e.preventDefault();
+    logout();
+  }
+});
 </script>
 
 </body>
