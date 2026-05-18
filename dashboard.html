@@ -1741,7 +1741,49 @@ function openClientSheet() {
 }
 
 function startMailDictation() {
-  showToast("Dictée bientôt disponible");
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur. Essayez avec Chrome.");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "fr-FR";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  showToast("Parlez maintenant...");
+
+  recognition.start();
+
+  recognition.onresult = async function(event) {
+    const instruction = event.results[0][0].transcript;
+    console.log("Instruction dictée:", instruction);
+
+    showToast("Instruction reçue, envoi en cours...");
+
+    const response = await fetch("https://hook.eu1.make.com/f1ygm8lv4du3nnv5urqex5kxef9xuvit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_email: currentUser.email,
+        instruction: instruction
+      })
+    });
+
+    const text = await response.text();
+    console.log("Réponse Make:", text);
+
+    showToast("Instruction envoyée à l’agent");
+  };
+
+  recognition.onerror = function(event) {
+    console.error("Erreur dictée:", event.error);
+    alert("Erreur dictée vocale : " + event.error);
+  };
 }
   
 function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
