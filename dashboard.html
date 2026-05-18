@@ -1518,21 +1518,40 @@ async function handleUser(user) {
 
 async function loadAgentConfigs() {
   if (!currentUser) return;
-  const { data } = await supabaseClient
-    .from("agent_configs")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .eq("agent_name", "mails")
-    .maybeSingle();
-  if (!data?.config) return;
-  document.getElementById("mails-prenom").value = data.config.prenom || "";
-  document.getElementById("mails-secteur").value = data.config.secteur || "";
-  document.getElementById("mails-tel").value = data.config.tel || "";
-  document.getElementById("mails-sheet").value = data.config.sheet || "";
-  const card = document.getElementById("card-mails");
-  card.querySelector(".agent-status").className = "agent-status ok";
-  card.querySelector(".agent-status").textContent = "Actif";
-  card.classList.add("configured");
+
+  try {
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/agent_configs?user_id=eq." + encodeURIComponent(currentUser.id) + "&agent_name=eq.mails&select=*",
+      {
+        method: "GET",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    const data = await response.json();
+    console.log("LOAD CONFIG:", data);
+
+    if (!Array.isArray(data) || data.length === 0 || !data[0].config) return;
+
+    const config = data[0].config;
+
+    document.getElementById("mails-prenom").value = config.prenom || "";
+    document.getElementById("mails-secteur").value = config.secteur || "";
+    document.getElementById("mails-tel").value = config.tel || "";
+    document.getElementById("mails-sheet").value = config.sheet || "";
+
+    const card = document.getElementById("card-mails");
+    card.querySelector(".agent-status").className = "agent-status ok";
+    card.querySelector(".agent-status").textContent = "Actif";
+    card.classList.add("configured");
+
+  } catch (err) {
+    console.error("Erreur loadAgentConfigs:", err);
+  }
 }
 
 // ─── AGENTS ──────────────────────────────────────────────
