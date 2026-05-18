@@ -1470,15 +1470,20 @@ async function checkGmailStatus() {
 }
   
 async function disconnectGmail() {
-  await supabaseClient
-    .from("user_integrations")
-    .update({ connected: false, updated_at: new Date().toISOString() })
-    .eq("account_email", currentUser.email)
-    .eq("provider", "google");
+  const email = currentUser?.email;
 
-  localStorage.removeItem("gmail_" + currentUser.email);
-  renderGmailDisconnected();
-  showToast("Gmail déconnecté");
+  if (email) {
+    await supabaseClient
+      .from("user_integrations")
+      .update({ connected: false, updated_at: new Date().toISOString() })
+      .eq("account_email", email)
+      .eq("provider", "google");
+
+    localStorage.removeItem("gmail_" + email);
+  }
+
+  renderGmailDisconnected();
+  showToast("Compte mail déconnecté");
 }
 
 // ─── USER ────────────────────────────────────────────────
@@ -1564,8 +1569,12 @@ function openTemplate(name) { showToast("Template " + name + " bientôt disponib
 function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
 
 async function logout() {
-  await supabaseClient.auth.signOut();
-  window.location.href = "index.html";
+  localStorage.removeItem("gmail_" + currentUser?.email);
+  localStorage.removeItem("clarity_email_before_oauth");
+
+  await supabaseClient.auth.signOut();
+
+  window.location.href = "index.html";
 }
 
 // ─── INIT ────────────────────────────────────────────────
