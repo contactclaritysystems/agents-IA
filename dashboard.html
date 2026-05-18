@@ -1470,22 +1470,22 @@ async function checkGmailStatus() {
   console.log("=== CHECK GMAIL ===");
   console.log("currentUser.email:", currentUser.email);
   
-  const { data, error } = await supabaseClient
-    .from("user_integrations")
-    .select("email, connected")
-    .eq("account_email", currentUser.email)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .maybeSingle();
+ const { data, error } = await supabaseClient
+  .from("user_integrations")
+  .select("email, connected")
+  .eq("account_email", currentUser.email)
+  .eq("provider", "google")
+  .eq("connected", true)
+  .limit(1);
 
-  console.log("Data:", data);
-  console.log("Error:", error);
+console.log("Data:", data);
+console.log("Error:", error);
 
-  if (data?.email) {
-    localStorage.setItem("gmail_" + currentUser.email, data.email);
-    renderGmailConnected(data.email);
-    return;
-  }
+if (data && data.length > 0 && data[0].email) {
+  localStorage.setItem("gmail_" + currentUser.email, data[0].email);
+  renderGmailConnected(data[0].email);
+  return;
+}
 
   const cached = localStorage.getItem("gmail_" + currentUser.email);
   console.log("Cached:", cached);
