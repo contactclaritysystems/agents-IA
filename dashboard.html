@@ -1557,8 +1557,12 @@ async function saveAgent(id, btn) {
   
   const { error } = await supabaseClient
     .from("agent_configs")
-    .upsert({ user_id: currentUser.id, agent_name: id, config, updated_at: new Date().toISOString() },
-    { onConflict: "user_id,agent_name" });
+   .insert({
+  user_id: currentUser.id,
+  agent_name: id,
+  config: config,
+  updated_at: new Date().toISOString()
+});
 
 console.log("SAVE RESULT", error);
   
