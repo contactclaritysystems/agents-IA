@@ -1125,7 +1125,21 @@ main > div[style*="background:var(--bg2)"] {
           </a>
         </div>
 
-        <button class="save-btn" onclick="saveAgent('mails', this)">💾 Enregistrer la configuration</button>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+  <button class="save-btn" onclick="startMailDictation()" type="button">🎙️ Dicter un mail</button>
+
+  <button class="sheet-btn" onclick="openClientSheet(); return false;" type="button" style="width:100%;">
+    📋 Ouvrir ma feuille contacts
+  </button>
+</div>
+
+<button class="sheet-btn" onclick="unlockMailsFields(); return false;" type="button" style="width:100%;">
+  ⚙️ Modifier la configuration
+</button>
+
+<button class="save-btn" onclick="saveAgent('mails', this)" type="button">
+  💾 Enregistrer les modifications
+</button>
       </div>
     </div>
 
@@ -1548,6 +1562,8 @@ async function loadAgentConfigs() {
     card.querySelector(".agent-status").className = "agent-status ok";
     card.querySelector(".agent-status").textContent = "Actif";
     card.classList.add("configured");
+    card.classList.remove("open");
+lockMailsFields();
 
   } catch (err) {
     console.error("Erreur loadAgentConfigs:", err);
@@ -1640,6 +1656,30 @@ async function saveAgent(id, btn) {
   }
 }
 
+  function lockMailsFields() {
+  ["mails-prenom", "mails-secteur", "mails-tel", "mails-sheet"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.style.opacity = "0.6";
+      el.style.cursor = "not-allowed";
+    }
+  });
+}
+
+function unlockMailsFields() {
+  ["mails-prenom", "mails-secteur", "mails-tel", "mails-sheet"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = false;
+      el.style.opacity = "1";
+      el.style.cursor = "text";
+    }
+  });
+
+  document.getElementById("card-mails").classList.add("open");
+}
+
 // ─── UTILS ───────────────────────────────────────────────
 
 function showToast(msg) {
@@ -1649,6 +1689,19 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2800);
 }
 
+function openClientSheet() {
+  const sheet = document.getElementById("mails-sheet").value;
+  if (!sheet) {
+    showToast("Ajoutez d'abord votre feuille contacts");
+    return;
+  }
+  window.open(sheet, "_blank");
+}
+
+function startMailDictation() {
+  showToast("Dictée bientôt disponible");
+}
+  
 function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
 
 function openTemplate(name) {
