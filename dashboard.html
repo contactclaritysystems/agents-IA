@@ -1553,10 +1553,15 @@ async function saveAgent(id, btn) {
   const original = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = "⏳ Enregistrement...";
-  const { error } = await supabaseClient
+  console.log("SAVE START");
+  
+  const { error } = await supabaseClient
     .from("agent_configs")
     .upsert({ user_id: currentUser.id, agent_name: id, config, updated_at: new Date().toISOString() },
     { onConflict: "user_id,agent_name" });
+
+console.log("SAVE RESULT", error);
+  
   if (error) {
     alert("Erreur : " + error.message);
     btn.disabled = false;
