@@ -981,6 +981,12 @@ main > div[style*="background:var(--bg2)"] {
 .template-muted {
   opacity: .55;
 }
+
+  .disabled-template {
+  opacity: .45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
   
 </style>
 </head>
@@ -1151,18 +1157,10 @@ main > div[style*="background:var(--bg2)"] {
           <div class="field-label">Lien vers votre carnet de contacts (Google Sheet) <span class="field-required">*</span></div>
           <div class="field-hint">Copiez-collez ici le lien de votre Sheet contacts</div>
           <input class="field-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." id="mails-sheet" />
-        <a href="#" class="sheet-btn template-muted" onclick="openTemplate('contacts'); return false;">
+      <a href="#" id="template-btn" class="sheet-btn template-muted" onclick="openTemplate('contacts'); return false;">
   <span class="sheet-icon">📋</span> Ouvrir le modèle contacts
 </a>
         </div>
-
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-  <button class="save-btn" onclick="startMailDictation()" type="button">🎙️ Dicter un mail</button>
-
-  <button class="sheet-btn" onclick="openClientSheet(); return false;" type="button" style="width:100%;">
-    📋 Ouvrir ma feuille contacts
-  </button>
-</div>
 
 <button class="sheet-btn" onclick="unlockMailsFields(); return false;" type="button" style="width:100%;">
   ⚙️ Modifier la configuration
@@ -1694,6 +1692,7 @@ async function saveAgent(id, btn) {
       el.disabled = true;
       el.style.opacity = "0.6";
       el.style.cursor = "not-allowed";
+      document.getElementById("template-btn")?.classList.add("template-disabled");
     }
   });
 }
@@ -1705,6 +1704,7 @@ function unlockMailsFields() {
       el.disabled = false;
       el.style.opacity = "1";
       el.style.cursor = "text";
+      document.getElementById("template-btn")?.classList.remove("template-disabled");
     }
   });
 
