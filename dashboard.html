@@ -1162,7 +1162,7 @@ main > div[style*="background:var(--bg2)"] {
 </a>
         </div>
 
-<button class="sheet-btn" onclick="unlockMailsFields(); return false;" type="button" style="width:100%;">
+<button class="sheet-btn" id="mails-edit-btn" onclick="unlockMailsFields(); return false;" type="button" style="width:100%;">
   ⚙️ Modifier la configuration
 </button>
 
@@ -1705,6 +1705,11 @@ function unlockMailsFields() {
       el.style.opacity = "1";
       el.style.cursor = "text";
       document.getElementById("template-btn")?.classList.remove("template-disabled");
+      const saveBtn = document.getElementById("mails-save-btn");
+if (saveBtn) saveBtn.style.display = "flex";
+
+const editBtn = document.getElementById("mails-edit-btn");
+if (editBtn) editBtn.style.display = "none";
     }
   });
 
