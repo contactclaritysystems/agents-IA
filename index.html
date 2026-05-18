@@ -595,6 +595,33 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   .modal { padding: 32px 22px; border-radius: 24px; }
   .ba-col { padding: 28px 24px; }
 }
+
+  .typing-cursor {
+  display: inline-block;
+  margin-left: 2px;
+  animation: cursorBlink .8s infinite;
+  color: var(--muted);
+}
+
+@keyframes cursorBlink {
+  0%, 45% { opacity: 1; }
+  46%, 100% { opacity: 0; }
+}
+
+.mail-sent {
+  animation: mailSent .7s ease both;
+}
+
+@keyframes mailSent {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 </style>
 </head>
 <body>
@@ -636,13 +663,25 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     <span>✓ Configuration en 2 minutes</span>
   </div>
   <div class="hero-vis">
-    <div class="hcard">
-      <div class="hcard-lbl">Dictée vocale en cours</div>
-      <div class="vbubble">« Envoie un mail à Anthony, demande-lui s'il peut passer me voir cette semaine. Notre dernier rendez-vous s'est très bien passé. »</div>
-      <div class="abubble">Objet : Suite à notre rendez-vous<br/><br/>Bonjour Anthony,<br/>Notre dernier échange a été très enrichissant. Seriez-vous disponible pour nous retrouver cette semaine ?<br/><br/>Cordialement</div>
-      <div class="hcard-ft"><span class="dot"></span>Mail envoyé via Gmail · il y a 2 secondes</div>
+  <div class="hcard">
+    <div class="hcard-lbl">Dictée vocale en cours</div>
+
+    <div class="vbubble">
+      <span id="dictationText"></span><span class="typing-cursor">|</span>
+    </div>
+
+    <div class="abubble" id="mailPreview" style="opacity:0; transform:translateY(8px);">
+      Objet : Suite à notre rendez-vous<br/><br/>
+      Bonjour Anthony,<br/>
+      Notre dernier échange a été très enrichissant. Seriez-vous disponible pour nous retrouver cette semaine ?<br/><br/>
+      Cordialement
+    </div>
+
+    <div class="hcard-ft" id="mailStatus">
+      <span class="dot"></span>Préparation du mail…
     </div>
   </div>
+</div>
 </section>
 
 <!-- STATS -->
@@ -768,55 +807,11 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 <!-- PRICING -->
 <section class="sec" id="pricing">
   <div class="eye rv">Tarifs</div>
-  <h2 class="stitle rv">Choisissez votre plan.</h2>
-  <p class="ssub rv">Sans engagement. Annulez à tout moment.</p>
-  <div class="pgrid">
-    <div class="pcard rv">
-      <div class="pname">Starter</div>
-      <div class="pprice"><sup>€</sup>49</div>
-      <div class="pper">par mois</div>
-      <div class="pdiv"></div>
-      <ul class="pfeats">
-        <li class="pli">3 agents au choix</li>
-        <li class="pli">Agent Mails inclus</li>
-        <li class="pli">Carnet de contacts</li>
-        <li class="pli">Connexion Gmail</li>
-        <li class="pli">Support par email</li>
-      </ul>
-      <button class="btn-outline-full" onclick="openModal(event)">Commencer</button>
-    </div>
-    <div class="pcard feat rv">
-      <div class="pop-tag">Le plus populaire</div>
-      <div class="pname">Pro</div>
-      <div class="pprice"><sup>€</sup>89</div>
-      <div class="pper">par mois</div>
-      <div class="pdiv"></div>
-      <ul class="pfeats">
-        <li class="pli">Tous les agents inclus</li>
-        <li class="pli">3 agents conditionnels au choix</li>
-        <li class="pli">Nouveaux agents en priorité</li>
-        <li class="pli">Gmail + Google intégré</li>
-        <li class="pli">Support prioritaire</li>
-      </ul>
-      <button class="btn-white-full" onclick="openModal(event)">Commencer</button>
-    </div>
-    <div class="pcard rv">
-      <div class="pname">Business</div>
-      <div class="pprice devis">Sur devis</div>
-      <div class="pper">setup + abonnement mensuel</div>
-      <div class="pdiv"></div>
-      <ul class="pfeats">
-        <li class="pli">Tout le plan Pro</li>
-        <li class="pli">Agents 100% personnalisés</li>
-        <li class="pli">Intégration à vos outils</li>
-        <li class="pli">Accompagnement dédié</li>
-        <li class="pli">Formation de vos équipes</li>
-        <li class="pli">Support téléphonique direct</li>
-      </ul>
-      <a href="mailto:contact@clarity-systems.fr" class="btn-dark-full">Nous contacter →</a>
-    </div>
-  </div>
-  <p class="pricing-note rv">🎁 <strong>Offre de lancement</strong> — 7 jours d'essai gratuit, sans carte bancaire.</p>
+  <h2 class="stitle rv">Essayez d’abord.<br/>Choisissez ensuite.</h2>
+  <p class="ssub rv">
+    7 jours gratuits, sans carte bancaire. Les abonnements commencent ensuite à partir de <strong>29€/mois</strong>.
+  </p>
+  <a href="#" class="btn-dark" onclick="openModal(event)">Commencer gratuitement</a>
 </section>
 
 <!-- CTA FINAL -->
@@ -918,6 +913,49 @@ async function signIn() {
   if (error) { alert(error.message); return; }
   window.location.href = "dashboard.html";
 }
+
+const dictationSentence = "« Envoie un mail à Anthony, demande-lui s'il peut passer me voir cette semaine. Notre dernier rendez-vous s'est très bien passé. »";
+
+function animateHeroDemo() {
+  const textEl = document.getElementById("dictationText");
+  const mailEl = document.getElementById("mailPreview");
+  const statusEl = document.getElementById("mailStatus");
+
+  if (!textEl || !mailEl || !statusEl) return;
+
+  textEl.textContent = "";
+  mailEl.style.opacity = "0";
+  mailEl.style.transform = "translateY(8px)";
+  mailEl.classList.remove("mail-sent");
+  statusEl.innerHTML = '<span class="dot"></span>Dictée en cours…';
+
+  let i = 0;
+
+  const interval = setInterval(() => {
+    textEl.textContent += dictationSentence.charAt(i);
+    i++;
+
+    if (i >= dictationSentence.length) {
+      clearInterval(interval);
+
+      setTimeout(() => {
+        statusEl.innerHTML = '<span class="dot"></span>Rédaction du mail…';
+      }, 400);
+
+      setTimeout(() => {
+        mailEl.classList.add("mail-sent");
+        mailEl.style.opacity = "1";
+        mailEl.style.transform = "translateY(0)";
+        statusEl.innerHTML = '<span class="dot"></span>Mail envoyé via Gmail · il y a 2 secondes';
+      }, 1200);
+    }
+  }, 38);
+}
+
+window.addEventListener("load", () => {
+  animateHeroDemo();
+  setInterval(animateHeroDemo, 9000);
+});
 </script>
 </body>
 </html>
