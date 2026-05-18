@@ -622,6 +622,104 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     transform: translateY(0) scale(1);
   }
 }
+
+/* CHATBOT */
+
+.chatbot-launcher {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+  cursor: pointer;
+  z-index: 999;
+  box-shadow: 0 12px 35px rgba(0,0,0,.22);
+  animation: chatbotFloat 2.6s infinite ease-in-out;
+}
+
+@keyframes chatbotFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.chatbot-window {
+  position: fixed;
+  right: 22px;
+  bottom: 96px;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(29,29,31,.08);
+  border-radius: 28px;
+  overflow: hidden;
+  z-index: 999;
+  box-shadow: 0 24px 80px rgba(0,0,0,.18);
+
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: all .25s ease;
+}
+
+.chatbot-window.open {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
+}
+
+.chatbot-header {
+  padding: 18px 20px;
+  font-size: .9rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--line);
+}
+
+.chatbot-body {
+  padding: 18px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.bot-msg {
+  background: var(--surface-soft);
+  padding: 14px 16px;
+  border-radius: 18px 18px 18px 6px;
+  font-size: .88rem;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.chat-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-options button {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 14px;
+  text-align: left;
+  cursor: pointer;
+  font-size: .85rem;
+  font-family: 'Inter', sans-serif;
+  transition: all .2s;
+}
+
+.chat-options button:hover {
+  background: var(--surface-soft);
+  transform: translateY(-1px);
+}
+  
 </style>
 </head>
 <body>
@@ -957,6 +1055,121 @@ window.addEventListener("load", () => {
   animateHeroDemo();
   setInterval(animateHeroDemo, 15000);
 });
+
+/* CHATBOT */
+
+function toggleChatbot() {
+  document.getElementById('chatbotWindow').classList.toggle('open');
+}
+
+function selectNeed(type) {
+
+  const body = document.getElementById('chatbotBody');
+
+  if (type === 'mails') {
+    body.innerHTML = `
+      <div class="bot-msg">
+        ✉️ L’Agent Mails est parfait pour commencer.<br><br>
+        Vous parlez naturellement, et le mail est rédigé puis envoyé automatiquement depuis votre Gmail.
+      </div>
+
+      <div class="chat-options">
+        <button onclick="openModal(event)">
+          Tester gratuitement →
+        </button>
+      </div>
+    `;
+  }
+
+  if (type === 'devis') {
+    body.innerHTML = `
+      <div class="bot-msg">
+        📄 L’Agent Devis vous permet de créer et envoyer un devis simplement en parlant.
+      </div>
+
+      <div class="chat-options">
+        <button onclick="openModal(event)">
+          Tester gratuitement →
+        </button>
+      </div>
+    `;
+  }
+
+  if (type === 'unknown') {
+    body.innerHTML = `
+      <div class="bot-msg">
+        Pas de souci 👌<br><br>
+        Qu’est-ce qui revient le plus souvent dans votre semaine ?
+      </div>
+
+      <div class="chat-options">
+        <button onclick="recommendAgent('mails')">
+          Répondre à des mails
+        </button>
+
+        <button onclick="recommendAgent('devis')">
+          Faire des devis
+        </button>
+
+        <button onclick="recommendAgent('relances')">
+          Relancer des clients
+        </button>
+
+      </div>
+    `;
+  }
+
+}
+
+function recommendAgent(agent) {
+
+  const body = document.getElementById('chatbotBody');
+
+  body.innerHTML = `
+    <div class="bot-msg">
+      Je pense que cet agent peut vous faire gagner énormément de temps 👌
+    </div>
+
+    <div class="chat-options">
+      <button onclick="openModal(event)">
+        Essayer gratuitement →
+      </button>
+    </div>
+  `;
+}
+  
 </script>
+
+<!-- CHATBOT -->
+<div class="chatbot-launcher" onclick="toggleChatbot()">
+  💬
+</div>
+
+<div class="chatbot-window" id="chatbotWindow">
+
+  <div class="chatbot-header">
+    Assistant Clarity
+  </div>
+
+  <div class="chatbot-body" id="chatbotBody">
+
+    <div class="bot-msg">
+      👋 Bonjour.<br><br>
+      Sur quoi voulez-vous gagner du temps ?
+    </div>
+
+    <div class="chat-options">
+      <button onclick="selectNeed('mails')">✉️ Mails</button>
+      <button onclick="selectNeed('devis')">📄 Devis</button>
+      <button onclick="selectNeed('relances')">🔁 Relances</button>
+      <button onclick="selectNeed('contenu')">✍️ Réseaux</button>
+      <button onclick="selectNeed('planning')">📅 Planning</button>
+      <button onclick="selectNeed('unknown')">🤔 Je ne sais pas</button>
+    </div>
+
+  </div>
+
+</div>
+  
 </body>
 </html>
