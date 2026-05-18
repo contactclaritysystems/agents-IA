@@ -1671,6 +1671,7 @@ async function saveAgent(id, btn) {
     card.classList.add("configured");
 
     showToast("Configuration enregistrée");
+    lockMailsFields();
 
     setTimeout(() => {
       btn.disabled = false;
