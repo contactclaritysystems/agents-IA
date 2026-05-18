@@ -1585,8 +1585,13 @@ function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
 function openTemplate(name) { showToast("Template " + name + " bientôt disponible"); }
 function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
 
-async function logout() {
-  await supabaseClient.auth.signOut();
+function logout() {
+  try {
+    supabaseClient.auth.signOut();
+  } catch (e) {
+    console.error("Erreur logout:", e);
+  }
+
   window.location.href = "index.html";
 }
 
