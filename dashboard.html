@@ -1435,18 +1435,6 @@ console.log("Code brut:", code);
     console.log("Make result:", result);
 
     if (result.gmail_email && result.access_token) {
-      await supabaseClient
-        .from("user_integrations")
-        .upsert({
-          account_email: clarityEmail,
-          provider: "google",
-          email: result.gmail_email,
-          access_token: result.access_token,
-          refresh_token: result.refresh_token || null,
-          connected: true,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "account_email,provider" });
-
      localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
 localStorage.removeItem("clarity_email_before_oauth");
 
@@ -1454,6 +1442,7 @@ renderGmailConnected(result.gmail_email);
 showToast("Compte Gmail connecté");
 
 return true;
+      
     } else {
       console.error("Champs manquants dans la réponse Make:", result);
       renderGmailDisconnected();
@@ -1469,26 +1458,9 @@ return true;
 async function checkGmailStatus() {
   console.log("=== CHECK GMAIL ===");
   console.log("currentUser.email:", currentUser.email);
-  
- const { data, error } = await supabaseClient
-  .from("user_integrations")
-  .select("email, connected")
-  .eq("account_email", currentUser.email)
-  .eq("provider", "google")
-  .eq("connected", true)
-  .limit(1);
-
-console.log("Data:", data);
-console.log("Error:", error);
-
-if (data && data.length > 0 && data[0].email) {
-  localStorage.setItem("gmail_" + currentUser.email, data[0].email);
-  renderGmailConnected(data[0].email);
-  return;
-}
 
   const cached = localStorage.getItem("gmail_" + currentUser.email);
-  console.log("Cached:", cached);
+
   if (cached) {
     renderGmailConnected(cached);
     return;
@@ -1496,7 +1468,7 @@ if (data && data.length > 0 && data[0].email) {
 
   renderGmailDisconnected();
 }
-
+  
 async function disconnectGmail() {
   await supabaseClient
     .from("user_integrations")
