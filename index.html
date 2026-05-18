@@ -719,6 +719,22 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   background: var(--surface-soft);
   transform: translateY(-1px);
 }
+
+@media(max-width: 600px) {
+  .chatbot-window {
+    right: 14px;
+    left: 14px;
+    bottom: 86px;
+    width: auto;
+    max-width: none;
+    max-height: 52vh;
+    border-radius: 22px;
+  }
+
+  .chatbot-body {
+    max-height: calc(52vh - 62px);
+  }
+}
   
 </style>
 </head>
@@ -1064,47 +1080,40 @@ function toggleChatbot() {
 
 function selectNeed(type) {
 
-  const body = document.getElementById('chatbotBody');
-
   if (type === 'mails') {
-    body.innerHTML = `
-      <div class="bot-msg">
-        ✉️ L’Agent Mails est parfait pour commencer.<br><br>
-        Vous parlez naturellement, et le mail est rédigé puis envoyé automatiquement depuis votre Gmail.
-      </div>
-
-      <div class="chat-options">
-        <button onclick="openModal(event)">
-          Tester gratuitement →
-        </button>
-      </div>
-    `;
+    recommendAgent('mails');
   }
 
   if (type === 'devis') {
-    body.innerHTML = `
-      <div class="bot-msg">
-        📄 L’Agent Devis vous permet de créer et envoyer un devis simplement en parlant.
-      </div>
+    recommendAgent('devis');
+  }
 
-      <div class="chat-options">
-        <button onclick="openModal(event)">
-          Tester gratuitement →
-        </button>
-      </div>
-    `;
+  if (type === 'relances') {
+    recommendAgent('relances');
+  }
+
+  if (type === 'contenu') {
+    recommendAgent('contenu');
+  }
+
+  if (type === 'planning') {
+    recommendAgent('planning');
   }
 
   if (type === 'unknown') {
+
+    const body = document.getElementById('chatbotBody');
+
     body.innerHTML = `
       <div class="bot-msg">
-        Pas de souci 👌<br><br>
-        Qu’est-ce qui revient le plus souvent dans votre semaine ?
+        Pas de problème 👍<br><br>
+        Parmi ces tâches, laquelle vous prend le plus de temps ?
       </div>
 
       <div class="chat-options">
+
         <button onclick="recommendAgent('mails')">
-          Répondre à des mails
+          Répondre aux mails
         </button>
 
         <button onclick="recommendAgent('devis')">
@@ -1115,25 +1124,81 @@ function selectNeed(type) {
           Relancer des clients
         </button>
 
+        <button onclick="recommendAgent('planning')">
+          Organiser mes rendez-vous
+        </button>
+
       </div>
     `;
   }
-
 }
 
 function recommendAgent(agent) {
-
   const body = document.getElementById('chatbotBody');
+
+  const recommendations = {
+    mails: {
+      icon: "✉️",
+      name: "Agent Mails",
+      text: "Vous répondez souvent aux mêmes messages. L’Agent Mails est le plus simple pour commencer : vous parlez, il rédige et peut envoyer le mail à votre place."
+    },
+    devis: {
+      icon: "📄",
+      name: "Agent Devis",
+      text: "Si vous faites régulièrement des devis, c’est probablement l’agent qui vous fera gagner le plus de temps. Vous dictez la demande, il prépare un devis propre."
+    },
+    relances: {
+      icon: "🔁",
+      name: "Agent Relance",
+      text: "Si vous oubliez parfois de relancer vos clients ou prospects, l’Agent Relance est le plus utile. Il vous aide à ne plus laisser de demandes sans suite."
+    },
+    contenu: {
+      icon: "✍️",
+      name: "Agent Réseaux",
+      text: "Si vous voulez communiquer plus souvent sans perdre du temps à écrire, l’Agent Réseaux vous propose des posts prêts à améliorer."
+    },
+    planning: {
+      icon: "📅",
+      name: "Agent Planning",
+      text: "Si vous gérez beaucoup de rendez-vous, l’Agent Planning vous aide à créer, confirmer et suivre vos rendez-vous plus facilement."
+    }
+  };
+
+  const r = recommendations[agent] || recommendations.mails;
 
   body.innerHTML = `
     <div class="bot-msg">
-      Je pense que cet agent peut vous faire gagner énormément de temps 👌
+      ${r.icon} Je vous conseille de tester <strong>${r.name}</strong> en premier.<br><br>
+      ${r.text}
     </div>
 
     <div class="chat-options">
       <button onclick="openModal(event)">
-        Essayer gratuitement →
+        Tester ${r.name} gratuitement →
       </button>
+      <button onclick="resetChatbot()">
+        Choisir un autre besoin
+      </button>
+    </div>
+  `;
+}
+
+  function resetChatbot() {
+  const body = document.getElementById('chatbotBody');
+
+  body.innerHTML = `
+    <div class="bot-msg">
+      👋 Bonjour.<br><br>
+      Sur quoi voulez-vous gagner du temps ?
+    </div>
+
+    <div class="chat-options">
+      <button onclick="recommendAgent('mails')">✉️ Mails</button>
+      <button onclick="recommendAgent('devis')">📄 Devis</button>
+      <button onclick="recommendAgent('relances')">🔁 Relances</button>
+      <button onclick="recommendAgent('contenu')">✍️ Réseaux</button>
+      <button onclick="recommendAgent('planning')">📅 Planning</button>
+      <button onclick="selectNeed('unknown')">🤔 Je ne sais pas</button>
     </div>
   `;
 }
