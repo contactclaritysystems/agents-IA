@@ -1693,6 +1693,11 @@ async function saveAgent(id, btn) {
       el.style.opacity = "0.6";
       el.style.cursor = "not-allowed";
       document.getElementById("template-btn")?.classList.add("template-disabled");
+      const saveBtn = document.getElementById("mails-save-btn");
+if (saveBtn) saveBtn.style.display = "none";
+
+const editBtn = document.getElementById("mails-edit-btn");
+if (editBtn) editBtn.style.display = "flex";
     }
   });
 }
