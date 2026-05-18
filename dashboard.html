@@ -994,7 +994,7 @@ main > div[style*="background:var(--bg2)"] {
     </a>
   </div>
 
-  <button class="nav-item" onclick="logout()">
+  <button class="nav-item" onclick="window.logout()" type="button">
   <span class="icon">🚪</span> Déconnexion
 </button>
 
@@ -1353,7 +1353,7 @@ function renderGmailConnected(gmailEmail) {
   document.getElementById("gmail-ui").innerHTML = `
     <div class="gmail-connected-badge">
       ✓ ${gmailEmail}
-      <button onclick="disconnectGmail()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
+      <button type="button" onclick="window.disconnectGmail()" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
     </div>`;
 }
 
@@ -1485,7 +1485,7 @@ async function disconnectGmail() {
   renderGmailDisconnected();
   showToast("Compte mail déconnecté");
 }
-
+  
 // ─── USER ────────────────────────────────────────────────
 
 async function handleUser(user) {
@@ -1600,6 +1600,9 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
   await handleUser(data.session.user);
 })();
+
+  window.disconnectGmail = disconnectGmail;
+window.logout = logout;
 </script>
 
 </body>
