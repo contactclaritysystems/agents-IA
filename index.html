@@ -627,169 +627,124 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
 .chatbot-launcher {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
-  width: 62px;
-  height: 62px;
+  right: 16px;
+  bottom: 16px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--dark);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   cursor: pointer;
   z-index: 999;
-  box-shadow: 0 12px 35px rgba(0,0,0,.22);
-  animation: chatbotFloat 2.6s infinite ease-in-out;
-}
-
-@keyframes chatbotFloat {
-  0%,100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  box-shadow: 0 14px 38px rgba(0,0,0,.24);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chatbot-window {
   position: fixed;
   right: 18px;
-  bottom: 92px;
-  width: 330px;
-  max-width: calc(100vw - 36px);
-  max-height: 58vh;
-  background: rgba(255,255,255,.94);
-  backdrop-filter: blur(24px);
-  border: 1px solid rgba(29,29,31,.08);
+  bottom: 86px;
+  width: 335px;
+  max-width: calc(100vw - 32px);
+  max-height: 48vh;
+  background: rgba(22,22,24,.94);
+  color: white;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255,255,255,.08);
   border-radius: 24px;
   overflow: hidden;
   z-index: 999;
-  box-shadow: 0 24px 80px rgba(0,0,0,.18);
+  box-shadow: 0 26px 90px rgba(0,0,0,.32);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(12px);
-  transition: all .25s ease;
+  transform: translateY(12px) scale(.98);
+  transition: all .24s ease;
 }
 
 .chatbot-window.open {
   opacity: 1;
   pointer-events: all;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
 }
 
 .chatbot-header {
-  padding: 18px 20px;
-  font-size: .9rem;
-  font-weight: 700;
-  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  font-size: .86rem;
+  font-weight: 750;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  color: white;
 }
 
 .chatbot-body {
-  padding: 18px;
-  max-height: 480px;
+  padding: 13px;
+  max-height: calc(48vh - 52px);
   overflow-y: auto;
 }
 
 .bot-msg {
-  background: var(--surface-soft);
-  padding: 14px 16px;
-  border-radius: 18px 18px 18px 6px;
-  font-size: .88rem;
-  line-height: 1.6;
-  margin-bottom: 16px;
+  background: rgba(255,255,255,.075);
+  color: rgba(255,255,255,.9);
+  border: 1px solid rgba(255,255,255,.06);
+  padding: 12px 13px;
+  border-radius: 16px;
+  font-size: .8rem;
+  line-height: 1.45;
+  margin-bottom: 11px;
 }
 
 .chat-options {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
 .chat-options button {
-  background: white;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 13px 14px;
+  background: rgba(255,255,255,.96);
+  color: var(--dark);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  padding: 10px 12px;
   text-align: left;
   cursor: pointer;
-  font-size: .85rem;
+  font-size: .78rem;
+  line-height: 1.3;
+  font-weight: 600;
   font-family: 'Inter', sans-serif;
-  transition: all .2s;
+  transition: transform .18s ease, background .18s ease;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .chat-options button:hover {
-  background: var(--surface-soft);
+  background: white;
   transform: translateY(-1px);
 }
 
-@media(max-width:600px){
-
-  .chatbot-window{
-    left: 14px !important;
-    right: 14px !important;
-    bottom: 82px !important;
-
-    max-height: 48vh !important;
-    border-radius: 24px;
-  }
-
-  .chatbot-body{
-    max-height: calc(48vh - 58px);
-    overflow-y:auto;
-    padding: 12px;
-  }
-
-  .chat-options button{
-    padding: 10px 12px;
-    font-size: .78rem;
-  }
-
+.chat-options button:focus,
+.chat-options button:active {
+  outline: none;
+  background: rgba(255,255,255,.96);
+  transform: none;
 }
 
-@media(max-width: 600px) {
-  .chatbot-launcher {
-    right: 16px;
-    bottom: 16px;
-    width: 54px;
-    height: 54px;
-    font-size: 1.25rem;
-  }
-
+@media(max-width:600px) {
   .chatbot-window {
-    left: 12px !important;
-    right: 12px !important;
-    bottom: 82px !important;
-    width: auto !important;
-    max-width: none !important;
-    max-height: 60vh !important;
-    border-radius: 22px !important;
-  }
-
-  .chatbot-header {
-    padding: 14px 16px !important;
-    font-size: .82rem !important;
+    left: 14px;
+    right: 14px;
+    bottom: 78px;
+    width: auto;
+    max-width: none;
+    max-height: 46vh;
+    border-radius: 22px;
   }
 
   .chatbot-body {
-    padding: 14px !important;
-    max-height: calc(60vh - 52px) !important;
-    overflow-y: auto !important;
-  }
-
-  .bot-msg {
-    font-size: .8rem !important;
-    line-height: 1.45 !important;
-    padding: 12px 13px !important;
-    margin-bottom: 12px !important;
-  }
-
-  .chat-options {
-    gap: 8px !important;
-  }
-
-  .chat-options button {
-    font-size: .78rem !important;
-    line-height: 1.35 !important;
-    padding: 11px 12px !important;
-    border-radius: 13px !important;
+    max-height: calc(46vh - 50px);
   }
 }
   
@@ -1291,30 +1246,14 @@ function openRegisterFromChat(e) {
 </div>
 
     <div class="chat-options">
-      <button onclick="recommendAgent('mails')">✉️ Mails</button>
-      <button onclick="recommendAgent('devis')">📄 Devis</button>
-      <button onclick="recommendAgent('relances')">🔁 Relances</button>
-      <button onclick="recommendAgent('contenu')">✍️ Réseaux</button>
-      <button onclick="recommendAgent('planning')">📅 Planning</button>
-      <button onclick="selectNeed('unknown')">🤔 Je ne sais pas</button>
+      <button onclick="selectNeed('mails')">✉️ Répondre / envoyer des messages</button>
+<button onclick="selectNeed('devis')">📄 Préparer des devis ou documents</button>
+<button onclick="selectNeed('relances')">🔁 Relancer des clients</button>
+<button onclick="selectNeed('planning')">📅 Organiser des rendez-vous</button>
+<button onclick="selectNeed('contenu')">✍️ Trouver quoi publier</button>
+<button onclick="selectNeed('unknown')">🤔 Je ne sais pas trop</button>
     </div>
   `;
-}
-
-function openRegisterFromChat(e) {
-  if (e) e.preventDefault();
-
-  const chat = document.getElementById('chatbotWindow');
-  if (chat) chat.classList.remove('open');
-
-  openModal(e);
-
-  const buttons = document.querySelectorAll('.tbtn');
-  buttons.forEach(t => t.classList.remove('active'));
-
-  buttons[1].classList.add('active');
-  document.getElementById('loginForm').style.display = 'none';
-  document.getElementById('registerForm').style.display = 'block';
 }
   
 </script>
@@ -1333,9 +1272,10 @@ function openRegisterFromChat(e) {
   <div class="chatbot-body" id="chatbotBody">
 
     <div class="bot-msg">
-      👋 Bonjour.<br><br>
-      Sur quoi voulez-vous gagner du temps ?
-    </div>
+  👋 Bonjour.<br><br>
+  Je peux vous aider à trouver l’agent le plus utile pour vous.<br><br>
+  Qu’est-ce qui vous prend le plus de temps dans une semaine ?
+</div>
 
     <div class="chat-options">
       <button onclick="selectNeed('mails')">✉️ Répondre / envoyer des messages</button>
