@@ -1542,43 +1542,83 @@ function toggleCard(id) {
 }
 
 async function saveAgent(id, btn) {
-  if (!currentUser) { window.location.href = "index.html"; return; }
-  if (id !== "mails") { alert("Cet agent n'est pas encore connecté à la base."); return; }
+  if (!currentUser) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  if (id !== "mails") {
+    alert("Cet agent n'est pas encore connecté à la base.");
+    return;
+  }
+
   const config = {
     prenom: document.getElementById("mails-prenom").value,
     secteur: document.getElementById("mails-secteur").value,
     tel: document.getElementById("mails-tel").value,
     sheet: document.getElementById("mails-sheet").value
   };
+
   const original = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = "⏳ Enregistrement...";
-  console.log("SAVE START");
-  
-  const { error } = await supabaseClient
-    .from("agent_configs")
-   .insert({
-  user_id: currentUser.id,
-  agent_name: id,
-  config: config,
-  updated_at: new Date().toISOString()
-});
 
-console.log("SAVE RESULT", error);
-  
-  if (error) {
-    alert("Erreur : " + error.message);
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates,return=representation"
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          agent_name: "mails",
+          config: config,
+          updated_at: new Date().toISOString()
+        }),
+        signal: controller.signal
+      }
+    );
+
+    clearTimeout(timeout);
+
+    const resultText = await response.text();
+    console.log("SAVE RESPONSE:", response.status, resultText);
+
+    if (!response.ok) {
+      alert("Erreur sauvegarde : " + resultText);
+      btn.disabled = false;
+      btn.innerHTML = original;
+      return;
+    }
+
+    btn.innerHTML = "✓ Enregistré";
+
+    const card = document.getElementById("card-mails");
+    card.querySelector(".agent-status").className = "agent-status ok";
+    card.querySelector(".agent-status").textContent = "Actif";
+    card.classList.add("configured");
+
+    showToast("Configuration enregistrée");
+
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }, 2500);
+
+  } catch (err) {
+    console.error("Erreur saveAgent:", err);
+    alert("Erreur sauvegarde ou timeout");
     btn.disabled = false;
     btn.innerHTML = original;
-    return;
   }
-  btn.innerHTML = "✓ Enregistré";
-  const card = document.getElementById("card-" + id);
-  card.querySelector(".agent-status").className = "agent-status ok";
-  card.querySelector(".agent-status").textContent = "Actif";
-  card.classList.add("configured");
-  showToast("Configuration enregistrée");
-  setTimeout(() => { btn.disabled = false; btn.innerHTML = original; }, 2500);
 }
 
 // ─── UTILS ───────────────────────────────────────────────
