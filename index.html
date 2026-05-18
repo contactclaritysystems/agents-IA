@@ -755,7 +755,7 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 <!-- BANDEAU -->
 <div class="promo-banner" id="promoBanner">
   <span>🎁 <strong>Offre de lancement</strong> — Essayez n'importe quel agent gratuitement pendant 7 jours, sans carte bancaire.</span>
-  <a href="#" class="pb-cta" onclick="openModal(event)">Commencer →</a>
+  <a href="#" class="pb-cta" onclick="openRegisterFromChat(event)">Commencer →</a>
   <button class="pb-close" onclick="closeBanner()" aria-label="Fermer">✕</button>
 </div>
 
@@ -1087,7 +1087,13 @@ window.addEventListener("load", () => {
 /* CHATBOT */
 
 function toggleChatbot() {
-  document.getElementById('chatbotWindow').classList.toggle('open');
+  const chat = document.getElementById('chatbotWindow');
+
+  if (!chat.classList.contains('open')) {
+    resetChatbot();
+  }
+
+  chat.classList.toggle('open');
 }
 
 function selectNeed(type) {
@@ -1235,7 +1241,7 @@ function openRegisterFromChat(e) {
   document.getElementById('registerForm').style.display = 'block';
 }
   
-  function resetChatbot() {
+function resetChatbot() {
   const body = document.getElementById('chatbotBody');
 
   body.innerHTML = `
