@@ -743,6 +743,18 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     border-radius: 22px;
   }
 }
+
+.logo-img {
+  height: 34px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+header {
+  display: flex;
+  align-items: center;
+}
   
 </style>
 </head>
@@ -757,7 +769,9 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
 <!-- NAV -->
 <nav id="mainNav">
-  <div class="nav-logo">Clarity Systems</div>
+  <div class="nav-logo">
+  <img src="https://i.imgur.com/1ZFTLIo.png" class="logo-img" alt="Clarity Systems">
+</div>
   <ul class="nav-links">
     <li><a href="#agents">Agents</a></li>
     <li><a href="#how">Fonctionnement</a></li>
