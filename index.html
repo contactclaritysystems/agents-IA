@@ -1080,57 +1080,76 @@ function toggleChatbot() {
 
 function selectNeed(type) {
 
-  if (type === 'mails') {
-    recommendAgent('mails');
-  }
-
-  if (type === 'devis') {
-    recommendAgent('devis');
-  }
-
-  if (type === 'relances') {
-    recommendAgent('relances');
-  }
-
-  if (type === 'contenu') {
-    recommendAgent('contenu');
-  }
-
-  if (type === 'planning') {
-    recommendAgent('planning');
-  }
+  const body = document.getElementById('chatbotBody');
 
   if (type === 'unknown') {
 
-    const body = document.getElementById('chatbotBody');
-
     body.innerHTML = `
       <div class="bot-msg">
-        Pas de problème 👍<br><br>
-        Parmi ces tâches, laquelle vous prend le plus de temps ?
+        Pas de souci 👌<br><br>
+        Parmi ces situations, laquelle vous ressemble le plus ?
       </div>
 
       <div class="chat-options">
 
-        <button onclick="recommendAgent('mails')">
-          Répondre aux mails
+        <button onclick="painPoint('mails')">
+          Je passe beaucoup de temps à répondre aux messages
         </button>
 
-        <button onclick="recommendAgent('devis')">
-          Faire des devis
+        <button onclick="painPoint('devis')">
+          Je fais souvent des devis ou documents
         </button>
 
-        <button onclick="recommendAgent('relances')">
-          Relancer des clients
+        <button onclick="painPoint('relances')">
+          J’oublie parfois de relancer des clients
         </button>
 
-        <button onclick="recommendAgent('planning')">
-          Organiser mes rendez-vous
+        <button onclick="painPoint('planning')">
+          Mon organisation / planning me fatigue
+        </button>
+
+        <button onclick="painPoint('contenu')">
+          Je voudrais être plus actif sur les réseaux
         </button>
 
       </div>
     `;
+
+    return;
   }
+
+  painPoint(type);
+}
+
+function painPoint(type) {
+
+  const body = document.getElementById('chatbotBody');
+
+  body.innerHTML = `
+    <div class="bot-msg">
+      Qu’est-ce qui vous dérange le plus dans cette tâche ?
+    </div>
+
+    <div class="chat-options">
+
+      <button onclick="recommendAgent('${type}')">
+        Ça me prend trop de temps
+      </button>
+
+      <button onclick="recommendAgent('${type}')">
+        Je repousse toujours
+      </button>
+
+      <button onclick="recommendAgent('${type}')">
+        J’oublie parfois
+      </button>
+
+      <button onclick="recommendAgent('${type}')">
+        Je veux aller plus vite
+      </button>
+
+    </div>
+  `;
 }
 
 function recommendAgent(agent) {
