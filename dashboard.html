@@ -957,6 +957,23 @@ main > div[style*="background:var(--bg2)"] {
   }
 }
 
+.agent-quick-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.agent-quick-actions button {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.85);
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text);
+}
+  
 </style>
 </head>
 <body>
@@ -1089,8 +1106,14 @@ main > div[style*="background:var(--bg2)"] {
           <div class="agent-name">Agent Mails</div>
           <div class="agent-desc">Rédige et envoie des mails professionnels depuis votre Gmail</div>
         </div>
-        <div class="agent-status ok">Actif</div>
-        <div class="agent-toggle">▾</div>
+       <div class="agent-status ok">Actif</div>
+
+<div class="agent-quick-actions">
+  <button type="button" onclick="event.stopPropagation(); startMailDictation();">🎙️ Dicter</button>
+  <button type="button" onclick="event.stopPropagation(); openClientSheet();">📋 Contacts</button>
+</div>
+
+<div class="agent-toggle">▾</div>
       </div>
       <div class="agent-body">
         <div class="info-box">
@@ -1137,7 +1160,7 @@ main > div[style*="background:var(--bg2)"] {
   ⚙️ Modifier la configuration
 </button>
 
-<button class="save-btn" onclick="saveAgent('mails', this)" type="button">
+<button class="save-btn" id="mails-save-btn" onclick="saveAgent('mails', this)" type="button" style="display:none;">
   💾 Enregistrer les modifications
 </button>
       </div>
