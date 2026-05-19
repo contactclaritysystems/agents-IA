@@ -1766,9 +1766,12 @@ if (editBtn) editBtn.style.display = "none";
   document.getElementById("card-mails").classList.add("open");
 }
 
-  async function saveProfile() {
+ async function saveProfile() {
 
-  if (!currentUser) return;
+  if (!currentUser) {
+    console.log("Pas connecté");
+    return;
+  }
 
   const profile = {
     firstname: document.getElementById("profile-firstname").value,
@@ -1777,6 +1780,8 @@ if (editBtn) editBtn.style.display = "none";
     city: document.getElementById("profile-city").value,
     job: document.getElementById("profile-job").value
   };
+
+  console.log("PROFILE:", profile);
 
   try {
 
@@ -1788,7 +1793,7 @@ if (editBtn) editBtn.style.display = "none";
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": "Bearer " + SUPABASE_ANON_KEY,
           "Content-Type": "application/json",
-          "Prefer": "resolution=merge-duplicates"
+          "Prefer": "resolution=merge-duplicates,return=representation"
         },
         body: JSON.stringify({
           user_id: currentUser.id,
@@ -1799,6 +1804,11 @@ if (editBtn) editBtn.style.display = "none";
       }
     );
 
+    const result = await response.text();
+
+    console.log("SAVE PROFILE STATUS:", response.status);
+    console.log("SAVE PROFILE RESULT:", result);
+
     if (!response.ok) {
       showToast("Erreur sauvegarde profil");
       return;
@@ -1807,7 +1817,7 @@ if (editBtn) editBtn.style.display = "none";
     showToast("Informations enregistrées");
 
   } catch (err) {
-    console.error(err);
+    console.error("SAVE PROFILE ERROR:", err);
     showToast("Erreur sauvegarde profil");
   }
 }
