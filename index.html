@@ -767,8 +767,8 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
 @media(max-width:600px) {
   .chatbot-nudge {
-    right: 86px;
-    bottom: 96px;
+    right: 18px;
+    bottom: 42px;
     font-size: .72rem;
     padding: 9px 12px;
   }
@@ -1311,13 +1311,13 @@ function resetChatbot() {
   setTimeout(() => {
   const nudge = document.querySelector('.chatbot-nudge');
   if (nudge) nudge.classList.add('show');
-}, 4000);
+}, 9000);
   
 </script>
 
 <!-- CHATBOT -->
 <div class="chatbot-nudge" onclick="toggleChatbot()">
-  Trouver mon agent →
+  Trouver mon agent ↗️
 </div>
 
 <div class="chatbot-launcher" onclick="toggleChatbot()">
