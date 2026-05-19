@@ -575,10 +575,23 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   .ba-arrow { transform: rotate(90deg); }
 }
 
+.mobile-login {
+  display: none;
+}
+  
 @media(max-width: 600px) {
   .logo-img { 
     height: 46px; 
   }
+
+  .mobile-login {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  opacity: .72;
+}
 
   .promo-banner { font-size: .68rem; padding: 9px 42px 9px 12px; gap: 7px; }
   .pb-cta { padding: 4px 10px; font-size: .65rem; }
@@ -819,9 +832,12 @@ header {
   <ul class="nav-links">
     <li><a href="#agents">Agents</a></li>
     <li><a href="#how">Fonctionnement</a></li>
-    <li><a href="#pricing">Tarifs</a></li>
-    <li><a href="#" class="nav-cta" onclick="openRegisterFromChat(event)">Commencer</a></li>
+   <li><a href="#pricing">Tarifs</a></li>
+<li><a href="#" onclick="openLoginModal(event)">Se connecter</a></li>
+<li><a href="#" class="nav-cta" onclick="openRegisterFromChat(event)">Commencer</a></li>
   </ul>
+  
+  <a href="#" class="mobile-login" onclick="openLoginModal(event)">Se connecter</a>
 </nav>
 
 <!-- HERO -->
@@ -1051,6 +1067,20 @@ function openModal(e) {
   document.getElementById('authModal').classList.add('open');
 }
 
+function openLoginModal(e) {
+  if (e) e.preventDefault();
+
+  openModal(e);
+
+  const buttons = document.querySelectorAll('.tbtn');
+  buttons.forEach(t => t.classList.remove('active'));
+
+  buttons[0].classList.add('active');
+
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('registerForm').style.display = 'none';
+}
+  
 function closeModal() {
   document.getElementById('authModal').classList.remove('open');
 }
