@@ -786,6 +786,14 @@ select.field-input {
   flex-shrink: 0;
 }
 
+.page-view {
+  display: none;
+}
+
+.page-view.active {
+  display: block;
+}
+
 /* TOAST */
 .toast {
   position: fixed;
@@ -1041,7 +1049,7 @@ main > div[style*="background:var(--bg2)"] {
 </aside>
   
 <!-- MAIN -->
-<main class="main" id="main-dashboard">
+<main class="main page-view active" id="main-settings">
   <div class="topbar">
     <div>
      <div class="page-title">Réglages <span>agents</span></div>
@@ -1373,6 +1381,33 @@ main > div[style*="background:var(--bg2)"] {
     </ul>
   </div>
 
+</main>
+
+<main class="main page-view" id="main-agents">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Mes <span>agents</span></div>
+      <div class="page-subtitle">Lancez vos agents prêts à l’emploi.</div>
+    </div>
+  </div>
+
+  <div class="agents-grid">
+    <div class="agent-card configured">
+      <div class="agent-head">
+        <div class="agent-emoji">✉️</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">Agent Mails</div>
+          <div class="agent-desc">Dictez un mail. L’agent rédige et envoie depuis votre Gmail connecté.</div>
+        </div>
+        <div class="agent-status ok">Prêt</div>
+      </div>
+
+      <div class="agent-body" style="display:flex;">
+        <button class="save-btn" onclick="startMailDictation()">🎙️ Dicter un mail</button>
+        <button class="sheet-btn" onclick="openClientSheet()" style="width:100%;">📋 Ouvrir mes contacts</button>
+      </div>
+    </div>
+  </div>
 </main>
 
 <!-- TOAST -->
@@ -1854,7 +1889,30 @@ function openTemplate(name) {
   showToast("Template bientôt disponible");
 }
   
-function showSection(section) { showToast("Section " + section + " bientôt disponible"); }
+function showSection(section) {
+  document.querySelectorAll(".page-view").forEach(page => {
+    page.classList.remove("active");
+  });
+
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.classList.remove("active");
+  });
+
+  if (section === "agents") {
+    document.getElementById("main-agents").classList.add("active");
+    event.target.closest(".nav-item").classList.add("active");
+    return;
+  }
+
+  if (section === "settings") {
+    document.getElementById("main-settings").classList.add("active");
+    event.target.closest(".nav-item").classList.add("active");
+    return;
+  }
+
+  document.getElementById("main-settings").classList.add("active");
+  showToast("Section bientôt disponible");
+}
 
 function logout() {
   try {
