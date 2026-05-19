@@ -1112,7 +1112,11 @@ main > div[style*="background:var(--bg2)"] {
       <input class="field-input" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." />
     </div>
 
-    <button class="save-btn" id="profile-save-btn" onclick="saveProfile()" type="button">
+   <button class="sheet-btn" id="profile-edit-btn" onclick="unlockProfileFields()" type="button" style="width:100%; display:none;">
+  ⚙️ Modifier les informations
+</button>
+
+<button class="save-btn" id="profile-save-btn" onclick="saveProfile()" type="button">
   💾 Enregistrer les informations
 </button>
 
@@ -1825,6 +1829,7 @@ if (editBtn) editBtn.style.display = "none";
 }
 
   function lockProfileFields() {
+
   [
     "profile-firstname",
     "profile-lastname",
@@ -1832,7 +1837,9 @@ if (editBtn) editBtn.style.display = "none";
     "profile-city",
     "profile-job"
   ].forEach(id => {
+
     const el = document.getElementById(id);
+
     if (el) {
       el.disabled = true;
       el.style.opacity = "0.6";
@@ -1841,13 +1848,14 @@ if (editBtn) editBtn.style.display = "none";
   });
 
   const saveBtn = document.getElementById("profile-save-btn");
-  if (saveBtn) {
-    saveBtn.innerHTML = "⚙️ Modifier les informations";
-    saveBtn.onclick = unlockProfileFields;
-  }
+  const editBtn = document.getElementById("profile-edit-btn");
+
+  if (saveBtn) saveBtn.style.display = "none";
+  if (editBtn) editBtn.style.display = "flex";
 }
 
 function unlockProfileFields() {
+
   [
     "profile-firstname",
     "profile-lastname",
@@ -1855,7 +1863,9 @@ function unlockProfileFields() {
     "profile-city",
     "profile-job"
   ].forEach(id => {
+
     const el = document.getElementById(id);
+
     if (el) {
       el.disabled = false;
       el.style.opacity = "1";
@@ -1864,10 +1874,10 @@ function unlockProfileFields() {
   });
 
   const saveBtn = document.getElementById("profile-save-btn");
-  if (saveBtn) {
-    saveBtn.innerHTML = "💾 Enregistrer les informations";
-    saveBtn.onclick = saveProfile;
-  }
+  const editBtn = document.getElementById("profile-edit-btn");
+
+  if (saveBtn) saveBtn.style.display = "flex";
+  if (editBtn) editBtn.style.display = "none";
 }
 
   async function loadProfile() {
