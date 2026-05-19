@@ -1462,7 +1462,7 @@ main > div[style*="background:var(--bg2)"] {
   <div class="gmail-section" style="display:block;">
     <div class="field-row">
       <input class="field-input" id="contact-search" placeholder="Rechercher un contact..." oninput="renderContacts()" />
-      <button class="save-btn" onclick="addContact()" type="button">+ Ajouter un contact</button>
+      <button class="save-btn" id="contact-submit-btn" onclick="addContact()" type="button">+ Ajouter un contact</button>
     </div>
 
     <div class="field-row" style="margin-top:18px;">
@@ -2291,7 +2291,10 @@ function renderContacts() {
             ${c.email || "Aucun email"} · ${c.phone || "Aucun téléphone"}
           </div>
         </div>
-        <button class="sheet-btn" onclick="deleteContact('${c.id}')" type="button">Supprimer</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="sheet-btn" onclick="editContact('${c.id}')" type="button">Modifier</button>
+          <button class="sheet-btn" onclick="deleteContact('${c.id}')" type="button">Supprimer</button>
+        </div>
       </div>
     </div>
   `).join("");
@@ -2332,6 +2335,67 @@ async function addContact() {
   document.getElementById("contact-phone").value = "";
 
   showToast("Contact ajouté");
+  loadContacts();
+}
+
+  function editContact(id) {
+  const contact = contactsCache.find(c => c.id === id);
+  if (!contact) return;
+
+  document.getElementById("contact-name").value = contact.full_name || "";
+  document.getElementById("contact-company").value = contact.company || "";
+  document.getElementById("contact-email").value = contact.email || "";
+  document.getElementById("contact-phone").value = contact.phone || "";
+
+  const btn = document.getElementById("contact-submit-btn");
+  if (btn) {
+    btn.innerHTML = "💾 Enregistrer les modifications";
+    btn.setAttribute("onclick", `updateContact('${id}')`);
+  }
+
+  showToast("Contact chargé pour modification");
+}
+
+async function updateContact(id) {
+  const fullName = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const email = document.getElementById("contact-email").value.trim();
+  const phone = document.getElementById("contact-phone").value.trim();
+
+  if (!fullName) {
+    showToast("Ajoutez au moins un nom");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("contacts")
+    .update({
+      full_name: fullName,
+      company,
+      email,
+      phone,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erreur modification contact:", error);
+    showToast("Erreur modification contact");
+    return;
+  }
+
+  document.getElementById("contact-name").value = "";
+  document.getElementById("contact-company").value = "";
+  document.getElementById("contact-email").value = "";
+  document.getElementById("contact-phone").value = "";
+
+  const btn = document.getElementById("contact-submit-btn");
+  if (btn) {
+    btn.innerHTML = "+ Ajouter un contact";
+    btn.setAttribute("onclick", "addContact()");
+  }
+
+  showToast("Contact modifié");
   loadContacts();
 }
 
