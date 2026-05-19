@@ -996,6 +996,10 @@ main > div[style*="background:var(--bg2)"] {
 <button class="nav-item" onclick="showSection('settings', this)">
   <span class="icon">⚙️</span> Réglages
 </button>
+
+<button class="nav-item" onclick="showSection('contacts', this)">
+  <span class="icon">👥</span> Carnet contacts
+</button>
     
     <button class="nav-item" onclick="showSection('historique')">
       <span class="icon">📋</span> Historique <span class="badge">12</span>
@@ -1443,6 +1447,36 @@ main > div[style*="background:var(--bg2)"] {
       </div>
     </div>
   </div>
+</main>
+
+<!-- MAIN PAGE CONTACTS -->
+
+  <main class="main page-view" id="main-contacts">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Carnet <span>contacts</span></div>
+      <div class="page-subtitle">Ajoutez vos contacts. Vos agents pourront les retrouver automatiquement.</div>
+    </div>
+  </div>
+
+  <div class="gmail-section" style="display:block;">
+    <div class="field-row">
+      <input class="field-input" id="contact-search" placeholder="Rechercher un contact..." oninput="renderContacts()" />
+      <button class="save-btn" onclick="addContact()" type="button">+ Ajouter un contact</button>
+    </div>
+
+    <div class="field-row" style="margin-top:18px;">
+      <input class="field-input" id="contact-name" placeholder="Nom complet" />
+      <input class="field-input" id="contact-company" placeholder="Société" />
+    </div>
+
+    <div class="field-row" style="margin-top:12px;">
+      <input class="field-input" id="contact-email" placeholder="Email" />
+      <input class="field-input" id="contact-phone" placeholder="Téléphone" />
+    </div>
+  </div>
+
+  <div id="contacts-list" class="agents-grid"></div>
 </main>
 
 <!-- TOAST -->
@@ -2155,8 +2189,125 @@ function showSection(section, btn) {
     return;
   }
 
+  if (section === "contacts") {
+  document.getElementById("main-contacts").classList.add("active");
+  btn.classList.add("active");
+  loadContacts();
+  return;
+}
+
   document.getElementById("main-agents").classList.add("active");
   showToast("Section bientôt disponible");
+}
+
+let contactsCache = [];
+
+async function loadContacts() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from("contacts")
+    .select("*")
+    .eq("user_id", currentUser.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Erreur contacts:", error);
+    showToast("Erreur chargement contacts");
+    return;
+  }
+
+  contactsCache = data || [];
+  renderContacts();
+}
+
+function renderContacts() {
+  const list = document.getElementById("contacts-list");
+  if (!list) return;
+
+  const search = (document.getElementById("contact-search")?.value || "").toLowerCase();
+
+  const contacts = contactsCache.filter(c =>
+    (c.full_name || "").toLowerCase().includes(search) ||
+    (c.company || "").toLowerCase().includes(search) ||
+    (c.email || "").toLowerCase().includes(search) ||
+    (c.phone || "").toLowerCase().includes(search)
+  );
+
+  if (contacts.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucun contact pour le moment.</div>`;
+    return;
+  }
+
+  list.innerHTML = contacts.map(c => `
+    <div class="agent-card">
+      <div class="agent-head" style="cursor:default;">
+        <div class="agent-emoji">👤</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">${c.full_name || "Sans nom"}</div>
+          <div class="agent-desc">
+            ${c.company || "Aucune société"}<br>
+            ${c.email || "Aucun email"} · ${c.phone || "Aucun téléphone"}
+          </div>
+        </div>
+        <button class="sheet-btn" onclick="deleteContact('${c.id}')" type="button">Supprimer</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function addContact() {
+  if (!currentUser) return;
+
+  const fullName = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const email = document.getElementById("contact-email").value.trim();
+  const phone = document.getElementById("contact-phone").value.trim();
+
+  if (!fullName) {
+    showToast("Ajoutez au moins un nom");
+    return;
+  }
+
+  const { error } = await supabaseClient
+    .from("contacts")
+    .insert({
+      user_id: currentUser.id,
+      full_name: fullName,
+      company,
+      email,
+      phone
+    });
+
+  if (error) {
+    console.error("Erreur ajout contact:", error);
+    showToast("Erreur ajout contact");
+    return;
+  }
+
+  document.getElementById("contact-name").value = "";
+  document.getElementById("contact-company").value = "";
+  document.getElementById("contact-email").value = "";
+  document.getElementById("contact-phone").value = "";
+
+  showToast("Contact ajouté");
+  loadContacts();
+}
+
+async function deleteContact(id) {
+  const { error } = await supabaseClient
+    .from("contacts")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Erreur suppression:", error);
+    showToast("Erreur suppression");
+    return;
+  }
+
+  showToast("Contact supprimé");
+  loadContacts();
 }
 
 function logout() {
