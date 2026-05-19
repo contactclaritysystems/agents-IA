@@ -1054,34 +1054,62 @@ main > div[style*="background:var(--bg2)"] {
 
   <div class="agents-grid">
 
+    <!-- PAGE MES AGENTS -->
+<main class="main" id="main-agents">
+
+  <div class="topbar">
+    <div>
+      <div class="page-title">Mes <span>agents</span></div>
+      <div class="page-subtitle">
+        Parlez naturellement. Vos agents s’occupent du reste.
+      </div>
+    </div>
+  </div>
+
+  <div class="agents-grid">
+
     <!-- AGENT MAILS -->
     <div class="agent-card configured">
+      
       <div class="agent-head">
+
         <div class="agent-emoji">✉️</div>
+
         <div class="agent-title-wrap">
           <div class="agent-name">Agent Mails</div>
+
           <div class="agent-desc">
             Dictez un mail naturellement. L’agent rédige et envoie depuis votre Gmail connecté.
           </div>
         </div>
+
         <div class="agent-status ok">Actif</div>
+
       </div>
+
       <div class="agent-body" style="display:flex;">
+
         <div class="info-box">
           <span class="info-icon">⚡</span>
           <div>
             Exemple : “Envoie un mail à Anthony pour lui proposer un rendez-vous demain matin.”
           </div>
         </div>
+
         <button class="save-btn" onclick="startMailDictation()">
           🎙️ Dicter un mail
         </button>
+
         <button class="sheet-btn" onclick="openClientSheet()" style="width:100%;">
           📋 Ouvrir mes contacts
         </button>
+
       </div>
+
     </div>
+
   </div>
+
 </main>
   
 <!-- MAIN -->
