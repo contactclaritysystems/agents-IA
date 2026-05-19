@@ -93,13 +93,13 @@ body {
 nav {
   position: fixed;
   top: 54px; left: 0; right: 0;
-  height: 58px;
+  height: 72px;
   z-index: 200;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 42px;
-  background: rgba(247,247,245,.82);
+  background: rgba(247,247,245,.88);
   backdrop-filter: saturate(180%) blur(26px);
   -webkit-backdrop-filter: saturate(180%) blur(26px);
   border-bottom: 1px solid var(--line);
@@ -575,14 +575,6 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   .ba-arrow { transform: rotate(90deg); }
 }
 
-.logo-img {
-  height: 56px;
-  width: auto;
-  display: block;
-  object-fit: contain;
-  mix-blend-mode: multiply;
-}
-
 @media(max-width: 600px) {
   .logo-img { 
     height: 46px; 
@@ -637,8 +629,8 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
 .chatbot-nudge {
   position: fixed;
-  right: 108px;
-  bottom: 72px;
+  right: 44px;
+  bottom: 64px;
   z-index: 999;
   background: white;
   color: var(--dark);
@@ -658,8 +650,8 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   
 .chatbot-launcher {
   position: fixed;
-  right: 32px;
-  bottom: 92px;
+  right: 54px;
+  bottom: 118px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -776,8 +768,13 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 }
 
 @media(max-width:600px) {
+  .chatbot-launcher {
+    right: 8px;
+    bottom: 92px;
+  }
+
   .chatbot-nudge {
-    right: 34px;
+    right: 10px;
     bottom: 42px;
     font-size: .72rem;
     padding: 9px 12px;
@@ -791,7 +788,7 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 }
 
 .logo-img {
-  height: 70px;
+  height: 54px;
   width: auto;
   display: block;
   object-fit: contain;
