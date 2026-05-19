@@ -1116,6 +1116,11 @@ main > div[style*="background:var(--bg2)"] {
       <input class="field-input" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." />
     </div>
 
+    <div class="field-group" style="margin-top:14px;">
+  <div class="field-label">Société</div>
+  <input class="field-input" type="text" id="profile-company" placeholder="Ex : Clarity Systems" />
+</div>
+
    <button class="sheet-btn" id="profile-edit-btn" onclick="unlockProfileFields()" type="button" style="width:100%; display:none;">
   ⚙️ Modifier les informations
 </button>
@@ -1837,7 +1842,8 @@ if (editBtn) editBtn.style.display = "none";
     lastname: document.getElementById("profile-lastname").value,
     phone: document.getElementById("profile-phone").value,
     city: document.getElementById("profile-city").value,
-    job: document.getElementById("profile-job").value
+    job: document.getElementById("profile-job").value,
+    company: document.getElementById("profile-company").value
   };
 
   console.log("PROFILE:", profile);
@@ -1930,7 +1936,8 @@ if (editBtn) editBtn.style.display = "none";
     "profile-lastname",
     "profile-phone",
     "profile-city",
-    "profile-job"
+    "profile-job",
+    "profile-company"
   ].forEach(id => {
 
     const el = document.getElementById(id);
@@ -1956,7 +1963,8 @@ function unlockProfileFields() {
     "profile-lastname",
     "profile-phone",
     "profile-city",
-    "profile-job"
+    "profile-job",
+    "profile-company"
   ].forEach(id => {
 
     const el = document.getElementById(id);
@@ -2004,6 +2012,7 @@ function unlockProfileFields() {
     document.getElementById("profile-phone").value = profile.phone || "";
     document.getElementById("profile-city").value = profile.city || "";
     document.getElementById("profile-job").value = profile.job || "";
+    document.getElementById("profile-company").value = profile.company || "";
 
     if (profile.contacts_sheet_url) {
       renderContactsSheetCreated(profile.contacts_sheet_url);
