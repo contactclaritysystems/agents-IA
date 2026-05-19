@@ -1397,7 +1397,7 @@ main > div[style*="background:var(--bg2)"] {
   </div>
 
   <div class="agents-grid">
-    <div class="agent-card configured">
+    <div class="agent-card configured" id="card-mails-run">
       <div class="agent-head">
         <div class="agent-emoji">✉️</div>
         <div class="agent-title-wrap">
@@ -1788,7 +1788,7 @@ function startMailDictation() {
     return;
   }
 
-  let box = document.getElementById("dictation-box");
+  let box = document.querySelector(".page-view.active #dictation-box");
 
   if (!box) {
     box = document.createElement("div");
@@ -1801,7 +1801,12 @@ function startMailDictation() {
     box.style.fontSize = "13px";
     box.style.color = "#15803d";
     box.style.fontWeight = "600";
-    document.getElementById("card-mails").querySelector(".agent-head").after(box);
+    const activePage = document.querySelector(".page-view.active");
+const targetCard =
+  activePage.querySelector("#card-mails-run") ||
+  activePage.querySelector("#card-mails");
+
+targetCard.querySelector(".agent-head").after(box);
   }
 
   const recognition = new SpeechRecognition();
