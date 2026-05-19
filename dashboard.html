@@ -2027,7 +2027,7 @@ function unlockProfileFields() {
   }
 }
 
-function renderContactsSheetCreated(url) {
+function renderContactsSheetCreated() {
   const ui = document.getElementById("contacts-sheet-ui");
   if (!ui) return;
 
@@ -2041,37 +2041,23 @@ function renderContactsSheetCreated(url) {
 async function createContactsSheet(btn) {
   if (!currentUser) return;
 
-  const firstname = document.getElementById("profile-firstname").value || "";
-  const lastname = document.getElementById("profile-lastname").value || "";
-  const phone = document.getElementById("profile-phone").value || "";
-  const job = document.getElementById("profile-job").value || "";
-
   btn.disabled = true;
   btn.innerHTML = "⏳ Création du carnet...";
 
   try {
-    const response = await fetch("https://hook.eu1.make.com/uk6m92m8yucpxcki4yt2ybkjut93nzbl", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        user_email: currentUser.email,
-        user_id: currentUser.id,
-        fullname: (firstname + " " + lastname).trim(),
-        company: job,
-        phone: phone
-      })
-    });
+    const profile = currentProfile || {
+      firstname: document.getElementById("profile-firstname")?.value || "",
+      lastname: document.getElementById("profile-lastname")?.value || "",
+      phone: document.getElementById("profile-phone")?.value || "",
+      job: document.getElementById("profile-job")?.value || "",
+      company: document.getElementById("profile-company")?.value || ""
+    };
 
-    const text = await response.text();
-    console.log("CREATE CONTACTS SHEET RESPONSE:", response.status, text);
+    await upsertSelfContact(profile);
 
     showToast("Carnet contacts créé");
-
-    setTimeout(() => {
-      loadProfile();
-    }, 1200);
+    renderContactsSheetCreated();
+    await loadContacts();
 
   } catch (err) {
     console.error("Erreur création carnet contacts:", err);
