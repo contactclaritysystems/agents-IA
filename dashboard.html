@@ -1150,6 +1150,25 @@ main > div[style*="background:var(--bg2)"] {
 </div>
 </div>
 
+  <!-- CARNET CONTACTS -->
+<div class="gmail-section">
+  <div>
+    <div class="gmail-title">
+      <span>📒</span> Carnet contacts
+      <span class="tag green">✓ Utilisé par vos agents</span>
+    </div>
+    <div class="gmail-desc">
+      Créez automatiquement votre feuille contacts. Vos agents pourront ensuite retrouver vos contacts par nom et prénom.
+    </div>
+  </div>
+
+  <div id="contacts-sheet-ui">
+    <button class="gmail-connect-btn" id="create-contacts-btn" onclick="createContactsSheet(this)" type="button">
+      📒 Créer mon carnet contacts
+    </button>
+  </div>
+</div>
+
   <!-- AGENTS -->
   <div class="section-header">
     <div class="section-title">Paramètres des agents</div>
@@ -1440,6 +1459,7 @@ const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.go
 const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
 
 let currentUser = null;
+let currentProfile = null;
 
 // ─── GMAIL UI ────────────────────────────────────────────
 
@@ -1881,11 +1901,9 @@ function unlockProfileFields() {
 }
 
   async function loadProfile() {
-
   if (!currentUser) return;
 
   try {
-
     const response = await fetch(
       SUPABASE_URL + "/rest/v1/agent_configs?user_id=eq." + encodeURIComponent(currentUser.id) + "&agent_name=eq.profile&select=*",
       {
@@ -1899,22 +1917,83 @@ function unlockProfileFields() {
     );
 
     const data = await response.json();
-
     console.log("LOAD PROFILE:", data);
 
     if (!Array.isArray(data) || data.length === 0 || !data[0].config) return;
 
     const profile = data[0].config;
+    currentProfile = profile;
 
     document.getElementById("profile-firstname").value = profile.firstname || "";
     document.getElementById("profile-lastname").value = profile.lastname || "";
     document.getElementById("profile-phone").value = profile.phone || "";
     document.getElementById("profile-city").value = profile.city || "";
     document.getElementById("profile-job").value = profile.job || "";
+
+    if (profile.contacts_sheet_url) {
+      renderContactsSheetCreated(profile.contacts_sheet_url);
+      document.getElementById("mails-sheet").value = profile.contacts_sheet_url;
+      lockMailsFields();
+    }
+
     lockProfileFields();
 
   } catch(err) {
     console.error("Erreur loadProfile:", err);
+  }
+}
+
+function renderContactsSheetCreated(url) {
+  const ui = document.getElementById("contacts-sheet-ui");
+  if (!ui) return;
+
+  ui.innerHTML = `
+    <button class="sheet-btn" onclick="window.open('${url}', '_blank')" type="button" style="width:100%;">
+      📋 Ouvrir mon carnet contacts
+    </button>
+  `;
+}
+
+async function createContactsSheet(btn) {
+  if (!currentUser) return;
+
+  const firstname = document.getElementById("profile-firstname").value || "";
+  const lastname = document.getElementById("profile-lastname").value || "";
+  const phone = document.getElementById("profile-phone").value || "";
+  const job = document.getElementById("profile-job").value || "";
+
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Création du carnet...";
+
+  try {
+    const response = await fetch("https://hook.eu1.make.com/uk6m92m8yucpxcki4yt2ybkjut93nzbl", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_email: currentUser.email,
+        user_id: currentUser.id,
+        fullname: (firstname + " " + lastname).trim(),
+        company: job,
+        phone: phone
+      })
+    });
+
+    const text = await response.text();
+    console.log("CREATE CONTACTS SHEET RESPONSE:", response.status, text);
+
+    showToast("Carnet contacts créé");
+
+    setTimeout(() => {
+      loadProfile();
+    }, 1200);
+
+  } catch (err) {
+    console.error("Erreur création carnet contacts:", err);
+    showToast("Erreur création carnet");
+    btn.disabled = false;
+    btn.innerHTML = "📒 Créer mon carnet contacts";
   }
 }
 
