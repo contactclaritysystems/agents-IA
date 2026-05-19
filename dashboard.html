@@ -1071,15 +1071,53 @@ main > div[style*="background:var(--bg2)"] {
 
   <!-- PROFIL -->
 <div class="gmail-section">
-  <div>
+
+  <div style="width:100%;">
+    
     <div class="gmail-title">
       <span>👤</span> Informations de base
       <span class="tag green">✓ Utilisées par vos agents</span>
     </div>
-    <div class="gmail-desc">
-      Ces informations permettent à vos agents de personnaliser les mails, signatures et messages.
+
+    <div class="gmail-desc" style="margin-bottom:20px;">
+      Ces informations permettent à vos agents de personnaliser automatiquement les mails, signatures et messages.
     </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <div class="field-label">Prénom</div>
+        <input class="field-input" type="text" id="profile-firstname" placeholder="Jean" />
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Nom</div>
+        <input class="field-input" type="text" id="profile-lastname" placeholder="Dupont" />
+      </div>
+    </div>
+
+    <div class="field-row" style="margin-top:14px;">
+      <div class="field-group">
+        <div class="field-label">Téléphone</div>
+        <input class="field-input" type="tel" id="profile-phone" placeholder="06 12 34 56 78" />
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Ville</div>
+        <input class="field-input" type="text" id="profile-city" placeholder="Marseille" />
+      </div>
+    </div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Métier / activité</div>
+      <input class="field-input" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." />
+    </div>
+
+    <button class="save-btn" style="margin-top:18px;" onclick="saveProfile()">
+      💾 Enregistrer les informations
+    </button>
+
   </div>
+
 </div>
 
   <!-- GMAIL -->
@@ -1132,24 +1170,6 @@ main > div[style*="background:var(--bg2)"] {
         <div class="info-box">
           <span class="info-icon">💡</span>
           <div>L'agent utilise automatiquement votre Gmail connecté ci-dessus pour envoyer les mails. Il n'y a rien d'autre à configurer côté envoi.</div>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Votre prénom <span class="field-required">*</span></div>
-          <div class="field-hint">Utilisé dans les signatures automatiques</div>
-          <input class="field-input" type="text" placeholder="Ex : Jean" id="mails-prenom" />
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Votre métier / secteur</div>
-          <div class="field-hint">L'agent adapte le ton selon votre activité</div>
-          <input class="field-input" type="text" placeholder="Ex : Plombier, Consultant, Agence immobilière..." id="mails-secteur" />
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Votre numéro de téléphone</div>
-          <div class="field-hint">Optionnel — ajouté en signature si renseigné</div>
-          <input class="field-input" type="tel" placeholder="06 12 34 56 78" id="mails-tel" />
         </div>
 
         <div class="field-group">
@@ -1644,11 +1664,8 @@ async function saveAgent(id, btn) {
   }
 
   const config = {
-    prenom: document.getElementById("mails-prenom").value,
-    secteur: document.getElementById("mails-secteur").value,
-    tel: document.getElementById("mails-tel").value,
-    sheet: document.getElementById("mails-sheet").value
-  };
+  sheet: document.getElementById("mails-sheet").value
+};
 
   const original = btn.innerHTML;
   btn.disabled = true;
@@ -1714,7 +1731,7 @@ async function saveAgent(id, btn) {
 }
 
   function lockMailsFields() {
-  ["mails-prenom", "mails-secteur", "mails-tel", "mails-sheet"].forEach(id => {
+  ["mails-sheet"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.disabled = true;
@@ -1731,7 +1748,7 @@ if (editBtn) editBtn.style.display = "flex";
 }
 
 function unlockMailsFields() {
-  ["mails-prenom", "mails-secteur", "mails-tel", "mails-sheet"].forEach(id => {
+  ["mails-sheet"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.disabled = false;
@@ -1747,6 +1764,52 @@ if (editBtn) editBtn.style.display = "none";
   });
 
   document.getElementById("card-mails").classList.add("open");
+}
+
+  async function saveProfile() {
+
+  if (!currentUser) return;
+
+  const profile = {
+    firstname: document.getElementById("profile-firstname").value,
+    lastname: document.getElementById("profile-lastname").value,
+    phone: document.getElementById("profile-phone").value,
+    city: document.getElementById("profile-city").value,
+    job: document.getElementById("profile-job").value
+  };
+
+  try {
+
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates"
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          agent_name: "profile",
+          config: profile,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
+
+    if (!response.ok) {
+      showToast("Erreur sauvegarde profil");
+      return;
+    }
+
+    showToast("Informations enregistrées");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Erreur sauvegarde profil");
+  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────
