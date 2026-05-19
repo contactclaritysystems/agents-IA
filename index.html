@@ -766,7 +766,17 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     bottom: 104px;
     font-size: .72rem;
     padding: 9px 12px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: all .35s ease;
   }
+}
+
+.chatbot-nudge.show {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
 }
 
 .logo-img {
