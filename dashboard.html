@@ -1009,15 +1009,19 @@ main > div[style*="background:var(--bg2)"] {
 
   <div class="sidebar-section">
     <div class="sidebar-section-label">Navigation</div>
-    <button class="nav-item active" onclick="showSection('dashboard')">
-      <span class="icon">⚡</span> Mes agents
-    </button>
-    <button class="nav-item" onclick="showSection('settings')">
- <span class="icon">⚙️</span> Réglages
+    
+    <button class="nav-item active" onclick="showSection('agents', this)">
+  <span class="icon">⚡</span> Mes agents
 </button>
+
+<button class="nav-item" onclick="showSection('settings', this)">
+  <span class="icon">⚙️</span> Réglages
+</button>
+    
     <button class="nav-item" onclick="showSection('historique')">
       <span class="icon">📋</span> Historique <span class="badge">12</span>
     </button>
+    
     <button class="nav-item" onclick="showSection('facturation')">
       <span class="icon">💳</span> Facturation
     </button>
@@ -1049,7 +1053,7 @@ main > div[style*="background:var(--bg2)"] {
 </aside>
   
 <!-- MAIN -->
-<main class="main page-view active" id="main-settings">
+<main class="main page-view" id="main-settings">
   <div class="topbar">
     <div>
      <div class="page-title">Réglages <span>agents</span></div>
@@ -1383,7 +1387,7 @@ main > div[style*="background:var(--bg2)"] {
 
 </main>
 
-<main class="main page-view" id="main-agents">
+<main class="main page-view active" id="main-agents">
   <div class="topbar">
     <div>
       <div class="page-title">Mes <span>agents</span></div>
@@ -1889,7 +1893,7 @@ function openTemplate(name) {
   showToast("Template bientôt disponible");
 }
   
-function showSection(section) {
+function showSection(section, btn) {
   document.querySelectorAll(".page-view").forEach(page => {
     page.classList.remove("active");
   });
@@ -1900,17 +1904,17 @@ function showSection(section) {
 
   if (section === "agents") {
     document.getElementById("main-agents").classList.add("active");
-    event.target.closest(".nav-item").classList.add("active");
+    btn.classList.add("active");
     return;
   }
 
   if (section === "settings") {
     document.getElementById("main-settings").classList.add("active");
-    event.target.closest(".nav-item").classList.add("active");
+    btn.classList.add("active");
     return;
   }
 
-  document.getElementById("main-settings").classList.add("active");
+  document.getElementById("main-agents").classList.add("active");
   showToast("Section bientôt disponible");
 }
 
