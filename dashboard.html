@@ -1112,9 +1112,9 @@ main > div[style*="background:var(--bg2)"] {
       <input class="field-input" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." />
     </div>
 
-    <button class="save-btn" style="margin-top:18px;" onclick="saveProfile()">
-      💾 Enregistrer les informations
-    </button>
+    <button class="save-btn" id="profile-save-btn" onclick="saveProfile()" type="button">
+  💾 Enregistrer les informations
+</button>
 
   </div>
 
@@ -1816,10 +1816,57 @@ if (editBtn) editBtn.style.display = "none";
     }
 
     showToast("Informations enregistrées");
+    lockProfileFields();
 
   } catch (err) {
     console.error("SAVE PROFILE ERROR:", err);
     showToast("Erreur sauvegarde profil");
+  }
+}
+
+  function lockProfileFields() {
+  [
+    "profile-firstname",
+    "profile-lastname",
+    "profile-phone",
+    "profile-city",
+    "profile-job"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = true;
+      el.style.opacity = "0.6";
+      el.style.cursor = "not-allowed";
+    }
+  });
+
+  const saveBtn = document.getElementById("profile-save-btn");
+  if (saveBtn) {
+    saveBtn.innerHTML = "⚙️ Modifier les informations";
+    saveBtn.onclick = unlockProfileFields;
+  }
+}
+
+function unlockProfileFields() {
+  [
+    "profile-firstname",
+    "profile-lastname",
+    "profile-phone",
+    "profile-city",
+    "profile-job"
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = false;
+      el.style.opacity = "1";
+      el.style.cursor = "text";
+    }
+  });
+
+  const saveBtn = document.getElementById("profile-save-btn");
+  if (saveBtn) {
+    saveBtn.innerHTML = "💾 Enregistrer les informations";
+    saveBtn.onclick = saveProfile;
   }
 }
 
@@ -1854,6 +1901,7 @@ if (editBtn) editBtn.style.display = "none";
     document.getElementById("profile-phone").value = profile.phone || "";
     document.getElementById("profile-city").value = profile.city || "";
     document.getElementById("profile-job").value = profile.job || "";
+    lockProfileFields();
 
   } catch(err) {
     console.error("Erreur loadProfile:", err);
