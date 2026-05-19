@@ -576,8 +576,19 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 }
 
 .mobile-login {
-  opacity: .82;
-  font-size: .82rem;
+  display: none;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  opacity: .72;
+}
+
+.mobile-login:visited,
+.mobile-login:hover,
+.mobile-login:active {
+  color: var(--text);
+  text-decoration: none;
 }
   
 @media(max-width: 600px) {
@@ -587,11 +598,6 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
   .mobile-login {
   display: block;
-  font-size: .78rem;
-  font-weight: 600;
-  color: var(--text);
-  text-decoration: none;
-  opacity: .72;
 }
 
   .promo-banner { font-size: .68rem; padding: 9px 42px 9px 12px; gap: 7px; }
