@@ -965,27 +965,6 @@ main > div[style*="background:var(--bg2)"] {
   }
 }
 
-.agent-quick-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.agent-quick-actions button {
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.85);
-  border-radius: 999px;
-  padding: 7px 11px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  color: var(--text);
-}
-
-#card-mails.open .agent-quick-actions {
-  display: none;
-}
-
 .template-muted {
   opacity: .55;
 }
@@ -1133,11 +1112,6 @@ main > div[style*="background:var(--bg2)"] {
          <div class="agent-desc" id="mails-agent-desc">Exemple : “Envoie un mail à Jean Martin pour lui dire qu’on se voit demain à 10h.”</div>
         </div>
        <div class="agent-status ok">Actif</div>
-
-<div class="agent-quick-actions">
-  <button type="button" onclick="event.stopPropagation(); startMailDictation();">🎙️ Dicter</button>
-  <button type="button" onclick="event.stopPropagation(); openClientSheet();">📋 Contacts</button>
-</div>
 
 <div class="agent-toggle">▾</div>
       </div>
