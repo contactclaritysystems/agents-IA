@@ -1876,10 +1876,51 @@ if (editBtn) editBtn.style.display = "none";
     showToast("Informations enregistrées");
     lockProfileFields();
 
+    await upsertSelfContact(profile);
+
   } catch (err) {
     console.error("SAVE PROFILE ERROR:", err);
     showToast("Erreur sauvegarde profil");
   }
+}
+
+  async function upsertSelfContact(profile) {
+  if (!currentUser) return;
+
+  const fullName = ((profile.firstname || "") + " " + (profile.lastname || "")).trim();
+
+  if (!fullName) return;
+
+  const { data: existing } = await supabaseClient
+    .from("contacts")
+    .select("id")
+    .eq("user_id", currentUser.id)
+    .eq("email", currentUser.email)
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    await supabaseClient
+      .from("contacts")
+      .update({
+        full_name: fullName,
+        company: profile.job || "",
+        phone: profile.phone || "",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", existing[0].id);
+
+    return;
+  }
+
+  await supabaseClient
+    .from("contacts")
+    .insert({
+      user_id: currentUser.id,
+      full_name: fullName,
+      company: profile.job || "",
+      email: currentUser.email,
+      phone: profile.phone || ""
+    });
 }
 
   function lockProfileFields() {
