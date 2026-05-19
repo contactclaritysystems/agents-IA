@@ -625,6 +625,22 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 
 /* CHATBOT */
 
+.chatbot-nudge {
+  position: fixed;
+  right: 82px;
+  bottom: 102px;
+  z-index: 999;
+  background: white;
+  color: var(--dark);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: .76rem;
+  font-weight: 700;
+  box-shadow: 0 12px 35px rgba(0,0,0,.14);
+  cursor: pointer;
+}
+  
 .chatbot-launcher {
   position: fixed;
   right: 16px;
@@ -741,6 +757,15 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
     max-width: none;
     max-height: none;
     border-radius: 22px;
+  }
+}
+
+@media(max-width:600px) {
+  .chatbot-nudge {
+    right: 82px;
+    bottom: 104px;
+    font-size: .72rem;
+    padding: 9px 12px;
   }
 }
 
@@ -1275,6 +1300,10 @@ function resetChatbot() {
 </script>
 
 <!-- CHATBOT -->
+<div class="chatbot-nudge" onclick="toggleChatbot()">
+  Trouver mon agent →
+</div>
+
 <div class="chatbot-launcher" onclick="toggleChatbot()">
   💬
 </div>
