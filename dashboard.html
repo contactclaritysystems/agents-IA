@@ -2358,13 +2358,14 @@ async function addContact() {
     return;
   }
 
-  alert("5 - avant insert");
+alert("5 - avant insert");
 
-// Récupérer le vrai token de session
-const { data: sessionData } = await supabaseClient.auth.getSession();
-const accessToken = sessionData?.session?.access_token;
+// Récupérer le token depuis localStorage directement
+const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+const rawSession = localStorage.getItem(storageKey);
+const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-alert("5b - token : " + (accessToken ? "OK" : "NULL"));
+alert("5b - token : " + (accessToken ? accessToken.substring(0,20) : "NULL"));
 
 const response = await fetch(
   SUPABASE_URL + "/rest/v1/contacts",
