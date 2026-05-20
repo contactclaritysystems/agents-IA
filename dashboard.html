@@ -2287,24 +2287,117 @@ function showSection(section, btn) {
 }
 
 let contactsCache = [];
-
+  
 async function loadContacts() {
   if (!currentUser) return;
 
-  const { data, error } = await supabaseClient
-    .from("contacts")
-    .select("*")
-    .eq("user_id", currentUser.id)
-    .order("created_at", { ascending: false });
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) return;
 
-  if (error) {
-    console.error("Erreur contacts:", error);
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts?user_id=eq." + currentUser.id + "&order=created_at.desc",
+    {
+      method: "GET",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
     showToast("Erreur chargement contacts");
     return;
   }
 
-  contactsCache = data || [];
+  contactsCache = await response.json();
   renderContacts();
+}
+
+async function updateContact(id) {
+  const fullName = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const email = document.getElementById("contact-email").value.trim();
+  const phone = document.getElementById("contact-phone").value.trim();
+
+  if (!fullName) {
+    showToast("Ajoutez au moins un nom");
+    return;
+  }
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) { showToast("Session expirée"); return; }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts?id=eq." + id,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        full_name: fullName,
+        company,
+        email,
+        phone,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur modification contact");
+    return;
+  }
+
+  document.getElementById("contact-name").value = "";
+  document.getElementById("contact-company").value = "";
+  document.getElementById("contact-email").value = "";
+  document.getElementById("contact-phone").value = "";
+
+  const btn = document.getElementById("contact-submit-btn");
+  if (btn) {
+    btn.innerHTML = "+ Ajouter un contact";
+    btn.setAttribute("onclick", "addContact()");
+  }
+
+  showToast("Contact modifié");
+  loadContacts();
+}
+
+async function deleteContact(id) {
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) { showToast("Session expirée"); return; }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts?id=eq." + id,
+    {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur suppression");
+    return;
+  }
+
+  showToast("Contact supprimé");
+  loadContacts();
 }
   
 function renderContacts() {
@@ -2416,66 +2509,6 @@ function editContact(id) {
     btn.setAttribute("onclick", `updateContact('${id}')`);
   }
   showToast("Contact chargé pour modification");
-}
-
-async function updateContact(id) {
-  const fullName = document.getElementById("contact-name").value.trim();
-  const company = document.getElementById("contact-company").value.trim();
-  const email = document.getElementById("contact-email").value.trim();
-  const phone = document.getElementById("contact-phone").value.trim();
-  if (!fullName) {
-    showToast("Ajoutez au moins un nom");
-    return;
-  }
-  const { error } = await supabaseClient
-    .from("contacts")
-    .update({
-      full_name: fullName,
-      company,
-      email,
-      phone,
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", id);
-  if (error) {
-    console.error("Erreur modification contact:", error);
-    showToast("Erreur modification contact");
-    return;
-  }
-  document.getElementById("contact-name").value = "";
-  document.getElementById("contact-company").value = "";
-  document.getElementById("contact-email").value = "";
-  document.getElementById("contact-phone").value = "";
-  const btn = document.getElementById("contact-submit-btn");
-  if (btn) {
-    btn.innerHTML = "+ Ajouter un contact";
-    btn.setAttribute("onclick", "addContact()");
-  }
-  showToast("Contact modifié");
-  loadContacts();
-}
-
-async function deleteContact(id) {
-  const { error } = await supabaseClient
-    .from("contacts")
-    .delete()
-    .eq("id", id);
-  if (error) {
-    console.error("Erreur suppression:", error);
-    showToast("Erreur suppression");
-    return;
-  }
-  showToast("Contact supprimé");
-  loadContacts();
-}
-
-function logout() {
-  try {
-    supabaseClient.auth.signOut();
-  } catch (e) {
-    console.error("Erreur logout:", e);
-  }
-  window.location.href = "index.html";
 }
 
 // ─── INIT ────────────────────────────────────────────────
