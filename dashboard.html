@@ -2012,7 +2012,10 @@ function unlockProfileFields() {
     const profile = data[0].config;
     currentProfile = profile;
 
-    if (profile.contacts_created === true) {
+   if (
+  profile.contacts_created === true ||
+  profile.contacts_created === "true"
+) {
   renderContactsSheetCreated();
 }
 
