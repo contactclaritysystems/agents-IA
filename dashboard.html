@@ -2065,19 +2065,56 @@ async function createContactsSheet(btn) {
   console.log("CLICK CREATE CONTACTS");
 
   if (!currentUser) {
-    console.log("PAS DE CURRENT USER");
     showToast("Utilisateur non connecté");
     return;
   }
 
   btn.disabled = true;
-  btn.innerHTML = "⏳ Création du carnet...";
+  btn.innerHTML = "⏳ Activation...";
 
-  // Test immédiat : on ne bloque pas sur Supabase
-  renderContactsSheetCreated();
-  showToast("Carnet contacts activé");
+  try {
+    // Sauvegarder contacts_created: true dans Supabase
+    const profile = currentProfile || {};
+    profile.contacts_created = true;
 
-  console.log("BOUTON REMPLACÉ OK");
+    const response = await fetch(
+      SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
+      {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates,return=representation"
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          agent_name: "profile",
+          config: profile,
+          updated_at: new Date().toISOString()
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Erreur save contacts_created:", err);
+      showToast("Erreur activation carnet");
+      btn.disabled = false;
+      btn.innerHTML = "📒 Créer mon carnet contacts";
+      return;
+    }
+
+    currentProfile = profile;
+    renderContactsSheetCreated();
+    showToast("Carnet contacts activé");
+
+  } catch (err) {
+    console.error("CRASH createContactsSheet:", err);
+    showToast("Erreur activation carnet");
+    btn.disabled = false;
+    btn.innerHTML = "📒 Créer mon carnet contacts";
+  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────
@@ -2351,6 +2388,9 @@ async function addContact() {
 
     console.log("INSERT START");
 
+    const submitBtn = document.getElementById("contact-submit-btn");
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = "⏳ Ajout..."; }
+
     const { data, error } = await supabaseClient
       .from("contacts")
       .insert({
@@ -2365,46 +2405,50 @@ async function addContact() {
     console.log("INSERT RESULT:", data);
     console.log("INSERT ERROR:", error);
 
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = "+ Ajouter un contact"; }
+
     if (error) {
-  console.error(error);
-  showToast("Erreur ajout contact");
-  return;
-}
+      console.error(error);
+      showToast("Erreur ajout contact");
+      return;
+    }
 
-console.log("INSERT OK");
+    console.log("INSERT OK");
 
-nameEl.value = "";
-companyEl.value = "";
-emailEl.value = "";
-phoneEl.value = "";
+    nameEl.value = "";
+    companyEl.value = "";
+    emailEl.value = "";
+    phoneEl.value = "";
 
-showToast("Contact ajouté");
+    showToast("Contact ajouté");
 
-await loadContacts();
+    const contactsPage = document.getElementById("main-contacts");
+    if (contactsPage && contactsPage.classList.contains("active")) {
+      await loadContacts();
+    } else {
+      if (data && data[0]) contactsCache.unshift(data[0]);
+    }
 
   } catch(err) {
-
     console.error("ADD CONTACT CRASH:", err);
-    alert(err.message);
-
+    const submitBtn2 = document.getElementById("contact-submit-btn");
+    if (submitBtn2) { submitBtn2.disabled = false; submitBtn2.innerHTML = "+ Ajouter un contact"; }
+    showToast("Erreur ajout contact");
   }
 }
 
-  function editContact(id) {
+function editContact(id) {
   const contact = contactsCache.find(c => c.id === id);
   if (!contact) return;
-
   document.getElementById("contact-name").value = contact.full_name || "";
   document.getElementById("contact-company").value = contact.company || "";
   document.getElementById("contact-email").value = contact.email || "";
   document.getElementById("contact-phone").value = contact.phone || "";
-
   const btn = document.getElementById("contact-submit-btn");
   if (btn) {
     btn.innerHTML = "💾 Enregistrer les modifications";
     btn.setAttribute("onclick", `updateContact('${id}')`);
   }
-
   showToast("Contact chargé pour modification");
 }
 
@@ -2413,12 +2457,10 @@ async function updateContact(id) {
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
-
   if (!fullName) {
     showToast("Ajoutez au moins un nom");
     return;
   }
-
   const { error } = await supabaseClient
     .from("contacts")
     .update({
@@ -2429,24 +2471,20 @@ async function updateContact(id) {
       updated_at: new Date().toISOString()
     })
     .eq("id", id);
-
   if (error) {
     console.error("Erreur modification contact:", error);
     showToast("Erreur modification contact");
     return;
   }
-
   document.getElementById("contact-name").value = "";
   document.getElementById("contact-company").value = "";
   document.getElementById("contact-email").value = "";
   document.getElementById("contact-phone").value = "";
-
   const btn = document.getElementById("contact-submit-btn");
   if (btn) {
     btn.innerHTML = "+ Ajouter un contact";
     btn.setAttribute("onclick", "addContact()");
   }
-
   showToast("Contact modifié");
   loadContacts();
 }
@@ -2456,13 +2494,11 @@ async function deleteContact(id) {
     .from("contacts")
     .delete()
     .eq("id", id);
-
   if (error) {
     console.error("Erreur suppression:", error);
     showToast("Erreur suppression");
     return;
   }
-
   showToast("Contact supprimé");
   loadContacts();
 }
@@ -2473,7 +2509,6 @@ function logout() {
   } catch (e) {
     console.error("Erreur logout:", e);
   }
-
   window.location.href = "index.html";
 }
 
