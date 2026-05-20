@@ -1891,42 +1891,47 @@ if (editBtn) editBtn.style.display = "none";
 }
 
   async function upsertSelfContact(profile) {
-  if (!currentUser) return;
+  if (!currentUser) throw new Error("Utilisateur non connecté");
 
   const fullName = ((profile.firstname || "") + " " + (profile.lastname || "")).trim();
 
-  if (!fullName) return;
+  if (!fullName) {
+    throw new Error("Nom incomplet");
+  }
 
-  const { data: existing } = await supabaseClient
+  const contactData = {
+    user_id: currentUser.id,
+    full_name: fullName,
+    company: profile.company || "",
+    email: currentUser.email,
+    phone: profile.phone || "",
+    updated_at: new Date().toISOString()
+  };
+
+  const { data: existing, error: findError } = await supabaseClient
     .from("contacts")
     .select("id")
     .eq("user_id", currentUser.id)
     .eq("email", currentUser.email)
     .limit(1);
 
+  if (findError) throw findError;
+
   if (existing && existing.length > 0) {
-    await supabaseClient
+    const { error: updateError } = await supabaseClient
       .from("contacts")
-      .update({
-        full_name: fullName,
-        company: profile.job || "",
-        phone: profile.phone || "",
-        updated_at: new Date().toISOString()
-      })
+      .update(contactData)
       .eq("id", existing[0].id);
 
+    if (updateError) throw updateError;
     return;
   }
 
-  await supabaseClient
+  const { error: insertError } = await supabaseClient
     .from("contacts")
-    .insert({
-      user_id: currentUser.id,
-      full_name: fullName,
-      company: profile.job || "",
-      email: currentUser.email,
-      phone: profile.phone || ""
-    });
+    .insert(contactData);
+
+  if (insertError) throw insertError;
 }
 
   function lockProfileFields() {
@@ -2052,23 +2057,27 @@ function renderContactsSheetCreated() {
 async function createContactsSheet(btn) {
   if (!currentUser) return;
 
+  const profile = {
+    firstname: document.getElementById("profile-firstname")?.value || currentProfile?.firstname || "",
+    lastname: document.getElementById("profile-lastname")?.value || currentProfile?.lastname || "",
+    phone: document.getElementById("profile-phone")?.value || currentProfile?.phone || "",
+    job: document.getElementById("profile-job")?.value || currentProfile?.job || "",
+    company: document.getElementById("profile-company")?.value || currentProfile?.company || ""
+  };
+
+  if (!profile.firstname || !profile.lastname) {
+    showToast("Ajoutez d’abord votre prénom et nom");
+    return;
+  }
+
   btn.disabled = true;
   btn.innerHTML = "⏳ Création du carnet...";
 
   try {
-    const profile = currentProfile || {
-      firstname: document.getElementById("profile-firstname")?.value || "",
-      lastname: document.getElementById("profile-lastname")?.value || "",
-      phone: document.getElementById("profile-phone")?.value || "",
-      job: document.getElementById("profile-job")?.value || "",
-      company: document.getElementById("profile-company")?.value || ""
-    };
-
     await upsertSelfContact(profile);
 
     showToast("Carnet contacts créé");
     renderContactsSheetCreated();
-    await loadContacts();
 
   } catch (err) {
     console.error("Erreur création carnet contacts:", err);
