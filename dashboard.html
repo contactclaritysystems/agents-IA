@@ -2352,16 +2352,23 @@ async function loadContacts() {
 }
 
 async function updateContact(id) {
-  
-  const fullName = document.getElementById("contact-name").value.trim();
+  const rawName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
 
-  if (!fullName) {
+  if (!rawName) {
     showToast("Ajoutez au moins un nom");
     return;
   }
+
+  // Normalisation : majuscule à chaque mot, sans tirets
+  const fullName = rawName
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, l => l.toUpperCase());
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
@@ -2406,16 +2413,6 @@ async function updateContact(id) {
 
   showToast("Contact modifié");
   loadContacts();
-
-  const fullName = document.getElementById("contact-name").value.trim();
-
-// Capitalise chaque mot, supprime les tirets
-const fullNameNormalized = fullName
-  .toLowerCase()
-  .replace(/-/g, " ")
-  .replace(/\s+/g, " ")
-  .trim()
-  .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 async function deleteContact(id) {
@@ -2486,15 +2483,23 @@ function renderContacts() {
 async function addContact() {
   if (!currentUser) return;
 
-  const fullName = document.getElementById("contact-name").value.trim();
+  const rawName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
 
-  if (!fullName) {
+  if (!rawName) {
     showToast("Ajoutez au moins un nom");
     return;
   }
+
+  // Normalisation : majuscule à chaque mot, sans tirets
+  const fullName = rawName
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, l => l.toUpperCase());
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
@@ -2539,16 +2544,6 @@ async function addContact() {
 
   showToast("Contact ajouté");
   loadContacts();
-
-  const fullName = document.getElementById("contact-name").value.trim();
-
-// Capitalise chaque mot, supprime les tirets
-const fullNameNormalized = fullName
-  .toLowerCase()
-  .replace(/-/g, " ")
-  .replace(/\s+/g, " ")
-  .trim()
-  .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function editContact(id) {
