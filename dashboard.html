@@ -2289,13 +2289,6 @@ function showSection(section, btn) {
 let contactsCache = [];
 
 async function loadContacts() {
-  console.log("=== LOAD CONTACTS ===");
-  console.log("currentUser:", currentUser?.id);
-  if (!currentUser) return;
-  console.log("QUERY SUPABASE...");
-  
-  const { data, error } = await supabaseClient
-  ...
   if (!currentUser) return;
 
   const { data, error } = await supabaseClient
@@ -2313,7 +2306,7 @@ async function loadContacts() {
   contactsCache = data || [];
   renderContacts();
 }
-
+  
 function renderContacts() {
   const list = document.getElementById("contacts-list");
   if (!list) return;
@@ -2353,7 +2346,6 @@ function renderContacts() {
 }
 
 async function addContact() {
-  alert("addContact appelé");
   if (!currentUser) return;
 
   const fullName = document.getElementById("contact-name").value.trim();
