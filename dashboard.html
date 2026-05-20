@@ -2358,46 +2358,49 @@ async function addContact() {
     return;
   }
 
-alert("5 - avant insert");
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-// Récupérer le token depuis localStorage directement
-const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-const rawSession = localStorage.getItem(storageKey);
-const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
-
-alert("5b - token : " + (accessToken ? accessToken.substring(0,20) : "NULL"));
-
-const response = await fetch(
-  SUPABASE_URL + "/rest/v1/contacts",
-  {
-    method: "POST",
-    headers: {
-      "apikey": SUPABASE_ANON_KEY,
-      "Authorization": "Bearer " + accessToken,
-      "Content-Type": "application/json",
-      "Prefer": "return=minimal"
-    },
-    body: JSON.stringify({
-      user_id: currentUser.id,
-      full_name: fullName,
-      company,
-      email,
-      phone
-    })
+  if (!accessToken) {
+    showToast("Session expirée, reconnectez-vous");
+    return;
   }
-);
 
-alert("6 - status : " + response.status);
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts",
+    {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        full_name: fullName,
+        company,
+        email,
+        phone
+      })
+    }
+  );
 
-if (!response.ok) {
-  const err = await response.text();
-  alert("7 - erreur : " + err);
-  showToast("Erreur ajout contact");
-  return;
-}
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Erreur ajout contact:", err);
+    showToast("Erreur ajout contact");
+    return;
+  }
 
-showToast("Contact ajouté");
-loadContacts();
+  document.getElementById("contact-name").value = "";
+  document.getElementById("contact-company").value = "";
+  document.getElementById("contact-email").value = "";
+  document.getElementById("contact-phone").value = "";
+
+  showToast("Contact ajouté");
+  loadContacts();
 }
 
 function editContact(id) {
