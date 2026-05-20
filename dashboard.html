@@ -2047,6 +2047,10 @@ function renderContactsSheetCreated() {
   const ui = document.getElementById("contacts-sheet-ui");
   if (!ui) return;
 
+  if (currentUser?.id) {
+    localStorage.setItem("contacts_created_" + currentUser.id, "true");
+  }
+
   ui.innerHTML = `
     <button class="sheet-btn" onclick="showSection('contacts', document.querySelector('[onclick*=contacts]'))" type="button" style="width:100%;">
       ✅ Carnet contacts créé
