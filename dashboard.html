@@ -2306,19 +2306,33 @@ function renderContacts() {
 }
 
 async function addContact() {
-  if (!currentUser) return;
+  console.log("CLICK ADD CONTACT");
+
+  if (!currentUser) {
+    console.log("PAS DE CURRENT USER");
+    showToast("Utilisateur non connecté");
+    return;
+  }
 
   const fullName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
 
+  console.log("CONTACT À AJOUTER:", {
+    user_id: currentUser.id,
+    fullName,
+    company,
+    email,
+    phone
+  });
+
   if (!fullName) {
     showToast("Ajoutez au moins un nom");
     return;
   }
 
-  const { error } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("contacts")
     .insert({
       user_id: currentUser.id,
@@ -2326,10 +2340,13 @@ async function addContact() {
       company,
       email,
       phone
-    });
+    })
+    .select();
+
+  console.log("INSERT CONTACT DATA:", data);
+  console.log("INSERT CONTACT ERROR:", error);
 
   if (error) {
-    console.error("Erreur ajout contact:", error);
     showToast("Erreur ajout contact");
     return;
   }
@@ -2340,7 +2357,7 @@ async function addContact() {
   document.getElementById("contact-phone").value = "";
 
   showToast("Contact ajouté");
-  loadContacts();
+  await loadContacts();
 }
 
   function editContact(id) {
