@@ -2309,7 +2309,6 @@ async function addContact() {
   console.log("CLICK ADD CONTACT");
 
   if (!currentUser) {
-    console.log("PAS DE CURRENT USER");
     showToast("Utilisateur non connecté");
     return;
   }
@@ -2319,43 +2318,59 @@ async function addContact() {
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
 
-  console.log("CONTACT À AJOUTER:", {
-    user_id: currentUser.id,
-    fullName,
-    company,
-    email,
-    phone
-  });
-
   if (!fullName) {
     showToast("Ajoutez au moins un nom");
     return;
   }
 
-  const { error } = await supabaseClient
-  .from("contacts")
-  .insert({
-    user_id: currentUser.id,
-    full_name: fullName,
-    company,
-    email,
-    phone
-  });
+  const { data: sessionData } = await supabaseClient.auth.getSession();
+  const token = sessionData?.session?.access_token;
 
-console.log("INSERT CONTACT ERROR:", error);
-
-  if (error) {
-    showToast("Erreur ajout contact");
+  if (!token) {
+    showToast("Session expirée, reconnectez-vous");
     return;
   }
 
-  document.getElementById("contact-name").value = "";
-  document.getElementById("contact-company").value = "";
-  document.getElementById("contact-email").value = "";
-  document.getElementById("contact-phone").value = "";
+  try {
+    const response = await fetch(SUPABASE_URL + "/rest/v1/contacts", {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + token,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        full_name: fullName,
+        company: company,
+        email: email,
+        phone: phone
+      })
+    });
 
-  showToast("Contact ajouté");
-  await loadContacts();
+    const text = await response.text();
+
+    console.log("ADD CONTACT STATUS:", response.status);
+    console.log("ADD CONTACT RESULT:", text);
+
+    if (!response.ok) {
+      showToast("Erreur ajout contact");
+      return;
+    }
+
+    document.getElementById("contact-name").value = "";
+    document.getElementById("contact-company").value = "";
+    document.getElementById("contact-email").value = "";
+    document.getElementById("contact-phone").value = "";
+
+    showToast("Contact ajouté");
+    await loadContacts();
+
+  } catch (err) {
+    console.error("ERREUR FETCH CONTACT:", err);
+    showToast("Erreur ajout contact");
+  }
 }
 
   function editContact(id) {
