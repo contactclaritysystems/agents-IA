@@ -2346,98 +2346,44 @@ function renderContacts() {
 }
 
 async function addContact() {
+  if (!currentUser) return;
 
-console.log("=== ADD CONTACT ===");
-  console.log("currentUser:", currentUser);
-  console.log("currentUser?.id:", currentUser?.id);
-  
-  try {
+  const fullName = document.getElementById("contact-name").value.trim();
+  const company = document.getElementById("contact-company").value.trim();
+  const email = document.getElementById("contact-email").value.trim();
+  const phone = document.getElementById("contact-phone").value.trim();
 
-    console.log("CLICK ADD CONTACT");
+  if (!fullName) {
+    showToast("Ajoutez au moins un nom");
+    return;
+  }
 
-    if (!currentUser) {
-      console.log("NO USER");
-      showToast("Utilisateur non connecté");
-      return;
-    }
-
-    const nameEl = document.getElementById("contact-name");
-    const companyEl = document.getElementById("contact-company");
-    const emailEl = document.getElementById("contact-email");
-    const phoneEl = document.getElementById("contact-phone");
-
-    console.log("ELEMENTS:", {
-      nameEl,
-      companyEl,
-      emailEl,
-      phoneEl
-    });
-
-    const fullName = nameEl.value.trim();
-    const company = companyEl.value.trim();
-    const email = emailEl.value.trim();
-    const phone = phoneEl.value.trim();
-
-    console.log("VALUES:", {
-      fullName,
+  const { error } = await supabaseClient
+    .from("contacts")
+    .insert({
+      user_id: currentUser.id,
+      full_name: fullName,
       company,
       email,
       phone
     });
 
-    if (!fullName) {
-      showToast("Ajoutez au moins un nom");
-      return;
-    }
-
-    console.log("INSERT START");
-    
-    const submitBtn = document.getElementById("contact-submit-btn");
-    if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = "⏳ Ajout..."; }
-
-    const { data, error } = await supabaseClient
-      .from("contacts")
-      .insert({
-        user_id: currentUser.id,
-        full_name: fullName,
-        company,
-        email,
-        phone
-      })
-      .select();
-
-    console.log("INSERT RESULT:", data);
-    console.log("INSERT ERROR:", error);
-
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = "+ Ajouter un contact"; }
-
-    if (error) {
-      console.error(error);
-      showToast("Erreur ajout contact");
-      return;
-    }
-
-    console.log("INSERT OK");
-
-    nameEl.value = "";
-    companyEl.value = "";
-    emailEl.value = "";
-    phoneEl.value = "";
-
-    showToast("Contact ajouté");
-
-    const contactsPage = document.getElementById("main-contacts");
-    if (contactsPage && contactsPage.classList.contains("active")) {
-      await loadContacts();
-    } else {
-      if (data && data[0]) contactsCache.unshift(data[0]);
-    }
-
-  } catch(err) {
-    console.error("ADD CONTACT CRASH:", err);
-    const submitBtn2 = document.getElementById("contact-submit-btn");
-    if (submitBtn2) { submitBtn2.disabled = false; submitBtn2.innerHTML = "+ Ajouter un contact"; }
+  if (error) {
+    console.error("Erreur ajout contact:", error);
     showToast("Erreur ajout contact");
+    return;
+  }
+
+  document.getElementById("contact-name").value = "";
+  document.getElementById("contact-company").value = "";
+  document.getElementById("contact-email").value = "";
+  document.getElementById("contact-phone").value = "";
+
+  showToast("Contact ajouté");
+
+  const contactsPage = document.getElementById("main-contacts");
+  if (contactsPage && contactsPage.classList.contains("active")) {
+    loadContacts();
   }
 }
 
