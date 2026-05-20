@@ -1743,18 +1743,20 @@ main > div[style*="background:var(--bg2)"] {
   <div class="gmail-section" style="display:block;">
     <div class="field-row">
       <input class="field-input" id="contact-search" placeholder="Rechercher un contact..." oninput="renderContacts()" />
-      <button class="save-btn" id="contact-submit-btn" onclick="addContact()" type="button">+ Ajouter un contact</button>
+      <button class="save-btn" id="contact-submit-btn" onclick="toggleContactForm()" type="button">+ Ajouter un contact</button>
     </div>
 
-    <div class="field-row" style="margin-top:18px;">
-      <input class="field-input" id="contact-name" placeholder="Nom complet" />
-      <input class="field-input" id="contact-company" placeholder="Société" />
-    </div>
+    <div id="contact-form-fields" style="display:none;">
+  <div class="field-row" style="margin-top:18px;">
+    <input class="field-input" id="contact-name" placeholder="Nom complet" />
+    <input class="field-input" id="contact-company" placeholder="Société" />
+  </div>
 
-    <div class="field-row" style="margin-top:12px;">
-      <input class="field-input" id="contact-email" placeholder="Email" />
-      <input class="field-input" id="contact-phone" placeholder="Téléphone" />
-    </div>
+  <div class="field-row" style="margin-top:12px;">
+    <input class="field-input" id="contact-email" placeholder="Email" />
+    <input class="field-input" id="contact-phone" placeholder="Téléphone" />
+  </div>
+</div>
   </div>
 
   <div id="contacts-list" class="agents-grid"></div>
@@ -2754,6 +2756,29 @@ function renderContacts() {
       </div>
     </div>
   `).join("");
+}
+
+  function toggleContactForm() {
+  const fields = document.getElementById("contact-form-fields");
+  const btn = document.getElementById("contact-submit-btn");
+  const isOpen = fields.style.display !== "none";
+
+  if (isOpen) {
+    // Fermer sans ajouter
+    fields.style.display = "none";
+    btn.innerHTML = "+ Ajouter un contact";
+    btn.onclick = toggleContactForm;
+  } else {
+    // Ouvrir le formulaire
+    fields.style.display = "block";
+    btn.innerHTML = "💾 Enregistrer le contact";
+    btn.onclick = function() {
+      addContact();
+      fields.style.display = "none";
+      btn.innerHTML = "+ Ajouter un contact";
+      btn.onclick = toggleContactForm;
+    };
+  }
 }
 
 async function addContact() {
