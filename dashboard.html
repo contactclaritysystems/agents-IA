@@ -2308,6 +2308,11 @@ function renderContacts() {
 async function addContact() {
   console.log("CLICK ADD CONTACT");
 
+console.log(document.getElementById("contact-name"));
+console.log(document.getElementById("contact-company"));
+console.log(document.getElementById("contact-email"));
+console.log(document.getElementById("contact-phone"));
+  
   if (!currentUser) {
     showToast("Utilisateur non connecté");
     return;
