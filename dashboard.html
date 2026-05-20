@@ -2352,6 +2352,17 @@ async function loadContacts() {
 }
 
 async function updateContact(id) {
+
+const fullName = document.getElementById("contact-name").value.trim();
+
+// Capitalise chaque mot, supprime les tirets
+const fullNameNormalized = fullName
+  .toLowerCase()
+  .replace(/-/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .replace(/\b\w/g, l => l.toUpperCase());
+  
   const fullName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
@@ -2474,6 +2485,16 @@ function renderContacts() {
 
 async function addContact() {
   if (!currentUser) return;
+
+  const fullName = document.getElementById("contact-name").value.trim();
+
+// Capitalise chaque mot, supprime les tirets
+const fullNameNormalized = fullName
+  .toLowerCase()
+  .replace(/-/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .replace(/\b\w/g, l => l.toUpperCase());
 
   const fullName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
