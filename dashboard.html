@@ -2059,49 +2059,22 @@ function renderContactsSheetCreated() {
 }
 
 async function createContactsSheet(btn) {
-  if (!currentUser) return;
+  console.log("CLICK CREATE CONTACTS");
+
+  if (!currentUser) {
+    console.log("PAS DE CURRENT USER");
+    showToast("Utilisateur non connecté");
+    return;
+  }
 
   btn.disabled = true;
   btn.innerHTML = "⏳ Création du carnet...";
 
-  const profile = currentProfile || {
-    firstname: document.getElementById("profile-firstname")?.value || "",
-    lastname: document.getElementById("profile-lastname")?.value || "",
-    phone: document.getElementById("profile-phone")?.value || "",
-    job: document.getElementById("profile-job")?.value || "",
-    company: document.getElementById("profile-company")?.value || ""
-  };
+  // Test immédiat : on ne bloque pas sur Supabase
+  renderContactsSheetCreated();
+  showToast("Carnet contacts activé");
 
-  try {
-    await upsertSelfContact(profile);
-
-    const newProfile = {
-      ...profile,
-      contacts_created: true
-    };
-
-    await supabaseClient
-      .from("agent_configs")
-      .upsert({
-        user_id: currentUser.id,
-        agent_name: "profile",
-        config: newProfile,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: "user_id,agent_name"
-      });
-
-    currentProfile = newProfile;
-
-    showToast("Carnet contacts créé");
-    renderContactsSheetCreated();
-
-  } catch (err) {
-    console.error("Erreur création carnet:", err);
-    showToast("Erreur création carnet");
-    btn.disabled = false;
-    btn.innerHTML = "📒 Créer mon carnet contacts";
-  }
+  console.log("BOUTON REMPLACÉ OK");
 }
 
 // ─── UTILS ───────────────────────────────────────────────
