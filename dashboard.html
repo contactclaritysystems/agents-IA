@@ -1693,10 +1693,10 @@ async function loadAgentConfigs() {
 
     const config = data[0].config;
 
-    document.getElementById("mails-prenom").value = config.prenom || "";
-    document.getElementById("mails-secteur").value = config.secteur || "";
-    document.getElementById("mails-tel").value = config.tel || "";
-    document.getElementById("mails-sheet").value = config.sheet || "";
+const mailsSheet = document.getElementById("mails-sheet");
+if (mailsSheet) {
+  mailsSheet.value = config.sheet || "";
+}
 
     const card = document.getElementById("card-mails");
     card.querySelector(".agent-status").className = "agent-status ok";
