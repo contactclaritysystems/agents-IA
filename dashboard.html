@@ -1107,6 +1107,31 @@ main > div[style*="background:var(--bg2)"] {
   #main-agents .agents-grid {
   padding: 0 18px;
 }
+
+  #main-contacts .mobile-agent-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+  padding: 18px 18px 0;
+}
+
+#main-contacts .topbar {
+  padding: 0 18px;
+  margin-bottom: 20px;
+}
+
+#main-contacts .gmail-section {
+  margin: 0 18px 24px;
+  border-radius: 22px;
+  padding: 18px;
+}
+
+#main-contacts #contacts-list {
+  padding: 0 18px;
+  grid-template-columns: 1fr;
+}
 }
 
 .template-muted {
@@ -1674,12 +1699,19 @@ main > div[style*="background:var(--bg2)"] {
 <!-- MAIN PAGE CONTACTS -->
 
   <main class="main page-view" id="main-contacts">
-  <div class="topbar">
-    <div>
-      <div class="page-title">Carnet <span>contacts</span></div>
-      <div class="page-subtitle">Ajoutez vos contacts. Vos agents pourront les retrouver automatiquement.</div>
-    </div>
-  </div>
+  <div class="mobile-agent-top">
+    <img src="https://i.imgur.com/1ZFTLIo.png" alt="Clarity Systems" style="height:36px; object-fit:contain;">
+    <div class="mobile-account-badge">
+      <span>🎁</span>
+      <strong>6 jours</strong>
+    </div>
+  </div>
+  <div class="topbar">
+    <div>
+      <div class="page-title">Carnet <span>contacts</span></div>
+      <div class="page-subtitle">Ajoutez vos contacts. Vos agents pourront les retrouver automatiquement.</div>
+    </div>
+  </div>
 
   <div class="gmail-section" style="display:block;">
     <div class="field-row">
