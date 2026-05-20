@@ -2034,15 +2034,26 @@ function unlockProfileFields() {
 
     lockProfileFields();
 
-  const { data: selfContact } = await supabaseClient
-  .from("contacts")
-  .select("id")
-  .eq("user_id", currentUser.id)
-  .eq("email", currentUser.email)
-  .limit(1);
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+const rawSession = localStorage.getItem(storageKey);
+const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-if (selfContact && selfContact.length > 0) {
-  renderContactsSheetCreated();
+if (accessToken) {
+  const scResp = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts?user_id=eq." + currentUser.id + "&email=eq." + encodeURIComponent(currentUser.email) + "&limit=1",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken
+      }
+    }
+  );
+  if (scResp.ok) {
+    const selfContact = await scResp.json();
+    if (selfContact && selfContact.length > 0) {
+      renderContactsSheetCreated();
+    }
+  }
 }
 
   } catch(err) {
