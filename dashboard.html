@@ -2022,6 +2022,17 @@ function unlockProfileFields() {
 
     lockProfileFields();
 
+  const { data: selfContact } = await supabaseClient
+  .from("contacts")
+  .select("id")
+  .eq("user_id", currentUser.id)
+  .eq("email", currentUser.email)
+  .limit(1);
+
+if (selfContact && selfContact.length > 0) {
+  renderContactsSheetCreated();
+}
+
   } catch(err) {
     console.error("Erreur loadProfile:", err);
   }
