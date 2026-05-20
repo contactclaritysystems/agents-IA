@@ -1118,6 +1118,70 @@ main > div[style*="background:var(--bg2)"] {
   pointer-events: none;
   cursor: not-allowed;
 }
+
+  /* ── BOTTOM TAB BAR ── */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 72px;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--line);
+    z-index: 200;
+    padding: 0 8px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 8px 4px;
+    border-radius: 14px;
+    transition: background .18s ease;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .bottom-tab:hover {
+    background: rgba(29,29,31,.05);
+  }
+
+  .bottom-tab.active .bottom-tab-icon {
+    transform: scale(1.15);
+  }
+
+  .bottom-tab.active .bottom-tab-label {
+    color: var(--dark);
+    font-weight: 700;
+  }
+
+  .bottom-tab-icon {
+    font-size: 20px;
+    transition: transform .2s ease;
+  }
+
+  .bottom-tab-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: .01em;
+  }
+}
   
 </style>
 </head>
@@ -2760,8 +2824,33 @@ window.logout = logout;
     e.preventDefault();
     logout();
   }
+
+    if (e.target.closest("#bottom-logout-btn")) {
+  e.preventDefault();
+  logout();
+}
 });
 </script>
+
+<!-- BOTTOM TAB BAR MOBILE -->
+<nav class="bottom-nav" id="bottomNav">
+  <button class="bottom-tab active" onclick="showSection('agents', this)" data-section="agents">
+    <span class="bottom-tab-icon">⚡</span>
+    <span class="bottom-tab-label">Agents</span>
+  </button>
+  <button class="bottom-tab" onclick="showSection('contacts', this)" data-section="contacts">
+    <span class="bottom-tab-icon">👥</span>
+    <span class="bottom-tab-label">Contacts</span>
+  </button>
+  <button class="bottom-tab" onclick="showSection('settings', this)" data-section="settings">
+    <span class="bottom-tab-icon">⚙️</span>
+    <span class="bottom-tab-label">Réglages</span>
+  </button>
+  <button class="bottom-tab" id="bottom-logout-btn">
+    <span class="bottom-tab-icon">🚪</span>
+    <span class="bottom-tab-label">Quitter</span>
+  </button>
+</nav>
 
 </body>
 </html>
