@@ -2346,6 +2346,7 @@ function renderContacts() {
 }
 
 async function addContact() {
+  alert("addContact appelé");
   if (!currentUser) return;
 
   const fullName = document.getElementById("contact-name").value.trim();
