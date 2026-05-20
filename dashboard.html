@@ -2381,10 +2381,7 @@ async function addContact() {
 
   showToast("Contact ajouté");
 
-  const contactsPage = document.getElementById("main-contacts");
-  if (contactsPage && contactsPage.classList.contains("active")) {
     loadContacts();
-  }
 }
 
 function editContact(id) {
