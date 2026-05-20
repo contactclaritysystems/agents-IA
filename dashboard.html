@@ -2289,6 +2289,13 @@ function showSection(section, btn) {
 let contactsCache = [];
 
 async function loadContacts() {
+  console.log("=== LOAD CONTACTS ===");
+  console.log("currentUser:", currentUser?.id);
+  if (!currentUser) return;
+  console.log("QUERY SUPABASE...");
+  
+  const { data, error } = await supabaseClient
+  ...
   if (!currentUser) return;
 
   const { data, error } = await supabaseClient
