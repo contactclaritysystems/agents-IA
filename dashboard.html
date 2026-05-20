@@ -2860,6 +2860,11 @@ function editContact(id) {
     btn.setAttribute("onclick", `updateContact('${id}')`);
   }
   showToast("Contact chargé pour modification");
+
+  // Ouvrir le formulaire automatiquement
+document.getElementById("contact-form-fields").style.display = "block";
+const btn = document.getElementById("contact-submit-btn");
+btn.innerHTML = "💾 Enregistrer les modifications";
 }
 
   function logout() {
