@@ -1613,24 +1613,39 @@ async function checkGmailStatus() {
   console.log("currentUser.email:", currentUser.email);
 
   const cached = localStorage.getItem("gmail_" + currentUser.email);
-
   if (cached) {
     renderGmailConnected(cached);
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from("user_integrations")
-    .select("email")
-    .eq("account_email", currentUser.email)
-    .eq("provider", "google")
-    .eq("connected", true)
-    .limit(1);
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
+  if (!accessToken) {
+    renderGmailDisconnected();
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/user_integrations?account_email=eq." + encodeURIComponent(currentUser.email) + "&provider=eq.google&connected=eq.true&limit=1",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken
+      }
+    }
+  );
+
+  if (!response.ok) {
+    renderGmailDisconnected();
+    return;
+  }
+
+  const data = await response.json();
   console.log("GMAIL DATA:", data);
-  console.log("GMAIL ERROR:", error);
 
-  if (!error && data && data.length > 0 && data[0].email) {
+  if (data && data.length > 0 && data[0].email) {
     localStorage.setItem("gmail_" + currentUser.email, data[0].email);
     renderGmailConnected(data[0].email);
     return;
