@@ -2366,19 +2366,21 @@ async function addContact() {
     console.log("INSERT ERROR:", error);
 
     if (error) {
-      console.error(error);
-      showToast("Erreur ajout contact");
-      return;
-    }
+  console.error(error);
+  showToast("Erreur ajout contact");
+  return;
+}
 
-    nameEl.value = "";
-    companyEl.value = "";
-    emailEl.value = "";
-    phoneEl.value = "";
+console.log("INSERT OK");
 
-    showToast("Contact ajouté");
+nameEl.value = "";
+companyEl.value = "";
+emailEl.value = "";
+phoneEl.value = "";
 
-    await loadContacts();
+showToast("Contact ajouté");
+
+await loadContacts();
 
   } catch(err) {
 
