@@ -1670,10 +1670,6 @@ async function handleUser(user) {
   await loadProfile();
 }
 
-if (localStorage.getItem("contacts_created_" + currentUser.id) === "true") {
-  renderContactsSheetCreated();
-}
-
 async function loadAgentConfigs() {
   if (!currentUser) return;
 
