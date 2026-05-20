@@ -2306,75 +2306,82 @@ function renderContacts() {
 }
 
 async function addContact() {
-  console.log("CLICK ADD CONTACT");
-
-console.log(document.getElementById("contact-name"));
-console.log(document.getElementById("contact-company"));
-console.log(document.getElementById("contact-email"));
-console.log(document.getElementById("contact-phone"));
-  
-  if (!currentUser) {
-    showToast("Utilisateur non connecté");
-    return;
-  }
-
-  const fullName = document.getElementById("contact-name").value.trim();
-  const company = document.getElementById("contact-company").value.trim();
-  const email = document.getElementById("contact-email").value.trim();
-  const phone = document.getElementById("contact-phone").value.trim();
-
-  if (!fullName) {
-    showToast("Ajoutez au moins un nom");
-    return;
-  }
-
-  const { data: sessionData } = await supabaseClient.auth.getSession();
-  const token = sessionData?.session?.access_token;
-
-  if (!token) {
-    showToast("Session expirée, reconnectez-vous");
-    return;
-  }
 
   try {
-    const response = await fetch(SUPABASE_URL + "/rest/v1/contacts", {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + token,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-      },
-      body: JSON.stringify({
-        user_id: currentUser.id,
-        full_name: fullName,
-        company: company,
-        email: email,
-        phone: phone
-      })
+
+    console.log("CLICK ADD CONTACT");
+
+    if (!currentUser) {
+      console.log("NO USER");
+      showToast("Utilisateur non connecté");
+      return;
+    }
+
+    const nameEl = document.getElementById("contact-name");
+    const companyEl = document.getElementById("contact-company");
+    const emailEl = document.getElementById("contact-email");
+    const phoneEl = document.getElementById("contact-phone");
+
+    console.log("ELEMENTS:", {
+      nameEl,
+      companyEl,
+      emailEl,
+      phoneEl
     });
 
-    const text = await response.text();
+    const fullName = nameEl.value.trim();
+    const company = companyEl.value.trim();
+    const email = emailEl.value.trim();
+    const phone = phoneEl.value.trim();
 
-    console.log("ADD CONTACT STATUS:", response.status);
-    console.log("ADD CONTACT RESULT:", text);
+    console.log("VALUES:", {
+      fullName,
+      company,
+      email,
+      phone
+    });
 
-    if (!response.ok) {
+    if (!fullName) {
+      showToast("Ajoutez au moins un nom");
+      return;
+    }
+
+    console.log("INSERT START");
+
+    const { data, error } = await supabaseClient
+      .from("contacts")
+      .insert({
+        user_id: currentUser.id,
+        full_name: fullName,
+        company,
+        email,
+        phone
+      })
+      .select();
+
+    console.log("INSERT RESULT:", data);
+    console.log("INSERT ERROR:", error);
+
+    if (error) {
+      console.error(error);
       showToast("Erreur ajout contact");
       return;
     }
 
-    document.getElementById("contact-name").value = "";
-    document.getElementById("contact-company").value = "";
-    document.getElementById("contact-email").value = "";
-    document.getElementById("contact-phone").value = "";
+    nameEl.value = "";
+    companyEl.value = "";
+    emailEl.value = "";
+    phoneEl.value = "";
 
     showToast("Contact ajouté");
+
     await loadContacts();
 
-  } catch (err) {
-    console.error("ERREUR FETCH CONTACT:", err);
-    showToast("Erreur ajout contact");
+  } catch(err) {
+
+    console.error("ADD CONTACT CRASH:", err);
+    alert(err.message);
+
   }
 }
 
