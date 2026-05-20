@@ -2360,26 +2360,38 @@ async function addContact() {
 
   alert("5 - avant insert");
 
-  const { error } = await supabaseClient
-    .from("contacts")
-    .insert({
+const response = await fetch(
+  SUPABASE_URL + "/rest/v1/contacts",
+  {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal"
+    },
+    body: JSON.stringify({
       user_id: currentUser.id,
       full_name: fullName,
       company,
       email,
       phone
-    });
-
-  alert("6 - après insert, error = " + JSON.stringify(error));
-
-  if (error) {
-    showToast("Erreur ajout contact");
-    return;
+    })
   }
+);
 
-  alert("7 - insert OK");
-  showToast("Contact ajouté");
-  loadContacts();
+alert("6 - status : " + response.status);
+
+if (!response.ok) {
+  const err = await response.text();
+  alert("7 - erreur : " + err);
+  showToast("Erreur ajout contact");
+  return;
+}
+
+alert("8 - OK");
+showToast("Contact ajouté");
+loadContacts();
 }
 
 function editContact(id) {
