@@ -2848,23 +2848,27 @@ async function addContact() {
 }
 
 function editContact(id) {
-  const contact = contactsCache.find(c => c.id === id);
-  if (!contact) return;
-  document.getElementById("contact-name").value = contact.full_name || "";
-  document.getElementById("contact-company").value = contact.company || "";
-  document.getElementById("contact-email").value = contact.email || "";
-  document.getElementById("contact-phone").value = contact.phone || "";
-  const btn = document.getElementById("contact-submit-btn");
-  if (btn) {
-    btn.innerHTML = "💾 Enregistrer les modifications";
-    btn.setAttribute("onclick", `updateContact('${id}')`);
-  }
-  showToast("Contact chargé pour modification");
+  const contact = contactsCache.find(c => c.id === id);
+  if (!contact) return;
+
+  document.getElementById("contact-name").value = contact.full_name || "";
+  document.getElementById("contact-company").value = contact.company || "";
+  document.getElementById("contact-email").value = contact.email || "";
+  document.getElementById("contact-phone").value = contact.phone || "";
+
+  const formFields = document.getElementById("contact-form-fields");
+  if (formFields) {
+    formFields.style.display = "block";
+  }
+
+  const btn = document.getElementById("contact-submit-btn");
+  if (btn) {
+    btn.innerHTML = "💾 Enregistrer les modifications";
+    btn.setAttribute("onclick", `updateContact('${id}')`);
+  }
+
+  showToast("Contact chargé pour modification");
 }
-  // Ouvrir le formulaire automatiquement
-document.getElementById("contact-form-fields").style.display = "block";
-const btn = document.getElementById("contact-submit-btn");
-btn.innerHTML = "💾 Enregistrer les modifications";
 
   function logout() {
   try {
