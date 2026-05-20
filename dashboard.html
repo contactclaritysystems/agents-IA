@@ -2487,16 +2487,6 @@ async function addContact() {
   if (!currentUser) return;
 
   const fullName = document.getElementById("contact-name").value.trim();
-
-// Capitalise chaque mot, supprime les tirets
-const fullNameNormalized = fullName
-  .toLowerCase()
-  .replace(/-/g, " ")
-  .replace(/\s+/g, " ")
-  .trim()
-  .replace(/\b\w/g, l => l.toUpperCase());
-
-  const fullName = document.getElementById("contact-name").value.trim();
   const company = document.getElementById("contact-company").value.trim();
   const email = document.getElementById("contact-email").value.trim();
   const phone = document.getElementById("contact-phone").value.trim();
@@ -2549,6 +2539,16 @@ const fullNameNormalized = fullName
 
   showToast("Contact ajouté");
   loadContacts();
+
+  const fullName = document.getElementById("contact-name").value.trim();
+
+// Capitalise chaque mot, supprime les tirets
+const fullNameNormalized = fullName
+  .toLowerCase()
+  .replace(/-/g, " ")
+  .replace(/\s+/g, " ")
+  .trim()
+  .replace(/\b\w/g, l => l.toUpperCase());
 }
 
 function editContact(id) {
