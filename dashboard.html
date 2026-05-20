@@ -1988,9 +1988,11 @@ function unlockProfileFields() {
   if (editBtn) editBtn.style.display = "none";
 }
 
-  async function loadProfile() {
+async function loadProfile() {
+  console.log("=== LOAD PROFILE ===");
+  console.log("currentUser:", currentUser?.id);
   if (!currentUser) return;
-
+    
   try {
     const response = await fetch(
       SUPABASE_URL + "/rest/v1/agent_configs?user_id=eq." + encodeURIComponent(currentUser.id) + "&agent_name=eq.profile&select=*",
