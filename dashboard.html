@@ -2392,6 +2392,24 @@ console.log("=== ADD CONTACT ===");
 
     console.log("INSERT START");
 
+// TEST TIMEOUT
+const insertPromise = supabaseClient
+  .from("contacts")
+  .insert({
+    user_id: currentUser.id,
+    full_name: fullName,
+    company,
+    email,
+    phone
+  })
+  .select();
+
+const timeoutPromise = new Promise((_, reject) =>
+  setTimeout(() => reject(new Error("TIMEOUT 8s")), 8000)
+);
+
+const { data, error } = await Promise.race([insertPromise, timeoutPromise]);
+    
     const submitBtn = document.getElementById("contact-submit-btn");
     if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = "⏳ Ajout..."; }
 
