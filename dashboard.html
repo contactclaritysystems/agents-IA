@@ -2332,19 +2332,17 @@ async function addContact() {
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from("contacts")
-    .insert({
-      user_id: currentUser.id,
-      full_name: fullName,
-      company,
-      email,
-      phone
-    })
-    .select();
+  const { error } = await supabaseClient
+  .from("contacts")
+  .insert({
+    user_id: currentUser.id,
+    full_name: fullName,
+    company,
+    email,
+    phone
+  });
 
-  console.log("INSERT CONTACT DATA:", data);
-  console.log("INSERT CONTACT ERROR:", error);
+console.log("INSERT CONTACT ERROR:", error);
 
   if (error) {
     showToast("Erreur ajout contact");
