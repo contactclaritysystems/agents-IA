@@ -845,6 +845,10 @@ main > div[style*="background:var(--bg2)"] {
   display: none !important;
 }
 
+  .mobile-agent-top {
+  display: none;
+}
+
 /* MOBILE */
 @media (max-width: 1100px) {
   .main {
@@ -1040,6 +1044,85 @@ main > div[style*="background:var(--bg2)"] {
 
   .main {
   overflow-x: hidden;
+}
+
+  /* MOBILE — Mes agents uniquement */
+#main-agents .mobile-agent-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+#main-agents .mobile-logo {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: var(--text);
+}
+
+#main-agents .mobile-logo span {
+  color: var(--muted-2);
+}
+
+#main-agents .desktop-trial-banner {
+  display: none;
+}
+
+#main-agents .mobile-account-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.78);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+#main-agents .mobile-account-badge strong {
+  color: var(--text);
+  font-weight: 800;
+}
+
+#main-agents .topbar {
+  margin-bottom: 20px;
+}
+
+#main-agents .status-row {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+#main-agents .stat-card {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 7px;
+  padding: 13px 8px;
+  border-radius: 18px;
+}
+
+#main-agents .stat-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  font-size: 14px;
+}
+
+#main-agents .stat-value {
+  font-size: 20px;
+}
+
+#main-agents .stat-label {
+  font-size: 10.5px;
+  line-height: 1.25;
+  margin-top: 1px;
 }
 }
 
@@ -1477,17 +1560,26 @@ main > div[style*="background:var(--bg2)"] {
 
   <!-- MAIN PAGE MES AGENTS -->
 <main class="main page-view active" id="main-agents">
-  <div class="topbar">
-    <div>
-      <div class="page-title">Mes <span>agents</span></div>
-      <div class="page-subtitle">Lancez vos agents prêts à l’emploi.</div>
-    </div>
+  <div class="mobile-agent-top">
+  <div class="mobile-logo">Clarity<span>.</span></div>
 
-    <div class="trial-banner">
-      <div class="trial-icon">🎁</div>
-      <div class="trial-text"><strong>6 jours</strong> restants dans votre essai gratuit</div>
-    </div>
+  <div class="mobile-account-badge">
+    <span>🎁</span>
+    <strong>6 jours</strong>
   </div>
+</div>
+
+<div class="topbar">
+  <div>
+    <div class="page-title">Mes <span>agents</span></div>
+    <div class="page-subtitle">Lancez vos agents prêts à l’emploi.</div>
+  </div>
+
+  <div class="trial-banner desktop-trial-banner">
+    <div class="trial-icon">🎁</div>
+    <div class="trial-text"><strong>6 jours</strong> restants dans votre essai gratuit</div>
+  </div>
+</div>
 
 <!-- STATS -->
   <div class="status-row">
