@@ -1462,9 +1462,6 @@ select.field-input {
     font-size: 10px;
     padding: 4px 8px;
   }
-}
-
-  @media (max-width: 600px) {
 
   #history-list.agents-grid {
     display: flex !important;
@@ -1509,9 +1506,6 @@ select.field-input {
   #history-list .agent-card::after {
     display: none;
   }
-}
-
-@media (max-width: 600px) {
 
   /* Pages mobile : moins d'espace en haut */
   .main {
@@ -1645,8 +1639,6 @@ select.field-input {
   }
 
   /* Page Historique : liste en petites lignes */
-  @media (max-width: 600px) {
-
   #history-detail {
     display: none;
   }
@@ -1673,7 +1665,6 @@ select.field-input {
   #history-detail .section-title {
     font-size: 20px;
   }
-}
 
   #history-list.agents-grid {
     display: flex !important;
@@ -1743,9 +1734,7 @@ select.field-input {
   .bottom-tab.active {
     background: rgba(0,0,0,.045) !important;
   }
-}
 
-  @media (max-width: 600px) {
   #profil-mobile-section {
     display: none;
   }
@@ -1753,9 +1742,7 @@ select.field-input {
   #profil-mobile-section.open {
     display: block;
   }
-}
 
-  @media (max-width: 600px) {
   #profil-mobile-section {
     display: none;
   }
@@ -1780,15 +1767,7 @@ select.field-input {
   #profil-mobile-section .gmail-section {
     margin: 0 !important;
   }
-}
 
-@media (min-width: 601px) {
-  .mobile-subpage-header {
-    display: none;
-  }
-}
-
-  @media (max-width: 600px) {
   #contact-mobile-section {
     display: none;
   }
@@ -1806,13 +1785,6 @@ select.field-input {
   #contact-mobile-section .gmail-section {
     margin: 0 !important;
   }
-}
-
-@media (min-width: 601px) {
-  #contact-mobile-section {
-    display: none;
-  }
-}
 
   .contact-row {
   width: 100%;
@@ -1879,11 +1851,19 @@ select.field-input {
   color: var(--text);
   text-align: right;
 }
-
-  @media (max-width: 600px) {
   /* Cache la ligne Carnet contacts */
   #main-settings > .gmail-section:has(#contacts-sheet-ui) {
     display: none !important;
+  }
+}
+
+@media (min-width: 601px) {
+  #contact-mobile-section {
+    display: none;
+  }
+
+  .mobile-subpage-header {
+    display: none;
   }
 }
   
