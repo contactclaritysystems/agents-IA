@@ -1206,6 +1206,18 @@ main > div[style*="background:var(--bg2)"] {
   font-size: 14px;
   margin-bottom: 4px;
 }
+
+  #main-settings .gmail-section:nth-child(2),
+#main-settings .gmail-section:nth-child(3) {
+  display: none;
+}
+
+#main-settings .mobile-integrations {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
 }
 
 .template-muted {
@@ -1409,6 +1421,19 @@ main > div[style*="background:var(--bg2)"] {
 
   </div>
 
+</div>
+
+  <div class="mobile-integrations">
+  <div class="stat-card" onclick="showSection('settings', document.querySelector('.bottom-tab[data-section=settings]'))" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
+    <div id="gmail-status-icon" style="font-size:22px;">📧</div>
+    <div class="stat-value" style="font-size:13px; margin-top:6px;">Gmail</div>
+    <div class="stat-label" id="gmail-status-label">Non connecté</div>
+  </div>
+  <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px;">
+    <div style="font-size:22px;">📒</div>
+    <div class="stat-value" style="font-size:13px; margin-top:6px;">Contacts</div>
+    <div class="stat-label" id="carnet-status-label">Non créé</div>
+  </div>
 </div>
 
   <!-- GMAIL -->
