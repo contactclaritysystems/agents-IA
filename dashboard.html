@@ -3861,7 +3861,12 @@ async function loadContacts() {
   }
 
   contactsCache = await response.json();
-  renderContacts();
+
+contactsCache.sort((a, b) =>
+  (a.full_name || "").localeCompare(b.full_name || "", "fr")
+);
+
+renderContacts(); 
 }
 
 async function updateContact(id) {
