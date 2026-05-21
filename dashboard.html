@@ -1974,12 +1974,16 @@ select.field-input {
   
 <!-- MAIN PAGE REGLAGES -->
 <main class="main page-view" id="main-settings" style="padding: 12px 18px 100px;">
-  <div class="topbar">
-    <div>
-     <div class="page-title">Réglages <span>agents</span></div>
-<div class="page-subtitle">Connectez vos outils et configurez vos agents une seule fois.</div>
-    </div>
+  <div class="topbar settings-topbar">
+  <div>
+    <div class="page-title">Réglages <span>agents</span></div>
+    <div class="page-subtitle">Connectez vos outils et configurez vos agents une seule fois.</div>
   </div>
+
+  <button class="power-logout-btn" onclick="confirmLogout()" type="button" aria-label="Déconnexion">
+    ⏻
+  </button>
+</div>
 
   <!-- PROFIL -->
 <div id="profil-mobile-section">
