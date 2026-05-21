@@ -824,16 +824,6 @@ select.field-input {
   transform: translateY(0);
 }
 
-/* FIX INLINE GUIDE STYLE */
-main > div[style*="background:var(--bg2)"] {
-  background: rgba(255,255,255,.72) !important;
-  border: 1px solid var(--line) !important;
-  border-radius: 24px !important;
-  padding: 26px 28px !important;
-  margin-bottom: 40px !important;
-  box-shadow: 0 1px 0 rgba(255,255,255,.75) inset;
-}
-
 /* FIX INLINE SUIVI BODY */
 #card-suivi.open .agent-body {
   display: grid !important;
@@ -1893,12 +1883,6 @@ main > div[style*="background:var(--bg2)"] {
   @media (max-width: 600px) {
   /* Cache la ligne Carnet contacts */
   #main-settings > .gmail-section:has(#contacts-sheet-ui) {
-    display: none !important;
-  }
-
-  /* Cache le bloc Comment ça marche */
-  #main-settings .section-header:last-of-type,
-  #main-settings > div[style*="background:var(--bg2)"] {
     display: none !important;
   }
 }
