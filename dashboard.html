@@ -2110,26 +2110,33 @@ select.field-input {
   <div class="agents-grid">
 
     <!-- AGENT MAILS -->
-    <div class="agent-card configured open" id="card-mails">
-      <div class="agent-head" onclick="toggleCard('mails')">
-        <div class="agent-emoji">✉️</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Mails</div>
-         <div class="agent-desc" id="mails-agent-desc">Exemple : “Envoie un mail à Lucas Martin pour lui dire qu’on se voit demain à 10h.”</div>
-        </div>
-       <div class="agent-status ok">Actif</div>
+<div class="agent-card configured" id="card-mails">
+  <div class="agent-head" onclick="toggleCard('mails')">
+    <div class="agent-emoji">✉️</div>
 
-<div class="agent-toggle">▾</div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Mails</div>
+      <div class="agent-desc" id="mails-agent-desc">
+        Envoie des mails à la voix en retrouvant vos contacts automatiquement.
       </div>
-      <div class="info-box">
-  <span class="info-icon">✉️</span>
-  <div>
-    Cet agent permet d’envoyer des mails simplement à la voix.
-    <br><br>
-    Exemple :
-    <strong>“Envoie un mail à Lucas pour déplacer le rendez-vous à demain.”</strong>
-    <br><br>
-    L’agent retrouve automatiquement le contact dans votre carnet et génère le mail avant l’envoi.
+    </div>
+
+    <div class="agent-status ok">Actif</div>
+    <div class="agent-toggle">▾</div>
+  </div>
+
+  <div class="agent-body">
+    <div class="info-box">
+      <span class="info-icon">✉️</span>
+      <div>
+        Cet agent permet d’envoyer des mails simplement à la voix.
+        <br><br>
+        Exemple :
+        <strong>“Envoie un mail à Lucas pour déplacer le rendez-vous à demain.”</strong>
+        <br><br>
+        L’agent retrouve automatiquement le contact dans votre carnet et prépare le mail avant l’envoi.
+      </div>
+    </div>
   </div>
 </div>
 
