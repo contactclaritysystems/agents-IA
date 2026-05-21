@@ -2339,87 +2339,85 @@ select.field-input {
 </main>
 
 <!-- MAIN PAGE CONTACTS -->
+<main class="main page-view" id="main-contacts">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Carnet <span>contacts</span></div>
+      <div class="page-subtitle">Ajoutez vos contacts. Vos agents pourront les retrouver automatiquement.</div>
+    </div>
+  </div>
 
-  <main class="main page-view" id="main-contacts">
-    
-  <div class="topbar">
-    <div>
-      <div class="page-title">Carnet <span>contacts</span></div>
-      <div class="page-subtitle">Ajoutez vos contacts. Vos agents pourront les retrouver automatiquement.</div>
-    </div>
-  </div>
-
-  <div class="gmail-section" style="display:block;">
+  <div class="gmail-section contacts-search-box" style="display:block;">
     <div class="field-row">
       <input class="field-input" id="contact-search" placeholder="Rechercher un contact..." oninput="renderContacts()" />
-     <button class="save-btn" id="contact-submit-btn" onclick="openContactPage()" type="button">+ Ajouter un contact</button>
+      <button class="save-btn" id="contact-submit-btn" onclick="openContactPage()" type="button">+ Ajouter un contact</button>
     </div>
-
-    <div id="contact-mobile-section">
-  <div class="mobile-subpage-header">
-    <button class="sheet-btn" type="button" onclick="closeContactPage()">← Retour</button>
-    <div class="section-title" id="contact-form-title">Nouveau contact</div>
   </div>
 
-  <div class="gmail-section" style="display:block;">
-    <div class="field-group">
-      <div class="field-label">Nom complet</div>
-      <input class="field-input" id="contact-name" placeholder="Lucas Martin" />
-    </div>
-
-    <div class="field-group" style="margin-top:14px;">
-      <div class="field-label">Société</div>
-      <input class="field-input" id="contact-company" placeholder="Entreprise" />
-    </div>
-
-    <div class="field-group" style="margin-top:14px;">
-      <div class="field-label">Email</div>
-      <input class="field-input" id="contact-email" placeholder="lucas@email.com" />
-    </div>
-
-    <div class="field-group" style="margin-top:14px;">
-      <div class="field-label">Téléphone</div>
-      <input class="field-input" id="contact-phone" placeholder="06 12 34 56 78" />
-    </div>
-
-    <button class="save-btn" id="contact-save-page-btn" onclick="saveContactFromPage()" type="button">
-      💾 Enregistrer le contact
-    </button>
-  </div>
-</div>
-
-    <div id="contact-detail-page">
-  <div class="mobile-subpage-header">
-    <button class="sheet-btn" type="button" onclick="closeContactDetail()">← Retour</button>
-    <div class="section-title">Contact</div>
-  </div>
-
-  <div class="gmail-section" style="display:block;">
-    <h1 id="contact-detail-name" style="font-size:24px; letter-spacing: -0.03em;;"></h1>
-    <p id="contact-detail-company" style="color:var(--muted); margin-bottom:18px;"></p>
-
-    <div class="detail-line">
-      <span>Téléphone</span>
-      <strong id="contact-detail-phone"></strong>
-    </div>
-
-    <div class="detail-line">
-      <span>Email</span>
-      <strong id="contact-detail-email"></strong>
-    </div>
-
-    <button class="save-btn" onclick="editSelectedContact()" type="button">
-      Modifier
-    </button>
-
-    <button class="sheet-btn" onclick="deleteSelectedContact()" type="button" style="width:100%; color:var(--danger); justify-content:center; margin-top:10px;">
-      Supprimer
-    </button>
-  </div>
-</div>
-
-    </div>
   <div id="contacts-list" class="agents-grid"></div>
+
+  <div id="contact-mobile-section">
+    <div class="mobile-subpage-header">
+      <button class="sheet-btn" type="button" onclick="closeContactPage()">← Retour</button>
+      <div class="section-title" id="contact-form-title">Nouveau contact</div>
+    </div>
+
+    <div class="gmail-section" style="display:block;">
+      <div class="field-group">
+        <div class="field-label">Nom complet</div>
+        <input class="field-input" id="contact-name" placeholder="Lucas Martin" />
+      </div>
+
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Société</div>
+        <input class="field-input" id="contact-company" placeholder="Entreprise" />
+      </div>
+
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Email</div>
+        <input class="field-input" id="contact-email" placeholder="lucas@email.com" />
+      </div>
+
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Téléphone</div>
+        <input class="field-input" id="contact-phone" placeholder="06 12 34 56 78" />
+      </div>
+
+      <button class="save-btn" id="contact-save-page-btn" onclick="saveContactFromPage()" type="button">
+        💾 Enregistrer le contact
+      </button>
+    </div>
+  </div>
+
+  <div id="contact-detail-page">
+    <div class="mobile-subpage-header">
+      <button class="sheet-btn" type="button" onclick="closeContactDetail()">← Retour</button>
+      <div class="section-title">Contact</div>
+    </div>
+
+    <div class="gmail-section" style="display:block;">
+      <h1 id="contact-detail-name" style="font-size:24px; letter-spacing:-0.03em;"></h1>
+      <p id="contact-detail-company" style="color:var(--muted); margin-bottom:18px;"></p>
+
+      <div class="detail-line">
+        <span>Téléphone</span>
+        <strong id="contact-detail-phone"></strong>
+      </div>
+
+      <div class="detail-line">
+        <span>Email</span>
+        <strong id="contact-detail-email"></strong>
+      </div>
+
+      <button class="save-btn" onclick="editSelectedContact()" type="button">
+        Modifier
+      </button>
+
+      <button class="sheet-btn" onclick="deleteSelectedContact()" type="button" style="width:100%; color:var(--danger); justify-content:center; margin-top:10px;">
+        Supprimer
+      </button>
+    </div>
+  </div>
 </main>
 
 <!-- MAIN PAGE HISTORIQUE -->
