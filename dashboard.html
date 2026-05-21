@@ -1307,6 +1307,31 @@ main > div[style*="background:var(--bg2)"] {
   #main-settings .gmail-section:has(#gmail-ui) {
   display: none !important;
 }
+}
+
+   .history-folder-card {
+  cursor: pointer;
+  min-height: 190px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.history-folder-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.history-folder-card .agent-status {
+  width: fit-content;
+}
 
   .history-folder-card {
   cursor: pointer;
@@ -1330,7 +1355,6 @@ main > div[style*="background:var(--bg2)"] {
 
 .history-folder-card .agent-status {
   width: fit-content;
-}
 }
 
 .template-muted {
@@ -1944,8 +1968,7 @@ main > div[style*="background:var(--bg2)"] {
 </main>
 
 <!-- MAIN PAGE HISTORIQUE -->
-
-  <main class="main page-view" id="main-historique">
+<main class="main page-view" id="main-historique">
   <div class="topbar">
     <div>
       <div class="page-title">Historique <span>actions</span></div>
@@ -1953,22 +1976,23 @@ main > div[style*="background:var(--bg2)"] {
     </div>
   </div>
 
-  <div class="agent-card history-folder-card" onclick="openHistoryAgent('mails')">
-  <div class="history-folder-icon">📧</div>
-  <div class="agent-name">Agent Mails</div>
-  <div class="agent-desc">Mails envoyés ou échoués</div>
-  <div class="agent-status ok">Historique</div>
-</div>
-
-    <div class="agent-card" style="opacity:.5;">
-      <div class="agent-head" style="cursor:default;">
-        <div class="agent-emoji">📄</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Devis</div>
-          <div class="agent-desc">Aucune action pour le moment.</div>
-        </div>
-        <div class="agent-status empty">Vide</div>
+  <div class="agents-grid" id="history-folders">
+    <div class="agent-card history-folder-card" onclick="openHistoryAgent('mails')">
+      <div class="history-folder-icon">📧</div>
+      <div>
+        <div class="agent-name">Agent Mails</div>
+        <div class="agent-desc">Mails envoyés ou échoués</div>
       </div>
+      <div class="agent-status ok">Historique</div>
+    </div>
+
+    <div class="agent-card history-folder-card" style="opacity:.5;">
+      <div class="history-folder-icon">📄</div>
+      <div>
+        <div class="agent-name">Agent Devis</div>
+        <div class="agent-desc">Aucune action pour le moment.</div>
+      </div>
+      <div class="agent-status empty">Vide</div>
     </div>
   </div>
 
