@@ -3109,19 +3109,40 @@ function openHistoryAgent(agentName) {
 
   const detail = document.getElementById("history-detail");
   const title = document.getElementById("history-detail-title");
+  const folders = document.getElementById("history-folders");
 
-  if (title) title.textContent = "Agent Mails";
-  if (detail) detail.style.display = "block";
+  if (folders) {
+    folders.style.display = "none";
+  }
+
+  if (title) {
+    title.textContent = "Agent Mails";
+  }
+
+  if (detail) {
+    detail.style.display = "block";
+  }
 
   loadHistory(agentName);
 }
 
 function closeHistoryDetail() {
+
   const detail = document.getElementById("history-detail");
   const list = document.getElementById("history-list");
+  const folders = document.getElementById("history-folders");
 
-  if (detail) detail.style.display = "none";
-  if (list) list.innerHTML = "";
+  if (detail) {
+    detail.style.display = "none";
+  }
+
+  if (list) {
+    list.innerHTML = "";
+  }
+
+  if (folders) {
+    folders.style.display = "grid";
+  }
 
   historyLimit = 10;
 }
