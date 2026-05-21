@@ -2742,6 +2742,7 @@ targetCard.querySelector(".agent-head").after(box);
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
+  recognition.continuous = false;
   recognition.maxAlternatives = 1;
 
   let finalText = "";
@@ -2749,12 +2750,6 @@ targetCard.querySelector(".agent-head").after(box);
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   recognition.start();
-
-  const micTimeout = setTimeout(() => {
-  try {
-    recognition.stop();
-  } catch(e) {}
-}, 4000);
 
   recognition.onresult = function(event) {
     let interimText = "";
@@ -2858,6 +2853,13 @@ console.log("Réponse Make:", data);
     await saveActionLog("mails", instruction, "empty_instruction");
     return;
   }
+
+   if (data.reason === "contact_email_missing") {
+  box.innerHTML = "❌ Adresse email introuvable pour ce contact.";
+  showToast("Email contact manquant");
+  await saveActionLog("mails", instruction, "contact_email_missing");
+  return;
+}
 
   box.innerHTML = "❌ Le mail n’a pas pu être envoyé.";
   showToast("Erreur agent mail");
