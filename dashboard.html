@@ -3658,7 +3658,7 @@ async function startMailDictation() {
   recognition.onerror = function(event) {
     clearTimeout(silenceTimer);
     console.error("Erreur dictée:", event.error);
-    box.innerHTML = "❌ Erreur dictée : " + event.error;
+    box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
 }
 
@@ -3781,7 +3781,7 @@ async function startPlanningDictation() {
   recognition.onerror = function(event) {
     clearTimeout(silenceTimer);
     console.error("Erreur dictée planning:", event.error);
-    box.innerHTML = "❌ Erreur dictée : " + event.error;
+    box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
 }
   
