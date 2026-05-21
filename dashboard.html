@@ -1520,6 +1520,214 @@ main > div[style*="background:var(--bg2)"] {
     display: none;
   }
 }
+
+@media (max-width: 600px) {
+
+  /* Pages mobile : moins d'espace en haut */
+  .main {
+    padding: 18px 18px 110px !important;
+  }
+
+  .topbar {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-title {
+    font-size: 2.45rem !important;
+    line-height: .95 !important;
+    letter-spacing: -0.07em !important;
+  }
+
+  .page-subtitle {
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+    margin-top: 12px !important;
+  }
+
+  /* Page Agents */
+  #main-agents .mobile-agent-top {
+    padding: 8px 0 0 !important;
+    margin-bottom: 18px !important;
+  }
+
+  #main-agents .topbar {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+  }
+
+  #main-agents .status-row {
+    padding: 0 !important;
+    margin-bottom: 24px !important;
+  }
+
+  #main-agents .agents-grid {
+    padding: 0 !important;
+  }
+
+  #main-agents .agent-card {
+    border-radius: 26px !important;
+  }
+
+  #main-agents .agent-head {
+    padding: 18px !important;
+  }
+
+  #main-agents .agent-body {
+    padding: 16px 18px 18px !important;
+  }
+
+  #main-agents .save-btn {
+    height: 54px !important;
+    font-size: 15px !important;
+    padding: 0 18px !important;
+  }
+
+  /* Page Contacts */
+  #main-contacts .topbar {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+  }
+
+  #main-contacts .gmail-section {
+    margin: 0 0 22px !important;
+    padding: 18px !important;
+  }
+
+  #main-contacts #contacts-list {
+    padding: 0 !important;
+  }
+
+  #main-contacts .agent-card {
+    border-radius: 24px !important;
+  }
+
+  #main-contacts .agent-head {
+    padding: 16px !important;
+  }
+
+  #main-contacts .sheet-btn {
+    height: 34px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+  }
+
+  /* Page Historique : dossiers carrés */
+  #main-historique .topbar {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+  }
+
+  #main-historique #history-folders {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    padding: 0 !important;
+  }
+
+  #main-historique .history-folder-card {
+    aspect-ratio: 1 / 1 !important;
+    min-height: unset !important;
+    padding: 14px !important;
+    border-radius: 24px !important;
+  }
+
+  #main-historique .history-folder-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 14px !important;
+    font-size: 18px !important;
+  }
+
+  #main-historique .history-folder-card .agent-name {
+    font-size: 14px !important;
+  }
+
+  #main-historique .history-folder-card .agent-desc {
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  #main-historique .history-folder-card .agent-status {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+    margin-left: 0 !important;
+  }
+
+  /* Page Historique : liste en petites lignes */
+  #history-detail .section-header {
+    margin-bottom: 14px !important;
+  }
+
+  #history-list.agents-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 0 !important;
+  }
+
+  #history-list .agent-card {
+    border-radius: 18px !important;
+    min-height: auto !important;
+  }
+
+  #history-list .agent-head {
+    padding: 12px 14px !important;
+    gap: 12px !important;
+    align-items: center !important;
+  }
+
+  #history-list .agent-emoji {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 11px !important;
+    font-size: 16px !important;
+  }
+
+  #history-list .agent-name {
+    font-size: 13.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  #history-list .agent-desc {
+    font-size: 11.5px !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Réglages : plus compact */
+  #main-settings .topbar {
+    padding: 0 !important;
+    margin-bottom: 22px !important;
+  }
+
+  #main-settings .gmail-section {
+    padding: 18px !important;
+    border-radius: 24px !important;
+  }
+
+  #main-settings .field-input {
+    height: 52px !important;
+    padding: 10px 14px !important;
+    font-size: 15px !important;
+  }
+
+  #main-settings .field-group {
+    gap: 5px !important;
+  }
+
+  /* Bottom nav plus propre */
+  .bottom-nav {
+    height: 72px !important;
+  }
+
+  .bottom-tab {
+    border-radius: 18px !important;
+  }
+
+  .bottom-tab.active {
+    background: rgba(0,0,0,.045) !important;
+  }
+}
   
 </style>
 </head>
