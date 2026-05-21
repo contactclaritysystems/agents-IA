@@ -3023,6 +3023,30 @@ function showSection(section, btn) {
 
 let contactsCache = [];
 
+  let historyLimit = 10;
+
+function openHistoryAgent(agentName) {
+  console.log("OUVERTURE HISTORIQUE:", agentName);
+
+  const detail = document.getElementById("history-detail");
+  const title = document.getElementById("history-detail-title");
+
+  if (title) title.textContent = "Agent Mails";
+  if (detail) detail.style.display = "block";
+
+  loadHistory(agentName);
+}
+
+function closeHistoryDetail() {
+  const detail = document.getElementById("history-detail");
+  const list = document.getElementById("history-list");
+
+  if (detail) detail.style.display = "none";
+  if (list) list.innerHTML = "";
+
+  historyLimit = 10;
+}
+
   async function loadHistory(agentName) {
   if (!currentUser) return;
 
