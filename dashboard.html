@@ -2813,44 +2813,136 @@ async function handleUser(user) {
   console.log("handleUser terminé");
 }
 
-async function loadAgentConfigs() {
-  if (!currentUser) return;
+async function loadAppointments() {
+  if (!currentUser) return;
 
-  try {
-    const response = await fetch(
-      SUPABASE_URL + "/rest/v1/agent_configs?user_id=eq." + encodeURIComponent(currentUser.id) + "&agent_name=eq.mails&select=*",
-      {
-        method: "GET",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-          "Content-Type": "application/json"
-        }
-      }
-    );
+  const list = document.getElementById("planning-list");
+  if (!list) return;
 
-    const data = await response.json();
-    console.log("LOAD CONFIG:", data);
+  list.innerHTML = `<div class="info-box">Chargement du planning...</div>`;
 
-    if (!Array.isArray(data) || data.length === 0 || !data[0].config) return;
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-    const config = data[0].config;
+  if (!accessToken) {
+    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
+    return;
+  }
 
-const mailsSheet = document.getElementById("mails-sheet");
-if (mailsSheet) {
-  mailsSheet.value = config.sheet || "";
-}
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) + "&order=appointment_date.asc&order=appointment_time.asc",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
 
-    const card = document.getElementById("card-mails");
-    card.querySelector(".agent-status").className = "agent-status ok";
-    card.querySelector(".agent-status").textContent = "Actif";
-    card.classList.add("configured");
-    card.classList.remove("open");
-lockMailsFields();
+  if (!response.ok) {
+    list.innerHTML = `<div class="info-box">Impossible de charger le planning.</div>`;
+    return;
+  }
 
-  } catch (err) {
-    console.error("Erreur loadAgentConfigs:", err);
-  }
+  const appointments = await response.json();
+
+  if (!appointments || appointments.length === 0) {
+    list.innerHTML = `
+      <div class="gmail-section" style="display:block;">
+        <div class="section-title">Aucun rendez-vous</div>
+        <div class="gmail-desc" style="margin-top:8px;">Vos prochains rendez-vous apparaîtront ici.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const endThisWeek = new Date(today);
+  endThisWeek.setDate(today.getDate() + (7 - today.getDay()));
+
+  const startNextWeek = new Date(endThisWeek);
+  startNextWeek.setDate(endThisWeek.getDate() + 1);
+
+  const endNextWeek = new Date(startNextWeek);
+  endNextWeek.setDate(startNextWeek.getDate() + 6);
+
+  function dateOnly(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  function formatDate(dateStr) {
+    return new Date(dateStr).toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
+  }
+
+  function renderAppointment(a) {
+    return `
+      <div class="gmail-section" style="display:block; cursor:pointer;">
+        <div class="section-title">
+          ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
+        </div>
+        <div class="gmail-desc" style="margin-top:8px;">
+          ${formatDate(a.appointment_date)} · ${a.title || "Sans motif"}<br>
+          ${a.location ? "📍 " + a.location : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSection(title, items) {
+    if (!items.length) return "";
+
+    return `
+      <div style="margin-bottom:18px;">
+        <div class="section-title" style="margin-bottom:10px;">${title}</div>
+        ${items.map(renderAppointment).join("")}
+      </div>
+    `;
+  }
+
+  const todayItems = [];
+  const thisWeekItems = [];
+  const nextWeekItems = [];
+  const futureItems = [];
+
+  appointments.forEach(a => {
+    const d = dateOnly(a.appointment_date);
+
+    if (d.getTime() === today.getTime()) {
+      todayItems.push(a);
+    } else if (d > today && d <= endThisWeek) {
+      thisWeekItems.push(a);
+    } else if (d >= startNextWeek && d <= endNextWeek) {
+      nextWeekItems.push(a);
+    } else if (d > endNextWeek) {
+      futureItems.push(a);
+    }
+  });
+
+  list.innerHTML = `
+    ${renderSection("Aujourd’hui", todayItems)}
+    ${renderSection("Cette semaine", thisWeekItems)}
+    ${renderSection("Semaine prochaine", nextWeekItems)}
+    ${renderSection("À venir", futureItems)}
+  `;
+
+  if (!list.innerHTML.trim()) {
+    list.innerHTML = `
+      <div class="gmail-section" style="display:block;">
+        <div class="section-title">Aucun rendez-vous à venir</div>
+        <div class="gmail-desc" style="margin-top:8px;">Les anciens rendez-vous iront dans l’historique plus tard.</div>
+      </div>
+    `;
+  }
 }
 
   function handleGmailMobileCard() {
