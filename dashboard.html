@@ -2121,30 +2121,17 @@ select.field-input {
 
 <div class="agent-toggle">▾</div>
       </div>
-      <div class="agent-body">
-        <div class="info-box">
-          <span class="info-icon">💡</span>
-          <div>L'agent utilise automatiquement votre Gmail connecté ci-dessus pour envoyer les mails. Il n'y a rien d'autre à configurer côté envoi.</div>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Lien vers votre carnet de contacts (Google Sheet) <span class="field-required">*</span></div>
-          <div class="field-hint">Copiez-collez ici le lien de votre Sheet contacts</div>
-          <input class="field-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." id="mails-sheet" />
-      <a href="#" id="template-btn" class="sheet-btn template-muted" onclick="openTemplate('contacts'); return false;">
-  <span class="sheet-icon">📋</span> Ouvrir le modèle contacts
-</a>
-        </div>
-
-<button class="sheet-btn" id="mails-edit-btn" onclick="unlockMailsFields(); return false;" type="button" style="width:100%;">
-  ⚙️ Modifier la configuration
-</button>
-
-<button class="save-btn" id="mails-save-btn" onclick="saveAgent('mails', this)" type="button" style="display:none;">
-  💾 Enregistrer les modifications
-</button>
-      </div>
-    </div>
+      <div class="info-box">
+  <span class="info-icon">✉️</span>
+  <div>
+    Cet agent permet d’envoyer des mails simplement à la voix.
+    <br><br>
+    Exemple :
+    <strong>“Envoie un mail à Lucas pour déplacer le rendez-vous à demain.”</strong>
+    <br><br>
+    L’agent retrouve automatiquement le contact dans votre carnet et génère le mail avant l’envoi.
+  </div>
+</div>
 
     <!-- AGENT RELANCE -->
     <div class="agent-card" id="card-relance">
