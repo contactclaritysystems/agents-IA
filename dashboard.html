@@ -3746,6 +3746,12 @@ function showSection(section, btn) {
   return;
 }
 
+  if (section === "planning") {
+  document.getElementById("main-planning").classList.add("active");
+  if (btn) btn.classList.add("active");
+  return;
+}
+
   if (section === "historique") {
     document.getElementById("main-historique").classList.add("active");
     if (btn) btn.classList.add("active");
