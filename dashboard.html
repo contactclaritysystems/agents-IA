@@ -3448,13 +3448,13 @@ async function createContactsSheet(btn) {
 // ─── UTILS ───────────────────────────────────────────────
 
 function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = "✓ " + msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2800);
+  const t = document.getElementById("toast");
+  t.textContent = "✓ " + msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
 }
 
-  async function saveActionLog(agent, action, status) {
+async function saveActionLog(agent, action, status) {
   if (!currentUser) return;
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
@@ -3480,7 +3480,7 @@ function showToast(msg) {
 }
 
 function openClientSheet() {
-  const sheet = document.getElementById("mails-sheet").value;
+  const sheet = document.getElementById("mails-sheet")?.value;
   if (!sheet) {
     showToast("Ajoutez d'abord votre feuille contacts");
     return;
@@ -3489,77 +3489,33 @@ function openClientSheet() {
 }
 
 async function startMailDictation() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("La dictée vocale n'est pas compatible avec ce navigateur. Essayez avec Chrome.");
-    return;
-  }
-
-  let box = document.querySelector(".page-view.active #dictation-box");
-
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "dictation-box";
-    box.style.marginTop = "12px";
-    box.style.padding = "12px 14px";
-    box.style.borderRadius = "14px";
-    box.style.background = "rgba(34,197,94,.09)";
-    box.style.border = "1px solid rgba(34,197,94,.20)";
-    box.style.fontSize = "13px";
-    box.style.color = "#15803d";
-    box.style.fontWeight = "600";
-    const activePage = document.querySelector(".page-view.active");
-const targetCard =
-  activePage.querySelector("#card-mails-run") ||
-  activePage.querySelector("#card-mails");
-
-targetCard.querySelector(".agent-head").after(box);
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "fr-FR";
-  recognition.interimResults = true;
-  recognition.continuous = false;
-  recognition.maxAlternatives = 1;
-
-  let finalText = "";
-  let hasSent = false;
-
-  let silenceTimer = null;
-
-  async function startPlanningDictation() {
-
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    alert("La dictée vocale n'est pas compatible avec ce navigateur. Essayez avec Chrome.");
     return;
   }
 
-  let box = document.querySelector(".page-view.active #planning-dictation-box");
+  let box = document.querySelector(".page-view.active #dictation-box");
 
   if (!box) {
-
     box = document.createElement("div");
-
-    box.id = "planning-dictation-box";
-
+    box.id = "dictation-box";
     box.style.marginTop = "12px";
     box.style.padding = "12px 14px";
     box.style.borderRadius = "14px";
-    box.style.background = "rgba(59,130,246,.08)";
-    box.style.border = "1px solid rgba(59,130,246,.18)";
+    box.style.background = "rgba(34,197,94,.09)";
+    box.style.border = "1px solid rgba(34,197,94,.20)";
     box.style.fontSize = "13px";
-    box.style.color = "#2563eb";
+    box.style.color = "#15803d";
     box.style.fontWeight = "600";
 
     const activePage = document.querySelector(".page-view.active");
-
     const targetCard =
-      activePage.querySelector("#card-planning-run");
+      activePage.querySelector("#card-mails-run") ||
+      activePage.querySelector("#card-mails");
+
+    if (!targetCard) return;
 
     targetCard.querySelector(".agent-head").after(box);
   }
@@ -3573,23 +3529,34 @@ targetCard.querySelector(".agent-head").after(box);
 
   let finalText = "";
   let hasSent = false;
-
   let silenceTimer = null;
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+
+    silenceTimer = setTimeout(() => {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }, 4000);
+  }
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
-  recognition.start();
-
-  resetSilenceTimer();
+  try {
+    recognition.start();
+    resetSilenceTimer();
+  } catch (e) {
+    box.innerHTML = "❌ Impossible de démarrer le micro.";
+    return;
+  }
 
   recognition.onresult = function(event) {
-
     resetSilenceTimer();
 
     let interimText = "";
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
-
       const text = event.results[i][0].transcript;
 
       if (event.results[i].isFinal) {
@@ -3603,251 +3570,219 @@ targetCard.querySelector(".agent-head").after(box);
   };
 
   recognition.onend = async function() {
+    clearTimeout(silenceTimer);
+
+    const instruction = finalText.trim();
+
+    const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
+
+    if (!gmailConnected) {
+      box.innerHTML = "❌ Connectez d’abord votre compte mail dans Réglages.";
+      showToast("Compte mail non connecté");
+      return;
+    }
+
+    if (!instruction) {
+      box.innerHTML = "❌ Aucune instruction détectée. Réessayez.";
+      return;
+    }
+
+    if (hasSent) return;
+    hasSent = true;
+
+    box.innerHTML = "🎙️ Analyse de votre demande...";
+
+    const payload = {
+      user_email: currentUser.email,
+      user_id: currentUser.id,
+      instruction
+    };
+
+    try {
+      const step1 = setTimeout(() => {
+        box.innerHTML = "👤 Recherche du contact...";
+      }, 800);
+
+      const step2 = setTimeout(() => {
+        box.innerHTML = "✍️ Génération du mail...";
+      }, 1800);
+
+      const step3 = setTimeout(() => {
+        box.innerHTML = "📤 Envoi du mail...";
+      }, 3000);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch("https://hook.eu1.make.com/f1ygm8lv4du3nnv5urqex5kxef9xuvit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
+
+      const text = await response.text();
+
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = { success: false, reason: "bad_make_response" };
+      }
+
+      if (!data.success) {
+        box.innerHTML = "❌ Le mail n’a pas pu être envoyé.";
+        showToast("Erreur agent mail");
+        await saveActionLog("mails", instruction, data.reason || "error");
+        return;
+      }
+
+      box.innerHTML = "✅ Mail envoyé avec succès";
+      showToast("Mail envoyé");
+      await saveActionLog("mails", instruction, "success");
+
+    } catch (err) {
+      console.error("Erreur envoi Make:", err);
+      box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
+      await saveActionLog("mails", instruction, "error");
+    }
+  };
+
+  recognition.onerror = function(event) {
+    clearTimeout(silenceTimer);
+    console.error("Erreur dictée:", event.error);
+    box.innerHTML = "❌ Erreur dictée : " + event.error;
+  };
+}
+
+async function startPlanningDictation() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    return;
+  }
+
+  let box = document.querySelector(".page-view.active #planning-dictation-box");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "planning-dictation-box";
+    box.style.marginTop = "12px";
+    box.style.padding = "12px 14px";
+    box.style.borderRadius = "14px";
+    box.style.background = "rgba(59,130,246,.08)";
+    box.style.border = "1px solid rgba(59,130,246,.18)";
+    box.style.fontSize = "13px";
+    box.style.color = "#2563eb";
+    box.style.fontWeight = "600";
+
+    const targetCard = document.querySelector("#card-planning-run");
+    if (!targetCard) return;
+
+    targetCard.querySelector(".agent-head").after(box);
+  }
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+
+  let finalText = "";
+  let hasSent = false;
+  let silenceTimer = null;
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+
+    silenceTimer = setTimeout(() => {
+      try {
+        recognition.stop();
+      } catch (e) {}
+    }, 4000);
+  }
+
+  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+
+  try {
+    recognition.start();
+    resetSilenceTimer();
+  } catch (e) {
+    box.innerHTML = "❌ Impossible de démarrer le micro.";
+    return;
+  }
+
+  recognition.onresult = function(event) {
+    resetSilenceTimer();
+
+    let interimText = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const text = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalText += text + " ";
+      } else {
+        interimText += text;
+      }
+    }
+
+    box.innerHTML = "🎙️ " + (finalText + interimText);
+  };
+
+  recognition.onend = async function() {
+    clearTimeout(silenceTimer);
 
     const instruction = finalText.trim();
 
     if (!instruction) {
-
       box.innerHTML = "❌ Aucune instruction détectée.";
       return;
     }
 
     if (hasSent) return;
-
     hasSent = true;
 
     box.innerHTML = "📅 Recherche de la date...";
 
-    try {
+    setTimeout(() => {
+      box.innerHTML = "👤 Recherche du contact...";
+    }, 1000);
 
-      setTimeout(() => {
-        box.innerHTML = "👤 Recherche du contact...";
-      }, 1200);
+    setTimeout(() => {
+      box.innerHTML = "🕒 Vérification du créneau...";
+    }, 2000);
 
-      setTimeout(() => {
-        box.innerHTML = "🕒 Vérification du créneau...";
-      }, 2400);
+    setTimeout(() => {
+      box.innerHTML = "📤 Création du rendez-vous...";
+    }, 3000);
 
-      setTimeout(() => {
-        box.innerHTML = "📤 Création du rendez-vous...";
-      }, 3600);
+    console.log("PLANNING DICTÉ:", instruction);
 
-      console.log("PLANNING DICTÉ:", instruction);
+    setTimeout(async () => {
+      box.innerHTML = "✅ Rendez-vous créé";
+      showToast("Rendez-vous ajouté");
 
-      // WEBHOOK MAKE ICI PLUS TARD
-
-      setTimeout(async () => {
-
-        box.innerHTML = "✅ Rendez-vous créé";
-
-        showToast("Rendez-vous ajouté");
-
+      if (typeof loadAppointments === "function") {
         await loadAppointments();
-
-      }, 5000);
-
-    } catch(err) {
-
-      console.error(err);
-
-      box.innerHTML = "❌ Impossible de créer le rendez-vous.";
-
-      showToast("Erreur planning");
-    }
+      }
+    }, 4200);
   };
 
   recognition.onerror = function(event) {
-
-    console.error(event);
-
+    clearTimeout(silenceTimer);
+    console.error("Erreur dictée planning:", event.error);
     box.innerHTML = "❌ Erreur dictée : " + event.error;
   };
-}
-
-  function resetSilenceTimer() {
-
-    clearTimeout(silenceTimer);
-
-    silenceTimer = setTimeout(() => {
-
-      try {
-        recognition.stop();
-      } catch (e) {}
-
-    }, 4000);
-  }
-  
-function resetSilenceTimer() {
-  clearTimeout(silenceTimer);
-  
-  silenceTimer = setTimeout(() => {
-    try {
-      recognition.stop();
-    } catch (e) {}
-  }, 4000);
-}
-
-  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
-  recognition.start();
-  
-  resetSilenceTimer();
-
-  recognition.onresult = function(event) {
-
-    resetSilenceTimer();
-    
-    let interimText = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const text = event.results[i][0].transcript;
-
-      if (event.results[i].isFinal) {
-        finalText += text + " ";
-      } else {
-        interimText += text;
-      }
-    }
-
-    box.innerHTML = "🎙️ " + (finalText + interimText);
-  };
-
-  recognition.onend = async function() {
-    const instruction = finalText.trim();
-
-    const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
-
-if (!gmailConnected) {
-  box.innerHTML = "❌ Connectez d’abord votre compte mail dans Réglages.";
-  showToast("Compte mail non connecté");
-  return;
-}
-
-    if (!instruction) {
-      box.innerHTML = "❌ Aucune instruction détectée. Réessayez.";
-      return;
-    }
-
-    if (hasSent) return;
-    hasSent = true;
-
-    box.innerHTML = "🎙️ Analyse de votre demande...";
-
-    const payload = {
-      user_email: currentUser.email,
-      user_id: currentUser.id,
-      instruction: instruction
-    };
-
-    console.log("ENVOI MAKE:", payload);
-
-    try {
-  const step1 = setTimeout(() => {
-    box.innerHTML = "👤 Recherche du contact...";
-  }, 800);
-
-  const step2 = setTimeout(() => {
-    box.innerHTML = "✍️ Génération du mail...";
-  }, 1800);
-
-  const step3 = setTimeout(() => {
-    box.innerHTML = "📤 Envoi du mail...";
-  }, 3000);
-const controller = new AbortController();
-
-const timeout = setTimeout(() => {
-  controller.abort();
-}, 20000);
-
-const response = await fetch("https://hook.eu1.make.com/f1ygm8lv4du3nnv5urqex5kxef9xuvit", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(payload),
-  signal: controller.signal
-});
-
-clearTimeout(timeout);
-
-  clearTimeout(step1);
-  clearTimeout(step2);
-  clearTimeout(step3);
-
- const text = await response.text();
-console.log("Réponse Make brute:", text);
-
-let data = {};
-try {
-  data = JSON.parse(text);
-} catch (e) {
-  console.error("Réponse Make non JSON:", text);
-  data = { success: false, reason: "bad_make_response" };
-}
-
-console.log("Réponse Make JSON:", data);
-
- if (!data.success) {
-  if (data.reason === "contact_not_found") {
-    box.innerHTML = "❌ Contact introuvable dans votre carnet.";
-    showToast("Contact introuvable");
-    await saveActionLog("mails", instruction, "contact_not_found");
-    return;
-  }
-
-  if (data.reason === "generation_failed") {
-    box.innerHTML = "❌ Impossible de générer le mail.";
-    showToast("Erreur génération");
-    await saveActionLog("mails", instruction, "generation_failed");
-    return;
-  }
-
-  if (data.reason === "mail_not_connected") {
-    box.innerHTML = "❌ Compte mail non connecté.";
-    showToast("Compte mail requis");
-    await saveActionLog("mails", instruction, "mail_not_connected");
-    return;
-  }
-
-  if (data.reason === "empty_instruction") {
-    box.innerHTML = "❌ Instruction trop courte.";
-    showToast("Instruction invalide");
-    await saveActionLog("mails", instruction, "empty_instruction");
-    return;
-  }
-
-   if (data.reason === "contact_email_missing") {
-  box.innerHTML = "❌ Adresse email introuvable pour ce contact.";
-  showToast("Email contact manquant");
-  await saveActionLog("mails", instruction, "contact_email_missing");
-  return;
-}
-
-  box.innerHTML = "❌ Le mail n’a pas pu être envoyé.";
-  showToast("Erreur agent mail");
-  await saveActionLog("mails", instruction, "error");
-  return;
-}
-
-box.innerHTML = "✅ Mail envoyé avec succès";
-showToast("Mail envoyé");
-await saveActionLog("mails", instruction, "success");
-
-} catch (err) {
-  console.error("Erreur envoi Make:", err);
-  box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
-
-  await saveActionLog(
-    "mails",
-    instruction,
-    "error"
-  );
-}
-  };
-
-  recognition.onerror = function(event) {
-    console.error("Erreur dictée:", event.error);
-    box.innerHTML = "❌ Erreur dictée : " + event.error;
-  };
 }
   
 function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
