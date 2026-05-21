@@ -1889,6 +1889,19 @@ main > div[style*="background:var(--bg2)"] {
   color: var(--text);
   text-align: right;
 }
+
+  @media (max-width: 600px) {
+  /* Cache la ligne Carnet contacts */
+  #main-settings > .gmail-section:has(#contacts-sheet-ui) {
+    display: none !important;
+  }
+
+  /* Cache le bloc Comment ça marche */
+  #main-settings .section-header:last-of-type,
+  #main-settings > div[style*="background:var(--bg2)"] {
+    display: none !important;
+  }
+}
   
 </style>
 </head>
