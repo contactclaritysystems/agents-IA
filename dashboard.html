@@ -3727,21 +3727,25 @@ function showSection(section, btn) {
     item.classList.remove("active");
   });
 
+  document.querySelectorAll(".bottom-tab").forEach(item => {
+  item.classList.remove("active");
+});
+
   if (section === "agents") {
     document.getElementById("main-agents").classList.add("active");
-    btn.classList.add("active");
+    if (btn) btn.classList.add("active");
     return;
   }
 
   if (section === "settings") {
     document.getElementById("main-settings").classList.add("active");
-    btn.classList.add("active");
+    if (btn) btn.classList.add("active");
     return;
   }
 
   if (section === "contacts") {
   document.getElementById("main-contacts").classList.add("active");
-  btn.classList.add("active");
+  if (btn) btn.classList.add("active");
   loadContacts();
   return;
 }
