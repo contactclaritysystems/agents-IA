@@ -1306,7 +1306,7 @@ main > div[style*="background:var(--bg2)"] {
 
 #main-settings .mobile-integrations {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -1868,18 +1868,23 @@ main > div[style*="background:var(--bg2)"] {
 
 </div>
 
-  <div class="mobile-integrations">
-    
+ <div class="mobile-integrations">
   <div class="stat-card" onclick="handleGmailMobileCard()" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
-  <div style="font-size:22px;">📧</div>
-  <div class="stat-value" style="font-size:13px; margin-top:6px;">Compte mail</div>
-  <div class="stat-label" id="gmail-status-label">Non connecté</div>
-</div>
+    <div style="font-size:22px;">📧</div>
+    <div class="stat-value" style="font-size:13px; margin-top:6px;">Gmail</div>
+    <div class="stat-label" id="gmail-status-label">Non connecté</div>
+  </div>
 
-  <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px;">
+  <div class="stat-card" onclick="handleContactsMobileCard()" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
     <div style="font-size:22px;">📒</div>
     <div class="stat-value" style="font-size:13px; margin-top:6px;">Contacts</div>
     <div class="stat-label" id="carnet-status-label">Non créé</div>
+  </div>
+
+  <div class="stat-card" onclick="handleProfilMobileCard()" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
+    <div style="font-size:22px;">👤</div>
+    <div class="stat-value" style="font-size:13px; margin-top:6px;">Profil</div>
+    <div class="stat-label" id="profil-status-label">À compléter</div>
   </div>
 </div>
 
