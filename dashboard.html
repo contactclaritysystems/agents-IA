@@ -2685,6 +2685,7 @@ lockMailsFields();
 }
 
   let profileInitialState = "";
+  let profileHasUnsavedChanges = false;
 
 function getProfileFormState() {
   return JSON.stringify({
@@ -2709,13 +2710,16 @@ function closeProfileMobilePage() {
   const section = document.getElementById("profil-mobile-section");
   if (!section) return;
 
-  const hasChanges = getProfileFormState() !== profileInitialState;
+  const hasChanges =
+    profileHasUnsavedChanges &&
+    getProfileFormState() !== profileInitialState;
 
   if (hasChanges) {
     const confirmLeave = confirm("Vous avez des modifications non enregistrées. Quitter sans enregistrer ?");
     if (!confirmLeave) return;
   }
 
+  profileHasUnsavedChanges = false;
   section.classList.remove("open");
 }
 
@@ -2909,6 +2913,7 @@ if (editBtn) editBtn.style.display = "none";
     lockProfileFields();
 
     profileInitialState = getProfileFormState();
+    profileHasUnsavedChanges = false;
 
     await upsertSelfContact(profile);
 
@@ -3014,6 +3019,9 @@ function unlockProfileFields() {
 
   if (saveBtn) saveBtn.style.display = "flex";
   if (editBtn) editBtn.style.display = "none";
+
+  profileInitialState = getProfileFormState();
+profileHasUnsavedChanges = true;
 }
 
 async function loadProfile() {
