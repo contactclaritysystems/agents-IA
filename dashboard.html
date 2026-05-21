@@ -1823,6 +1823,72 @@ main > div[style*="background:var(--bg2)"] {
     display: none;
   }
 }
+
+  .contact-row {
+  width: 100%;
+  border: none;
+  background: #fff;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  text-align: left;
+}
+
+.contact-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.contact-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111;
+}
+
+.contact-company {
+  font-size: 13px;
+  color: #8a8a8e;
+}
+
+.contact-chevron {
+  font-size: 26px;
+  color: #c7c7cc;
+}
+
+  #contact-detail-page {
+  display: none;
+}
+
+#contact-detail-page.open {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: var(--page);
+  padding: 18px 18px 110px;
+  overflow-y: auto;
+}
+
+.detail-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.detail-line span {
+  color: var(--muted);
+}
+
+.detail-line strong {
+  color: var(--text);
+  text-align: right;
+}
   
 </style>
 </head>
@@ -2385,6 +2451,36 @@ main > div[style*="background:var(--bg2)"] {
 
     <button class="save-btn" id="contact-save-page-btn" onclick="saveContactFromPage()" type="button">
       💾 Enregistrer le contact
+    </button>
+  </div>
+</div>
+
+    <div id="contact-detail-page">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closeContactDetail()">← Retour</button>
+    <div class="section-title">Contact</div>
+  </div>
+
+  <div class="gmail-section" style="display:block;">
+    <h1 id="contact-detail-name" style="font-size:24px; letter-spacing:-.04em;"></h1>
+    <p id="contact-detail-company" style="color:var(--muted); margin-bottom:18px;"></p>
+
+    <div class="detail-line">
+      <span>Téléphone</span>
+      <strong id="contact-detail-phone"></strong>
+    </div>
+
+    <div class="detail-line">
+      <span>Email</span>
+      <strong id="contact-detail-email"></strong>
+    </div>
+
+    <button class="save-btn" onclick="editSelectedContact()" type="button">
+      Modifier
+    </button>
+
+    <button class="sheet-btn" onclick="deleteSelectedContact()" type="button" style="width:100%; color:var(--danger); justify-content:center; margin-top:10px;">
+      Supprimer
     </button>
   </div>
 </div>
@@ -3190,15 +3286,53 @@ if (accessToken) {
 if (lbl) lbl.textContent = "Créé ✓";
 }
 
-function renderContactsSheetCreated() {
-  const ui = document.getElementById("contacts-sheet-ui");
-  if (!ui) return;
+function renderContactsList(contacts = []) {
+  const container = document.getElementById("contacts-list");
 
-  ui.innerHTML = `
-    <button class="sheet-btn" onclick="showSection('contacts', document.querySelector('button[onclick*=contacts]'))" type="button" style="width:100%;">
-      ✅ Carnet contacts créé
+  if (!contacts.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        Aucun contact pour le moment.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = contacts.map(contact => `
+    <button class="contact-row" onclick="openContactDetail('${contact.id}')">
+      <div class="contact-row-main">
+        <div class="contact-name">
+          ${contact.firstname || ""} ${contact.lastname || ""}
+        </div>
+        ${contact.company ? `<div class="contact-company">${contact.company}</div>` : ""}
+      </div>
+      <span class="contact-chevron">›</span>
     </button>
-  `;
+  `).join("");
+}
+
+  function openContactDetail(contactId) {
+  const contact = contacts.find(c => c.id === contactId);
+  if (!contact) return;
+
+  selectedContactId = contactId;
+
+  document.getElementById("contact-detail-name").textContent =
+    `${contact.firstname || ""} ${contact.lastname || ""}`;
+
+  document.getElementById("contact-detail-company").textContent =
+    contact.company || "";
+
+  document.getElementById("contact-detail-phone").textContent =
+    contact.phone || "Non renseigné";
+
+  document.getElementById("contact-detail-email").textContent =
+    contact.email || "Non renseigné";
+
+  document.getElementById("contact-detail-address").textContent =
+    contact.address || "Non renseignée";
+
+  showPage("contact-detail-page");
 }
 
 async function createContactsSheet(btn) {
