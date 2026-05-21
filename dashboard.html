@@ -1728,6 +1728,16 @@ main > div[style*="background:var(--bg2)"] {
     background: rgba(0,0,0,.045) !important;
   }
 }
+
+  @media (max-width: 600px) {
+  #profil-mobile-section {
+    display: none;
+  }
+
+  #profil-mobile-section.open {
+    display: block;
+  }
+}
   
 </style>
 </head>
@@ -2627,6 +2637,30 @@ lockMailsFields();
   }
 
   openMailChoiceModal();
+}
+
+  function handleProfilMobileCard() {
+  const section = document.getElementById("profil-mobile-section");
+  if (section) {
+    section.classList.toggle("open");
+  }
+}
+
+  function handleContactsMobileCard() {
+  const lbl = document.getElementById("carnet-status-label");
+  const isCreated = lbl && lbl.textContent.includes("Créé");
+
+  if (isCreated) {
+    showSection('contacts', document.querySelector('.bottom-tab[data-section="contacts"]'));
+    return;
+  }
+
+  const btn = document.getElementById("create-contacts-btn");
+  if (btn) {
+    createContactsSheet(btn);
+  } else {
+    showToast("Carnet déjà activé");
+  }
 }
 
 // ─── AGENTS ──────────────────────────────────────────────
