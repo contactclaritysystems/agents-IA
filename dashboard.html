@@ -2748,10 +2748,27 @@ targetCard.querySelector(".agent-head").after(box);
   let finalText = "";
   let hasSent = false;
 
+  let silenceTimer = null;
+
+function resetSilenceTimer() {
+  clearTimeout(silenceTimer);
+  
+  silenceTimer = setTimeout(() => {
+    try {
+      recognition.stop();
+    } catch (e) {}
+  }, 4000);
+}
+
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   recognition.start();
+  
+  resetSilenceTimer();
 
   recognition.onresult = function(event) {
+
+    resetSilenceTimer();
+    
     let interimText = "";
 
     for (let i = event.resultIndex; i < event.results.length; i++) {
