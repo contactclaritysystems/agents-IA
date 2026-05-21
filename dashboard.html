@@ -3220,6 +3220,12 @@ async function loadProfile() {
   renderContactsSheetCreated();
 }
 
+    const profilLbl = document.getElementById("profil-status-label");
+if (profilLbl) {
+  const isComplete = profile.firstname && profile.lastname && profile.phone && profile.company;
+  profilLbl.textContent = isComplete ? "Complété ✓" : "À compléter";
+}
+    
     document.getElementById("profile-firstname").value = profile.firstname || "";
     document.getElementById("profile-lastname").value = profile.lastname || "";
     document.getElementById("profile-phone").value = profile.phone || "";
