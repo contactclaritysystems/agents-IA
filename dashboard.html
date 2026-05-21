@@ -4140,6 +4140,13 @@ async function addContact() {
   loadContacts();
 }
 
+  function confirmLogout() {
+  const ok = confirm("Voulez-vous vraiment vous déconnecter ?");
+  if (!ok) return;
+
+  logout();
+}
+
   function logout() {
   try {
     supabaseClient.auth.signOut();
