@@ -1852,6 +1852,8 @@ function renderGmailConnected(gmailEmail) {
       ✓ ${gmailEmail}
     <button id="gmail-disconnect-btn" type="button" style="margin-left:10px;border:none;background:transparent;cursor:pointer;font-weight:800;color:inherit;font-size:16px;">×</button>
     </div>`;
+  const lbl = document.getElementById("gmail-status-label");
+if (lbl) lbl.textContent = "Connecté ✓";
 }
 
 function renderGmailDisconnected() {
@@ -1866,6 +1868,8 @@ function renderGmailDisconnected() {
       </svg>
       Connecter avec Google
     </button>`;
+  const lbl = document.getElementById("gmail-status-label");
+if (lbl) lbl.textContent = "Non connecté";
 }
 
 function connectGmail() {
@@ -2426,6 +2430,9 @@ if (accessToken) {
   } catch(err) {
     console.error("Erreur loadProfile:", err);
   }
+
+  const lbl = document.getElementById("carnet-status-label");
+if (lbl) lbl.textContent = "Créé ✓";
 }
 
 function renderContactsSheetCreated() {
