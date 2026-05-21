@@ -2749,6 +2749,13 @@ targetCard.querySelector(".agent-head").after(box);
   let hasSent = false;
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+
+  try {
+  await navigator.mediaDevices.getUserMedia({ audio: true });
+} catch (err) {
+  box.innerHTML = "❌ Accès micro refusé.";
+  return;
+}
   recognition.start();
 
   recognition.onresult = function(event) {
