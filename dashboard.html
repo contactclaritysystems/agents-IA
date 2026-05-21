@@ -2109,223 +2109,177 @@ select.field-input {
 
   <div class="agents-grid">
 
-    <!-- AGENT MAILS -->
-<div class="agent-card configured" id="card-mails">
-  <div class="agent-head" onclick="toggleCard('mails')">
-    <div class="agent-emoji">✉️</div>
+  <!-- AGENT MAILS -->
+  <div class="agent-card configured" id="card-mails">
+    <div class="agent-head" onclick="toggleCard('mails')">
+      <div class="agent-emoji">✉️</div>
 
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Mails</div>
-      <div class="agent-desc" id="mails-agent-desc">
-        Envoie des mails à la voix en retrouvant vos contacts automatiquement.
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Mails</div>
+        <div class="agent-desc">
+          Envoie des mails à la voix en retrouvant vos contacts automatiquement.
+        </div>
       </div>
+
+      <div class="agent-status ok">Actif</div>
+      <div class="agent-toggle">▾</div>
     </div>
 
-    <div class="agent-status ok">Actif</div>
-    <div class="agent-toggle">▾</div>
-  </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">✉️</span>
+        <div>
+          Cet agent permet d’envoyer des mails simplement à la voix.
+          <br><br>
 
-  <div class="agent-body">
-    <div class="info-box">
-      <span class="info-icon">✉️</span>
-      <div>
-        Cet agent permet d’envoyer des mails simplement à la voix.
-        <br><br>
-        Exemple :
-        <strong>“Envoie un mail à Lucas pour déplacer le rendez-vous à demain.”</strong>
-        <br><br>
-        L’agent retrouve automatiquement le contact dans votre carnet et prépare le mail avant l’envoi.
+          Exemple :
+          <strong>“Envoie un mail à Lucas pour déplacer le rendez-vous à demain.”</strong>
+
+          <br><br>
+
+          L’agent retrouve automatiquement le contact dans votre carnet et prépare le mail avant l’envoi.
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- AGENT PLANNING -->
+  <div class="agent-card" id="card-planning">
+    <div class="agent-head" onclick="toggleCard('planning')">
+      <div class="agent-emoji">📅</div>
+
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Planning</div>
+        <div class="agent-desc">
+          Crée des rendez-vous automatiquement dans votre agenda.
+        </div>
+      </div>
+
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📅</span>
+        <div>
+          Cet agent permet de créer des rendez-vous automatiquement.
+          <br><br>
+
+          Exemple :
+          <strong>“Planifie un rendez-vous mardi à 14h avec Monsieur Martin.”</strong>
+
+          <br><br>
+
+          Les confirmations pourront être envoyées automatiquement aux clients.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT RELANCE -->
+  <div class="agent-card" id="card-relance">
+    <div class="agent-head" onclick="toggleCard('relance')">
+      <div class="agent-emoji">🔁</div>
+
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Relance Clients</div>
+        <div class="agent-desc">
+          Relance automatiquement les clients sans réponse.
+        </div>
+      </div>
+
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">🔁</span>
+        <div>
+          Cet agent aide à relancer automatiquement les clients en attente.
+          <br><br>
+
+          Exemple :
+          <strong>“Relance les clients qui n’ont pas répondu depuis 7 jours.”</strong>
+
+          <br><br>
+
+          Les relances sont adaptées automatiquement selon chaque client.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT SUIVI -->
+  <div class="agent-card" id="card-suivi">
+    <div class="agent-head" onclick="toggleCard('suivi')">
+      <div class="agent-emoji">📊</div>
+
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Suivi</div>
+        <div class="agent-desc">
+          Détecte les retards et les dossiers oubliés automatiquement.
+        </div>
+      </div>
+
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📊</span>
+        <div>
+          Cet agent aide à suivre vos dossiers et repérer les oublis.
+          <br><br>
+
+          Exemple :
+          <strong>“Quels dossiers n’ont pas bougé depuis plus de 14 jours ?”</strong>
+
+          <br><br>
+
+          Vous recevez automatiquement des alertes lorsqu’une action est nécessaire.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT DEVIS -->
+  <div class="agent-card" id="card-devis">
+    <div class="agent-head" onclick="toggleCard('devis')">
+      <div class="agent-emoji">📄</div>
+
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Devis & Factures</div>
+        <div class="agent-desc">
+          Génère automatiquement vos devis et factures.
+        </div>
+      </div>
+
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📄</span>
+        <div>
+          Cet agent aide à générer rapidement des devis et des factures.
+          <br><br>
+
+          Exemple :
+          <strong>“Crée une facture pour le client Martin après l’intervention.”</strong>
+
+          <br><br>
+
+          Les documents peuvent être préparés automatiquement à partir de vos informations.
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
-
-    <!-- AGENT RELANCE -->
-    <div class="agent-card" id="card-relance">
-      <div class="agent-head" onclick="toggleCard('relance')">
-        <div class="agent-emoji">🔁</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Relance Clients</div>
-          <div class="agent-desc">Relances automatiques, zéro doublon, zéro oubli</div>
-        </div>
-        <div class="agent-status pending">À configurer</div>
-        <div class="agent-toggle">▾</div>
-      </div>
-      <div class="agent-body">
-        <div class="field-group">
-          <div class="field-label">Lien votre Sheet "Relances" <span class="field-required">*</span></div>
-          <div class="field-hint">Ce sheet contient vos clients à relancer (nom, email, statut, date)</div>
-          <input class="field-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." id="relance-sheet" />
-          <a href="#" class="sheet-btn" onclick="openTemplate('relances'); return false;">
-            <span class="sheet-icon">📋</span> Copier le template Relances →
-          </a>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Délai de relance par défaut</div>
-          <div class="field-hint">Combien de jours sans réponse avant qu'une relance soit proposée ?</div>
-          <input class="field-input" type="number" placeholder="7" id="relance-delai" min="1" max="60" />
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Message de relance type (optionnel)</div>
-          <div class="field-hint">L'IA adapte ce modèle selon le contexte de chaque client</div>
-          <textarea class="field-input" rows="3" placeholder="Ex : Bonjour, je me permets de revenir vers vous suite à notre échange..." id="relance-template" style="resize:vertical"></textarea>
-        </div>
-
-        <button class="save-btn" onclick="saveAgent('relance', this)">💾 Enregistrer la configuration</button>
-      </div>
-    </div>
-
-    <!-- AGENT PROSPECTS -->
-    <div class="agent-card" id="card-prospects">
-      <div class="agent-head" onclick="toggleCard('prospects')">
-        <div class="agent-emoji">🎯</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Prospects</div>
-          <div class="agent-desc">Prise de contact personnalisée avec chaque prospect de votre liste</div>
-        </div>
-        <div class="agent-status empty">Non configuré</div>
-        <div class="agent-toggle">▾</div>
-      </div>
-      <div class="agent-body">
-        <div class="warning-box">
-          <span>⚠️</span>
-          <div>Cet agent envoie des mails à des personnes qui ne vous connaissent pas encore. Veillez à respecter le RGPD — utilisez uniquement des contacts ayant un intérêt légitime à vous recevoir.</div>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Lien votre Sheet "Prospects" <span class="field-required">*</span></div>
-          <div class="field-hint">Ce sheet contient vos prospects (nom, email, société, notes)</div>
-          <input class="field-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." id="prospects-sheet" />
-          <a href="#" class="sheet-btn" onclick="openTemplate('prospects'); return false;">
-            <span class="sheet-icon">📋</span> Copier le template Prospects →
-          </a>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Votre proposition de valeur (1-2 phrases)</div>
-          <div class="field-hint">L'agent s'en sert pour personnaliser chaque message</div>
-          <textarea class="field-input" rows="3" placeholder="Ex : J'aide les artisans à économiser 2h par jour en automatisant leurs tâches administratives grâce à l'IA." id="prospects-pitch" style="resize:vertical"></textarea>
-        </div>
-
-        <div class="field-row">
-          <div class="field-group">
-            <div class="field-label">Secteur cible</div>
-            <input class="field-input" type="text" placeholder="Ex : Artisans BTP" id="prospects-secteur" />
-          </div>
-          <div class="field-group">
-            <div class="field-label">Ton souhaité</div>
-            <select class="field-input" id="prospects-ton">
-              <option value="professionnel">Professionnel</option>
-              <option value="decontracte">Décontracté</option>
-              <option value="direct">Direct & concis</option>
-            </select>
-          </div>
-        </div>
-
-        <button class="save-btn" onclick="saveAgent('prospects', this)">💾 Enregistrer la configuration</button>
-      </div>
-    </div>
-
-    <!-- AGENT PLANNING -->
-    <div class="agent-card" id="card-planning">
-      <div class="agent-head" onclick="toggleCard('planning')">
-        <div class="agent-emoji">📅</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Planning</div>
-          <div class="agent-desc">Créez des événements et envoyez des confirmations automatiques</div>
-        </div>
-        <div class="agent-status empty">Non configuré</div>
-        <div class="agent-toggle">▾</div>
-      </div>
-      <div class="agent-body">
-        <div class="info-box">
-          <span class="info-icon">📅</span>
-          <div>Cet agent nécessite l'accès à votre <strong>Google Calendar</strong>. La connexion se fait en une seule fois ci-dessous.</div>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Google Calendar <span class="field-required">*</span></div>
-          <div class="field-hint">Autoriser Clarity Systems à créer des événements dans votre agenda</div>
-          <button class="gmail-connect-btn" style="font-size:13px;padding:10px 16px;" onclick="connectCalendar()">
-            <svg width="16" height="16" viewBox="0 0 48 48"><rect x="6" y="6" width="36" height="36" rx="4" fill="#1A73E8"/><rect x="14" y="2" width="4" height="10" rx="2" fill="#fff"/><rect x="30" y="2" width="4" height="10" rx="2" fill="#fff"/><line x1="6" y1="18" x2="42" y2="18" stroke="#fff" stroke-width="3"/></svg>
-            Connecter Google Calendar
-          </button>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Durée par défaut d'un RDV</div>
-          <div class="field-hint">L'agent l'utilisera si vous ne précisez pas la durée à la dictée</div>
-          <select class="field-input" id="planning-duree">
-            <option value="30">30 minutes</option>
-            <option value="60" selected>1 heure</option>
-            <option value="90">1h30</option>
-            <option value="120">2 heures</option>
-          </select>
-        </div>
-
-        <div class="field-group">
-          <div class="field-label">Message de confirmation automatique</div>
-          <div class="field-hint">Envoyé par mail au client après création du RDV</div>
-          <textarea class="field-input" rows="3" id="planning-confirm" style="resize:vertical" placeholder="Ex : Votre rendez-vous est confirmé pour le {date} à {heure}. À bientôt !"></textarea>
-        </div>
-
-        <button class="save-btn" onclick="saveAgent('planning', this)">💾 Enregistrer la configuration</button>
-      </div>
-    </div>
-
-    <!-- AGENT SUIVI -->
-    <div class="agent-card" id="card-suivi" style="grid-column: 1 / -1;">
-      <div class="agent-head" onclick="toggleCard('suivi')">
-        <div class="agent-emoji">📊</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Suivi</div>
-          <div class="agent-desc">Mettez à jour vos dossiers vocalement. Alertes si retard détecté.</div>
-        </div>
-        <div class="agent-status empty">Non configuré</div>
-        <div class="agent-toggle">▾</div>
-      </div>
-      <div class="agent-body" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div class="field-group">
-            <div class="field-label">Lien votre Sheet "Dossiers" <span class="field-required">*</span></div>
-            <div class="field-hint">Ce sheet contient vos dossiers clients à suivre</div>
-            <input class="field-input" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." id="suivi-sheet" />
-            <a href="#" class="sheet-btn" onclick="openTemplate('suivi'); return false;">
-              <span class="sheet-icon">📋</span> Copier le template Suivi →
-            </a>
-          </div>
-
-          <div class="field-group">
-            <div class="field-label">Délai d'alerte (jours)</div>
-            <div class="field-hint">Si un dossier n'a pas bougé depuis X jours, vous recevez une alerte</div>
-            <input class="field-input" type="number" placeholder="14" min="1" id="suivi-alerte" />
-          </div>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div class="field-group">
-            <div class="field-label">E-mail de réception des alertes <span class="field-required">*</span></div>
-            <div class="field-hint">Où voulez-vous recevoir les alertes de retard ?</div>
-            <input class="field-input" type="email" placeholder="vous@gmail.com" id="suivi-email" />
-          </div>
-
-          <div class="field-group">
-            <div class="field-label">Fréquence des rapports</div>
-            <select class="field-input" id="suivi-freq">
-              <option value="quotidien">Quotidien (8h du matin)</option>
-              <option value="hebdo" selected>Hebdomadaire (lundi matin)</option>
-              <option value="nunca">Uniquement si alerte</option>
-            </select>
-          </div>
-
-          <button class="save-btn" style="margin-top:auto;" onclick="saveAgent('suivi', this)">💾 Enregistrer la configuration</button>
-        </div>
-      </div>
-    </div>
-
-  </div>
 
   <!-- GUIDE -->
 </main>
