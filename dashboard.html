@@ -2820,15 +2820,42 @@ if (!gmailConnected) {
   clearTimeout(step2);
   clearTimeout(step3);
 
-  const text = await response.text();
-  console.log("Réponse Make:", response.status, text);
+  const data = await response.json();
+console.log("Réponse Make:", data);
 
-  if (!response.ok) {
+ if (!data.success) {
     box.innerHTML = "❌ Le mail n’a pas pu être envoyé.";
     showToast("Erreur agent mail");
     await saveActionLog("mails", instruction, "error");
     return;
   }
+
+      if (data.reason === "contact_not_found") {
+  box.innerHTML = "❌ Contact introuvable dans votre carnet.";
+  showToast("Contact introuvable");
+  return;
+}
+
+if (data.reason === "generation_failed") {
+  box.innerHTML = "❌ Impossible de générer le mail.";
+  showToast("Erreur génération");
+  return;
+}
+
+if (data.reason === "mail_not_connected") {
+  box.innerHTML = "❌ Compte mail non connecté.";
+  showToast("Compte mail requis");
+  return;
+}
+
+if (data.reason === "empty_instruction") {
+  box.innerHTML = "❌ Instruction trop courte.";
+  showToast("Instruction invalide");
+  return;
+}
+
+      data.success === true
+      ✅ Mail envoyé avec succès
 
   box.innerHTML = "✅ Mail envoyé avec succès";
   showToast("Mail envoyé");
