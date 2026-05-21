@@ -2849,17 +2849,6 @@ if (!gmailConnected) {
     "error"
   );
 }
-
-    } catch (err) {
-      console.error("Erreur envoi Make:", err);
-    box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
-
-await saveActionLog(
-  "mails",
-  instruction,
-  "error"
-);
-    }
   };
 
   recognition.onerror = function(event) {
