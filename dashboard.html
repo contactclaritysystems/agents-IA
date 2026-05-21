@@ -2676,6 +2676,31 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove("show"), 2800);
 }
 
+  async function saveActionLog(agent, action, status) {
+  if (!currentUser) return;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) return;
+
+  await fetch(SUPABASE_URL + "/rest/v1/action_event_logs", {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal"
+    },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      agent,
+      action,
+      status
+    })
+  });
+}
+
 function openClientSheet() {
   const sheet = document.getElementById("mails-sheet").value;
   if (!sheet) {
@@ -2786,12 +2811,24 @@ setTimeout(() => {
       const text = await response.text();
       console.log("Réponse Make:", response.status, text);
 
-      box.innerHTML = "✅ Instruction envoyée : " + instruction;
-      showToast("Instruction envoyée à l’agent");
+      box.innerHTML = "✅ Mail traité : " + instruction;
+showToast("Action enregistrée");
+
+await saveActionLog(
+  "mails",
+  instruction,
+  "success"
+);
 
     } catch (err) {
       console.error("Erreur envoi Make:", err);
-      box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
+    box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
+
+await saveActionLog(
+  "mails",
+  instruction,
+  "error"
+);
     }
   };
 
