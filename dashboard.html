@@ -1466,6 +1466,53 @@ main > div[style*="background:var(--bg2)"] {
     padding: 4px 8px;
   }
 }
+
+  @media (max-width: 600px) {
+
+  #history-list.agents-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #history-list .agent-card {
+    border-radius: 18px;
+    min-height: auto;
+  }
+
+  #history-list .agent-head {
+    padding: 14px;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  #history-list .agent-emoji {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  #history-list .agent-name {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  #history-list .agent-desc {
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  #history-list .agent-title-wrap {
+    min-width: 0;
+  }
+
+  #history-list .agent-card::after {
+    display: none;
+  }
+}
   
 </style>
 </head>
