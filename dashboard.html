@@ -3922,63 +3922,6 @@ function openTemplate(name) {
 
   showToast("Template bientôt disponible");
 }
-
-  async function loadAppointments() {
-  if (!currentUser) return;
-
-  const list = document.getElementById("planning-list");
-  if (!list) return;
-
-  list.innerHTML = `<div class="info-box">Chargement du planning...</div>`;
-
-  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-  const rawSession = localStorage.getItem(storageKey);
-  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
-
-  if (!accessToken) {
-    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
-    return;
-  }
-
-  const response = await fetch(
-    SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) + "&order=appointment_date.asc&order=appointment_time.asc",
-    {
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
-      }
-    }
-  );
-
-  if (!response.ok) {
-    list.innerHTML = `<div class="info-box">Impossible de charger le planning.</div>`;
-    return;
-  }
-
-  const appointments = await response.json();
-
-  if (!appointments || appointments.length === 0) {
-    list.innerHTML = `
-      <div class="gmail-section" style="display:block;">
-        <div class="section-title">Aucun rendez-vous</div>
-        <div class="gmail-desc" style="margin-top:8px;">Vos prochains rendez-vous apparaîtront ici.</div>
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = appointments.map(a => `
-    <div class="gmail-section" style="display:block;">
-      <div class="section-title">${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}</div>
-      <div class="gmail-desc" style="margin-top:8px;">
-        ${a.title || "Sans motif"}<br>
-        ${a.location ? "📍 " + a.location + "<br>" : ""}
-        ${new Date(a.appointment_date).toLocaleDateString("fr-FR")}
-      </div>
-    </div>
-  `).join("");
-}
   
 function showSection(section, btn) {
   window.scrollTo(0, 0);
