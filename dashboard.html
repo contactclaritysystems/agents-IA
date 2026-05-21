@@ -3010,6 +3010,13 @@ function showSection(section, btn) {
   return;
 }
 
+  if (section === "historique") {
+    document.getElementById("main-historique").classList.add("active");
+    if (btn) btn.classList.add("active");
+    closeHistoryDetail();
+    return;
+  }
+  
   document.getElementById("main-agents").classList.add("active");
   showToast("Section bientôt disponible");
 }
