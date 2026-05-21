@@ -4187,13 +4187,8 @@ window.logout = logout;
   }
 
   if (e.target.closest("#logout-btn")) {
-    e.preventDefault();
-    logout();
-  }
-
-    if (e.target.closest("#bottom-logout-btn")) {
   e.preventDefault();
-  logout();
+  confirmLogout();
 }
 });
 </script>
