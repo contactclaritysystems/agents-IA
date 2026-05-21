@@ -1409,7 +1409,7 @@ main > div[style*="background:var(--bg2)"] {
   <span class="icon">👥</span> Carnet contacts
 </button>
     
-    <button class="nav-item" onclick="showSection('historique')">
+   <button class="nav-item" onclick="showSection('historique', this)">
       <span class="icon">📋</span> Historique <span class="badge">12</span>
     </button>
     
@@ -1917,6 +1917,50 @@ main > div[style*="background:var(--bg2)"] {
   </div>
 
   <div id="contacts-list" class="agents-grid"></div>
+</main>
+
+<!-- MAIN PAGE HISTORIQUE -->
+
+  <main class="main page-view" id="main-historique">
+  <div class="topbar">
+    <div>
+      <div class="page-title">Historique <span>actions</span></div>
+      <div class="page-subtitle">Consultez les dernières actions de vos agents.</div>
+    </div>
+  </div>
+
+  <div class="agents-grid">
+    <div class="agent-card" onclick="openHistoryAgent('mails')" style="cursor:pointer;">
+      <div class="agent-head">
+        <div class="agent-emoji">📧</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">Agent Mails</div>
+          <div class="agent-desc">Voir les derniers mails envoyés ou échoués.</div>
+        </div>
+        <div class="agent-status ok">Historique</div>
+      </div>
+    </div>
+
+    <div class="agent-card" style="opacity:.5;">
+      <div class="agent-head" style="cursor:default;">
+        <div class="agent-emoji">📄</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">Agent Devis</div>
+          <div class="agent-desc">Aucune action pour le moment.</div>
+        </div>
+        <div class="agent-status empty">Vide</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="history-detail" style="display:none;">
+    <div class="section-header">
+      <div class="section-title" id="history-detail-title">Agent Mails</div>
+      <button class="sheet-btn" onclick="closeHistoryDetail()" type="button">← Retour</button>
+    </div>
+
+    <div id="history-list" class="agents-grid"></div>
+  </div>
 </main>
 
   <div id="mail-choice-modal" style="display:none;">
