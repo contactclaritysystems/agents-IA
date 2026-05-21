@@ -1738,6 +1738,39 @@ main > div[style*="background:var(--bg2)"] {
     display: block;
   }
 }
+
+  @media (max-width: 600px) {
+  #profil-mobile-section {
+    display: none;
+  }
+
+  #profil-mobile-section.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: var(--page);
+    padding: 18px 18px 110px;
+    overflow-y: auto;
+  }
+
+  .mobile-subpage-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  #profil-mobile-section .gmail-section {
+    margin: 0 !important;
+  }
+}
+
+@media (min-width: 601px) {
+  .mobile-subpage-header {
+    display: none;
+  }
+}
   
 </style>
 </head>
@@ -1810,6 +1843,10 @@ main > div[style*="background:var(--bg2)"] {
 
   <!-- PROFIL -->
 <div id="profil-mobile-section">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closeProfileMobilePage()">← Retour</button>
+    <div class="section-title">Informations de base</div>
+  </div>
 
 <div class="gmail-section">
 
@@ -2647,11 +2684,39 @@ lockMailsFields();
   openMailChoiceModal();
 }
 
-  function handleProfilMobileCard() {
+  let profileInitialState = "";
+
+function getProfileFormState() {
+  return JSON.stringify({
+    firstname: document.getElementById("profile-firstname")?.value || "",
+    lastname: document.getElementById("profile-lastname")?.value || "",
+    phone: document.getElementById("profile-phone")?.value || "",
+    city: document.getElementById("profile-city")?.value || "",
+    job: document.getElementById("profile-job")?.value || "",
+    company: document.getElementById("profile-company")?.value || ""
+  });
+}
+
+function handleProfilMobileCard() {
   const section = document.getElementById("profil-mobile-section");
-  if (section) {
-    section.classList.toggle("open");
+  if (!section) return;
+
+  profileInitialState = getProfileFormState();
+  section.classList.add("open");
+}
+
+function closeProfileMobilePage() {
+  const section = document.getElementById("profil-mobile-section");
+  if (!section) return;
+
+  const hasChanges = getProfileFormState() !== profileInitialState;
+
+  if (hasChanges) {
+    const confirmLeave = confirm("Vous avez des modifications non enregistrées. Quitter sans enregistrer ?");
+    if (!confirmLeave) return;
   }
+
+  section.classList.remove("open");
 }
 
   function handleContactsMobileCard() {
@@ -2842,6 +2907,8 @@ if (editBtn) editBtn.style.display = "none";
 
     showToast("Informations enregistrées");
     lockProfileFields();
+
+    profileInitialState = getProfileFormState();
 
     await upsertSelfContact(profile);
 
