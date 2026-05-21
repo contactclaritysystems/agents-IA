@@ -2684,18 +2684,27 @@ lockMailsFields();
   openMailChoiceModal();
 }
 
-  let profileInitialState = "";
-  let profileHasUnsavedChanges = false;
+let profileInitialState = "";
+let profileHasUnsavedChanges = false;
 
 function getProfileFormState() {
-  return JSON.stringify({
+  return {
     firstname: document.getElementById("profile-firstname")?.value || "",
     lastname: document.getElementById("profile-lastname")?.value || "",
     phone: document.getElementById("profile-phone")?.value || "",
     city: document.getElementById("profile-city")?.value || "",
     job: document.getElementById("profile-job")?.value || "",
     company: document.getElementById("profile-company")?.value || ""
-  });
+  };
+}
+
+function setProfileFormState(profile) {
+  document.getElementById("profile-firstname").value = profile.firstname || "";
+  document.getElementById("profile-lastname").value = profile.lastname || "";
+  document.getElementById("profile-phone").value = profile.phone || "";
+  document.getElementById("profile-city").value = profile.city || "";
+  document.getElementById("profile-job").value = profile.job || "";
+  document.getElementById("profile-company").value = profile.company || "";
 }
 
 function handleProfilMobileCard() {
@@ -2703,6 +2712,7 @@ function handleProfilMobileCard() {
   if (!section) return;
 
   profileInitialState = getProfileFormState();
+  profileHasUnsavedChanges = false;
   section.classList.add("open");
 }
 
@@ -2710,13 +2720,17 @@ function closeProfileMobilePage() {
   const section = document.getElementById("profil-mobile-section");
   if (!section) return;
 
+  const currentState = getProfileFormState();
   const hasChanges =
     profileHasUnsavedChanges &&
-    getProfileFormState() !== profileInitialState;
+    JSON.stringify(currentState) !== JSON.stringify(profileInitialState);
 
   if (hasChanges) {
-    const confirmLeave = confirm("Vous avez des modifications non enregistrées. Quitter sans enregistrer ?");
+    const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, les anciennes informations seront conservées.");
     if (!confirmLeave) return;
+
+    setProfileFormState(profileInitialState);
+    lockProfileFields();
   }
 
   profileHasUnsavedChanges = false;
