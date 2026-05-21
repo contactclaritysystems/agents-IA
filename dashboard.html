@@ -3285,26 +3285,32 @@ if (accessToken) {
   const lbl = document.getElementById("carnet-status-label");
 if (lbl) lbl.textContent = "Créé ✓";
 }
+  
+let selectedContactId = null;
 
-function renderContactsList(contacts = []) {
-  const container = document.getElementById("contacts-list");
+function renderContacts() {
+  const list = document.getElementById("contacts-list");
+  if (!list) return;
 
-  if (!contacts.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        Aucun contact pour le moment.
-      </div>
-    `;
+  const search = (document.getElementById("contact-search")?.value || "").toLowerCase();
+
+  const contacts = contactsCache.filter(c =>
+    (c.full_name || "").toLowerCase().includes(search) ||
+    (c.company || "").toLowerCase().includes(search) ||
+    (c.email || "").toLowerCase().includes(search) ||
+    (c.phone || "").toLowerCase().includes(search)
+  );
+
+  if (contacts.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucun contact pour le moment.</div>`;
     return;
   }
 
-  container.innerHTML = contacts.map(contact => `
-    <button class="contact-row" onclick="openContactDetail('${contact.id}')">
+  list.innerHTML = contacts.map(c => `
+    <button class="contact-row" onclick="openContactDetail('${c.id}')" type="button">
       <div class="contact-row-main">
-        <div class="contact-name">
-          ${contact.firstname || ""} ${contact.lastname || ""}
-        </div>
-        ${contact.company ? `<div class="contact-company">${contact.company}</div>` : ""}
+        <div class="contact-name">${c.full_name || "Sans nom"}</div>
+        ${c.company ? `<div class="contact-company">${c.company}</div>` : ""}
       </div>
       <span class="contact-chevron">›</span>
     </button>
@@ -3312,13 +3318,13 @@ function renderContactsList(contacts = []) {
 }
 
   function openContactDetail(contactId) {
-  const contact = contacts.find(c => c.id === contactId);
+  const contact = contactsCache.find(c => c.id === contactId);
   if (!contact) return;
 
   selectedContactId = contactId;
 
   document.getElementById("contact-detail-name").textContent =
-    `${contact.firstname || ""} ${contact.lastname || ""}`;
+    contact.full_name || "Sans nom";
 
   document.getElementById("contact-detail-company").textContent =
     contact.company || "";
@@ -3329,10 +3335,27 @@ function renderContactsList(contacts = []) {
   document.getElementById("contact-detail-email").textContent =
     contact.email || "Non renseigné";
 
-  document.getElementById("contact-detail-address").textContent =
-    contact.address || "Non renseignée";
+  document.getElementById("contact-detail-page").classList.add("open");
+}
 
-  showPage("contact-detail-page");
+  function closeContactDetail() {
+  selectedContactId = null;
+  document.getElementById("contact-detail-page").classList.remove("open");
+}
+
+function editSelectedContact() {
+  if (!selectedContactId) return;
+  document.getElementById("contact-detail-page").classList.remove("open");
+  openContactPage(selectedContactId);
+}
+
+function deleteSelectedContact() {
+  if (!selectedContactId) return;
+
+  if (!confirm("Supprimer ce contact ?")) return;
+
+  deleteContact(selectedContactId);
+  closeContactDetail();
 }
 
 async function createContactsSheet(btn) {
