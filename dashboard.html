@@ -1221,6 +1221,10 @@ main > div[style*="background:var(--bg2)"] {
   gap: 10px;
   margin-bottom: 14px;
 }
+
+  #main-settings .gmail-section:has(#gmail-ui) {
+  display: none !important;
+}
 }
 
 .template-muted {
@@ -2089,12 +2093,14 @@ lockMailsFields();
   const isConnected = lbl && lbl.textContent.includes("Connecté");
 
   if (isConnected) {
-    if (confirm("Déconnecter votre compte Gmail ?")) {
+    if (confirm("Déconnecter votre compte mail ?")) {
       disconnectGmail();
     }
-  } else {
-    connectGmail();
+    return;
   }
+
+  openMailChoiceModal();
+}
 }
 
 // ─── AGENTS ──────────────────────────────────────────────
