@@ -1945,7 +1945,7 @@ main > div[style*="background:var(--bg2)"] {
     <button class="mail-choice-btn" onclick="closeMailChoiceModal(); connectProfessionalEmail();">
       <span>🌐</span>
       <div>
-        <strong>Adresse professionnelle</strong>
+        <strong>SMTP professionnel</strong>
         <small>OVH, Ionos, Infomaniak, domaine privé</small>
       </div>
     </button>
@@ -2009,7 +2009,14 @@ function closeMailChoiceModal() {
 }
 
 function connectOutlook() {
-  showToast("Connexion Outlook à configurer");
+
+  localStorage.setItem(
+    "clarity_email_before_oauth",
+    currentUser.email
+  );
+
+  showToast("Connexion Outlook bientôt disponible");
+
 }
 
 function connectProfessionalEmail() {
