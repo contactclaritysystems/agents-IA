@@ -3576,19 +3576,6 @@ targetCard.querySelector(".agent-head").after(box);
 
   let silenceTimer = null;
 
-  function resetSilenceTimer() {
-
-    clearTimeout(silenceTimer);
-
-    silenceTimer = setTimeout(() => {
-
-      try {
-        recognition.stop();
-      } catch (e) {}
-
-    }, 4000);
-  }
-
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   recognition.start();
@@ -3676,6 +3663,19 @@ targetCard.querySelector(".agent-head").after(box);
     box.innerHTML = "❌ Erreur dictée : " + event.error;
   };
 }
+
+  function resetSilenceTimer() {
+
+    clearTimeout(silenceTimer);
+
+    silenceTimer = setTimeout(() => {
+
+      try {
+        recognition.stop();
+      } catch (e) {}
+
+    }, 4000);
+  }
   
 function resetSilenceTimer() {
   clearTimeout(silenceTimer);
