@@ -3528,6 +3528,155 @@ targetCard.querySelector(".agent-head").after(box);
 
   let silenceTimer = null;
 
+  async function startPlanningDictation() {
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    return;
+  }
+
+  let box = document.querySelector(".page-view.active #planning-dictation-box");
+
+  if (!box) {
+
+    box = document.createElement("div");
+
+    box.id = "planning-dictation-box";
+
+    box.style.marginTop = "12px";
+    box.style.padding = "12px 14px";
+    box.style.borderRadius = "14px";
+    box.style.background = "rgba(59,130,246,.08)";
+    box.style.border = "1px solid rgba(59,130,246,.18)";
+    box.style.fontSize = "13px";
+    box.style.color = "#2563eb";
+    box.style.fontWeight = "600";
+
+    const activePage = document.querySelector(".page-view.active");
+
+    const targetCard =
+      activePage.querySelector("#card-planning-run");
+
+    targetCard.querySelector(".agent-head").after(box);
+  }
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  recognition.maxAlternatives = 1;
+
+  let finalText = "";
+  let hasSent = false;
+
+  let silenceTimer = null;
+
+  function resetSilenceTimer() {
+
+    clearTimeout(silenceTimer);
+
+    silenceTimer = setTimeout(() => {
+
+      try {
+        recognition.stop();
+      } catch (e) {}
+
+    }, 4000);
+  }
+
+  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+
+  recognition.start();
+
+  resetSilenceTimer();
+
+  recognition.onresult = function(event) {
+
+    resetSilenceTimer();
+
+    let interimText = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+
+      const text = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalText += text + " ";
+      } else {
+        interimText += text;
+      }
+    }
+
+    box.innerHTML = "🎙️ " + (finalText + interimText);
+  };
+
+  recognition.onend = async function() {
+
+    const instruction = finalText.trim();
+
+    if (!instruction) {
+
+      box.innerHTML = "❌ Aucune instruction détectée.";
+      return;
+    }
+
+    if (hasSent) return;
+
+    hasSent = true;
+
+    box.innerHTML = "📅 Recherche de la date...";
+
+    try {
+
+      setTimeout(() => {
+        box.innerHTML = "👤 Recherche du contact...";
+      }, 1200);
+
+      setTimeout(() => {
+        box.innerHTML = "🕒 Vérification du créneau...";
+      }, 2400);
+
+      setTimeout(() => {
+        box.innerHTML = "📤 Création du rendez-vous...";
+      }, 3600);
+
+      console.log("PLANNING DICTÉ:", instruction);
+
+      // WEBHOOK MAKE ICI PLUS TARD
+
+      setTimeout(async () => {
+
+        box.innerHTML = "✅ Rendez-vous créé";
+
+        showToast("Rendez-vous ajouté");
+
+        await loadAppointments();
+
+      }, 5000);
+
+    } catch(err) {
+
+      console.error(err);
+
+      box.innerHTML = "❌ Impossible de créer le rendez-vous.";
+
+      showToast("Erreur planning");
+    }
+  };
+
+  recognition.onerror = function(event) {
+
+    console.error(event);
+
+    box.innerHTML = "❌ Erreur dictée : " + event.error;
+  };
+}
+  
 function resetSilenceTimer() {
   clearTimeout(silenceTimer);
   
