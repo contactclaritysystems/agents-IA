@@ -1186,15 +1186,6 @@ select.field-input {
   overflow: hidden;
 }
 
-  #main-contacts .mobile-agent-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 22px;
-  padding: 18px 18px 0;
-}
-
 #main-contacts .gmail-section {
   margin: 0 18px 24px;
   border-radius: 22px;
@@ -3647,6 +3638,13 @@ function openTemplate(name) {
 }
   
 function showSection(section, btn) {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
+  document.querySelectorAll(".page-view").forEach(page => {
+    page.classList.remove("active");
+  });
   document.querySelectorAll(".page-view").forEach(page => {
     page.classList.remove("active");
   });
