@@ -2809,14 +2809,17 @@ async function disconnectGmail() {
 async function handleUser(user) {
   console.log("=== HANDLE USER ===");
   currentUser = user;
+
   const prenom = user.user_metadata?.prenom || "Client";
   document.querySelector(".user-name").textContent = prenom;
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
   
   console.log("avant handleOAuthCallback");
   await handleOAuthCallback();
+
   console.log("avant checkGmailStatus");
   await checkGmailStatus();
+
   console.log("avant loadProfile");
   await loadProfile();
   
