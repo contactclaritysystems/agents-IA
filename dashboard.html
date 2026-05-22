@@ -2294,38 +2294,39 @@ select.field-input {
   </div>
 
   <!-- AGENT RELANCE -->
-  <div class="agent-card" id="card-relance">
-    <div class="agent-head" onclick="toggleCard('relance')">
-      <div class="agent-emoji">🔁</div>
+<div class="agent-card" id="card-relance">
+  <div class="agent-head" onclick="toggleCard('relance')">
+    <div class="agent-emoji">🔁</div>
 
-      <div class="agent-title-wrap">
-        <div class="agent-name">Agent Relance Clients</div>
-        <div class="agent-desc">
-          Relance automatiquement les clients sans réponse.
-        </div>
-      </div>
-
-      <div class="agent-status pending">Bientôt</div>
-      <div class="agent-toggle">▾</div>
-    </div>
-
-    <div class="agent-body">
-      <div class="info-box">
-        <span class="info-icon">🔁</span>
-        <div>
-          Cet agent aide à relancer automatiquement les clients en attente.
-          <br><br>
-
-          Exemple :
-          <strong>“Relance les clients qui n’ont pas répondu depuis 7 jours.”</strong>
-
-          <br><br>
-
-          Les relances sont adaptées automatiquement selon chaque client.
-        </div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Relance Clients</div>
+      <div class="agent-desc">
+        Prépare vos relances clients à partir d’une dictée simple.
       </div>
     </div>
+
+    <div class="agent-status pending">Non activé</div>
+    <div class="agent-toggle">▾</div>
   </div>
+
+  <div class="agent-body">
+    <div class="info-box">
+      <span class="info-icon">🔁</span>
+      <div>
+        Cet agent vous permet de programmer une relance client.
+        <br><br>
+        Exemple :
+        <strong>“Rappelle-moi de relancer Lucas vendredi pour le devis.”</strong>
+        <br><br>
+        Le jour prévu, l’agent vous rappelle qui relancer et pourquoi.
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="toggleAgentEnabled('relance')" type="button">
+      Activer / Désactiver l’agent
+    </button>
+  </div>
+</div>
 
   <!-- AGENT SUIVI -->
   <div class="agent-card" id="card-suivi">
