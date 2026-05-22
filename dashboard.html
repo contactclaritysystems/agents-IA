@@ -3847,7 +3847,19 @@ try {
 }
 
 if (!data.success) {
-  box.innerHTML = "❌ Impossible de créer le rendez-vous.";
+  const message =
+    data.message ||
+    data.error ||
+    data.reason ||
+    "Impossible de créer le rendez-vous.";
+
+  box.innerHTML = "❌ " + message;
+  showToast(message);
+
+  await saveActionLog("planning", instruction, data.reason || data.error || "error");
+  return;
+}
+
   showToast("Erreur planning");
   await saveActionLog("planning", instruction, "error");
   return;
