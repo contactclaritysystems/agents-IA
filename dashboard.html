@@ -2603,32 +2603,6 @@ let currentUser = null;
 let currentProfile = null;
 const mailsEnabled = true;
 const planningEnabled = true;
-const planningEnabled = true;
-
-function syncPlanningStatus() {
-
-  // Réglages
-  const settingsStatus = document.querySelector("#card-planning .agent-status");
-
-  if (settingsStatus) {
-    settingsStatus.className =
-      planningEnabled ? "agent-status ok" : "agent-status pending";
-
-    settingsStatus.textContent =
-      planningEnabled ? "Actif" : "Bientôt";
-  }
-
-  // Mes agents
-  const agentsStatus = document.querySelector("#card-planning-run .agent-status");
-
-  if (agentsStatus) {
-    agentsStatus.className =
-      planningEnabled ? "agent-status ok" : "agent-status pending";
-
-    agentsStatus.textContent =
-      planningEnabled ? "Prêt" : "Bientôt";
-  }
-}
 
 // ─── GMAIL UI ────────────────────────────────────────────
 
@@ -2838,9 +2812,6 @@ async function handleUser(user) {
   const prenom = user.user_metadata?.prenom || "Client";
   document.querySelector(".user-name").textContent = prenom;
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
-
-syncMailsStatus();
-syncPlanningStatus();
   
   console.log("avant handleOAuthCallback");
   await handleOAuthCallback();
@@ -2850,6 +2821,10 @@ syncPlanningStatus();
   await loadAgentConfigs();
   console.log("avant loadProfile");
   await loadProfile();
+  
+  syncMailsStatus();
+  syncPlanningStatus();
+  
   console.log("handleUser terminé");
 }
 
@@ -4061,7 +4036,7 @@ function openHistoryAgent(agentName) {
   }
 
   if (title) {
-    title.textContent = "Agent Mails";
+  title.textContent = agentName === "planning" ? "Agent Planning" : "Agent Mails";
   }
 
   if (detail) {
@@ -4463,7 +4438,6 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 
   await handleUser(data.session.user);
-  syncPlanningStatus();
 })();
 
   window.disconnectGmail = disconnectGmail;
