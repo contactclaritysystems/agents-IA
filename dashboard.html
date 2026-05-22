@@ -3153,6 +3153,9 @@ lockProfileFields();
 profileInitialState = getProfileFormState();
 profileHasUnsavedChanges = false;
 
+const section = document.getElementById("profil-mobile-section");
+if (section) section.classList.remove("open");
+
 try {
 
   if (profile.firstname || profile.lastname) {
