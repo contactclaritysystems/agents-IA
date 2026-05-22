@@ -2519,11 +2519,11 @@ select.field-input {
       <div class="agent-status ok">Historique</div>
     </div>
 
-    <div class="agent-card history-folder-card" onclick="openHistoryAgent('planning')">
+    <div class="agent-card history-folder-card" onclick="openPlanningHistoryFolders()">
   <div class="history-folder-icon">📅</div>
   <div>
     <div class="agent-name">Agent Planning</div>
-    <div class="agent-desc">Rendez-vous créés ou modifiés</div>
+    <div class="agent-desc">Dictées et anciens rendez-vous</div>
   </div>
   <div class="agent-status ok">Historique</div>
 </div>
@@ -3951,6 +3951,104 @@ function showSection(section, btn) {
 let contactsCache = [];
 
   let historyLimit = 10;
+
+  function openPlanningHistoryFolders() {
+  const detail = document.getElementById("history-detail");
+  const title = document.getElementById("history-detail-title");
+  const folders = document.getElementById("history-folders");
+  const list = document.getElementById("history-list");
+
+  if (folders) folders.style.display = "none";
+
+  if (title) title.textContent = "Agent Planning";
+
+  if (detail) {
+    detail.style.display = "block";
+    detail.classList.add("open");
+  }
+
+  if (list) {
+    list.innerHTML = `
+      <div class="agent-card history-folder-card" onclick="loadHistory('planning')">
+        <div class="history-folder-icon">🎙️</div>
+        <div>
+          <div class="agent-name">Toutes les dictées</div>
+          <div class="agent-desc">Demandes vocales réussies ou échouées</div>
+        </div>
+        <div class="agent-status ok">Voir</div>
+      </div>
+
+      <div class="agent-card history-folder-card" onclick="loadPastAppointments()">
+        <div class="history-folder-icon">📅</div>
+        <div>
+          <div class="agent-name">Rendez-vous passés</div>
+          <div class="agent-desc">Tous les anciens rendez-vous</div>
+        </div>
+        <div class="agent-status ok">Voir</div>
+      </div>
+    `;
+  }
+}
+
+  async function loadPastAppointments() {
+  if (!currentUser) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  list.innerHTML = `<div class="info-box">Chargement des rendez-vous passés...</div>`;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + currentUser.id +
+    "&appointment_date=lt." + today +
+    "&order=appointment_date.desc&order=appointment_time.desc",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    list.innerHTML = `<div class="info-box">Impossible de charger les rendez-vous passés.</div>`;
+    return;
+  }
+
+  const appointments = await response.json();
+
+  if (!appointments || appointments.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucun rendez-vous passé pour le moment.</div>`;
+    return;
+  }
+
+  list.innerHTML = appointments.map(a => `
+    <div class="agent-card">
+      <div class="agent-head" style="cursor:default;">
+        <div class="agent-emoji">📅</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">${a.contact_name || "Rendez-vous"}</div>
+          <div class="agent-desc">
+            ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
+            ${a.title || "Sans motif"}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
 
 function openHistoryAgent(agentName) {
   console.log("OUVERTURE HISTORIQUE:", agentName);
