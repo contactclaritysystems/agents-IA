@@ -2970,8 +2970,8 @@ function syncPlanningStatus() {
 
   const settingsStatus = document.querySelector("#card-relance .agent-status");
   if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status pending";
-    settingsStatus.textContent = active ? "Actif" : "Non activé";
+    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = active ? "Actif" : "Désactivé";
   }
 
   const agentsStatus = document.querySelector("#card-relance-run .agent-status");
@@ -4085,11 +4085,18 @@ if (typeof loadAppointments === "function") {
     box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
 }
+
+function closeAllAgentCards() {
+  document.querySelectorAll(".agent-card.open").forEach(card => {
+    card.classList.remove("open");
+  });
+}
   
 function showSection(section, btn) {
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
+  closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
     page.classList.remove("active");
