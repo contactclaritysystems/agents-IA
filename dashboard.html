@@ -3826,21 +3826,6 @@ if (typeof loadAppointments === "function") {
   };
 }
   
-function connectCalendar() { showToast("Google Calendar bientôt disponible"); }
-
-function openTemplate(name) {
-  const templates = {
-    contacts: "https://docs.google.com/spreadsheets/d/1CHMkxGC4N0v23fg-hCRm9ssAgOtC-9uFXCHbdowGpAs/copy"
-  };
-
-  if (templates[name]) {
-    window.open(templates[name], "_blank");
-    return;
-  }
-
-  showToast("Template bientôt disponible");
-}
-  
 function showSection(section, btn) {
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
