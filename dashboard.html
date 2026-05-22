@@ -4356,14 +4356,18 @@ function capitalizeFirstLetter(value) {
 
 function setupAutoCapitalizeFields() {
   document.querySelectorAll(".auto-capitalize").forEach(input => {
+
     input.addEventListener("input", function () {
+
       const start = this.selectionStart;
       const end = this.selectionEnd;
 
       this.value = capitalizeFirstLetter(this.value);
 
       this.setSelectionRange(start, end);
+
     });
+
   });
 }
 
