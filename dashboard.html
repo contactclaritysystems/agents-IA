@@ -2817,8 +2817,6 @@ async function handleUser(user) {
   await handleOAuthCallback();
   console.log("avant checkGmailStatus");
   await checkGmailStatus();
-  console.log("avant loadAgentConfigs");
-  await loadAgentConfigs();
   console.log("avant loadProfile");
   await loadProfile();
   
