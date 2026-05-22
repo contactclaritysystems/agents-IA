@@ -2479,6 +2479,24 @@ select.field-input {
     <button class="save-btn" id="planning-dictation-btn" onclick="startPlanningDictation()">🎙️ Créer un rendez-vous</button>
   </div>
 </div>
+
+<div class="agent-card configured" id="card-relance-run" style="display:none;">
+  <div class="agent-head">
+    <div class="agent-emoji">🔁</div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Relance Clients</div>
+      <div class="agent-desc">Exemple : “Rappelle-moi de relancer Lucas vendredi pour le devis.”</div>
+    </div>
+    <div class="agent-status ok">Prêt</div>
+  </div>
+
+  <div class="agent-body" style="display:flex;">
+    <button class="save-btn" id="relance-dictation-btn" onclick="startRelanceDictation()">
+      🎙️ Créer une relance
+    </button>
+  </div>
+</div>
+    
   </div>
 </main>
 
@@ -3451,9 +3469,10 @@ async function loadEnabledAgents() {
 
 function syncAgentsVisibility() {
   const runCards = {
-    mails: document.getElementById("card-mails-run"),
-    planning: document.getElementById("card-planning-run")
-  };
+  mails: document.getElementById("card-mails-run"),
+  planning: document.getElementById("card-planning-run"),
+  relance: document.getElementById("card-relance-run")
+};
 
   Object.keys(runCards).forEach(agent => {
     if (!runCards[agent]) return;
