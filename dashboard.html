@@ -3201,6 +3201,7 @@ if (editBtn) editBtn.style.display = "none";
   }
 
   const profile = {
+    ...(currentProfile || {}),
     firstname: document.getElementById("profile-firstname").value,
     lastname: document.getElementById("profile-lastname").value,
     phone: document.getElementById("profile-phone").value,
@@ -3242,6 +3243,8 @@ if (editBtn) editBtn.style.display = "none";
       return;
     }
 
+    currentProfile = profile;
+    
     showToast("Informations enregistrées");
     lockProfileFields();
 
@@ -3402,12 +3405,6 @@ if (profilLbl) {
     document.getElementById("profile-city").value = profile.city || "";
     document.getElementById("profile-job").value = profile.job || "";
     document.getElementById("profile-company").value = profile.company || "";
-
-    if (profile.contacts_sheet_url) {
-      renderContactsSheetCreated(profile.contacts_sheet_url);
-      document.getElementById("mails-sheet").value = profile.contacts_sheet_url;
-      lockMailsFields();
-    }
 
     lockProfileFields();
 
