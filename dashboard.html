@@ -2233,10 +2233,6 @@ select.field-input {
 
     <div class="agent-body">
       <div class="info-box">
-
-        <button class="save-btn" onclick="toggleAgentEnabled('mails')" type="button">
-        Activer / Désactiver l’agent
-        </button>
         
         <span class="info-icon">✉️</span>
         <div>
@@ -2251,6 +2247,11 @@ select.field-input {
           L’agent retrouve automatiquement le contact dans votre carnet et prépare le mail avant l’envoi.
         </div>
       </div>
+
+<button class="save-btn" onclick="toggleAgentEnabled('mails')" type="button">
+        Activer / Désactiver l’agent
+        </button>
+      
     </div>
   </div>
 
@@ -2272,10 +2273,6 @@ select.field-input {
 
     <div class="agent-body">
       <div class="info-box">
-
-        <button class="save-btn" onclick="toggleAgentEnabled('planning')" type="button">
-        Activer / Désactiver l’agent
-        </button>
         
         <span class="info-icon">📅</span>
         <div>
@@ -2290,6 +2287,11 @@ select.field-input {
           Les confirmations pourront être envoyées automatiquement aux clients.
         </div>
       </div>
+
+<button class="save-btn" onclick="toggleAgentEnabled('planning')" type="button">
+        Activer / Désactiver l’agent
+        </button>
+      
     </div>
   </div>
 
@@ -2962,6 +2964,22 @@ function syncPlanningStatus() {
     agentsStatus.textContent = active ? "Prêt" : "Désactivé";
   }
 }
+
+  function syncRelanceStatus() {
+  const active = enabledAgents.relance === true;
+
+  const settingsStatus = document.querySelector("#card-relance .agent-status");
+  if (settingsStatus) {
+    settingsStatus.className = active ? "agent-status ok" : "agent-status pending";
+    settingsStatus.textContent = active ? "Actif" : "Non activé";
+  }
+
+  const agentsStatus = document.querySelector("#card-relance-run .agent-status");
+  if (agentsStatus) {
+    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
+  }
+}
   
 async function loadAppointments() {
   if (!currentUser) return;
@@ -3480,7 +3498,8 @@ function syncAgentsVisibility() {
   });
 
   syncMailsStatus();
-  syncPlanningStatus();
+syncPlanningStatus();
+syncRelanceStatus();
 }
 
   async function toggleAgentEnabled(agentName) {
