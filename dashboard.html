@@ -1936,6 +1936,22 @@ select.field-input {
   }
 }
 
+  @media (max-width: 600px) {
+  #history-list.planning-folder-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    padding: 0 !important;
+  }
+
+  #history-list.planning-folder-grid .history-folder-card {
+    aspect-ratio: 1 / 1 !important;
+    min-height: unset !important;
+    padding: 14px !important;
+    border-radius: 24px !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3968,6 +3984,9 @@ let contactsCache = [];
   }
 
   if (list) {
+
+    list.classList.add("planning-folder-grid");
+    
     list.innerHTML = `
       <div class="agent-card history-folder-card" onclick="loadHistory('planning')">
         <div class="history-folder-icon">🎙️</div>
@@ -3994,6 +4013,7 @@ let contactsCache = [];
   if (!currentUser) return;
 
   const list = document.getElementById("history-list");
+  list.classList.remove("planning-folder-grid");
   if (!list) return;
 
   list.innerHTML = `<div class="info-box">Chargement des rendez-vous passés...</div>`;
