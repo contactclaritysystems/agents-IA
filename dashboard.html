@@ -3690,6 +3690,12 @@ if (mailBtn) {
   recognition.onerror = function(event) {
     clearTimeout(silenceTimer);
     console.error("Erreur dictée:", event.error);
+
+    if (mailBtn) {
+  mailBtn.innerHTML = "🎙️ Dicter un mail";
+  mailBtn.onclick = startMailDictation;
+}
+    
     box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
 }
@@ -3855,6 +3861,12 @@ if (typeof loadAppointments === "function") {
   recognition.onerror = function(event) {
     clearTimeout(silenceTimer);
     console.error("Erreur dictée planning:", event.error);
+
+    if (planningBtn) {
+  planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
+  planningBtn.onclick = startPlanningDictation;
+}
+    
     box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
 }
