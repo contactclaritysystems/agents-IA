@@ -3130,15 +3130,23 @@ function toggleCard(id) {
     }
 
     currentProfile = profile;
-    
-    showToast("Informations enregistrées");
-    lockProfileFields();
 
-    profileInitialState = getProfileFormState();
-    profileHasUnsavedChanges = false;
+showToast("Informations enregistrées");
+lockProfileFields();
 
-    if (profile.firstname || profile.lastname) {
-  await upsertSelfContact(profile);
+profileInitialState = getProfileFormState();
+profileHasUnsavedChanges = false;
+
+try {
+
+  if (profile.firstname || profile.lastname) {
+    await upsertSelfContact(profile);
+  }
+
+} catch (e) {
+
+  console.error("Erreur création contact profil:", e);
+
 }
 
   } catch (err) {
