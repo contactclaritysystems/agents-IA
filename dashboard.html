@@ -2384,7 +2384,7 @@ select.field-input {
       </div>
 
       <div class="agent-body" style="display:flex;">
-        <button class="save-btn" onclick="startMailDictation()">🎙️ Dicter un mail</button>
+       <button class="save-btn" id="mail-dictation-btn" onclick="startMailDictation()">🎙️ Dicter un mail</button>
       </div>
     </div>
 
@@ -2399,7 +2399,7 @@ select.field-input {
   </div>
 
   <div class="agent-body" style="display:flex;">
-    <button class="save-btn" onclick="startPlanningDictation()">🎙️ Créer un rendez-vous</button>
+    <button class="save-btn" id="planning-dictation-btn" onclick="startPlanningDictation()">🎙️ Créer un rendez-vous</button>
   </div>
 </div>
   </div>
@@ -3551,6 +3551,14 @@ async function startMailDictation() {
   let hasSent = false;
   let silenceTimer = null;
 
+  const mailBtn = document.getElementById("mail-dictation-btn");
+if (mailBtn) {
+  mailBtn.innerHTML = "⏹ Arrêter la dictée";
+  mailBtn.onclick = () => {
+    try { recognition.stop(); } catch(e) {}
+  };
+}
+
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
 
@@ -3562,20 +3570,6 @@ async function startMailDictation() {
   }
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
-  const stopBtn = document.createElement("button");
-
-stopBtn.innerHTML = "⏹ Arrêter";
-stopBtn.className = "sheet-btn";
-stopBtn.style.marginTop = "10px";
-
-box.appendChild(document.createElement("br"));
-box.appendChild(stopBtn);
-
-stopBtn.onclick = () => {
-  try {
-    recognition.stop();
-  } catch(e) {}
-};
 
   try {
     recognition.start();
@@ -3606,6 +3600,10 @@ stopBtn.onclick = () => {
   recognition.onend = async function() {
     clearTimeout(silenceTimer);
 
+    if (mailBtn) {
+  mailBtn.innerHTML = "🎙️ Dicter un mail";
+  mailBtn.onclick = startMailDictation;
+}
     const instruction = finalText.trim();
 
     const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
@@ -3735,6 +3733,13 @@ async function startPlanningDictation() {
   let hasSent = false;
   let silenceTimer = null;
 
+  const planningBtn = document.getElementById("planning-dictation-btn");
+if (planningBtn) {
+  planningBtn.innerHTML = "⏹ Arrêter la dictée";
+  planningBtn.onclick = () => {
+    try { recognition.stop(); } catch(e) {}
+  };
+}
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
 
@@ -3746,20 +3751,6 @@ async function startPlanningDictation() {
   }
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
-  const stopBtn = document.createElement("button");
-
-stopBtn.innerHTML = "⏹ Arrêter";
-stopBtn.className = "sheet-btn";
-stopBtn.style.marginTop = "10px";
-
-box.appendChild(document.createElement("br"));
-box.appendChild(stopBtn);
-
-stopBtn.onclick = () => {
-  try {
-    recognition.stop();
-  } catch(e) {}
-};
 
   try {
     recognition.start();
@@ -3790,6 +3781,10 @@ stopBtn.onclick = () => {
   recognition.onend = async function() {
     clearTimeout(silenceTimer);
 
+    if (planningBtn) {
+  planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
+  planningBtn.onclick = startPlanningDictation;
+}
     const instruction = finalText.trim();
 
     if (!instruction) {
