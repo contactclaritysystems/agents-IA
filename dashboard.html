@@ -3137,7 +3137,9 @@ function toggleCard(id) {
     profileInitialState = getProfileFormState();
     profileHasUnsavedChanges = false;
 
-    await upsertSelfContact(profile);
+    if (profile.firstname || profile.lastname) {
+  await upsertSelfContact(profile);
+}
 
   } catch (err) {
     console.error("SAVE PROFILE ERROR:", err);
