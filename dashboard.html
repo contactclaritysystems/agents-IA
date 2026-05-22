@@ -3548,6 +3548,7 @@ async function startMailDictation() {
   recognition.maxAlternatives = 1;
 
   let finalText = "";
+  let latestText = "";
   let hasSent = false;
   let silenceTimer = null;
 
@@ -3594,7 +3595,8 @@ if (mailBtn) {
       }
     }
 
-    box.innerHTML = "🎙️ " + (finalText + interimText);
+    latestText = (finalText + interimText).trim();
+    box.innerHTML = "🎙️ " + latestText;
   };
 
   recognition.onend = async function() {
@@ -3604,7 +3606,7 @@ if (mailBtn) {
   mailBtn.innerHTML = "🎙️ Dicter un mail";
   mailBtn.onclick = startMailDictation;
 }
-    const instruction = finalText.trim();
+    const instruction = latestText.trim();
 
     const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
 
