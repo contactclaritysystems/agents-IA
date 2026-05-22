@@ -3714,7 +3714,7 @@ async function startPlanningDictation() {
 
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.maxAlternatives = 1;
 
   let finalText = "";
@@ -3728,10 +3728,24 @@ async function startPlanningDictation() {
       try {
         recognition.stop();
       } catch (e) {}
-    }, 4000);
+    }, 12000);
   }
 
   box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+  const stopBtn = document.createElement("button");
+
+stopBtn.innerHTML = "⏹ Arrêter";
+stopBtn.className = "sheet-btn";
+stopBtn.style.marginTop = "10px";
+
+box.appendChild(document.createElement("br"));
+box.appendChild(stopBtn);
+
+stopBtn.onclick = () => {
+  try {
+    recognition.stop();
+  } catch(e) {}
+};
 
   try {
     recognition.start();
