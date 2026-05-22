@@ -2556,7 +2556,7 @@ select.field-input {
 
   <div id="history-detail" style="display:none;">
     <div class="section-header">
-  <button class="sheet-btn" onclick="closeHistoryDetail()" type="button">
+  <button class="sheet-btn" onclick="handleHistoryBack()" type="button">
     ← Retour
   </button>
 
@@ -3969,6 +3969,9 @@ let contactsCache = [];
   let historyLimit = 10;
 
   function openPlanningHistoryFolders() {
+
+  window.historyPlanningFoldersOpen = true;
+    
   const detail = document.getElementById("history-detail");
   const title = document.getElementById("history-detail-title");
   const folders = document.getElementById("history-folders");
@@ -4010,6 +4013,9 @@ let contactsCache = [];
 }
 
   async function loadPastAppointments() {
+
+  window.historyPlanningFoldersOpen = false;
+    
   if (!currentUser) return;
 
   const list = document.getElementById("history-list");
@@ -4181,7 +4187,22 @@ function closeHistoryDetail() {
   }
 }
 
+  function handleHistoryBack() {
+
+  if (window.historyPlanningFoldersOpen) {
+
+    openPlanningHistoryFolders();
+    return;
+
+  }
+
+  closeHistoryDetail();
+}
+
 function loadMoreHistory(agentName) {
+
+  window.historyPlanningFoldersOpen = false;
+  
   historyLimit += 10;
   loadHistory(agentName);
 }
