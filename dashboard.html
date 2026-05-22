@@ -3736,6 +3736,7 @@ async function startPlanningDictation() {
   recognition.maxAlternatives = 1;
 
   let finalText = "";
+  let latestText = "";
   let hasSent = false;
   let silenceTimer = null;
 
@@ -3781,7 +3782,8 @@ if (planningBtn) {
       }
     }
 
-    box.innerHTML = "🎙️ " + (finalText + interimText);
+    latestText = (finalText + interimText).trim();
+    box.innerHTML = "🎙️ " + latestText;
   };
 
   recognition.onend = async function() {
@@ -3791,7 +3793,7 @@ if (planningBtn) {
   planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
   planningBtn.onclick = startPlanningDictation;
 }
-    const instruction = finalText.trim();
+    const instruction = (latestText || finalText).trim();
 
     if (!instruction) {
       box.innerHTML = "❌ Aucune instruction détectée.";
