@@ -3079,120 +3079,6 @@ function toggleCard(id) {
   document.getElementById("card-" + id).classList.toggle("open");
 }
 
-async function saveAgent(id, btn) {
-  if (!currentUser) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  if (id !== "mails") {
-    alert("Cet agent n'est pas encore connecté à la base.");
-    return;
-  }
-
-  const config = {
-  sheet: document.getElementById("mails-sheet").value
-};
-
-  const original = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = "⏳ Enregistrement...";
-
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(
-      SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
-      {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-          "Prefer": "resolution=merge-duplicates,return=representation"
-        },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          agent_name: "mails",
-          config: config,
-          updated_at: new Date().toISOString()
-        }),
-        signal: controller.signal
-      }
-    );
-
-    clearTimeout(timeout);
-
-    const resultText = await response.text();
-    console.log("SAVE RESPONSE:", response.status, resultText);
-
-    if (!response.ok) {
-      alert("Erreur sauvegarde : " + resultText);
-      btn.disabled = false;
-      btn.innerHTML = original;
-      return;
-    }
-
-    btn.innerHTML = "✓ Enregistré";
-
-    const card = document.getElementById("card-mails");
-    card.querySelector(".agent-status").className = "agent-status ok";
-    card.querySelector(".agent-status").textContent = "Actif";
-    card.classList.add("configured");
-
-    showToast("Configuration enregistrée");
-    lockMailsFields();
-
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = original;
-    }, 2500);
-
-  } catch (err) {
-    console.error("Erreur saveAgent:", err);
-    alert("Erreur sauvegarde ou timeout");
-    btn.disabled = false;
-    btn.innerHTML = original;
-  }
-}
-
-  function lockMailsFields() {
-  ["mails-sheet"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.disabled = true;
-      el.style.opacity = "0.6";
-      el.style.cursor = "not-allowed";
-      document.getElementById("template-btn")?.classList.add("template-disabled");
-      const saveBtn = document.getElementById("mails-save-btn");
-if (saveBtn) saveBtn.style.display = "none";
-
-const editBtn = document.getElementById("mails-edit-btn");
-if (editBtn) editBtn.style.display = "flex";
-    }
-  });
-}
-
-function unlockMailsFields() {
-  ["mails-sheet"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.disabled = false;
-      el.style.opacity = "1";
-      el.style.cursor = "text";
-      document.getElementById("template-btn")?.classList.remove("template-disabled");
-      const saveBtn = document.getElementById("mails-save-btn");
-if (saveBtn) saveBtn.style.display = "flex";
-
-const editBtn = document.getElementById("mails-edit-btn");
-if (editBtn) editBtn.style.display = "none";
-    }
-  });
-
-  document.getElementById("card-mails").classList.add("open");
-}
-
  async function saveProfile() {
 
   if (!currentUser) {
@@ -3610,15 +3496,6 @@ async function saveActionLog(agent, action, status) {
       status
     })
   });
-}
-
-function openClientSheet() {
-  const sheet = document.getElementById("mails-sheet")?.value;
-  if (!sheet) {
-    showToast("Ajoutez d'abord votre feuille contacts");
-    return;
-  }
-  window.open(sheet, "_blank");
 }
 
 async function startMailDictation() {
