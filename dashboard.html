@@ -4022,8 +4022,9 @@ let contactsCache = [];
   if (!currentUser) return;
 
   const list = document.getElementById("history-list");
-  list.classList.remove("planning-folder-grid");
   if (!list) return;
+    
+  list.classList.remove("planning-folder-grid");
 
   list.innerHTML = `<div class="info-box">Chargement des rendez-vous passés...</div>`;
 
@@ -4127,20 +4128,17 @@ function closeHistoryDetail() {
   async function loadHistory(agentName) {
 
   window.currentHistorySubPage =
-  agentName === "planning"
-    ? "planning-list"
-    : "agent-list";
-
-const list = document.getElementById("history-list");
-
-if (list) {
-  list.classList.remove("planning-folder-grid");
-}
-    
-  if (!currentUser) return;
+    agentName === "planning"
+      ? "planning-list"
+      : "agent-list";
 
   const list = document.getElementById("history-list");
+
   if (!list) return;
+
+  list.classList.remove("planning-folder-grid");
+
+  if (!currentUser) return;
 
   list.innerHTML = `<div class="info-box">Chargement de l’historique...</div>`;
 
