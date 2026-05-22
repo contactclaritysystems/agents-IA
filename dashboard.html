@@ -2670,6 +2670,14 @@ let currentProfile = null;
 const mailsEnabled = true;
 const planningEnabled = true;
 
+let enabledAgents = {
+  mails: true,
+  planning: true,
+  relance: false,
+  suivi: false,
+  devis: false
+};
+
 // ─── GMAIL UI ────────────────────────────────────────────
 
 function renderGmailConnected(gmailEmail) {
@@ -2887,39 +2895,42 @@ async function handleUser(user) {
   await checkGmailStatus();
 
   console.log("avant loadProfile");
-  await loadProfile();
   
-  syncMailsStatus();
-  syncPlanningStatus();
+  await loadProfile();
+await loadEnabledAgents();
   
   console.log("handleUser terminé");
 }
 
 function syncMailsStatus() {
+  const active = enabledAgents.mails === true;
+
   const settingsStatus = document.querySelector("#card-mails .agent-status");
   if (settingsStatus) {
-    settingsStatus.className = mailsEnabled ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = mailsEnabled ? "Actif" : "Non configuré";
+    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = active ? "Actif" : "Désactivé";
   }
 
   const agentsStatus = document.querySelector("#card-mails-run .agent-status");
   if (agentsStatus) {
-    agentsStatus.className = mailsEnabled ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = mailsEnabled ? "Prêt" : "Configuration";
+    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
   }
 }
 
 function syncPlanningStatus() {
+  const active = enabledAgents.planning === true;
+
   const settingsStatus = document.querySelector("#card-planning .agent-status");
   if (settingsStatus) {
-    settingsStatus.className = planningEnabled ? "agent-status ok" : "agent-status pending";
-    settingsStatus.textContent = planningEnabled ? "Actif" : "Bientôt";
+    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = active ? "Actif" : "Désactivé";
   }
 
   const agentsStatus = document.querySelector("#card-planning-run .agent-status");
   if (agentsStatus) {
-    agentsStatus.className = planningEnabled ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = planningEnabled ? "Prêt" : "Configuration";
+    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
   }
 }
   
@@ -3398,10 +3409,49 @@ if (accessToken) {
   } catch(err) {
     console.error("Erreur loadProfile:", err);
   }
-
 }
   
 let selectedContactId = null;
+
+async function loadEnabledAgents() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from("agent_configs")
+    .select("config")
+    .eq("user_id", currentUser.id)
+    .eq("agent_name", "enabled_agents")
+    .limit(1);
+
+  if (error) {
+    console.error("Erreur loadEnabledAgents:", error);
+    return;
+  }
+
+  if (data && data.length > 0 && data[0].config) {
+    enabledAgents = {
+      ...enabledAgents,
+      ...data[0].config
+    };
+  }
+
+  syncAgentsVisibility();
+}
+
+function syncAgentsVisibility() {
+  const runCards = {
+    mails: document.getElementById("card-mails-run"),
+    planning: document.getElementById("card-planning-run")
+  };
+
+  Object.keys(runCards).forEach(agent => {
+    if (!runCards[agent]) return;
+    runCards[agent].style.display = enabledAgents[agent] ? "block" : "none";
+  });
+
+  syncMailsStatus();
+  syncPlanningStatus();
+}
 
 function renderContacts() {
   const list = document.getElementById("contacts-list");
