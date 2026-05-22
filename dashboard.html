@@ -3973,7 +3973,7 @@ let contactsCache = [];
 
   function openPlanningHistoryFolders() {
 
-  window.historyPlanningFoldersOpen = true;
+  window.currentHistorySubPage = "planning-folders";
     
   const detail = document.getElementById("history-detail");
   const title = document.getElementById("history-detail-title");
@@ -4017,7 +4017,7 @@ let contactsCache = [];
 
   async function loadPastAppointments() {
 
-  window.historyPlanningFoldersOpen = false;
+  window.currentHistorySubPage = "planning-list";
     
   if (!currentUser) return;
 
@@ -4125,6 +4125,18 @@ function closeHistoryDetail() {
 }
 
   async function loadHistory(agentName) {
+
+  window.currentHistorySubPage =
+  agentName === "planning"
+    ? "planning-list"
+    : "agent-list";
+
+const list = document.getElementById("history-list");
+
+if (list) {
+  list.classList.remove("planning-folder-grid");
+}
+    
   if (!currentUser) return;
 
   const list = document.getElementById("history-list");
@@ -4190,21 +4202,17 @@ function closeHistoryDetail() {
   }
 }
 
-  function handleHistoryBack() {
-
-  if (window.historyPlanningFoldersOpen) {
-
+ function handleHistoryBack() {
+   
+  if (window.currentHistorySubPage === "planning-list") {
     openPlanningHistoryFolders();
     return;
-
   }
 
   closeHistoryDetail();
 }
 
 function loadMoreHistory(agentName) {
-
-  window.historyPlanningFoldersOpen = false;
   
   historyLimit += 10;
   loadHistory(agentName);
