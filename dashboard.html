@@ -2519,6 +2519,15 @@ select.field-input {
       <div class="agent-status ok">Historique</div>
     </div>
 
+    <div class="agent-card history-folder-card" onclick="openHistoryAgent('planning')">
+  <div class="history-folder-icon">📅</div>
+  <div>
+    <div class="agent-name">Agent Planning</div>
+    <div class="agent-desc">Rendez-vous créés ou modifiés</div>
+  </div>
+  <div class="agent-status ok">Historique</div>
+</div>
+
     <div class="agent-card history-folder-card" style="opacity:.5;">
       <div class="history-folder-icon">📄</div>
       <div>
@@ -2592,6 +2601,8 @@ const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboar
 
 let currentUser = null;
 let currentProfile = null;
+const mailsEnabled = true;
+const planningEnabled = true;
 const planningEnabled = true;
 
 function syncPlanningStatus() {
@@ -2828,6 +2839,9 @@ async function handleUser(user) {
   document.querySelector(".user-name").textContent = prenom;
   document.querySelector(".user-avatar").textContent = prenom.substring(0, 2).toUpperCase();
 
+syncMailsStatus();
+syncPlanningStatus();
+  
   console.log("avant handleOAuthCallback");
   await handleOAuthCallback();
   console.log("avant checkGmailStatus");
@@ -2839,6 +2853,34 @@ async function handleUser(user) {
   console.log("handleUser terminé");
 }
 
+function syncMailsStatus() {
+  const settingsStatus = document.querySelector("#card-mails .agent-status");
+  if (settingsStatus) {
+    settingsStatus.className = mailsEnabled ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = mailsEnabled ? "Actif" : "Non configuré";
+  }
+
+  const agentsStatus = document.querySelector("#card-mails-run .agent-status");
+  if (agentsStatus) {
+    agentsStatus.className = mailsEnabled ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = mailsEnabled ? "Prêt" : "Configuration";
+  }
+}
+
+function syncPlanningStatus() {
+  const settingsStatus = document.querySelector("#card-planning .agent-status");
+  if (settingsStatus) {
+    settingsStatus.className = planningEnabled ? "agent-status ok" : "agent-status pending";
+    settingsStatus.textContent = planningEnabled ? "Actif" : "Bientôt";
+  }
+
+  const agentsStatus = document.querySelector("#card-planning-run .agent-status");
+  if (agentsStatus) {
+    agentsStatus.className = planningEnabled ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = planningEnabled ? "Prêt" : "Configuration";
+  }
+}
+  
 async function loadAppointments() {
   if (!currentUser) return;
 
