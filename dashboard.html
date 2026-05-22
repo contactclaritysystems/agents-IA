@@ -3802,18 +3802,18 @@ if (planningBtn) {
     hasSent = true;
 
     box.innerHTML = "📅 Recherche de la date...";
+    
+const step1 = setTimeout(() => {
+  box.innerHTML = "👤 Recherche du contact...";
+}, 1000);
 
-    setTimeout(() => {
-      box.innerHTML = "👤 Recherche du contact...";
-    }, 1000);
+const step2 = setTimeout(() => {
+  box.innerHTML = "🕒 Vérification du créneau...";
+}, 2000);
 
-    setTimeout(() => {
-      box.innerHTML = "🕒 Vérification du créneau...";
-    }, 2000);
-
-    setTimeout(() => {
-      box.innerHTML = "📤 Création du rendez-vous...";
-    }, 3000);
+const step3 = setTimeout(() => {
+  box.innerHTML = "📤 Création du rendez-vous...";
+}, 3000);
 
     console.log("PLANNING DICTÉ:", instruction);
 
@@ -3832,6 +3832,11 @@ const response = await fetch("https://hook.eu1.make.com/1png71shpmks4ectfd5vnx2b
 });
 
 const text = await response.text();
+    
+clearTimeout(step1);
+clearTimeout(step2);
+clearTimeout(step3);
+
 console.log("Réponse Make Planning brute:", text);
 
 let data = {};
