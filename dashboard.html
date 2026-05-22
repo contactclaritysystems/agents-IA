@@ -2592,6 +2592,32 @@ const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboar
 
 let currentUser = null;
 let currentProfile = null;
+const planningEnabled = true;
+
+function syncPlanningStatus() {
+
+  // Réglages
+  const settingsStatus = document.querySelector("#card-planning .agent-status");
+
+  if (settingsStatus) {
+    settingsStatus.className =
+      planningEnabled ? "agent-status ok" : "agent-status pending";
+
+    settingsStatus.textContent =
+      planningEnabled ? "Actif" : "Bientôt";
+  }
+
+  // Mes agents
+  const agentsStatus = document.querySelector("#card-planning-run .agent-status");
+
+  if (agentsStatus) {
+    agentsStatus.className =
+      planningEnabled ? "agent-status ok" : "agent-status pending";
+
+    agentsStatus.textContent =
+      planningEnabled ? "Prêt" : "Bientôt";
+  }
+}
 
 // ─── GMAIL UI ────────────────────────────────────────────
 
@@ -4395,6 +4421,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 
   await handleUser(data.session.user);
+  syncPlanningStatus();
 })();
 
   window.disconnectGmail = disconnectGmail;
