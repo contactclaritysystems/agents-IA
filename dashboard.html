@@ -3860,11 +3860,6 @@ if (!data.success) {
   return;
 }
 
-  showToast("Erreur planning");
-  await saveActionLog("planning", instruction, "error");
-  return;
-}
-
 box.innerHTML = "✅ Rendez-vous créé";
 showToast("Rendez-vous ajouté");
 
