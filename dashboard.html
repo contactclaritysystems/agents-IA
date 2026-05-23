@@ -2554,7 +2554,7 @@ select.field-input {
       <div class="history-folder-icon">📅</div>
       <div>
         <div class="agent-name">Rendez-vous</div>
-        <div class="agent-desc">Vos rendez-vous à venir</div>
+        <div class="agent-desc">Voir les rendez-vous à venir</div>
       </div>
       <div class="agent-status ok">Voir</div>
     </div>
@@ -2563,7 +2563,7 @@ select.field-input {
       <div class="history-folder-icon">🔁</div>
       <div>
         <div class="agent-name">Relances</div>
-        <div class="agent-desc">Clients à relancer</div>
+        <div class="agent-desc">Voir les relances prévues</div>
       </div>
       <div class="agent-status ok">Voir</div>
     </div>
@@ -2571,7 +2571,10 @@ select.field-input {
 
   <div id="planning-detail" style="display:none;">
     <div class="section-header">
-      <button class="sheet-btn" onclick="closePlanningDetail()" type="button">← Retour</button>
+      <button class="sheet-btn" onclick="closePlanningDetail()" type="button">
+        ← Retour
+      </button>
+
       <div class="section-title" id="planning-detail-title">Planning</div>
     </div>
 
@@ -4379,10 +4382,18 @@ function showSection(section, btn) {
   return;
 }
 
-  if (section === "planning") {
+ if (section === "planning") {
   document.getElementById("main-planning").classList.add("active");
   if (btn) btn.classList.add("active");
-  closePlanningDetail();
+
+  const folders = document.getElementById("planning-folders");
+  const detail = document.getElementById("planning-detail");
+  const list = document.getElementById("planning-list");
+
+  if (folders) folders.style.display = "grid";
+  if (detail) detail.style.display = "none";
+  if (list) list.innerHTML = "";
+
   return;
 }
 
@@ -4986,25 +4997,25 @@ window.logout = logout;
 });
 
   function openPlanningAppointments() {
-  document.getElementById("planning-folders").style.display = "none";
-
+  const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
 
-  if (title) title.textContent = "Rendez-vous";
+  if (folders) folders.style.display = "none";
   if (detail) detail.style.display = "block";
+  if (title) title.textContent = "Rendez-vous";
 
   loadAppointments();
 }
 
 function openPlanningFollowUps() {
-  document.getElementById("planning-folders").style.display = "none";
-
+  const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
 
-  if (title) title.textContent = "Relances";
+  if (folders) folders.style.display = "none";
   if (detail) detail.style.display = "block";
+  if (title) title.textContent = "Relances";
 
   loadFollowUps();
 }
@@ -5014,8 +5025,8 @@ function closePlanningDetail() {
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
 
-  if (folders) folders.style.display = "grid";
   if (detail) detail.style.display = "none";
+  if (folders) folders.style.display = "grid";
   if (list) list.innerHTML = "";
 }
   
