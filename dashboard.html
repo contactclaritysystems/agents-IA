@@ -4076,6 +4076,8 @@ if (mailBtn) {
   await saveActionLog("mails", instruction, data.reason || data.error || "error");
   return;
 }
+      
+    console.log("DATA PREVIEW MAIL:", data);
 
      box.innerHTML = "✅ Mail préparé";
 showToast("Mail prêt à valider");
