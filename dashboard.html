@@ -3949,6 +3949,60 @@ if (planningBtn) {
   };
 }
 
+  async function startRelanceDictation() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    return;
+  }
+
+  let box = document.querySelector(".page-view.active #relance-dictation-box");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "relance-dictation-box";
+    box.style.marginTop = "12px";
+    box.style.padding = "12px 14px";
+    box.style.borderRadius = "14px";
+    box.style.background = "rgba(183,121,31,.09)";
+    box.style.border = "1px solid rgba(183,121,31,.18)";
+    box.style.fontSize = "13px";
+    box.style.color = "#b7791f";
+    box.style.fontWeight = "600";
+
+    const targetCard = document.querySelector("#card-relance-run");
+    if (!targetCard) return;
+
+    targetCard.querySelector(".agent-head").after(box);
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
+
+  let finalText = "";
+  let latestText = "";
+  let hasSent = false;
+  let silenceTimer = null;
+
+  const relanceBtn = document.getElementById("relance-dictation-btn");
+
+  if (relanceBtn) {
+    relanceBtn.innerHTML = "⏹ Arrêter la dictée";
+    relanceBtn.onclick = () => {
+      try { recognition.stop(); } catch(e) {}
+    };
+  }
+
+function closeAllAgentCards() {
+  document.querySelectorAll(".agent-card.open").forEach(card => {
+    card.classList.remove("open");
+  });
+}
+
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
     silenceTimer = setTimeout(() => {
@@ -4222,60 +4276,6 @@ if (typeof loadAppointments === "function") {
     
     box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
   };
-}
-
-  async function startRelanceDictation() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
-    return;
-  }
-
-  let box = document.querySelector(".page-view.active #relance-dictation-box");
-
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "relance-dictation-box";
-    box.style.marginTop = "12px";
-    box.style.padding = "12px 14px";
-    box.style.borderRadius = "14px";
-    box.style.background = "rgba(183,121,31,.09)";
-    box.style.border = "1px solid rgba(183,121,31,.18)";
-    box.style.fontSize = "13px";
-    box.style.color = "#b7791f";
-    box.style.fontWeight = "600";
-
-    const targetCard = document.querySelector("#card-relance-run");
-    if (!targetCard) return;
-
-    targetCard.querySelector(".agent-head").after(box);
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "fr-FR";
-  recognition.interimResults = true;
-  recognition.continuous = true;
-  recognition.maxAlternatives = 1;
-
-  let finalText = "";
-  let latestText = "";
-  let hasSent = false;
-  let silenceTimer = null;
-
-  const relanceBtn = document.getElementById("relance-dictation-btn");
-
-  if (relanceBtn) {
-    relanceBtn.innerHTML = "⏹ Arrêter la dictée";
-    relanceBtn.onclick = () => {
-      try { recognition.stop(); } catch(e) {}
-    };
-  }
-
-function closeAllAgentCards() {
-  document.querySelectorAll(".agent-card.open").forEach(card => {
-    card.classList.remove("open");
-  });
 }
   
 function showSection(section, btn) {
