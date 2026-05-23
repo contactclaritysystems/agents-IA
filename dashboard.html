@@ -2038,6 +2038,26 @@ select.field-input {
     padding: 4px 8px !important;
     margin-left: 0 !important;
   }
+
+     #planning-detail.open {
+    display: block !important;
+  }
+
+  #planning-detail .section-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-bottom: 18px !important;
+  }
+
+  #planning-detail .section-header .sheet-btn {
+    width: auto !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    border-radius: 999px !important;
+  }
 }
 
 </style>
@@ -4997,37 +5017,77 @@ window.logout = logout;
 });
 
   function openPlanningAppointments() {
-  const folders = document.getElementById("planning-folders");
-  const detail = document.getElementById("planning-detail");
-  const title = document.getElementById("planning-detail-title");
-
-  if (folders) folders.style.display = "none";
-  if (detail) detail.style.display = "block";
-  if (title) title.textContent = "Rendez-vous";
+  document.getElementById("planning-folders").style.display = "none";
+  document.getElementById("planning-detail").style.display = "block";
+  document.getElementById("planning-detail").classList.add("open");
+  document.getElementById("planning-detail-title").textContent = "Rendez-vous";
 
   loadAppointments();
 }
 
 function openPlanningFollowUps() {
-  const folders = document.getElementById("planning-folders");
-  const detail = document.getElementById("planning-detail");
-  const title = document.getElementById("planning-detail-title");
-
-  if (folders) folders.style.display = "none";
-  if (detail) detail.style.display = "block";
-  if (title) title.textContent = "Relances";
+  document.getElementById("planning-folders").style.display = "none";
+  document.getElementById("planning-detail").style.display = "block";
+  document.getElementById("planning-detail").classList.add("open");
+  document.getElementById("planning-detail-title").textContent = "Relances";
 
   loadFollowUps();
 }
 
 function closePlanningDetail() {
-  const folders = document.getElementById("planning-folders");
-  const detail = document.getElementById("planning-detail");
-  const list = document.getElementById("planning-list");
+  document.getElementById("planning-detail").style.display = "none";
+  document.getElementById("planning-detail").classList.remove("open");
+  document.getElementById("planning-folders").style.display = "grid";
+  document.getElementById("planning-list").innerHTML = "";
+}
 
-  if (detail) detail.style.display = "none";
-  if (folders) folders.style.display = "grid";
-  if (list) list.innerHTML = "";
+async function loadFollowUps() {
+  const list = document.getElementById("planning-list");
+  if (!list || !currentUser) return;
+
+  list.innerHTML = `<div class="info-box">Chargement des relances...</div>`;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/relances?user_id=eq." + currentUser.id + "&order=reminder_date.asc",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    list.innerHTML = `<div class="info-box">Impossible de charger les relances.</div>`;
+    return;
+  }
+
+  const relances = await response.json();
+
+  if (!relances || relances.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucune relance prévue.</div>`;
+    return;
+  }
+
+  list.innerHTML = relances.map(r => `
+    <div class="gmail-section" style="display:block;">
+      <div class="section-title">${r.contact_name || "Relance"}</div>
+      <div class="gmail-desc" style="margin-top:8px;">
+        ${r.reminder_date || ""} · ${r.reason || "Relance"}<br>
+        ${r.message_context || ""}
+      </div>
+    </div>
+  `).join("");
 }
   
 </script>
