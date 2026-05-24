@@ -2823,65 +2823,6 @@ select.field-input {
   </div>
 </div>
 
-  <div id="mail-preview-modal" style="display:none;">
-
-  <div class="mail-preview-backdrop"
-       onclick="closeMailPreview()">
-  </div>
-
-  <div class="mail-preview-box">
-
-    <button class="mail-preview-close"
-            onclick="closeMailPreview()">
-      ×
-    </button>
-
-    <div class="mail-preview-title">
-      Vérifier le mail
-    </div>
-
-    <div class="field-group">
-      <div class="field-label">Destinataire</div>
-      <input class="field-input"
-             id="preview-mail-to">
-    </div>
-
-    <div class="field-group" style="margin-top:12px;">
-      <div class="field-label">Sujet</div>
-      <input class="field-input"
-             id="preview-mail-subject">
-    </div>
-
-    <div class="field-group" style="margin-top:12px;">
-      <div class="field-label">Message</div>
-
-      <textarea class="field-input"
-                id="preview-mail-body"
-                style="height:220px;"></textarea>
-    </div>
-
-    <div style="display:flex; gap:10px; margin-top:18px;">
-
-      <button class="sheet-btn"
-              onclick="closeMailPreview()"
-              type="button"
-              style="flex:1;">
-        Annuler
-      </button>
-
-      <button class="save-btn"
-              onclick="sendPreparedMail()"
-              type="button"
-              style="flex:1;">
-        Envoyer
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
 <!-- TOAST -->
 <div class="toast" id="toast">✓ Configuration enregistrée</div>
 
@@ -5184,18 +5125,20 @@ if (!body) {
       return;
     }
 
-    closeMailPreview(false);
+    const logSubject = subject || "Mail envoyé";
+
+closeMailPreview(false);
 
 const box = document.querySelector(".page-view.active #dictation-box");
 if (box) box.innerHTML = "✅ Mail envoyé avec succès";
 
 showToast("Mail envoyé");
 
-    await saveActionLog(
-      "mails",
-      currentPreparedMail.subject || "Mail envoyé",
-      "success"
-    );
+await saveActionLog(
+  "mails",
+  logSubject,
+  "success"
+);
 
   } catch (err) {
     console.error("Erreur webhook envoi réel:", err);
