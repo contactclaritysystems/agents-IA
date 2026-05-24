@@ -3969,7 +3969,7 @@ async function sendPreviewMail() {
   }
 
   if (!data.success) {
-    showToast(data.message || "Erreur envoi mail");
+    showToast(data.message || "Erreur envoi mail", "error");
     await saveActionLog("mails", pendingMailInstruction, "error");
     return;
   }
@@ -5229,7 +5229,7 @@ if (!body) {
 
   } catch (err) {
     console.error("Erreur webhook envoi réel:", err);
-    showToast("Erreur envoi mail");
+    showToast("Erreur envoi mail", "error");
   }
 }
 
