@@ -5059,7 +5059,9 @@ async function addContact() {
 }
 
   function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  email = email.trim();
+
+  return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email);
 }
 
   async function sendPreparedMail() {
