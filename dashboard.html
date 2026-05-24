@@ -2794,8 +2794,7 @@ select.field-input {
   <div class="mail-choice-backdrop" onclick="closeMailPreview()"></div>
 
   <div class="mail-choice-box">
-    <button onclick="closeMailPreview()" type="button" style="position:absolute;right:18px;top:14px;border:none;background:transparent;font-size:22px;font-weight:800;cursor:pointer;">×</button>
-
+  
     <div class="mail-choice-title">Mail prêt à envoyer</div>
     <div class="mail-choice-subtitle">Vérifiez rapidement avant l’envoi.</div>
 
@@ -3915,24 +3914,35 @@ async function saveActionLog(agent, action, status) {
 }
 
   let pendingMailInstruction = "";
+  let currentPreparedMail = null;
 
 function openMailPreview(data, instruction) {
   pendingMailInstruction = instruction || "";
 
-  document.getElementById("preview-mail-to").value =
-    data.to || data.email || data.recipient_email || "";
+  currentPreparedMail = {
+    to: data.to || data.email || data.recipient_email || "",
+    subject: data.subject || data.objet || "",
+    body: data.body || data.message || data.email_body || ""
+  };
 
-  document.getElementById("preview-mail-subject").value =
-    data.subject || data.objet || "";
-
-  document.getElementById("preview-mail-body").value =
-    data.body || data.message || data.email_body || "";
+  document.getElementById("preview-mail-to").value = currentPreparedMail.to;
+  document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
+  document.getElementById("preview-mail-body").value = currentPreparedMail.body;
 
   document.getElementById("mail-preview-modal").style.display = "block";
 }
 
-function closeMailPreview() {
+function closeMailPreview(showCancel = true) {
   document.getElementById("mail-preview-modal").style.display = "none";
+
+  if (showCancel) {
+    showToast("Envoi annulé", "error");
+
+    const box = document.querySelector(".page-view.active #dictation-box");
+    if (box) box.innerHTML = "✕ Envoi annulé";
+  }
+
+  currentPreparedMail = null;
 }
 
 async function startMailDictation() {
@@ -5174,8 +5184,12 @@ if (!body) {
       return;
     }
 
-    closeMailPreview();
-    showToast("Mail envoyé");
+    closeMailPreview(false);
+
+const box = document.querySelector(".page-view.active #dictation-box");
+if (box) box.innerHTML = "✅ Mail envoyé avec succès";
+
+showToast("Mail envoyé");
 
     await saveActionLog(
       "mails",
