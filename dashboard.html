@@ -2814,7 +2814,7 @@ select.field-input {
       <textarea class="field-input" id="preview-mail-body" style="min-height:180px;"></textarea>
     </div>
 
-    <button class="save-btn" onclick="sendPreviewMail()" type="button">
+    <button class="save-btn" onclick="sendPreparedMail()" type="button">
       📤 Envoyer le mail
     </button>
 
@@ -3933,50 +3933,6 @@ function openMailPreview(data, instruction) {
 
 function closeMailPreview() {
   document.getElementById("mail-preview-modal").style.display = "none";
-}
-
-async function sendPreviewMail() {
-  const to = document.getElementById("preview-mail-to").value.trim();
-  const subject = document.getElementById("preview-mail-subject").value.trim();
-  const body = document.getElementById("preview-mail-body").value.trim();
-
-  if (!to || !subject || !body) {
-    showToast("Mail incomplet", "error");
-    return;
-  }
-
-  const payload = {
-    user_email: currentUser.email,
-    user_id: currentUser.id,
-    to,
-    subject,
-    body
-  };
-
-  const response = await fetch("https://hook.eu1.make.com/hhr4jci9cg9gao5fzhldh2gt376xe5kl", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-
-  const text = await response.text();
-
-  let data = {};
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    data = { success: false };
-  }
-
-  if (!data.success) {
-    showToast(data.message || "Erreur envoi mail", "error");
-    await saveActionLog("mails", pendingMailInstruction, "error");
-    return;
-  }
-
-  closeMailPreview();
-  showToast("Mail envoyé");
-  await saveActionLog("mails", pendingMailInstruction, "success");
 }
 
 async function startMailDictation() {
@@ -5162,7 +5118,7 @@ const subject = document.getElementById("preview-mail-subject").value.trim();
 const body = document.getElementById("preview-mail-body").value.trim();
 
 if (!to) {
-  showToast("Ajoutez un destinataire", "error");
+  showToast("Adresse mail vide", "error");
   return;
 }
 
@@ -5172,12 +5128,12 @@ if (!isValidEmail(to)) {
 }
 
 if (!subject) {
-  showToast("Ajoutez un sujet au mail", "error");
+  showToast("Objet du mail vide", "error");
   return;
 }
 
 if (!body) {
-  showToast("Le message est vide", "error");
+  showToast("Message du mail vide", "error");
   return;
 }
     
@@ -5214,7 +5170,7 @@ if (!body) {
     }
 
     if (!response.ok || data.success === false) {
-      showToast(data.message || "Erreur envoi mail");
+      showToast(data.message || "Erreur envoi mail", "error");
       return;
     }
 
