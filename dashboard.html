@@ -4106,16 +4106,16 @@ if (mailBtn) {
     try {
       const step1 = setTimeout(() => {
         box.innerHTML = "👤 Recherche du contact...";
-      }, 800);
+      }, 1000);
 
       const step2 = setTimeout(() => {
         box.innerHTML = "✍️ Génération du mail...";
-      }, 1800);
+      }, 2000);
 
       const step3 = setTimeout(() => {
-        box.innerHTML = "📤 Envoi du mail...";
-      }, 3000);
-
+        box.innerHTML = "✅ Mail prêt à valider";
+      }, 2600);
+      
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
 
