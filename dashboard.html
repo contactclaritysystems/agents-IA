@@ -823,6 +823,12 @@ select.field-input {
   transform: translateY(0);
 }
 
+  .toast.error {
+  background: rgba(214,69,69,.95);
+  border-color: rgba(214,69,69,.35);
+  color: white;
+}
+
 /* FIX INLINE SUIVI BODY */
 #card-suivi.open .agent-body {
   display: grid !important;
@@ -3862,11 +3868,25 @@ async function createContactsSheet(btn) {
 
 // ─── UTILS ───────────────────────────────────────────────
 
-function showToast(msg) {
+function showToast(msg, type = "success") {
   const t = document.getElementById("toast");
-  t.textContent = "✓ " + msg;
+  if (!t) return;
+
+  t.classList.remove("error");
+
+  if (type === "error") {
+    t.textContent = "✕ " + msg;
+    t.classList.add("error");
+  } else {
+    t.textContent = "✓ " + msg;
+  }
+
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2800);
+
+  setTimeout(() => {
+    t.classList.remove("show");
+    t.classList.remove("error");
+  }, 2800);
 }
 
 async function saveActionLog(agent, action, status) {
@@ -3921,7 +3941,7 @@ async function sendPreviewMail() {
   const body = document.getElementById("preview-mail-body").value.trim();
 
   if (!to || !subject || !body) {
-    showToast("Mail incomplet");
+    showToast("Mail incomplet", "error");
     return;
   }
 
@@ -5142,27 +5162,27 @@ const subject = document.getElementById("preview-mail-subject").value.trim();
 const body = document.getElementById("preview-mail-body").value.trim();
 
 if (!to) {
-  showToast("Ajoutez un destinataire");
+  showToast("Ajoutez un destinataire", "error");
   return;
 }
 
 if (!isValidEmail(to)) {
-  showToast("Adresse mail invalide");
+  showToast("Adresse mail invalide", "error");
   return;
 }
 
 if (!subject) {
-  showToast("Ajoutez un sujet au mail");
+  showToast("Ajoutez un sujet au mail", "error");
   return;
 }
 
 if (!body) {
-  showToast("Le message est vide");
+  showToast("Le message est vide", "error");
   return;
 }
     
   if (!currentPreparedMail || !currentUser) {
-    showToast("Mail introuvable");
+    showToast("Mail introuvable", "error");
     return;
   }
 
