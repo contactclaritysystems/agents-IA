@@ -4028,7 +4028,20 @@ function prepareNotesEmail() {
 
   currentNotesSummary = summary;
 
-  showToast("Envoi par mail bientôt disponible");
+  closeNotesPreview(false);
+
+  openMailPreview({
+    to: "",
+    subject: "Compte rendu",
+    body:
+`Bonjour,
+
+Voici le compte rendu :
+
+${summary}
+
+Bonne journée,`
+  }, "Compte rendu envoyé par mail");
 }
 
 function openMailPreview(data, instruction) {
