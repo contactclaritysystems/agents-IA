@@ -5521,8 +5521,22 @@ async function addContact() {
 
   function isValidEmail(email) {
   email = email.trim();
-
   return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email);
+}
+
+function parseEmailList(value) {
+  return value
+    .split(",")
+    .map(email => email.trim())
+    .filter(Boolean);
+}
+
+function isValidEmailList(value) {
+  const emails = parseEmailList(value);
+
+  if (emails.length === 0) return false;
+
+  return emails.every(isValidEmail);
 }
 
   async function sendPreparedMail() {
@@ -5536,7 +5550,7 @@ if (!to) {
   return;
 }
 
-if (!isValidEmail(to)) {
+if (!isValidEmailList(to)) {
   showToast("Adresse mail invalide", "error");
   return;
 }
