@@ -4010,11 +4010,13 @@ function openNotesPreview(summary) {
   if (modal) modal.style.display = "block";
 }
 
-function closeNotesPreview() {
+function closeNotesPreview(clear = true) {
   const modal = document.getElementById("notes-preview-modal");
   if (modal) modal.style.display = "none";
 
-  currentNotesSummary = "";
+  if (clear) {
+    currentNotesSummary = "";
+  }
 }
 
 function prepareNotesEmail() {
