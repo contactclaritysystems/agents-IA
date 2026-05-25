@@ -2535,8 +2535,8 @@ select.field-input {
     <div class="stat-card">
       <div class="stat-icon-wrap purple">⚡</div>
       <div>
-        <div class="stat-value">47</div>
-        <div class="stat-label">Actions ce mois</div>
+        <div class="stat-value" id="actions-count">0 / 50</div>
+<div class="stat-label">Actions utilisées</div>
       </div>
     </div>
     <div class="stat-card">
@@ -3089,6 +3089,7 @@ async function handleUser(user) {
   
   await loadProfile();
 await loadEnabledAgents();
+  await loadActionCounter();
   
   console.log("handleUser terminé");
 }
@@ -3876,6 +3877,27 @@ async function saveActionLog(agent, action, status) {
 
   let pendingMailInstruction = "";
   let currentPreparedMail = null;
+
+  async function loadActionCounter() {
+  if (!currentUser) return;
+
+  const { count, error } = await supabaseClient
+    .from("action_event_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", currentUser.id)
+    .eq("status", "success");
+
+  if (error) {
+    console.error("Erreur compteur actions:", error);
+    return;
+  }
+
+  const el = document.getElementById("actions-count");
+
+  if (el) {
+    el.textContent = `${count || 0} / 50`;
+  }
+}
 
 function openMailPreview(data, instruction) {
   pendingMailInstruction = instruction || "";
@@ -5216,6 +5238,9 @@ setTimeout(async () => {
     logSubject,
     "success"
   );
+
+  await loadActionCounter();
+  
 }, 550);
 
   } catch (err) {
