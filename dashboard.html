@@ -3899,14 +3899,12 @@ function closeMailPreview(showCancel = true) {
   showToast("Envoi annulé", "error");
 
   const box = document.querySelector(".page-view.active #dictation-box");
+if (box) {
+  setDictationBoxState(box, "error");
+  box.innerHTML = "✕ Envoi annulé";
 
-  if (box) {
-    box.innerHTML = "✕ Envoi annulé";
-
-    box.style.background = "rgba(239,68,68,.08)";
-    box.style.border = "1px solid rgba(239,68,68,.18)";
-    box.style.color = "#dc2626";
-  }
+  autoHideDictationBox(box);
+}
 }
 
   currentPreparedMail = null;
@@ -3974,7 +3972,8 @@ if (mailBtn) {
     }, 8000);
   }
 
-  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+  setDictationBoxState(box, "info");
+box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   try {
     recognition.start();
@@ -5179,7 +5178,12 @@ setTimeout(async () => {
   }
 
   const box = document.querySelector(".page-view.active #dictation-box");
-  if (box) box.innerHTML = "✅ Mail envoyé avec succès";
+  if (box) {
+  setDictationBoxState(box, "success");
+  box.innerHTML = "✅ Mail envoyé avec succès";
+
+  autoHideDictationBox(box);
+}
 
   showToast("Mail envoyé");
 
@@ -5358,6 +5362,46 @@ async function loadFollowUps() {
       </div>
     </div>
   `).join("");
+}
+
+  function setDictationBoxState(box, type = "success") {
+
+  if (!box) return;
+
+  if (type === "error") {
+
+    box.style.background = "rgba(239,68,68,.08)";
+    box.style.border = "1px solid rgba(239,68,68,.18)";
+    box.style.color = "#dc2626";
+
+  } else if (type === "info") {
+
+    box.style.background = "rgba(59,130,246,.08)";
+    box.style.border = "1px solid rgba(59,130,246,.18)";
+    box.style.color = "#2563eb";
+
+  } else {
+
+    box.style.background = "rgba(34,197,94,.09)";
+    box.style.border = "1px solid rgba(34,197,94,.20)";
+    box.style.color = "#15803d";
+  }
+}
+
+function autoHideDictationBox(box, delay = 3500) {
+
+  if (!box) return;
+
+  setTimeout(() => {
+
+    box.style.transition = "opacity .25s ease";
+    box.style.opacity = "0";
+
+    setTimeout(() => {
+      box.remove();
+    }, 250);
+
+  }, delay);
 }
   
 </script>
