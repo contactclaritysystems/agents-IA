@@ -2080,6 +2080,25 @@ select.field-input {
 }
 }
 
+  .mail-choice-box.sending {
+  animation: mailSendOut .55s ease forwards;
+}
+
+@keyframes mailSendOut {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(-50%, -50%) scale(.86);
+    opacity: .95;
+  }
+  100% {
+    transform: translate(80%, -120%) scale(.25) rotate(12deg);
+    opacity: 0;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -5088,6 +5107,21 @@ if (!body) {
   showToast("Message du mail vide", "error");
   return;
 }
+
+    const modalBox = document.querySelector("#mail-preview-modal .mail-choice-box");
+const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
+
+if (sendBtn) {
+  sendBtn.disabled = true;
+  sendBtn.innerHTML = "📤 Envoi en cours...";
+}
+
+if (modalBox) {
+  modalBox.classList.add("sending");
+}
+
+const box = document.querySelector(".page-view.active #dictation-box");
+if (box) box.innerHTML = "📤 Envoi du mail en cours...";
     
   if (!currentPreparedMail || !currentUser) {
     showToast("Mail introuvable", "error");
@@ -5128,24 +5162,26 @@ if (!body) {
 
     const logSubject = subject || "Mail envoyé";
 
-closeMailPreview(false);
+setTimeout(async () => {
+  closeMailPreview(false);
 
-const box = document.querySelector(".page-view.active #dictation-box");
-if (box) box.innerHTML = "✅ Mail envoyé avec succès";
-
-showToast("Mail envoyé");
-
-await saveActionLog(
-  "mails",
-  logSubject,
-  "success"
-);
-
-  } catch (err) {
-    console.error("Erreur webhook envoi réel:", err);
-    showToast("Erreur envoi mail", "error");
+  if (modalBox) modalBox.classList.remove("sending");
+  if (sendBtn) {
+    sendBtn.disabled = false;
+    sendBtn.innerHTML = "📤 Envoyer le mail";
   }
-}
+
+  const box = document.querySelector(".page-view.active #dictation-box");
+  if (box) box.innerHTML = "✅ Mail envoyé avec succès";
+
+  showToast("Mail envoyé");
+
+  await saveActionLog(
+    "mails",
+    logSubject,
+    "success"
+  );
+}, 550);
 
 // ─── INIT ────────────────────────────────────────────────
 
