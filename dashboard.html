@@ -2080,6 +2080,22 @@ select.field-input {
 }
 }
 
+  #mail-contact-suggestions {
+  margin-top: 8px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(0,0,0,.06);
+  background: #fff;
+}
+
+#mail-contact-suggestions button:last-child {
+  border-bottom: none !important;
+}
+
+#mail-contact-suggestions button:hover {
+  background: rgba(0,0,0,.03);
+}
+
   .mail-choice-box.sending {
   animation: mailSendOut .55s ease forwards;
 }
@@ -4059,6 +4075,14 @@ function openMailPreview(data, instruction) {
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
   document.getElementById("preview-mail-body").value = currentPreparedMail.body;
+
+  const suggestions =
+  document.getElementById("mail-contact-suggestions");
+
+if (suggestions) {
+  suggestions.style.display = "none";
+  suggestions.innerHTML = "";
+}
 
   document.getElementById("mail-preview-modal").style.display = "block";
 }
