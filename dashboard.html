@@ -4131,10 +4131,7 @@ async function startPlanningDictation() {
     box.style.marginTop = "12px";
     box.style.padding = "12px 14px";
     box.style.borderRadius = "14px";
-    box.style.background = "rgba(59,130,246,.08)";
-    box.style.border = "1px solid rgba(59,130,246,.18)";
     box.style.fontSize = "13px";
-    box.style.color = "#2563eb";
     box.style.fontWeight = "600";
 
     const targetCard = document.querySelector("#card-planning-run");
@@ -4143,8 +4140,11 @@ async function startPlanningDictation() {
     targetCard.querySelector(".agent-head").after(box);
   }
 
-  const recognition = new SpeechRecognition();
+  setDictationBoxState(box, "info");
+  box.style.opacity = "1";
+  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
+  const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
   recognition.continuous = true;
@@ -4156,30 +4156,28 @@ async function startPlanningDictation() {
   let silenceTimer = null;
 
   const planningBtn = document.getElementById("planning-dictation-btn");
-if (planningBtn) {
-  planningBtn.innerHTML = "⏹ Arrêter la dictée";
-  planningBtn.onclick = () => {
-    try { recognition.stop(); } catch(e) {}
-  };
-}
+
+  if (planningBtn) {
+    planningBtn.innerHTML = "⏹ Arrêter la dictée";
+    planningBtn.onclick = () => {
+      try { recognition.stop(); } catch(e) {}
+    };
+  }
 
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
-
     silenceTimer = setTimeout(() => {
-      try {
-        recognition.stop();
-      } catch (e) {}
+      try { recognition.stop(); } catch (e) {}
     }, 12000);
   }
-
-  🎙️ Écoute en cours… Parlez maintenant.";
 
   try {
     recognition.start();
     resetSilenceTimer();
   } catch (e) {
-    ❌ Impossible de démarrer le micro.";
+    setDictationBoxState(box, "error");
+    box.innerHTML = "✕ Impossible de démarrer le micro.";
+    autoHideDictationBox(box);
     return;
   }
 
@@ -4199,99 +4197,107 @@ if (planningBtn) {
     }
 
     latestText = (finalText + interimText).trim();
-    🎙️ " + latestText;
+    box.innerHTML = "🎙️ " + latestText;
   };
 
   recognition.onend = async function() {
     clearTimeout(silenceTimer);
 
     if (planningBtn) {
-  planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
-  planningBtn.onclick = startPlanningDictation;
-}
+      planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
+      planningBtn.onclick = startPlanningDictation;
+    }
+
     const instruction = (latestText || finalText).trim();
 
     if (!instruction) {
       setDictationBoxState(box, "error");
-✕ Aucune instruction détectée.";
-autoHideDictationBox(box);
+      box.innerHTML = "✕ Aucune instruction détectée.";
+      autoHideDictationBox(box);
       return;
     }
 
     if (hasSent) return;
     hasSent = true;
 
-    📅 Recherche de la date...";
-    
-const step1 = setTimeout(() => {
-  box.innerHTML = "👤 Recherche du contact...";
-}, 1000);
+    setDictationBoxState(box, "info");
+    box.innerHTML = "📅 Recherche de la date...";
 
-const step2 = setTimeout(() => {
-  box.innerHTML = "🕒 Vérification du créneau...";
-}, 2000);
+    const step1 = setTimeout(() => {
+      box.innerHTML = "👤 Recherche du contact...";
+    }, 1000);
 
-const step3 = setTimeout(() => {
-  box.innerHTML = "📤 Création du rendez-vous...";
-}, 3000);
+    const step2 = setTimeout(() => {
+      box.innerHTML = "🕒 Vérification du créneau...";
+    }, 2000);
 
-    console.log("PLANNING DICTÉ:", instruction);
+    const step3 = setTimeout(() => {
+      box.innerHTML = "📤 Création du rendez-vous...";
+    }, 3000);
 
-const payload = {
-  user_email: currentUser.email,
-  user_id: currentUser.id,
-  instruction: instruction
-};
+    const payload = {
+      user_email: currentUser.email,
+      user_id: currentUser.id,
+      instruction
+    };
 
-const response = await fetch("https://hook.eu1.make.com/1png71shpmks4ectfd5vnx2bn8672vfs", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(payload)
-});
+    try {
+      const response = await fetch("https://hook.eu1.make.com/1png71shpmks4ectfd5vnx2bn8672vfs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-const text = await response.text();
-    
-clearTimeout(step1);
-clearTimeout(step2);
-clearTimeout(step3);
+      const text = await response.text();
 
-console.log("Réponse Make Planning brute:", text);
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
 
-let data = {};
-try {
-  data = JSON.parse(text);
-} catch (e) {
-  data = { success: false };
-}
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = { success: false };
+      }
 
-if (!data.success) {
-  const message =
-    data.message ||
-    data.error ||
-    data.reason ||
-    "Impossible de créer le rendez-vous.";
+      if (!data.success) {
+        const message = data.message || data.error || data.reason || "Impossible de créer le rendez-vous.";
 
-  setDictationBoxState(box, "error");
-box.innerHTML = "✕ " + message;
-showToast(message, "error");
-autoHideDictationBox(box);
+        setDictationBoxState(box, "error");
+        box.innerHTML = "✕ " + message;
+        showToast(message, "error");
+        autoHideDictationBox(box);
 
-  await saveActionLog("planning", instruction, data.reason || data.error || "error");
-  return;
-}
+        await saveActionLog("planning", instruction, data.reason || data.error || "error");
+        return;
+      }
 
-setDictationBoxState(box, "success");
-box.innerHTML = "✅ Rendez-vous créé";
-showToast("Rendez-vous ajouté");
-autoHideDictationBox(box);
+      setDictationBoxState(box, "success");
+      box.innerHTML = "✅ Rendez-vous créé";
+      showToast("Rendez-vous ajouté");
+      autoHideDictationBox(box);
 
-await saveActionLog("planning", instruction, "success");
+      await saveActionLog("planning", instruction, "success");
 
-if (typeof loadAppointments === "function") {
-  await loadAppointments();
-}
+      if (typeof loadAppointments === "function") {
+        await loadAppointments();
+      }
+
+    } catch (err) {
+      clearTimeout(step1);
+      clearTimeout(step2);
+      clearTimeout(step3);
+
+      console.error("Erreur planning Make:", err);
+
+      setDictationBoxState(box, "error");
+      box.innerHTML = "✕ Erreur lors de l’envoi à l’agent.";
+      showToast("Erreur planning", "error");
+      autoHideDictationBox(box);
+
+      await saveActionLog("planning", instruction, "error");
+    }
   };
 
   recognition.onerror = function(event) {
@@ -4299,11 +4305,13 @@ if (typeof loadAppointments === "function") {
     console.error("Erreur dictée planning:", event.error);
 
     if (planningBtn) {
-  planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
-  planningBtn.onclick = startPlanningDictation;
-}
-    
-    box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
+      planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
+      planningBtn.onclick = startPlanningDictation;
+    }
+
+    setDictationBoxState(box, "error");
+    box.innerHTML = "✕ Autorisez le micro pour utiliser la dictée";
+    autoHideDictationBox(box);
   };
 }
 
