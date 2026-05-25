@@ -2898,6 +2898,30 @@ select.field-input {
   </div>
 </div>
 
+  <div id="notes-preview-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeNotesPreview()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Compte rendu prêt</div>
+    <div class="mail-choice-subtitle">
+      ✅ Enregistré dans l’historique. Vous pouvez le modifier avant de l’envoyer.
+    </div>
+
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Compte rendu</div>
+      <textarea class="field-input" id="notes-summary-preview" style="min-height:240px;"></textarea>
+    </div>
+
+    <button class="save-btn" onclick="prepareNotesEmail()" type="button">
+      📤 Envoyer par mail
+    </button>
+
+    <button class="sheet-btn" onclick="closeNotesPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast">✓ Configuration enregistrée</div>
 
