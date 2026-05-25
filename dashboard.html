@@ -3998,6 +3998,39 @@ async function saveActionLog(agent, action, status) {
   }
 }
 
+  let currentNotesSummary = "";
+
+function openNotesPreview(summary) {
+  currentNotesSummary = summary || "";
+
+  const textarea = document.getElementById("notes-summary-preview");
+  const modal = document.getElementById("notes-preview-modal");
+
+  if (textarea) textarea.value = currentNotesSummary;
+  if (modal) modal.style.display = "block";
+}
+
+function closeNotesPreview() {
+  const modal = document.getElementById("notes-preview-modal");
+  if (modal) modal.style.display = "none";
+
+  currentNotesSummary = "";
+}
+
+function prepareNotesEmail() {
+  const summary =
+    document.getElementById("notes-summary-preview")?.value.trim() || "";
+
+  if (!summary) {
+    showToast("Compte rendu vide", "error");
+    return;
+  }
+
+  currentNotesSummary = summary;
+
+  showToast("Envoi par mail bientôt disponible");
+}
+
 function openMailPreview(data, instruction) {
   pendingMailInstruction = instruction || "";
 
@@ -4827,13 +4860,14 @@ try {
   }
 
   setDictationBoxState(box, "success");
-  box.innerHTML = "✅ Compte rendu créé";
-  showToast("Compte rendu créé");
-  autoHideDictationBox(box);
+box.innerHTML = "✅ Compte rendu enregistré dans l’historique";
+showToast("Compte rendu enregistré");
+autoHideDictationBox(box);
 
-  await saveActionLog("notes", "Compte rendu créé", "success");
-  await loadActionCounter();
+openNotesPreview(data.summary || "Compte rendu généré.");
 
+await saveActionLog("notes", "Compte rendu créé", "success");
+await loadActionCounter();
 } catch (err) {
   console.error("Erreur Make Notes:", err);
 
