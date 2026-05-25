@@ -5182,6 +5182,17 @@ setTimeout(async () => {
     "success"
   );
 }, 550);
+
+  } catch (err) {
+    console.error("Erreur webhook envoi réel:", err);
+
+    if (modalBox) modalBox.classList.remove("sending");
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = "📤 Envoyer le mail";
+    }
+
+    showToast("Erreur envoi mail", "error");
   }
 }
 
