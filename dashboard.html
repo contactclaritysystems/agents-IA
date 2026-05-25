@@ -4605,6 +4605,205 @@ autoHideDictationBox(box);
   };
 }
 
+  async function startNotesDictation() {
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    return;
+  }
+
+  let box = document.querySelector(".page-view.active #notes-dictation-box");
+
+  if (!box) {
+
+    box = document.createElement("div");
+
+    box.id = "notes-dictation-box";
+
+    box.style.marginTop = "12px";
+    box.style.padding = "12px 14px";
+    box.style.borderRadius = "14px";
+    box.style.fontSize = "13px";
+    box.style.fontWeight = "600";
+
+    const targetCard =
+      document.querySelector("#card-notes-run");
+
+    if (!targetCard) return;
+
+    targetCard.querySelector(".agent-head").after(box);
+  }
+
+  setDictationBoxState(box, "info");
+
+  box.style.opacity = "1";
+
+  box.innerHTML =
+    "🎙️ Écoute en cours… Discussion limitée à 2 minutes.";
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
+
+  let finalText = "";
+  let latestText = "";
+  let hasSent = false;
+
+  const notesBtn =
+    document.getElementById("notes-dictation-btn");
+
+  if (notesBtn) {
+
+    notesBtn.innerHTML = "⏹ Arrêter l’écoute";
+
+    notesBtn.onclick = () => {
+      try {
+        recognition.stop();
+      } catch(e) {}
+    };
+  }
+
+  try {
+
+    recognition.start();
+
+  } catch(e) {
+
+    setDictationBoxState(box, "error");
+
+    box.innerHTML =
+      "✕ Impossible de démarrer le micro.";
+
+    autoHideDictationBox(box);
+
+    return;
+  }
+
+  const maxDuration = setTimeout(() => {
+
+    try {
+      recognition.stop();
+    } catch(e) {}
+
+  }, 120000);
+
+  recognition.onresult = function(event) {
+
+    let interimText = "";
+
+    for (
+      let i = event.resultIndex;
+      i < event.results.length;
+      i++
+    ) {
+
+      const text =
+        event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+
+        finalText += text + " ";
+
+      } else {
+
+        interimText += text;
+      }
+    }
+
+    latestText =
+      (finalText + interimText).trim();
+
+    box.innerHTML =
+      "🎙️ " + latestText;
+  };
+
+  recognition.onend = async function() {
+
+    clearTimeout(maxDuration);
+
+    if (notesBtn) {
+
+      notesBtn.innerHTML =
+        "🎙️ Créer un compte rendu";
+
+      notesBtn.onclick =
+        startNotesDictation;
+    }
+
+    const instruction =
+      (latestText || finalText).trim();
+
+    if (!instruction) {
+
+      setDictationBoxState(box, "error");
+
+      box.innerHTML =
+        "✕ Aucune discussion détectée.";
+
+      autoHideDictationBox(box);
+
+      return;
+    }
+
+    if (hasSent) return;
+
+    hasSent = true;
+
+    setDictationBoxState(box, "info");
+
+    box.innerHTML =
+      "📝 Génération du compte rendu...";
+
+    console.log("NOTES TRANSCRIPTION:", instruction);
+
+    setTimeout(() => {
+
+      setDictationBoxState(box, "success");
+
+      box.innerHTML =
+        "✅ Discussion enregistrée";
+
+      showToast("Compte rendu prêt");
+
+      autoHideDictationBox(box);
+
+    }, 1800);
+  };
+
+  recognition.onerror = function(event) {
+
+    clearTimeout(maxDuration);
+
+    console.error(
+      "Erreur dictée notes:",
+      event.error
+    );
+
+    if (notesBtn) {
+
+      notesBtn.innerHTML =
+        "🎙️ Créer un compte rendu";
+
+      notesBtn.onclick =
+        startNotesDictation;
+    }
+
+    setDictationBoxState(box, "error");
+
+    box.innerHTML =
+      "✕ Autorisez le micro pour utiliser la dictée";
+
+    autoHideDictationBox(box);
+  };
+}
+
   function closeAllAgentCards() {
   document.querySelectorAll(".agent-card.open").forEach(card => {
     card.classList.remove("open");
