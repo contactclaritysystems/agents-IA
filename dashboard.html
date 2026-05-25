@@ -3972,7 +3972,8 @@ if (mailBtn) {
     }, 8000);
   }
 
-  setDictationBoxState(box, "info");
+setDictationBoxState(box, "info");
+box.style.opacity = "1";
 box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   try {
@@ -4172,13 +4173,13 @@ if (planningBtn) {
     }, 12000);
   }
 
-  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+  🎙️ Écoute en cours… Parlez maintenant.";
 
   try {
     recognition.start();
     resetSilenceTimer();
   } catch (e) {
-    box.innerHTML = "❌ Impossible de démarrer le micro.";
+    ❌ Impossible de démarrer le micro.";
     return;
   }
 
@@ -4198,7 +4199,7 @@ if (planningBtn) {
     }
 
     latestText = (finalText + interimText).trim();
-    box.innerHTML = "🎙️ " + latestText;
+    🎙️ " + latestText;
   };
 
   recognition.onend = async function() {
@@ -4211,14 +4212,16 @@ if (planningBtn) {
     const instruction = (latestText || finalText).trim();
 
     if (!instruction) {
-      box.innerHTML = "❌ Aucune instruction détectée.";
+      setDictationBoxState(box, "error");
+✕ Aucune instruction détectée.";
+autoHideDictationBox(box);
       return;
     }
 
     if (hasSent) return;
     hasSent = true;
 
-    box.innerHTML = "📅 Recherche de la date...";
+    📅 Recherche de la date...";
     
 const step1 = setTimeout(() => {
   box.innerHTML = "👤 Recherche du contact...";
@@ -4270,15 +4273,19 @@ if (!data.success) {
     data.reason ||
     "Impossible de créer le rendez-vous.";
 
-  box.innerHTML = "❌ " + message;
-  showToast(message);
+  setDictationBoxState(box, "error");
+box.innerHTML = "✕ " + message;
+showToast(message, "error");
+autoHideDictationBox(box);
 
   await saveActionLog("planning", instruction, data.reason || data.error || "error");
   return;
 }
 
+setDictationBoxState(box, "success");
 box.innerHTML = "✅ Rendez-vous créé";
 showToast("Rendez-vous ajouté");
+autoHideDictationBox(box);
 
 await saveActionLog("planning", instruction, "success");
 
@@ -4355,7 +4362,9 @@ if (typeof loadAppointments === "function") {
     }, 10000);
   }
 
-  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+  setDictationBoxState(box, "info");
+box.style.opacity = "1";
+box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   try {
     recognition.start();
@@ -4395,7 +4404,9 @@ if (typeof loadAppointments === "function") {
     const instruction = (latestText || finalText).trim();
 
     if (!instruction) {
-      box.innerHTML = "❌ Aucune instruction détectée.";
+      setDictationBoxState(box, "error");
+box.innerHTML = "✕ Aucune instruction détectée.";
+autoHideDictationBox(box);
       return;
     }
 
@@ -4452,16 +4463,20 @@ if (typeof loadAppointments === "function") {
           data.error ||
           data.reason ||
           "Impossible de créer la relance.";
-
-        box.innerHTML = "❌ " + message;
-        showToast(message);
+        
+setDictationBoxState(box, "error");
+box.innerHTML = "✕ " + message;
+showToast(message, "error");
+autoHideDictationBox(box);
 
         await saveActionLog("relance", instruction, data.reason || data.error || "error");
         return;
       }
 
-      box.innerHTML = "✅ Relance enregistrée";
-      showToast("Relance ajoutée");
+      setDictationBoxState(box, "success");
+box.innerHTML = "✅ Relance enregistrée";
+showToast("Relance ajoutée");
+autoHideDictationBox(box);
 
       await saveActionLog("relance", instruction, "success");
 
