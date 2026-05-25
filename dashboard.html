@@ -4036,7 +4036,7 @@ function closeNotesPreview(clear = true) {
   }
 }
 
-function prepareNotesEmail() {
+async function prepareNotesEmail() {
   const summary =
     document.getElementById("notes-summary-preview")?.value.trim() || "";
 
@@ -4049,6 +4049,8 @@ function prepareNotesEmail() {
 
   closeNotesPreview(false);
 
+await loadContacts();
+  
   openMailPreview({
     to: "",
     subject: "Compte rendu",
