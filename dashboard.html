@@ -2865,7 +2865,8 @@ let enabledAgents = {
   planning: true,
   relance: false,
   suivi: false,
-  devis: false
+  devis: false,
+  notes: true
 };
 
 // ─── GMAIL UI ────────────────────────────────────────────
@@ -3136,6 +3137,22 @@ function syncPlanningStatus() {
   }
 
   const agentsStatus = document.querySelector("#card-relance-run .agent-status");
+  if (agentsStatus) {
+    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
+    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
+  }
+}
+
+  function syncNotesStatus() {
+  const active = enabledAgents.notes === true;
+
+  const settingsStatus = document.querySelector("#card-notes .agent-status");
+  if (settingsStatus) {
+    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = active ? "Actif" : "Désactivé";
+  }
+
+  const agentsStatus = document.querySelector("#card-notes-run .agent-status");
   if (agentsStatus) {
     agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
     agentsStatus.textContent = active ? "Prêt" : "Désactivé";
@@ -3650,7 +3667,8 @@ function syncAgentsVisibility() {
   const runCards = {
   mails: document.getElementById("card-mails-run"),
   planning: document.getElementById("card-planning-run"),
-  relance: document.getElementById("card-relance-run")
+  relance: document.getElementById("card-relance-run"),
+  notes: document.getElementById("card-notes-run")
 };
 
   Object.keys(runCards).forEach(agent => {
@@ -3661,6 +3679,7 @@ function syncAgentsVisibility() {
   syncMailsStatus();
 syncPlanningStatus();
 syncRelanceStatus();
+syncNotesStatus();
 }
 
   async function toggleAgentEnabled(agentName) {
