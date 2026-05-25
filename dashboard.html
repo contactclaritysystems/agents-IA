@@ -2427,6 +2427,41 @@ select.field-input {
   </div>
 </div>
 
+<!-- AGENT NOTES -->
+<div class="agent-card" id="card-notes">
+  <div class="agent-head" onclick="toggleCard('notes')">
+    <div class="agent-emoji">📝</div>
+
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Compte Rendu</div>
+      <div class="agent-desc">
+        Transforme une discussion courte en compte rendu propre.
+      </div>
+    </div>
+
+    <div class="agent-status ok">Actif</div>
+    <div class="agent-toggle">▾</div>
+  </div>
+
+  <div class="agent-body">
+    <div class="info-box">
+      <span class="info-icon">📝</span>
+      <div>
+        Cet agent permet de résumer une discussion ou un échange client.
+        <br><br>
+        Exemple :
+        <strong>“Résume cette discussion et note les actions à faire.”</strong>
+        <br><br>
+        L’écoute est limitée à 2 minutes pour rester simple et rapide.
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="toggleAgentEnabled('notes')" type="button">
+      Activer / Désactiver l’agent
+    </button>
+  </div>
+</div>
+    
   <!-- AGENT SUIVI -->
   <div class="agent-card" id="card-suivi">
     <div class="agent-head" onclick="toggleCard('suivi')">
@@ -2594,6 +2629,26 @@ select.field-input {
       🎙️ Créer une relance
     </button>
   </div>
+
+<div class="agent-card configured" id="card-notes-run">
+  <div class="agent-head">
+    <div class="agent-emoji">📝</div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Compte Rendu</div>
+      <div class="agent-desc">
+        Exemple : “Résume cette discussion client et note les actions importantes.”
+      </div>
+    </div>
+    <div class="agent-status ok">Prêt</div>
+  </div>
+
+  <div class="agent-body" style="display:flex;">
+    <button class="save-btn" id="notes-dictation-btn" onclick="startNotesDictation()">
+      🎙️ Créer un compte rendu
+    </button>
+  </div>
+</div>
+  
 </div>
     
   </div>
