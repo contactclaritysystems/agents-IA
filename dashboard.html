@@ -2875,7 +2875,8 @@ select.field-input {
 
     <div class="field-group">
       <div class="field-label">Destinataire</div>
-      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com">
+      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions()">
+      <div id="mail-contact-suggestions" style="display:none;"></div>
     </div>
 
     <div class="field-group" style="margin-top:12px;">
@@ -5537,6 +5538,59 @@ function isValidEmailList(value) {
   if (emails.length === 0) return false;
 
   return emails.every(isValidEmail);
+}
+
+  function showMailContactSuggestions() {
+  const input = document.getElementById("preview-mail-to");
+  const box = document.getElementById("mail-contact-suggestions");
+
+  if (!input || !box) return;
+
+  const value = input.value;
+  const lastPart = value.split(",").pop().trim().toLowerCase();
+
+  if (!lastPart || lastPart.length < 2) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const matches = contactsCache.filter(c =>
+    (c.full_name || "").toLowerCase().includes(lastPart) ||
+    (c.email || "").toLowerCase().includes(lastPart)
+  ).slice(0, 5);
+
+  if (matches.length === 0) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = matches.map(c => `
+    <button type="button" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:#fff;padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
+      <strong>${c.full_name || "Contact"}</strong><br>
+      <span style="font-size:12px;color:#8a8a8e;">${c.email || ""}</span>
+    </button>
+  `).join("");
+
+  box.style.display = "block";
+}
+
+  function selectMailSuggestion(email) {
+  const input = document.getElementById("preview-mail-to");
+  const box = document.getElementById("mail-contact-suggestions");
+
+  if (!input || !email) return;
+
+  const parts = input.value.split(",");
+  parts[parts.length - 1] = " " + email;
+
+  input.value = parts.join(",").replace(/^,/, "").trim();
+
+  if (box) {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
 }
 
   async function sendPreparedMail() {
