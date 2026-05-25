@@ -2962,10 +2962,11 @@ console.log("Code brut:", code);
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        code, 
-        redirect_uri: REDIRECT_URI,
-        clarity_email: clarityEmail
-      })
+      code, 
+      redirect_uri: REDIRECT_URI,
+      clarity_email: clarityEmail,
+      user_id: currentUser.id
+    })
     });
 
     // Log la réponse brute pour voir ce que Make renvoie
