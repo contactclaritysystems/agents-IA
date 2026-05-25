@@ -3895,12 +3895,19 @@ function openMailPreview(data, instruction) {
 function closeMailPreview(showCancel = true) {
   document.getElementById("mail-preview-modal").style.display = "none";
 
-  if (showCancel) {
-    showToast("Envoi annulé", "error");
+ if (showCancel) {
+  showToast("Envoi annulé", "error");
 
-    const box = document.querySelector(".page-view.active #dictation-box");
-    if (box) box.innerHTML = "✕ Envoi annulé";
+  const box = document.querySelector(".page-view.active #dictation-box");
+
+  if (box) {
+    box.innerHTML = "✕ Envoi annulé";
+
+    box.style.background = "rgba(239,68,68,.08)";
+    box.style.border = "1px solid rgba(239,68,68,.18)";
+    box.style.color = "#dc2626";
   }
+}
 
   currentPreparedMail = null;
 }
