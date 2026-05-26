@@ -4784,7 +4784,22 @@ autoHideDictationBox(box);
 
   setDictationBoxState(box, "info");
 
-  box.style.opacity = "1";
+ box.style.opacity = "1";
+
+const recognition = new SpeechRecognition();
+
+recognition.lang = "fr-FR";
+recognition.interimResults = true;
+recognition.continuous = true;
+recognition.maxAlternatives = 1;
+
+let finalText = "";
+let latestText = "";
+let hasSent = false;
+
+let remainingSeconds = 120;
+let countdownInterval = null;
+
 box.innerHTML = "🎙️ Écoute en cours… Temps restant : 2:00";
 
 countdownInterval = setInterval(() => {
@@ -4799,20 +4814,6 @@ countdownInterval = setInterval(() => {
     clearInterval(countdownInterval);
   }
 }, 1000);
-
-  const recognition = new SpeechRecognition();
-
-  recognition.lang = "fr-FR";
-  recognition.interimResults = true;
-  recognition.continuous = true;
-  recognition.maxAlternatives = 1;
-
-  let finalText = "";
-  let latestText = "";
-  let hasSent = false;
-
-  let remainingSeconds = 120;
-  let countdownInterval = null;
 
   const notesBtn =
     document.getElementById("notes-dictation-btn");
