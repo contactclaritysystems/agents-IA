@@ -4917,8 +4917,14 @@ try {
   let summary = text.trim();
 
 console.log("SUMMARY NOTES:", summary);
-
-if (!response.ok || !summary) {
+  
+if (
+  !response.ok ||
+  !summary ||
+  summary.includes("Veuillez réessayer") ||
+  summary.includes("n’a pas pu") ||
+  summary.includes("Impossible de")
+) {
   const message = "Impossible de créer le compte rendu.";
 
   setDictationBoxState(box, "error");
