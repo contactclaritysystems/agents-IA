@@ -4914,22 +4914,11 @@ try {
   const text = await response.text();
   console.log("Réponse Make Notes brute:", text);
 
-  let data = {};
+  let summary = text.trim();
 
-try {
-  data = JSON.parse(text);
-} catch (e) {
+console.log("SUMMARY NOTES:", summary);
 
-  data = {
-    success: response.ok,
-    summary: "Compte rendu enregistré dans l’historique."
-  };
-
-}
-
-console.log("DATA NOTES:", data);
-
-  if (!data.success) {
+if (!response.ok || !summary) {
     const message =
       data.message ||
       data.error ||
