@@ -4976,7 +4976,7 @@ autoHideDictationBox(box);
 
 openNotesPreview(summary);
 
-await saveActionLog("notes", "Compte rendu créé", "success");
+await saveActionLog("notes", summary, "success");
 await loadActionCounter();
 } catch (err) {
   console.error("Erreur Make Notes:", err);
