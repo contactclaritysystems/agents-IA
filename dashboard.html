@@ -2814,6 +2814,15 @@ select.field-input {
       <div class="agent-status ok">Historique</div>
     </div>
 
+    <div class="agent-card history-folder-card" onclick="openHistoryAgent('notes')">
+  <div class="history-folder-icon">📝</div>
+  <div>
+    <div class="agent-name">Agent Compte Rendu</div>
+    <div class="agent-desc">Comptes rendus créés</div>
+  </div>
+  <div class="agent-status ok">Historique</div>
+</div>
+
     <div class="agent-card history-folder-card" onclick="openPlanningHistoryFolders()">
   <div class="history-folder-icon">📅</div>
   <div>
@@ -4776,9 +4785,20 @@ autoHideDictationBox(box);
   setDictationBoxState(box, "info");
 
   box.style.opacity = "1";
+box.innerHTML = "🎙️ Écoute en cours… Temps restant : 2:00";
 
-  box.innerHTML =
-    "🎙️ Écoute en cours… Discussion limitée à 2 minutes.";
+countdownInterval = setInterval(() => {
+  remainingSeconds--;
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = String(remainingSeconds % 60).padStart(2, "0");
+
+  box.innerHTML = `🎙️ Écoute en cours… Temps restant : ${minutes}:${seconds}`;
+
+  if (remainingSeconds <= 0) {
+    clearInterval(countdownInterval);
+  }
+}, 1000);
 
   const recognition = new SpeechRecognition();
 
@@ -4790,6 +4810,9 @@ autoHideDictationBox(box);
   let finalText = "";
   let latestText = "";
   let hasSent = false;
+
+  let remainingSeconds = 120;
+  let countdownInterval = null;
 
   const notesBtn =
     document.getElementById("notes-dictation-btn");
@@ -4862,6 +4885,8 @@ autoHideDictationBox(box);
   recognition.onend = async function() {
 
     clearTimeout(maxDuration);
+
+    clearInterval(countdownInterval);
 
     if (notesBtn) {
 
@@ -4960,6 +4985,8 @@ await loadActionCounter();
   recognition.onerror = function(event) {
 
     clearTimeout(maxDuration);
+
+    clearInterval(countdownInterval);
 
     console.error(
       "Erreur dictée notes:",
@@ -5178,7 +5205,10 @@ function openHistoryAgent(agentName) {
   }
 
   if (title) {
-  title.textContent = agentName === "planning" ? "Agent Planning" : "Agent Mails";
+  title.textContent =
+  agentName === "planning" ? "Agent Planning" :
+  agentName === "notes" ? "Agent Compte Rendu" :
+  "Agent Mails";
   }
 
   if (detail) {
