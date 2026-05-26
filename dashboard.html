@@ -4105,7 +4105,23 @@ if (suggestions) {
   suggestions.innerHTML = "";
 }
 
-  document.getElementById("mail-preview-modal").style.display = "block";
+  const modal = document.getElementById("mail-preview-modal");
+
+modal.style.display = "block";
+
+requestAnimationFrame(() => {
+  modal.scrollTop = 0;
+
+  const box = modal.querySelector(".mail-choice-box");
+
+  if (box) {
+    box.scrollTop = 0;
+    box.scrollIntoView({
+      behavior: "instant",
+      block: "center"
+    });
+  }
+});
 }
 
 function closeMailPreview(showCancel = true) {
