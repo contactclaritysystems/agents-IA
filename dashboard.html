@@ -4949,7 +4949,12 @@ box.innerHTML = "✅ Compte rendu enregistré dans l’historique";
 showToast("Compte rendu enregistré");
 autoHideDictationBox(box);
 
-openNotesPreview(data.summary || "Compte rendu généré.");
+openNotesPreview(
+  data.summary ||
+  data.Result ||
+  data.result ||
+  "Aucun résumé reçu."
+);
 
 await saveActionLog("notes", "Compte rendu créé", "success");
 await loadActionCounter();
