@@ -4880,11 +4880,19 @@ try {
   console.log("Réponse Make Notes brute:", text);
 
   let data = {};
-  try {
-    data = JSON.parse(text);
-  } catch (e) {
-    data = { success: false };
-  }
+
+try {
+  data = JSON.parse(text);
+} catch (e) {
+
+  data = {
+    success: response.ok,
+    summary: "Compte rendu enregistré dans l’historique."
+  };
+
+}
+
+console.log("DATA NOTES:", data);
 
   if (!data.success) {
     const message =
