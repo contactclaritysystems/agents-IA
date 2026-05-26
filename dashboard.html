@@ -4791,7 +4791,7 @@ const recognition = new SpeechRecognition();
 recognition.lang = "fr-FR";
 recognition.interimResults = true;
 recognition.continuous = true;
-recognition.maxAlternatives = 1;
+recognition.maxAlternatives = 3;
 
 let finalText = "";
 let latestText = "";
@@ -4801,8 +4801,8 @@ let remainingSeconds = 120;
 let countdownInterval = null;
 
 box.innerHTML = `
-  <div id="notes-timer">⏱ Temps restant : 2:00</div>
-  <div id="notes-live-text">🎙️ Écoute en cours… Parlez maintenant.</div>
+  <div id="notes-timer">⏱️ Temps restant : 2:00</div>
+  <div id="notes-live-text">🎙️ Parlez clairement, phrase par phrase.</div>
 `;
 
 countdownInterval = setInterval(() => {
