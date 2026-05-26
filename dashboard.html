@@ -4800,7 +4800,10 @@ let hasSent = false;
 let remainingSeconds = 120;
 let countdownInterval = null;
 
-box.innerHTML = "🎙️ Écoute en cours… Temps restant : 2:00";
+box.innerHTML = `
+  <div id="notes-timer">⏱ Temps restant : 2:00</div>
+  <div id="notes-live-text">🎙️ Écoute en cours… Parlez maintenant.</div>
+`;
 
 countdownInterval = setInterval(() => {
   remainingSeconds--;
@@ -4808,7 +4811,8 @@ countdownInterval = setInterval(() => {
   const minutes = Math.floor(remainingSeconds / 60);
   const seconds = String(remainingSeconds % 60).padStart(2, "0");
 
-  box.innerHTML = `🎙️ Écoute en cours… Temps restant : ${minutes}:${seconds}`;
+  const timerEl = document.getElementById("notes-timer");
+  if (timerEl) timerEl.textContent = `⏱ Temps restant : ${minutes}:${seconds}`;
 
   if (remainingSeconds <= 0) {
     clearInterval(countdownInterval);
@@ -4879,8 +4883,11 @@ countdownInterval = setInterval(() => {
     latestText =
       (finalText + interimText).trim();
 
-    box.innerHTML =
-      "🎙️ " + latestText;
+    const liveText = document.getElementById("notes-live-text");
+
+if (liveText) {
+  liveText.textContent = "🎙️ " + latestText;
+}
   };
 
   recognition.onend = async function() {
