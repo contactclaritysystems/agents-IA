@@ -4919,31 +4919,23 @@ try {
 console.log("SUMMARY NOTES:", summary);
 
 if (!response.ok || !summary) {
-    const message =
-      data.message ||
-      data.error ||
-      "Impossible de créer le compte rendu.";
+  const message = "Impossible de créer le compte rendu.";
 
-    setDictationBoxState(box, "error");
-    box.innerHTML = "✕ " + message;
-    showToast(message, "error");
-    autoHideDictationBox(box);
+  setDictationBoxState(box, "error");
+  box.innerHTML = "✕ " + message;
+  showToast(message, "error");
+  autoHideDictationBox(box);
 
-    await saveActionLog("notes", instruction, "error");
-    return;
-  }
+  await saveActionLog("notes", instruction, "error");
+  return;
+}
 
-  setDictationBoxState(box, "success");
+setDictationBoxState(box, "success");
 box.innerHTML = "✅ Compte rendu enregistré dans l’historique";
 showToast("Compte rendu enregistré");
 autoHideDictationBox(box);
 
-openNotesPreview(
-  data.summary ||
-  data.Result ||
-  data.result ||
-  "Aucun résumé reçu."
-);
+openNotesPreview(summary);
 
 await saveActionLog("notes", "Compte rendu créé", "success");
 await loadActionCounter();
