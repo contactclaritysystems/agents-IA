@@ -4024,7 +4024,26 @@ function openNotesPreview(summary) {
   const modal = document.getElementById("notes-preview-modal");
 
   if (textarea) textarea.value = currentNotesSummary;
-  if (modal) modal.style.display = "block";
+ if (modal) {
+
+  modal.style.display = "block";
+
+  requestAnimationFrame(() => {
+
+    modal.scrollTop = 0;
+
+    const box = modal.querySelector(".mail-choice-box");
+
+    if (box) {
+      box.scrollTop = 0;
+      box.scrollIntoView({
+        behavior: "instant",
+        block: "center"
+      });
+    }
+
+  });
+}
 }
 
 function closeNotesPreview(clear = true) {
