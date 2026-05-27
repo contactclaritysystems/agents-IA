@@ -5434,7 +5434,7 @@ if (detail) {
   }
 
   list.innerHTML = relances.map((r, index) => `
-    <div class="agent-card">
+    <div class="agent-card" onclick="openPastFollowUpDetail(${index})" style="cursor:pointer;">
       <div class="agent-head">
         <div class="agent-emoji">🔁</div>
 
@@ -5449,7 +5449,7 @@ if (detail) {
           </div>
         </div>
 
-        <div class="agent-status ok">Passée</div>
+        <div class="agent-status ok">Voir</div>
       </div>
     </div>
   `).join("");
