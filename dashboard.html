@@ -3264,6 +3264,12 @@ function syncPlanningStatus() {
     agentsStatus.textContent = active ? "Prêt" : "Désactivé";
   }
 }
+
+  function formatDateShort(dateStr) {
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-");
+  return `${day}-${month}-${year}`;
+}
   
 async function loadAppointments() {
   if (!currentUser) return;
@@ -3347,7 +3353,7 @@ function renderAppointment(a) {
 
         <div class="agent-title-wrap">
           <div class="agent-name">
-            ${a.appointment_date || ""} · ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
+            ${formatDateShort(a.appointment_date)} · ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
           </div>
 
           <div class="agent-desc">
@@ -3409,6 +3415,7 @@ function renderAppointment(a) {
 }
 
   function openAppointmentDetail(index) {
+  window.currentPlanningSubPage = "appointment-detail";
   const a = currentAppointments[index];
   if (!a) return;
 
@@ -3443,12 +3450,12 @@ function renderAppointment(a) {
 
       <div class="field-group" style="margin-top:18px;">
         <div class="field-label">Note</div>
-        <textarea class="field-input" id="appointment-note-input" style="min-height:140px;">${a.description || ""}</textarea>
+        <textarea class="field-input" id="appointment-note-input" style="min-height:140px;" oninput="toggleAppointmentNoteSave(this)">${a.description || ""}</textarea>
       </div>
 
-      <button class="save-btn" onclick="saveAppointmentNote('${a.id}')" type="button">
-        💾 Enregistrer la note
-      </button>
+      <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointmentNote('${a.id}')" type="button" disabled style="opacity:.45;">
+  💾 Enregistrer la note
+</button>
 
     </div>
   `;
@@ -6188,6 +6195,7 @@ window.logout = logout;
 });
 
   function openPlanningAppointments() {
+  window.currentPlanningSubPage = "appointments-list";
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
@@ -6222,6 +6230,12 @@ function openPlanningFollowUps() {
 }
 
 function closePlanningDetail() {
+  if (window.currentPlanningSubPage === "appointment-detail") {
+    window.currentPlanningSubPage = "appointments-list";
+    loadAppointments();
+    return;
+  }
+
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
@@ -6282,6 +6296,16 @@ async function loadFollowUps() {
       </div>
     </div>
   `).join("");
+}
+
+  function toggleAppointmentNoteSave(textarea) {
+  const btn = document.getElementById("appointment-note-save-btn");
+  if (!btn) return;
+
+  const hasText = textarea.value.trim().length > 0;
+
+  btn.disabled = !hasText;
+  btn.style.opacity = hasText ? "1" : ".45";
 }
 
   function setDictationBoxState(box, type = "success") {
