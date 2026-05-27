@@ -5449,7 +5449,7 @@ if (objetMatch && objetMatch[1]) {
   `;
 }
 
-  function sendHistoryNoteByEmail(index) {
+  async function sendHistoryNoteByEmail(index) {
   const log = currentHistoryLogs[index];
   if (!log) return;
 
@@ -5461,6 +5461,8 @@ if (objetMatch && objetMatch[1]) {
   }
 
   currentNotesSummary = summary;
+
+  await loadContacts();
 
   openMailPreview({
     to: "",
