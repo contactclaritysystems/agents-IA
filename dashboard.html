@@ -6290,10 +6290,13 @@ setTimeout(async () => {
   showToast("Mail envoyé");
 
   await saveActionLog(
-    "mails",
-    logSubject,
-    "success"
-  );
+  "mails",
+  `DESTINATAIRE: ${to}
+OBJET: ${subject}
+
+${body}`,
+  "success"
+);
 
   await loadActionCounter();
   
