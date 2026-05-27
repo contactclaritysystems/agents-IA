@@ -5253,46 +5253,39 @@ let contactsCache = [];
   list.style.gap = "14px";
 
   list.innerHTML = `
-    <div class="gmail-section" style="display:block;">
-      <div class="section-title">
-        ${a.contact_name || "Rendez-vous"}
-      </div>
+  <div class="gmail-section" style="display:block;">
 
-      <div class="gmail-desc" style="margin-top:8px;">
-        ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
-      </div>
-
-      <div class="detail-line" style="margin-top:16px;">
-        <span>Motif</span>
-        <strong>${a.title || "Non renseigné"}</strong>
-      </div>
-
-      <div class="detail-line">
-        <span>Société</span>
-        <strong>${a.company || "Non renseignée"}</strong>
-      </div>
-
-      <div class="detail-line">
-        <span>Téléphone</span>
-        <strong>${a.phone || "Non renseigné"}</strong>
-      </div>
-
-      <div class="detail-line">
-        <span>Email</span>
-        <strong>${a.email || "Non renseigné"}</strong>
-      </div>
-
-      <div style="
-        margin-top:16px;
-        white-space:pre-wrap;
-        line-height:1.6;
-        font-size:14px;
-        word-break:break-word;
-      ">
-        ${a.description || "Aucune description."}
-      </div>
+    <div class="section-title">
+      ${a.contact_name || "Rendez-vous"}
     </div>
-  `;
+
+    <div class="gmail-desc" style="margin-top:8px;">
+      ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
+    </div>
+
+    <div class="detail-line" style="margin-top:16px;">
+      <span>Motif</span>
+      <strong>${a.title || "Non renseigné"}</strong>
+    </div>
+
+    ${
+      a.description
+        ? `
+        <div style="
+          margin-top:18px;
+          white-space:pre-wrap;
+          line-height:1.6;
+          font-size:14px;
+          word-break:break-word;
+        ">
+          ${a.description}
+        </div>
+      `
+        : ""
+    }
+
+  </div>
+`;
 }
 
 function openHistoryAgent(agentName) {
