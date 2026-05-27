@@ -5249,93 +5249,105 @@ function closeHistoryDetail() {
   historyLimit = 10;
 }
 
-  async function loadHistory(agentName) {
+  let currentHistoryLogs = [];
 
-  window.currentHistorySubPage =
-    agentName === "planning"
-      ? "planning-list"
-      : "agent-list";
+async function loadHistory(agentName) {
+  window.currentHistorySubPage =
+    agentName === "planning" ? "planning-list" : "agent-list";
 
-  const list = document.getElementById("history-list");
+  const list = document.getElementById("history-list");
+  if (!list || !currentUser) return;
 
-  if (!list) return;
+  list.classList.remove("planning-folder-grid");
+  list.innerHTML = `<div class="info-box">Chargement de l’historique...</div>`;
 
-  list.classList.remove("planning-folder-grid");
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-  if (!currentUser) return;
+  if (!accessToken) {
+    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
+    return;
+  }
 
-  list.innerHTML = `<div class="info-box">Chargement de l’historique...</div>`;
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/action_event_logs?user_id=eq." + currentUser.id +
+    "&agent=eq." + agentName +
+    "&order=created_at.desc&limit=" + historyLimit,
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
 
-  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-  const rawSession = localStorage.getItem(storageKey);
-  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!response.ok) {
+    list.innerHTML = `<div class="info-box">Impossible de charger l’historique.</div>`;
+    return;
+  }
 
-  if (!accessToken) {
-    list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
-    return;
-  }
+  const logs = await response.json();
+  currentHistoryLogs = logs || [];
 
-  const response = await fetch(
-    SUPABASE_URL + "/rest/v1/action_event_logs?user_id=eq." + currentUser.id +
-    "&agent=eq." + agentName +
-    "&order=created_at.desc&limit=" + historyLimit,
-    {
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
-      }
-    }
-  );
+  if (!logs || logs.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucune action pour le moment.</div>`;
+    return;
+  }
 
-  if (!response.ok) {
-    list.innerHTML = `<div class="info-box">Impossible de charger l’historique.</div>`;
-    return;
-  }
+  list.innerHTML = logs.map((log, index) => {
+    if (agentName === "notes") {
+      const text = log.action || "Compte rendu";
+      const title = text.split("\n")[0].replace("Résumé :", "").trim() || "Compte rendu";
 
-  const logs = await response.json();
+      return `
+        <div class="agent-card" onclick="openNotesHistoryDetail(${index})">
+          <div class="agent-head">
+            <div class="agent-emoji">${log.status === "success" ? "📝" : "❌"}</div>
+            <div class="agent-title-wrap">
+              <div class="agent-name">${title}</div>
+              <div class="agent-desc">${new Date(log.created_at).toLocaleString("fr-FR")}</div>
+            </div>
+            <div class="agent-status ok">Voir</div>
+          </div>
+        </div>
+      `;
+    }
 
-  if (!logs || logs.length === 0) {
-    list.innerHTML = `<div class="info-box">Aucune action pour le moment.</div>`;
-    return;
-  }
+    return `
+      <div class="agent-card">
+        <div class="agent-head" style="cursor:default;">
+          <div class="agent-emoji">${log.status === "success" ? "✅" : "❌"}</div>
+          <div class="agent-title-wrap">
+            <div class="agent-name">${log.status === "success" ? "Action réussie" : "Action échouée"}</div>
+            <div class="agent-desc">
+              ${log.action || "Action sans détail"}<br>
+              ${new Date(log.created_at).toLocaleString("fr-FR")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
 
-  list.innerHTML = logs.map((log, index) => {
-  if (agentName === "notes") {
-    const text = log.action || "Compte rendu";
-    const title = text.split("\n")[0].replace("Résumé :", "").trim() || "Compte rendu";
-
-    return `
-      <div class="agent-card" onclick="openNotesHistoryDetail(${index})">
-        <div class="agent-head">
-          <div class="agent-emoji">${log.status === "success" ? "📝" : "❌"}</div>
-          <div class="agent-title-wrap">
-            <div class="agent-name">${title}</div>
-            <div class="agent-desc">
-              ${new Date(log.created_at).toLocaleString("fr-FR")}
-            </div>
-          </div>
-          <div class="agent-status ok">Voir</div>
-        </div>
-      </div>
-    `;
-  }
-
-  return `
-
-  if (logs.length >= historyLimit) {
-    list.innerHTML += `
-      <button class="save-btn" onclick="loadMoreHistory('${agentName}')" type="button">
-        Voir plus
-      </button>
-    `;
-  }
+  if (logs.length >= historyLimit) {
+    list.innerHTML += `
+      <button class="save-btn" onclick="loadMoreHistory('${agentName}')" type="button">
+        Voir plus
+      </button>
+    `;
+  }
 }
 
  function handleHistoryBack() {
-   
   if (window.currentHistorySubPage === "planning-list") {
     openPlanningHistoryFolders();
+    return;
+  }
+
+  if (window.currentHistorySubPage === "notes-detail") {
+    loadHistory("notes");
     return;
   }
 
