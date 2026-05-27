@@ -3338,37 +3338,27 @@ async function loadAppointments() {
   }
 
 function renderAppointment(a) {
-  const index = currentAppointments.findIndex(item => item.id === a.id);
+  const index = currentAppointments.findIndex(item => item.id === a.id);
 
-  return `
-    <div onclick="openAppointmentDetail(${index})" style="
-      background:#fff;
-      border:1px solid rgba(0,0,0,.06);
-      border-radius:22px;
-      padding:18px 20px;
-      margin-bottom:12px;
-      box-shadow:0 8px 24px rgba(0,0,0,.04);
-      cursor:pointer;
-    ">
-      <div style="
-        font-size:20px;
-        font-weight:800;
-        color:#1d1d1f;
-      ">
-        ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
-      </div>
+  return `
+    <div class="agent-card" onclick="openAppointmentDetail(${index})" style="cursor:pointer;">
+      <div class="agent-head">
+        <div class="agent-emoji">📅</div>
 
-      <div style="
-        margin-top:8px;
-        font-size:15px;
-        color:#7c7c80;
-        line-height:1.4;
-      ">
-        ${formatDate(a.appointment_date)} · ${a.title || "Sans motif"}
-        ${a.location ? `<br>📍 ${a.location}` : ""}
-      </div>
-    </div>
-  `;
+        <div class="agent-title-wrap">
+          <div class="agent-name">
+            ${a.appointment_date || ""} · ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
+          </div>
+
+          <div class="agent-desc">
+            ${a.title || "Sans motif"}
+          </div>
+        </div>
+
+        <div class="agent-status ok">Voir</div>
+      </div>
+    </div>
+  `;
 }
 
   function renderSection(title, items) {
