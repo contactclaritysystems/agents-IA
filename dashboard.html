@@ -5321,11 +5321,6 @@ detail.classList.add("open");
   loadHistory(agentName);
 }
 
-if (window.currentHistorySubPage === "past-appointment-detail") {
-  loadPastAppointments();
-  return;
-}
-
 function closeHistoryDetail() {
 
   const detail = document.getElementById("history-detail");
@@ -5547,6 +5542,11 @@ Bonne journée,`
  function handleHistoryBack() {
   if (window.currentHistorySubPage === "planning-list") {
     openPlanningHistoryFolders();
+    return;
+  }
+
+  if (window.currentHistorySubPage === "past-appointment-detail") {
+    loadPastAppointments();
     return;
   }
 
