@@ -3415,50 +3415,59 @@ function renderAppointment(a) {
 }
 
   function openAppointmentDetail(index) {
+  const a = currentAppointments[index];
+  if (!a) return;
+
   window.currentPlanningSubPage = "appointment-detail";
-  const a = currentAppointments[index];
-  if (!a) return;
+  currentAppointmentInitialNote = a.description || "";
 
-  const detail = document.getElementById("planning-detail");
-  const list = document.getElementById("planning-list");
-  const title = document.getElementById("planning-detail-title");
+  const detail = document.getElementById("planning-detail");
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
 
-  if (title) title.textContent = "Rendez-vous";
+  if (title) title.textContent = "Rendez-vous";
 
-  if (detail) {
-    detail.style.display = "block";
-    detail.classList.add("open");
-  }
+  if (detail) {
+    detail.style.display = "block";
+    detail.classList.add("open");
+  }
 
-  if (!list) return;
+  if (!list) return;
 
-  list.innerHTML = `
-    <div class="gmail-section" style="display:block;">
+  list.innerHTML = `
+    <div class="agent-card" style="padding:22px;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
+        ${a.contact_name || "Rendez-vous"}
+      </div>
 
-      <div class="section-title">
-        ${a.contact_name || "Rendez-vous"}
-      </div>
+      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+        ${formatDateShort(a.appointment_date)} à ${a.appointment_time?.slice(0,5) || ""}
+      </div>
 
-      <div class="gmail-desc" style="margin-top:8px;">
-        ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
-      </div>
+      <div style="
+        background:#f7f7f8;
+        border-radius:16px;
+        padding:14px;
+        margin-bottom:18px;
+      ">
+        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
+          Motif
+        </div>
+        <div style="font-size:16px;font-weight:800;line-height:1.35;">
+          ${a.title || "Non renseigné"}
+        </div>
+      </div>
 
-      <div class="detail-line" style="margin-top:16px;">
-        <span>Motif</span>
-        <strong>${a.title || "Non renseigné"}</strong>
-      </div>
+      <div class="field-group">
+        <div class="field-label">Note</div>
+        <textarea class="field-input" id="appointment-note-input" style="min-height:110px;" oninput="toggleAppointmentNoteSave(this)">${a.description || ""}</textarea>
+      </div>
 
-      <div class="field-group" style="margin-top:18px;">
-        <div class="field-label">Note</div>
-        <textarea class="field-input" id="appointment-note-input" style="min-height:140px;" oninput="toggleAppointmentNoteSave(this)">${a.description || ""}</textarea>
-      </div>
-
-      <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointmentNote('${a.id}')" type="button" disabled style="opacity:.45;">
-  💾 Enregistrer la note
-</button>
-
-    </div>
-  `;
+      <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointmentNote('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
+        💾 Enregistrer la note
+      </button>
+    </div>
+  `;
 }
 
   async function saveAppointmentNote(appointmentId) {
@@ -3496,6 +3505,7 @@ function renderAppointment(a) {
   }
 
   showToast("Note enregistrée");
+  currentAppointmentInitialNote = note;
   await loadAppointments();
 }
 
@@ -5441,6 +5451,7 @@ function closeHistoryDetail() {
   let currentHistoryLogs = [];
   let currentPastAppointments = [];
   let currentAppointments = [];
+  let currentAppointmentInitialNote = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6231,6 +6242,13 @@ function openPlanningFollowUps() {
 
 function closePlanningDetail() {
   if (window.currentPlanningSubPage === "appointment-detail") {
+    const currentNote = document.getElementById("appointment-note-input")?.value || "";
+
+    if (currentNote.trim() !== currentAppointmentInitialNote.trim()) {
+      const confirmLeave = confirm("Votre note n’est pas enregistrée. Si vous quittez, elle sera perdue.");
+      if (!confirmLeave) return;
+    }
+
     window.currentPlanningSubPage = "appointments-list";
     loadAppointments();
     return;
