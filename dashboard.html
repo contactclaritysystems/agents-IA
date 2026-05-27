@@ -5298,6 +5298,19 @@ let contactsCache = [];
 
   const list = document.getElementById("history-list");
   if (!list) return;
+
+  window.currentHistorySubPage = "past-appointments-list";
+
+const title = document.getElementById("history-detail-title");
+const detail = document.getElementById("history-detail");
+const folders = document.getElementById("history-folders");
+
+if (title) title.textContent = "Rendez-vous passés";
+if (folders) folders.style.display = "none";
+if (detail) {
+  detail.style.display = "block";
+  detail.classList.add("open");
+}
     
   list.classList.remove("planning-folder-grid");
 
