@@ -5341,6 +5341,7 @@ async function loadHistory(agentName) {
 }
 
   function openNotesHistoryDetail(index) {
+
   const log = currentHistoryLogs[index];
   if (!log) return;
 
@@ -5349,17 +5350,32 @@ async function loadHistory(agentName) {
 
   window.currentHistorySubPage = "notes-detail";
 
+  list.classList.remove("planning-folder-grid");
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "14px";
+
   list.innerHTML = `
     <div class="gmail-section" style="display:block;">
-      <div class="section-title">Compte rendu</div>
+      
+      <div class="section-title">
+        Compte rendu
+      </div>
 
       <div class="gmail-desc" style="margin-top:8px;">
         ${new Date(log.created_at).toLocaleString("fr-FR")}
       </div>
 
-      <div style="margin-top:16px; white-space:pre-wrap; line-height:1.55; font-size:14px;">
+      <div style="
+        margin-top:16px;
+        white-space:pre-wrap;
+        line-height:1.6;
+        font-size:14px;
+        word-break:break-word;
+      ">
         ${log.action || "Compte rendu vide"}
       </div>
+
     </div>
   `;
 }
