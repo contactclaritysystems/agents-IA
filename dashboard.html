@@ -5401,12 +5401,26 @@ let contactsCache = [];
 
   const relances = await response.json();
 
+    currentPastFollowUps = relances || [];
+window.currentHistorySubPage = "past-followups-list";
+
+const title = document.getElementById("history-detail-title");
+const detail = document.getElementById("history-detail");
+const folders = document.getElementById("history-folders");
+
+if (title) title.textContent = "Relances passées";
+if (folders) folders.style.display = "none";
+if (detail) {
+  detail.style.display = "block";
+  detail.classList.add("open");
+}
+
   if (!relances || relances.length === 0) {
     list.innerHTML = `<div class="info-box">Aucune ancienne relance.</div>`;
     return;
   }
 
-  list.innerHTML = relances.map(r => `
+  list.innerHTML = relances.map((r, index) => `
     <div class="agent-card">
       <div class="agent-head">
         <div class="agent-emoji">🔁</div>
@@ -5426,6 +5440,63 @@ let contactsCache = [];
       </div>
     </div>
   `).join("");
+}
+
+  function openPastFollowUpDetail(index) {
+  const r = currentPastFollowUps[index];
+  if (!r) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  window.currentHistorySubPage = "past-followup-detail";
+
+  list.classList.remove("planning-folder-grid");
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "14px";
+
+  list.innerHTML = `
+    <div class="agent-card" style="padding:22px;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
+        ${r.contact_name || "Relance"}
+      </div>
+
+      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+        ${formatDateShort(r.reminder_date)}
+      </div>
+
+      <div style="
+        background:#f7f7f8;
+        border-radius:16px;
+        padding:14px;
+        margin-bottom:18px;
+      ">
+        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
+          Motif
+        </div>
+        <div style="font-size:16px;font-weight:800;line-height:1.35;">
+          ${r.reason || "Non renseigné"}
+        </div>
+      </div>
+
+      ${
+        r.message_context
+          ? `
+          <div style="
+            margin-top:14px;
+            white-space:pre-wrap;
+            line-height:1.6;
+            font-size:14px;
+            word-break:break-word;
+          ">
+            ${r.message_context}
+          </div>
+        `
+          : ""
+      }
+    </div>
+  `;
 }
 
   function openPastAppointmentDetail(index) {
@@ -5528,6 +5599,7 @@ function closeHistoryDetail() {
 
   let currentHistoryLogs = [];
   let currentPastAppointments = [];
+  let currentPastFollowUps = [];
   let currentAppointments = [];
   let currentAppointmentInitialNote = "";
 
@@ -5725,13 +5797,13 @@ Bonne journée,`
 }
 
  function handleHistoryBack() {
-  if (window.currentHistorySubPage === "planning-list") {
-    openPlanningHistoryFolders();
+  if (window.currentHistorySubPage === "past-appointment-detail") {
+    loadPastAppointments();
     return;
   }
 
-  if (window.currentHistorySubPage === "past-appointment-detail") {
-    loadPastAppointments();
+  if (window.currentHistorySubPage === "past-followup-detail") {
+    loadPastFollowUps();
     return;
   }
 
@@ -6384,16 +6456,27 @@ async function loadFollowUps() {
     list.innerHTML = `<div class="info-box">Aucune relance prévue.</div>`;
     return;
   }
+  
+list.innerHTML = relances.map((r, index) => `
+  <div class="agent-card" onclick="openPastFollowUpDetail(${index})">
+    <div class="agent-head">
+      <div class="agent-emoji">🔁</div>
 
-  list.innerHTML = relances.map(r => `
-    <div class="gmail-section" style="display:block;">
-      <div class="section-title">${r.contact_name || "Relance"}</div>
-      <div class="gmail-desc" style="margin-top:8px;">
-        ${r.reminder_date || ""} · ${r.reason || "Relance"}<br>
-        ${r.message_context || ""}
+      <div class="agent-title-wrap">
+        <div class="agent-name">
+          ${r.contact_name || "Relance"}
+        </div>
+
+        <div class="agent-desc">
+          ${formatDateShort(r.reminder_date)}<br>
+          ${r.reason || "Sans motif"}
+        </div>
       </div>
+
+      <div class="agent-status ok">Voir</div>
     </div>
-  `).join("");
+  </div>
+`).join("");
 }
 
   function toggleAppointmentNoteSave(textarea) {
