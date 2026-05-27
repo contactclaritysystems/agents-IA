@@ -5575,10 +5575,12 @@ function openHistoryAgent(agentName) {
 
   if (title) {
   title.textContent =
-  agentName === "planning" ? "Agent Planning" :
-  agentName === "notes" ? "Agent Compte Rendu" :
-  "Agent Mails";
-  }
+    agentName === "notes"
+      ? "Comptes rendus"
+      : agentName === "mails"
+      ? "Mails"
+      : "Historique";
+}
 
   if (detail) {
     detail.style.display = "block";
