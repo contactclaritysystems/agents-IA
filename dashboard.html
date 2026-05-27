@@ -5670,28 +5670,6 @@ async function loadHistory(agentName) {
   }
 
   list.innerHTML = logs.map((log, index) => {
-  if (agentName === "notes") {
-    const text = log.action || "Compte rendu";
-    
-    
-    let title = "Compte rendu";
-
-const objetMatch = text.match(/objet\s*:\s*(.+)/i);
-
-if (objetMatch && objetMatch[1]) {
-  title = objetMatch[1].trim().slice(0, 80);
-} else {
-  title =
-    text
-      .split("\n")
-      .find(line =>
-        line.trim().length > 8 &&
-        !line.toLowerCase().includes("compte rendu") &&
-        !line.toLowerCase().includes("résumé")
-      ) || "Compte rendu";
-
-  title = title.trim().slice(0, 80);
-}
 
     if (agentName === "mails") {
   const text = log.action || "";
@@ -5717,6 +5695,29 @@ if (objetMatch && objetMatch[1]) {
       </div>
     </div>
   `;
+}
+    
+  if (agentName === "notes") {
+    const text = log.action || "Compte rendu";
+    
+    
+    let title = "Compte rendu";
+
+const objetMatch = text.match(/objet\s*:\s*(.+)/i);
+
+if (objetMatch && objetMatch[1]) {
+  title = objetMatch[1].trim().slice(0, 80);
+} else {
+  title =
+    text
+      .split("\n")
+      .find(line =>
+        line.trim().length > 8 &&
+        !line.toLowerCase().includes("compte rendu") &&
+        !line.toLowerCase().includes("résumé")
+      ) || "Compte rendu";
+
+  title = title.trim().slice(0, 80);
 }
 
     return `
