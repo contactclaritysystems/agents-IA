@@ -5673,7 +5673,10 @@ async function loadHistory(agentName) {
 
     if (agentName === "mails") {
   const text = log.action || "";
-
+      
+const toMatch = text.match(/DESTINATAIRE:\s*(.+)/i);
+const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
+      
   const objetMatch = text.match(/OBJET:\s*(.+)/i);
   const title = objetMatch && objetMatch[1]
     ? objetMatch[1].trim().slice(0, 80)
@@ -5687,8 +5690,9 @@ async function loadHistory(agentName) {
         <div class="agent-title-wrap">
           <div class="agent-name">${title}</div>
           <div class="agent-desc">
-            ${new Date(log.created_at).toLocaleString("fr-FR")}
-          </div>
+  ${recipient ? recipient + "<br>" : ""}
+  ${new Date(log.created_at).toLocaleString("fr-FR")}
+</div>
         </div>
 
         <div class="agent-status ok">Envoyé</div>
