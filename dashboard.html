@@ -4945,20 +4945,39 @@ try {
   });
 
   const text = await response.text();
-  console.log("Réponse Make Notes brute:", text);
+console.log("Réponse Make Notes brute:", text);
 
-  let summary = text.trim();
+let data = {};
+let summary = "";
+
+try {
+  data = JSON.parse(text);
+
+  summary =
+    data.compte_rendu ||
+    data.summary ||
+    data.resume ||
+    data.content ||
+    data.text ||
+    data.message ||
+    "";
+} catch (e) {
+  summary = text.trim();
+}
+
+summary = String(summary || "").trim();
 
 console.log("SUMMARY NOTES:", summary);
   
 if (
   !response.ok ||
   !summary ||
+  summary === "Compte rendu créé" ||
   summary.includes("Veuillez réessayer") ||
   summary.includes("n’a pas pu") ||
   summary.includes("Impossible de")
 ) {
-  const message = "Impossible de créer le compte rendu.";
+  const message = "Impossible de récupérer le compte rendu complet.";
 
   setDictationBoxState(box, "error");
   box.innerHTML = "✕ " + message;
