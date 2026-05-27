@@ -3337,21 +3337,21 @@ async function loadAppointments() {
     });
   }
 
- function renderAppointment(a) {
+function renderAppointment(a) {
   const index = currentAppointments.findIndex(item => item.id === a.id);
 
   return `
-   <div class="gmail-section" style="
-  display:block;
-  cursor:pointer;
-  padding:18px;
-  min-height:auto;
-" ...
-
-     <div class="section-title" style="font-size:20px;">
+    <div class="gmail-section" onclick="openAppointmentDetail(${index})" style="
+      display:block;
+      cursor:pointer;
+      padding:22px;
+      min-height:auto;
+    ">
+      <div class="section-title" style="font-size:20px;">
         ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
       </div>
-      <div class="gmail-desc" style="margin-top:8px;">
+
+      <div class="gmail-desc" style="margin-top:10px;">
         ${formatDate(a.appointment_date)} · ${a.title || "Sans motif"}<br>
         ${a.location ? "📍 " + a.location : ""}
       </div>
