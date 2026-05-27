@@ -5340,6 +5340,30 @@ async function loadHistory(agentName) {
   }
 }
 
+  function openNotesHistoryDetail(index) {
+  const log = currentHistoryLogs[index];
+  if (!log) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  window.currentHistorySubPage = "notes-detail";
+
+  list.innerHTML = `
+    <div class="gmail-section" style="display:block;">
+      <div class="section-title">Compte rendu</div>
+
+      <div class="gmail-desc" style="margin-top:8px;">
+        ${new Date(log.created_at).toLocaleString("fr-FR")}
+      </div>
+
+      <div style="margin-top:16px; white-space:pre-wrap; line-height:1.55; font-size:14px;">
+        ${log.action || "Compte rendu vide"}
+      </div>
+    </div>
+  `;
+}
+
  function handleHistoryBack() {
   if (window.currentHistorySubPage === "planning-list") {
     openPlanningHistoryFolders();
