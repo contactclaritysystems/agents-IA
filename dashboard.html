@@ -4967,6 +4967,17 @@ try {
 
 summary = String(summary || "").trim();
 
+let notesTitle = "Compte rendu";
+
+const titleMatch = summary.match(/^OBJET:\s*(.+)$/im);
+
+if (titleMatch && titleMatch[1]) {
+  notesTitle = titleMatch[1].trim().slice(0, 80);
+  summary = summary.replace(/^OBJET:\s*.+$/im, "").trim();
+}
+
+console.log("TITRE NOTES:", notesTitle);
+
 console.log("SUMMARY NOTES:", summary);
   
 if (
@@ -4995,7 +5006,11 @@ autoHideDictationBox(box);
 
 openNotesPreview(summary);
 
-await saveActionLog("notes", summary, "success");
+await saveActionLog(
+  "notes",
+  notesTitle + "\n\n" + summary,
+  "success"
+);
 await loadActionCounter();
 } catch (err) {
   console.error("Erreur Make Notes:", err);
