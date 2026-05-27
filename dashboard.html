@@ -5617,6 +5617,8 @@ function closeHistoryDetail() {
   let currentPastFollowUps = [];
   let currentAppointments = [];
   let currentAppointmentInitialNote = "";
+  let currentFollowUps = [];
+  let currentFollowUpInitialNote = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6389,6 +6391,7 @@ window.logout = logout;
 }
 
 function openPlanningFollowUps() {
+  window.currentPlanningSubPage = "followups-list";
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
@@ -6404,8 +6407,8 @@ function openPlanningFollowUps() {
 
   loadFollowUps();
 }
-
 function closePlanningDetail() {
+
   if (window.currentPlanningSubPage === "appointment-detail") {
     const currentNote = document.getElementById("appointment-note-input")?.value || "";
 
@@ -6418,6 +6421,23 @@ function closePlanningDetail() {
     loadAppointments();
     return;
   }
+
+  // ICI ↓↓↓
+
+  if (window.currentPlanningSubPage === "followup-detail") {
+    const currentNote = document.getElementById("followup-note-input")?.value || "";
+
+    if (currentNote.trim() !== currentFollowUpInitialNote.trim()) {
+      const confirmLeave = confirm("Votre note n’est pas enregistrée. Si vous quittez, elle sera perdue.");
+      if (!confirmLeave) return;
+    }
+
+    window.currentPlanningSubPage = "followups-list";
+    loadFollowUps();
+    return;
+  }
+
+  // ↑↑↑ ICI
 
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
@@ -6466,6 +6486,7 @@ async function loadFollowUps() {
   }
 
   const relances = await response.json();
+  currentFollowUps = relances || [];
 
   if (!relances || relances.length === 0) {
     list.innerHTML = `<div class="info-box">Aucune relance prévue.</div>`;
@@ -6473,17 +6494,16 @@ async function loadFollowUps() {
   }
   
 list.innerHTML = relances.map((r, index) => `
-  <div class="agent-card" onclick="openPastFollowUpDetail(${index})">
+  <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
     <div class="agent-head">
       <div class="agent-emoji">🔁</div>
 
       <div class="agent-title-wrap">
         <div class="agent-name">
-          ${r.contact_name || "Relance"}
+          ${formatDateShort(r.reminder_date)} · ${r.contact_name || "Relance"}
         </div>
 
         <div class="agent-desc">
-          ${formatDateShort(r.reminder_date)}<br>
           ${r.reason || "Sans motif"}
         </div>
       </div>
@@ -6492,6 +6512,111 @@ list.innerHTML = relances.map((r, index) => `
     </div>
   </div>
 `).join("");
+}
+
+  function openFollowUpDetail(index) {
+  const r = currentFollowUps[index];
+  if (!r) return;
+
+  window.currentPlanningSubPage = "followup-detail";
+  currentFollowUpInitialNote = r.message_context || "";
+
+  const detail = document.getElementById("planning-detail");
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
+
+  if (title) title.textContent = "Relance";
+
+  if (detail) {
+    detail.style.display = "block";
+    detail.classList.add("open");
+  }
+
+  if (!list) return;
+
+  list.innerHTML = `
+    <div class="agent-card" style="padding:22px;">
+      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
+        ${r.contact_name || "Relance"}
+      </div>
+
+      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+        ${formatDateShort(r.reminder_date)}
+      </div>
+
+      <div style="
+        background:#f7f7f8;
+        border-radius:16px;
+        padding:14px;
+        margin-bottom:18px;
+      ">
+        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
+          Motif
+        </div>
+        <div style="font-size:16px;font-weight:800;line-height:1.35;">
+          ${r.reason || "Non renseigné"}
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Note</div>
+        <textarea class="field-input" id="followup-note-input" style="min-height:110px;" oninput="toggleFollowUpNoteSave(this)">${r.message_context || ""}</textarea>
+      </div>
+
+      <button class="save-btn" id="followup-note-save-btn" onclick="saveFollowUpNote('${r.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
+        💾 Enregistrer la note
+      </button>
+    </div>
+  `;
+}
+
+  function toggleFollowUpNoteSave(textarea) {
+  const btn = document.getElementById("followup-note-save-btn");
+  if (!btn) return;
+
+  const hasText = textarea.value.trim().length > 0;
+
+  btn.disabled = !hasText;
+  btn.style.opacity = hasText ? "1" : ".45";
+}
+
+  async function saveFollowUpNote(followUpId) {
+  const note = document.getElementById("followup-note-input")?.value.trim() || "";
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/follow_ups?id=eq." + followUpId,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        message_context: note,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur sauvegarde note", "error");
+    return;
+  }
+
+  showToast("Note enregistrée");
+  currentFollowUpInitialNote = note;
+  await loadFollowUps();
 }
 
   function toggleAppointmentNoteSave(textarea) {
