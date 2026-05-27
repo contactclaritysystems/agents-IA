@@ -3299,6 +3299,7 @@ async function loadAppointments() {
   }
 
   const appointments = await response.json();
+  currentAppointments = appointments || [];
 
   if (!appointments || appointments.length === 0) {
     list.innerHTML = `
@@ -3336,19 +3337,21 @@ async function loadAppointments() {
     });
   }
 
-  function renderAppointment(a) {
-    return `
-      <div class="gmail-section" style="display:block; cursor:pointer;">
-        <div class="section-title">
-          ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
-        </div>
-        <div class="gmail-desc" style="margin-top:8px;">
-          ${formatDate(a.appointment_date)} · ${a.title || "Sans motif"}<br>
-          ${a.location ? "📍 " + a.location : ""}
-        </div>
-      </div>
-    `;
-  }
+ function renderAppointment(a) {
+  const index = currentAppointments.findIndex(item => item.id === a.id);
+
+  return `
+    <div class="gmail-section" style="display:block; cursor:pointer;" onclick="openAppointmentDetail(${index})">
+      <div class="section-title">
+        ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
+      </div>
+      <div class="gmail-desc" style="margin-top:8px;">
+        ${formatDate(a.appointment_date)} · ${a.title || "Sans motif"}<br>
+        ${a.location ? "📍 " + a.location : ""}
+      </div>
+    </div>
+  `;
+}
 
   function renderSection(title, items) {
     if (!items.length) return "";
@@ -3395,6 +3398,90 @@ async function loadAppointments() {
       </div>
     `;
   }
+}
+
+  function openAppointmentDetail(index) {
+  const a = currentAppointments[index];
+  if (!a) return;
+
+  const detail = document.getElementById("planning-detail");
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
+
+  if (title) title.textContent = "Rendez-vous";
+
+  if (detail) {
+    detail.style.display = "block";
+    detail.classList.add("open");
+  }
+
+  if (!list) return;
+
+  list.innerHTML = `
+    <div class="gmail-section" style="display:block;">
+
+      <div class="section-title">
+        ${a.contact_name || "Rendez-vous"}
+      </div>
+
+      <div class="gmail-desc" style="margin-top:8px;">
+        ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
+      </div>
+
+      <div class="detail-line" style="margin-top:16px;">
+        <span>Motif</span>
+        <strong>${a.title || "Non renseigné"}</strong>
+      </div>
+
+      <div class="field-group" style="margin-top:18px;">
+        <div class="field-label">Note</div>
+        <textarea class="field-input" id="appointment-note-input" style="min-height:140px;">${a.description || ""}</textarea>
+      </div>
+
+      <button class="save-btn" onclick="saveAppointmentNote('${a.id}')" type="button">
+        💾 Enregistrer la note
+      </button>
+
+    </div>
+  `;
+}
+
+  async function saveAppointmentNote(appointmentId) {
+  const note = document.getElementById("appointment-note-input")?.value.trim() || "";
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/appointments?id=eq." + appointmentId,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        description: note,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur sauvegarde note", "error");
+    return;
+  }
+
+  showToast("Note enregistrée");
+  await loadAppointments();
 }
 
   function handleGmailMobileCard() {
@@ -5338,6 +5425,7 @@ function closeHistoryDetail() {
 
   let currentHistoryLogs = [];
   let currentPastAppointments = [];
+  let currentAppointments = [];
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
