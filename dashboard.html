@@ -3353,7 +3353,7 @@ function renderAppointment(a) {
 
         <div class="agent-title-wrap">
           <div class="agent-name">
-            ${formatDateShort(a.appointment_date)} · ${a.appointment_time?.slice(0,5) || ""} — ${a.contact_name || "Rendez-vous"}
+            ${formatDateShort(a.appointment_date)} · ${a.appointment_time?.slice(0,5) || ""} · ${a.contact_name || "Rendez-vous"}
           </div>
 
           <div class="agent-desc">
