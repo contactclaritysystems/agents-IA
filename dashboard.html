@@ -5259,6 +5259,10 @@ async function loadHistory(agentName) {
   if (!list || !currentUser) return;
 
   list.classList.remove("planning-folder-grid");
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "14px";
+
   list.innerHTML = `<div class="info-box">Chargement de l’historique...</div>`;
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
@@ -5298,16 +5302,18 @@ async function loadHistory(agentName) {
 
   list.innerHTML = logs.map((log, index) => {
     if (agentName === "notes") {
-      const text = log.action || "Compte rendu";
-      const title = text.split("\n")[0].replace("Résumé :", "").trim() || "Compte rendu";
+      const text = log.action || "";
+      const firstLine = text.split("\n").find(l => l.trim()) || "Compte rendu";
 
       return `
-        <div class="agent-card" onclick="openNotesHistoryDetail(${index})">
+        <div class="agent-card" onclick="openNotesHistoryDetail(${index})" style="width:100%;">
           <div class="agent-head">
             <div class="agent-emoji">${log.status === "success" ? "📝" : "❌"}</div>
             <div class="agent-title-wrap">
-              <div class="agent-name">${title}</div>
-              <div class="agent-desc">${new Date(log.created_at).toLocaleString("fr-FR")}</div>
+              <div class="agent-name">${firstLine.slice(0, 80)}</div>
+              <div class="agent-desc">
+                ${new Date(log.created_at).toLocaleString("fr-FR")}
+              </div>
             </div>
             <div class="agent-status ok">Voir</div>
           </div>
@@ -5316,7 +5322,7 @@ async function loadHistory(agentName) {
     }
 
     return `
-      <div class="agent-card">
+      <div class="agent-card" style="width:100%;">
         <div class="agent-head" style="cursor:default;">
           <div class="agent-emoji">${log.status === "success" ? "✅" : "❌"}</div>
           <div class="agent-title-wrap">
