@@ -5431,18 +5431,49 @@ if (objetMatch && objetMatch[1]) {
         ${new Date(log.created_at).toLocaleString("fr-FR")}
       </div>
 
-      <div style="
-        margin-top:16px;
-        white-space:pre-wrap;
-        line-height:1.6;
-        font-size:14px;
-        word-break:break-word;
-      ">
-        ${log.action || "Compte rendu vide"}
-      </div>
+      <button class="save-btn" onclick="sendHistoryNoteByEmail(${index})" type="button" style="margin-top:16px;">
+  📤 Envoyer par mail
+</button>
+
+<div style="
+  margin-top:16px;
+  white-space:pre-wrap;
+  line-height:1.6;
+  font-size:14px;
+  word-break:break-word;
+">
+  ${log.action || "Compte rendu vide"}
+</div>
 
     </div>
   `;
+}
+
+  function sendHistoryNoteByEmail(index) {
+  const log = currentHistoryLogs[index];
+  if (!log) return;
+
+  const summary = log.action || "";
+
+  if (!summary.trim()) {
+    showToast("Compte rendu vide", "error");
+    return;
+  }
+
+  currentNotesSummary = summary;
+
+  openMailPreview({
+    to: "",
+    subject: "Compte rendu",
+    body:
+`Bonjour,
+
+Voici le compte rendu :
+
+${summary}
+
+Bonne journée,`
+  }, "Compte rendu envoyé par mail");
 }
 
  function handleHistoryBack() {
