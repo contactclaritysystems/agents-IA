@@ -2808,7 +2808,7 @@ select.field-input {
     <div class="agent-card history-folder-card" onclick="openHistoryAgent('mails')">
       <div class="history-folder-icon">📧</div>
       <div>
-        <div class="agent-name">Agent Mails</div>
+        <div class="agent-name">Mails</div>
         <div class="agent-desc">Mails envoyés ou échoués</div>
       </div>
       <div class="agent-status ok">Historique</div>
@@ -2817,19 +2817,27 @@ select.field-input {
     <div class="agent-card history-folder-card" onclick="openHistoryAgent('notes')">
   <div class="history-folder-icon">📝</div>
   <div>
-    <div class="agent-name">Agent Compte Rendu</div>
+    <div class="agent-name">Compte Rendu</div>
     <div class="agent-desc">Comptes rendus créés</div>
   </div>
   <div class="agent-status ok">Historique</div>
 </div>
-
-    <div class="agent-card history-folder-card" onclick="openPlanningHistoryFolders()">
+<div class="agent-card history-folder-card" onclick="loadPastAppointments()">
   <div class="history-folder-icon">📅</div>
   <div>
-    <div class="agent-name">Agent Planning</div>
-    <div class="agent-desc">Dictées et anciens rendez-vous</div>
+    <div class="agent-name">Rendez-vous</div>
+    <div class="agent-desc">Anciens rendez-vous</div>
   </div>
-  <div class="agent-status ok">Historique</div>
+  <div class="agent-status ok">Voir</div>
+</div>
+
+<div class="agent-card history-folder-card" onclick="loadPastFollowUps()">
+  <div class="history-folder-icon">🔁</div>
+  <div>
+    <div class="agent-name">Relances</div>
+    <div class="agent-desc">Relances passées</div>
+  </div>
+  <div class="agent-status ok">Voir</div>
 </div>
 
     <div class="agent-card history-folder-card" style="opacity:.5;">
