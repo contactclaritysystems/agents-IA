@@ -5214,25 +5214,85 @@ let contactsCache = [];
 
   const appointments = await response.json();
 
+  currentPastAppointments = appointments || [];
+
   if (!appointments || appointments.length === 0) {
     list.innerHTML = `<div class="info-box">Aucun rendez-vous passé pour le moment.</div>`;
     return;
   }
 
-  list.innerHTML = appointments.map(a => `
-    <div class="agent-card">
-      <div class="agent-head" style="cursor:default;">
-        <div class="agent-emoji">📅</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">${a.contact_name || "Rendez-vous"}</div>
-          <div class="agent-desc">
-            ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
-            ${a.title || "Sans motif"}
-          </div>
+ list.innerHTML = appointments.map((a, index) => `
+  <div class="agent-card" onclick="openPastAppointmentDetail(${index})">
+    <div class="agent-head">
+      <div class="agent-emoji">📅</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">${a.contact_name || "Rendez-vous"}</div>
+        <div class="agent-desc">
+          ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
+          ${a.title || "Sans motif"}
         </div>
       </div>
+      <div class="agent-status ok">Voir</div>
     </div>
-  `).join("");
+  </div>
+`).join("");
+}
+
+  function openPastAppointmentDetail(index) {
+  const a = currentPastAppointments[index];
+  if (!a) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  window.currentHistorySubPage = "past-appointment-detail";
+
+  list.classList.remove("planning-folder-grid");
+  list.style.display = "flex";
+  list.style.flexDirection = "column";
+  list.style.gap = "14px";
+
+  list.innerHTML = `
+    <div class="gmail-section" style="display:block;">
+      <div class="section-title">
+        ${a.contact_name || "Rendez-vous"}
+      </div>
+
+      <div class="gmail-desc" style="margin-top:8px;">
+        ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
+      </div>
+
+      <div class="detail-line" style="margin-top:16px;">
+        <span>Motif</span>
+        <strong>${a.title || "Non renseigné"}</strong>
+      </div>
+
+      <div class="detail-line">
+        <span>Société</span>
+        <strong>${a.company || "Non renseignée"}</strong>
+      </div>
+
+      <div class="detail-line">
+        <span>Téléphone</span>
+        <strong>${a.phone || "Non renseigné"}</strong>
+      </div>
+
+      <div class="detail-line">
+        <span>Email</span>
+        <strong>${a.email || "Non renseigné"}</strong>
+      </div>
+
+      <div style="
+        margin-top:16px;
+        white-space:pre-wrap;
+        line-height:1.6;
+        font-size:14px;
+        word-break:break-word;
+      ">
+        ${a.description || "Aucune description."}
+      </div>
+    </div>
+  `;
 }
 
 function openHistoryAgent(agentName) {
@@ -5261,6 +5321,11 @@ detail.classList.add("open");
   loadHistory(agentName);
 }
 
+if (window.currentHistorySubPage === "past-appointment-detail") {
+  loadPastAppointments();
+  return;
+}
+
 function closeHistoryDetail() {
 
   const detail = document.getElementById("history-detail");
@@ -5284,6 +5349,7 @@ function closeHistoryDetail() {
 }
 
   let currentHistoryLogs = [];
+  let currentPastAppointments = [];
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
