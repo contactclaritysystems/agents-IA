@@ -5301,41 +5301,51 @@ async function loadHistory(agentName) {
   }
 
   list.innerHTML = logs.map((log, index) => {
-    if (agentName === "notes") {
-      const text = log.action || "";
-      const firstLine = text.split("\n").find(l => l.trim()) || "Compte rendu";
+  if (agentName === "notes") {
+    const text = log.action || "Compte rendu";
+    const title =
+      text.split("\n")[0]
+        .replace("Résumé :", "")
+        .trim()
+        .slice(0, 60) || "Compte rendu";
 
-      return `
-        <div class="agent-card" onclick="openNotesHistoryDetail(${index})" style="width:100%;">
-          <div class="agent-head">
-            <div class="agent-emoji">${log.status === "success" ? "📝" : "❌"}</div>
-            <div class="agent-title-wrap">
-              <div class="agent-name">${firstLine.slice(0, 80)}</div>
-              <div class="agent-desc">
-                ${new Date(log.created_at).toLocaleString("fr-FR")}
-              </div>
-            </div>
-            <div class="agent-status ok">Voir</div>
-          </div>
-        </div>
-      `;
-    }
+    return `
+      <div class="agent-card" onclick="openNotesHistoryDetail(${index})">
+        <div class="agent-head">
+          <div class="agent-emoji">${log.status === "success" ? "📝" : "❌"}</div>
 
-    return `
-      <div class="agent-card" style="width:100%;">
-        <div class="agent-head" style="cursor:default;">
-          <div class="agent-emoji">${log.status === "success" ? "✅" : "❌"}</div>
-          <div class="agent-title-wrap">
-            <div class="agent-name">${log.status === "success" ? "Action réussie" : "Action échouée"}</div>
-            <div class="agent-desc">
-              ${log.action || "Action sans détail"}<br>
-              ${new Date(log.created_at).toLocaleString("fr-FR")}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
+          <div class="agent-title-wrap">
+            <div class="agent-name">${title}</div>
+            <div class="agent-desc">
+              ${new Date(log.created_at).toLocaleString("fr-FR")}
+            </div>
+          </div>
+
+          <div class="agent-status ok">Voir</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="agent-card">
+      <div class="agent-head" style="cursor:default;">
+        <div class="agent-emoji">${log.status === "success" ? "✅" : "❌"}</div>
+
+        <div class="agent-title-wrap">
+          <div class="agent-name">
+            ${log.status === "success" ? "Action réussie" : "Action échouée"}
+          </div>
+
+          <div class="agent-desc">
+            ${log.action || "Action sans détail"}<br>
+            ${new Date(log.created_at).toLocaleString("fr-FR")}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}).join("");
 
   if (logs.length >= historyLimit) {
     list.innerHTML += `
