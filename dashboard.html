@@ -5687,15 +5687,25 @@ const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
       <div class="agent-head">
         <div class="agent-emoji">📧</div>
 
-        <div class="agent-title-wrap">
-          <div class="agent-name">${title}</div>
-          <div class="agent-desc">
-  ${recipient ? recipient + "<br>" : ""}
-  ${new Date(log.created_at).toLocaleString("fr-FR")}
-</div>
-        </div>
+        <div class="agent-title-wrap" style="min-width:0;">
+  <div class="agent-name" style="
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  ">
+    ${title}
+  </div>
 
-        <div class="agent-status ok">Envoyé</div>
+  <div class="agent-desc" style="
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  ">
+    ${recipient ? recipient + " · " : ""}${new Date(log.created_at).toLocaleString("fr-FR")}
+  </div>
+</div>
+
+        <div class="agent-status ok" style="flex-shrink:0;">Envoyé</div>
       </div>
     </div>
   `;
