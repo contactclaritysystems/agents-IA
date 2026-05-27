@@ -5358,6 +5358,76 @@ let contactsCache = [];
 `).join("");
 }
 
+  async function loadPastFollowUps() {
+
+  if (!currentUser) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  list.innerHTML = `<div class="info-box">Chargement des relances...</div>`;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession
+    ? JSON.parse(rawSession)?.access_token
+    : null;
+
+  if (!accessToken) {
+    list.innerHTML = `<div class="info-box">Session expirée.</div>`;
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const response = await fetch(
+    SUPABASE_URL +
+    "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
+    "&reminder_date=lt." + today +
+    "&order=reminder_date.desc",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    list.innerHTML = `<div class="info-box">Impossible de charger les relances.</div>`;
+    return;
+  }
+
+  const relances = await response.json();
+
+  if (!relances || relances.length === 0) {
+    list.innerHTML = `<div class="info-box">Aucune ancienne relance.</div>`;
+    return;
+  }
+
+  list.innerHTML = relances.map(r => `
+    <div class="agent-card">
+      <div class="agent-head">
+        <div class="agent-emoji">🔁</div>
+
+        <div class="agent-title-wrap">
+          <div class="agent-name">
+            ${r.contact_name || "Relance"}
+          </div>
+
+          <div class="agent-desc">
+            ${formatDateShort(r.reminder_date)}<br>
+            ${r.reason || ""}
+          </div>
+        </div>
+
+        <div class="agent-status ok">Passée</div>
+      </div>
+    </div>
+  `).join("");
+}
+
   function openPastAppointmentDetail(index) {
   const a = currentPastAppointments[index];
   if (!a) return;
