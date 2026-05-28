@@ -6739,8 +6739,8 @@ async function loadFollowUps() {
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
-    "&reminder_date=gte." + new Date().toISOString().slice(0, 10) +
-    "&order=reminder_date.asc",
+"&status=eq.pending" +
+"&order=reminder_date.asc",
     {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
