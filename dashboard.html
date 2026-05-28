@@ -6858,6 +6858,17 @@ list.innerHTML = relances.map((r, index) => `
         ${formatDateShort(r.reminder_date)}
       </div>
 
+      <div class="field-group" style="margin-bottom:14px;">
+  <div class="field-label">Date de relance</div>
+  <input
+    class="field-input"
+    id="followup-date-input"
+    type="date"
+    value="${r.reminder_date || ""}"
+    oninput="toggleFollowUpSave()"
+  >
+</div>
+
       <div style="
         background:#f7f7f8;
         border-radius:16px;
