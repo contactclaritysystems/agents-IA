@@ -5569,21 +5569,39 @@ if (detail) {
     return;
   }
 
- list.innerHTML = appointments.map((a, index) => `
-  <div class="agent-card" onclick="openPastAppointmentDetail(${index})">
-    <div class="agent-head">
-      <div class="agent-emoji">📅</div>
-      <div class="agent-title-wrap">
-        <div class="agent-name">${a.contact_name || "Rendez-vous"}</div>
-        <div class="agent-desc">
-          ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
-          ${a.title || "Sans motif"}
+ list.innerHTML = appointments.map((a, index) => {
+
+  const statusLabel = getItemStatusLabel(a.status);
+  const statusIcon = getItemStatusIcon(a.status);
+  const statusClass = getItemStatusClass(a.status);
+
+  return `
+    <div class="agent-card" onclick="openPastAppointmentDetail(${index})">
+      <div class="agent-head">
+
+        <div class="agent-emoji">
+          ${statusIcon}
         </div>
+
+        <div class="agent-title-wrap">
+          <div class="agent-name">
+            ${a.contact_name || "Rendez-vous"}
+          </div>
+
+          <div class="agent-desc">
+            ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
+            ${a.title || "Sans motif"}
+          </div>
+        </div>
+
+        <div class="agent-status ${statusClass}">
+          ${statusLabel}
+        </div>
+
       </div>
-      <div class="agent-status ok">Voir</div>
     </div>
-  </div>
-`).join("");
+  `;
+}).join("");
 }
 
   async function loadPastFollowUps() {
@@ -6864,25 +6882,39 @@ async function loadFollowUps() {
     return;
   }
   
-list.innerHTML = relances.map((r, index) => `
-  <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
-    <div class="agent-head">
-      <div class="agent-emoji">🔁</div>
+list.innerHTML = relances.map((r, index) => {
 
-      <div class="agent-title-wrap">
-        <div class="agent-name">
-          ${formatDateShort(r.reminder_date)} · ${r.contact_name || "Relance"}
+  const statusLabel = getItemStatusLabel(r.status);
+  const statusIcon = getItemStatusIcon(r.status);
+  const statusClass = getItemStatusClass(r.status);
+
+  return `
+    <div class="agent-card" onclick="openPastFollowUpDetail(${index})" style="cursor:pointer;">
+      <div class="agent-head">
+
+        <div class="agent-emoji">
+          ${statusIcon}
         </div>
 
-        <div class="agent-desc">
-          ${r.reason || "Sans motif"}
+        <div class="agent-title-wrap">
+          <div class="agent-name">
+            ${r.contact_name || "Relance"}
+          </div>
+
+          <div class="agent-desc">
+            ${formatDateShort(r.reminder_date)}<br>
+            ${r.reason || ""}
+          </div>
         </div>
+
+        <div class="agent-status ${statusClass}">
+          ${statusLabel}
+        </div>
+
       </div>
-
-      <div class="agent-status ok">Voir</div>
     </div>
-  </div>
-`).join("");
+  `;
+}).join("");
 }
 
   function openFollowUpDetail(index) {
