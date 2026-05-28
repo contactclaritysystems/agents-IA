@@ -5521,9 +5521,9 @@ if (detail) {
 
   const response = await fetch(
     SUPABASE_URL +
-    "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
-    "&reminder_date=lt." + today +
-    "&order=reminder_date.desc",
+"/rest/v1/follow_ups?user_id=eq." + currentUser.id +
+"&status=in.(done,cancelled)" +
+"&order=reminder_date.desc",
     {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
