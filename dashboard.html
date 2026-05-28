@@ -3581,6 +3581,55 @@ function renderAppointment(a) {
   loadAppointments();
 }
 
+  async function deleteFollowUp(id) {
+
+  const confirmDelete = confirm(
+    "Supprimer cette relance ?"
+  );
+
+  if (!confirmDelete) return;
+
+  const storageKey =
+    "sb-vduqkeodewrdwsqwokmu-auth-token";
+
+  const rawSession =
+    localStorage.getItem(storageKey);
+
+  const accessToken =
+    rawSession
+      ? JSON.parse(rawSession)?.access_token
+      : null;
+
+  if (!accessToken) {
+    showToast("Session expirée");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL +
+    "/rest/v1/follow_ups?id=eq." + id,
+    {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur suppression", "error");
+    return;
+  }
+
+  showToast("Relance supprimée");
+
+  window.currentPlanningSubPage = "followups-list";
+
+  loadFollowUps();
+}
+
   function handleGmailMobileCard() {
   const lbl = document.getElementById("gmail-status-label");
   const isConnected = lbl && lbl.textContent.includes("Connecté");
