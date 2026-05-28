@@ -6749,6 +6749,16 @@ list.innerHTML = relances.map((r, index) => `
       <button class="save-btn" id="followup-note-save-btn" onclick="saveFollowUpNote('${r.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
         💾 Enregistrer la note
       </button>
+
+      <button
+  class="sheet-btn"
+  onclick="deleteFollowUp('${r.id}')"
+  type="button"
+  style="width:100%;justify-content:center;margin-top:10px;color:#dc2626;"
+>
+  Supprimer la relance
+</button>
+
     </div>
   `;
 }
