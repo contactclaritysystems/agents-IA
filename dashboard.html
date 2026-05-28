@@ -5773,6 +5773,16 @@ if (objetMatch && objetMatch[1]) {
   }
 }
 
+  function getNoteTitle(text) {
+  const objetMatch = text.match(/objet\s*:\s*(.+)/i);
+
+  if (objetMatch && objetMatch[1]) {
+    return objetMatch[1].trim().slice(0, 80);
+  }
+
+  return "Détail";
+}
+
   function openNotesHistoryDetail(index) {
 
   const log = currentHistoryLogs[index];
@@ -5780,6 +5790,12 @@ if (objetMatch && objetMatch[1]) {
 
   const list = document.getElementById("history-list");
   if (!list) return;
+
+    
+const cleanText = (log.action || "")
+  .replace(/^Compte rendu\s*/i, "")
+  .trim();
+
 
   window.currentHistorySubPage = "notes-detail";
 
@@ -5792,8 +5808,8 @@ if (objetMatch && objetMatch[1]) {
     <div class="gmail-section" style="display:block;">
       
       <div class="section-title">
-        Compte rendu
-      </div>
+  ${getNoteTitle(log.action || "")}
+</div>
 
       <div class="gmail-desc" style="margin-top:8px;">
         ${new Date(log.created_at).toLocaleString("fr-FR")}
@@ -5810,7 +5826,7 @@ if (objetMatch && objetMatch[1]) {
   font-size:14px;
   word-break:break-word;
 ">
-  ${log.action || "Compte rendu vide"}
+  ${cleanText || "Compte rendu vide"}
 </div>
 
     </div>
