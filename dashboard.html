@@ -6895,14 +6895,19 @@ list.innerHTML = relances.map((r, index) => `
   `;
 }
 
-  function toggleFollowUpNoteSave(textarea) {
+  function toggleFollowUpSave() {
   const btn = document.getElementById("followup-note-save-btn");
   if (!btn) return;
 
-  const hasText = textarea.value.trim().length > 0;
+  const note = document.getElementById("followup-note-input")?.value || "";
+  const reason = document.getElementById("followup-reason-input")?.value || "";
 
-  btn.disabled = !hasText;
-  btn.style.opacity = hasText ? "1" : ".45";
+  const hasChanges =
+    note.trim() !== currentFollowUpInitialNote.trim() ||
+    reason.trim() !== currentFollowUpInitialReason.trim();
+
+  btn.disabled = !hasChanges;
+  btn.style.opacity = hasChanges ? "1" : ".45";
 }
 
   async function saveFollowUpNote(followUpId) {
