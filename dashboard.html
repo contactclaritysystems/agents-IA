@@ -3474,6 +3474,21 @@ function renderAppointment(a) {
       <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointmentNote('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
         💾 Enregistrer la note
       </button>
+
+      <button
+  class="sheet-btn"
+  onclick="deleteAppointment('${a.id}')"
+  type="button"
+  style="
+    width:100%;
+    justify-content:center;
+    margin-top:10px;
+    color:#dc2626;
+  "
+>
+  Supprimer le rendez-vous
+</button>
+
     </div>
   `;
 }
