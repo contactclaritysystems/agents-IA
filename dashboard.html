@@ -6955,6 +6955,7 @@ list.innerHTML = relances.map((r, index) => `
   currentFollowUpInitialNote = note;
   currentFollowUpInitialReason = reason;
 
+  window.currentPlanningSubPage = "followups-list";
   await loadFollowUps();
 }
 
