@@ -6934,6 +6934,7 @@ const hasChanges =
   async function saveFollowUpNote(followUpId) {
   const note = document.getElementById("followup-note-input")?.value.trim() || "";
   const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
+  const date = document.getElementById("followup-date-input")?.value || "";
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
@@ -6956,6 +6957,7 @@ const hasChanges =
       },
       body: JSON.stringify({
         reason: reason,
+        reminder_date: date,
         message_context: note,
         updated_at: new Date().toISOString()
       })
@@ -6971,6 +6973,7 @@ const hasChanges =
 
   currentFollowUpInitialNote = note;
   currentFollowUpInitialReason = reason;
+  currentFollowUpInitialDate = date;
 
   window.currentPlanningSubPage = "followups-list";
   await loadFollowUps();
