@@ -3278,6 +3278,29 @@ function syncPlanningStatus() {
   const [year, month, day] = dateStr.split("-");
   return `${day}-${month}-${year}`;
 }
+
+  function getItemStatusLabel(status) {
+  if (status === "done") return "Terminé";
+  if (status === "cancelled") return "Annulé";
+  if (status === "missed") return "Manqué";
+  if (status === "pending") return "À faire";
+  if (status === "scheduled") return "Prévu";
+  return "Non traité";
+}
+
+function getItemStatusIcon(status) {
+  if (status === "done") return "✅";
+  if (status === "cancelled") return "❌";
+  if (status === "missed") return "⚠️";
+  return "🔁";
+}
+
+function getItemStatusClass(status) {
+  if (status === "done") return "ok";
+  if (status === "cancelled") return "empty";
+  if (status === "missed") return "pending";
+  return "ok";
+}
   
 async function loadAppointments() {
   if (!currentUser) return;
@@ -3483,6 +3506,14 @@ function renderAppointment(a) {
         💾 Enregistrer
       </button>
 
+      <button class="save-btn" onclick="event.stopPropagation(); markAppointmentDone('${a.id}')" type="button" style="margin-top:10px;">
+  ✅ Marquer comme terminé
+</button>
+
+<button class="sheet-btn" onclick="event.stopPropagation(); markAppointmentCancelled('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+  ❌ Marquer comme annulé
+</button>
+
       <button class="sheet-btn" onclick="deleteAppointment('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626;">
         Supprimer le rendez-vous
       </button>
@@ -3592,6 +3623,64 @@ function renderAppointment(a) {
   window.currentPlanningSubPage = "appointments-list";
 
   loadAppointments();
+}
+
+  async function markAppointmentDone(id) {
+  if (!confirm("Marquer ce rendez-vous comme terminé ?")) return;
+  await updateAppointmentStatus(id, "done", "Rendez-vous terminé");
+}
+
+async function markAppointmentCancelled(id) {
+  if (!confirm("Marquer ce rendez-vous comme annulé ?")) return;
+  await updateAppointmentStatus(id, "cancelled", "Rendez-vous annulé");
+}
+
+async function updateAppointmentStatus(id, status, message) {
+  const note = document.getElementById("appointment-note-input")?.value || "";
+  const title = document.getElementById("appointment-title-input")?.value || "";
+  const contact = document.getElementById("appointment-contact-input")?.value || "";
+  const date = document.getElementById("appointment-date-input")?.value || "";
+  const time = document.getElementById("appointment-time-input")?.value || "";
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/appointments?id=eq." + id,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        contact_name: contact,
+        appointment_date: date,
+        appointment_time: time,
+        title,
+        description: note,
+        status,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur modification rendez-vous", "error");
+    return;
+  }
+
+  showToast(message);
+  window.currentPlanningSubPage = "appointments-list";
+  await loadAppointments();
 }
 
   async function deleteFollowUp(id) {
@@ -5609,6 +5698,10 @@ if (detail) {
 
   window.currentHistorySubPage = "past-followup-detail";
 
+  const statusLabel = getItemStatusLabel(r.status);
+  const statusIcon = getItemStatusIcon(r.status);
+  const statusClass = getItemStatusClass(r.status);
+
   list.classList.remove("planning-folder-grid");
   list.style.display = "flex";
   list.style.flexDirection = "column";
@@ -5620,16 +5713,15 @@ if (detail) {
         ${r.contact_name || "Relance"}
       </div>
 
-      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+      <div style="font-size:14px;color:#8a8a8e;margin-bottom:14px;">
         ${formatDateShort(r.reminder_date)}
       </div>
 
-      <div style="
-        background:#f7f7f8;
-        border-radius:16px;
-        padding:14px;
-        margin-bottom:18px;
-      ">
+      <div class="agent-status ${statusClass}" style="display:inline-flex;margin-bottom:18px;">
+        ${statusIcon} ${statusLabel}
+      </div>
+
+      <div style="background:#f7f7f8;border-radius:16px;padding:14px;margin-bottom:18px;">
         <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
           Motif
         </div>
@@ -5640,17 +5732,7 @@ if (detail) {
 
       ${
         r.message_context
-          ? `
-          <div style="
-            margin-top:14px;
-            white-space:pre-wrap;
-            line-height:1.6;
-            font-size:14px;
-            word-break:break-word;
-          ">
-            ${r.message_context}
-          </div>
-        `
+          ? `<div style="margin-top:14px;white-space:pre-wrap;line-height:1.6;font-size:14px;word-break:break-word;">${r.message_context}</div>`
           : ""
       }
     </div>
@@ -6989,6 +7071,11 @@ async function markFollowUpCancelled(id) {
 }
 
 async function updateFollowUpStatus(id, status, message) {
+  const note = document.getElementById("followup-note-input")?.value || "";
+  const reason = document.getElementById("followup-reason-input")?.value || "";
+  const contact = document.getElementById("followup-contact-input")?.value || "";
+  const date = document.getElementById("followup-date-input")?.value || "";
+
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
@@ -7009,6 +7096,10 @@ async function updateFollowUpStatus(id, status, message) {
         "Prefer": "return=minimal"
       },
       body: JSON.stringify({
+        contact_name: contact,
+        reminder_date: date,
+        reason,
+        message_context: note,
         status,
         updated_at: new Date().toISOString()
       })
@@ -7089,6 +7180,9 @@ function autoHideDictationBox(box, delay = 3500) {
   window.markFollowUpDone = markFollowUpDone;
 window.markFollowUpCancelled = markFollowUpCancelled;
 window.updateFollowUpStatus = updateFollowUpStatus;
+  window.markAppointmentDone = markAppointmentDone;
+window.markAppointmentCancelled = markAppointmentCancelled;
+window.updateAppointmentStatus = updateAppointmentStatus;
   
 </script>
 
