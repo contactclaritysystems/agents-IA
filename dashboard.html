@@ -6734,17 +6734,21 @@ function closePlanningDetail() {
   // ICI ↓↓↓
 
   if (window.currentPlanningSubPage === "followup-detail") {
-    const currentNote = document.getElementById("followup-note-input")?.value || "";
+  const currentNote = document.getElementById("followup-note-input")?.value || "";
+  const currentReason = document.getElementById("followup-reason-input")?.value || "";
 
-    if (currentNote.trim() !== currentFollowUpInitialNote.trim()) {
-      const confirmLeave = confirm("Votre note n’est pas enregistrée. Si vous quittez, elle sera perdue.");
-      if (!confirmLeave) return;
-    }
-
-    window.currentPlanningSubPage = "followups-list";
-    loadFollowUps();
-    return;
+  if (
+    currentNote.trim() !== currentFollowUpInitialNote.trim() ||
+    currentReason.trim() !== currentFollowUpInitialReason.trim()
+  ) {
+    const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
+    if (!confirmLeave) return;
   }
+
+  window.currentPlanningSubPage = "followups-list";
+  loadFollowUps();
+  return;
+}
 
   // ↑↑↑ ICI
 
