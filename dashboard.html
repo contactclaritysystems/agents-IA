@@ -5805,6 +5805,7 @@ function closeHistoryDetail() {
   let currentFollowUpInitialNote = "";
   let currentFollowUpInitialReason = "";
   let currentAppointmentInitialTitle = "";
+  let currentFollowUpInitialDate = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6834,6 +6835,7 @@ list.innerHTML = relances.map((r, index) => `
   window.currentPlanningSubPage = "followup-detail";
   currentFollowUpInitialNote = r.message_context || "";
   currentFollowUpInitialReason = r.reason || "";
+  currentFollowUpInitialDate = r.reminder_date || "";
 
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
