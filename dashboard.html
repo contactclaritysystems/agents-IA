@@ -6957,6 +6957,55 @@ const hasChanges =
   await loadFollowUps();
 }
 
+  async function markFollowUpDone(id) {
+  if (!confirm("Marquer cette relance comme faite ?")) return;
+
+  await updateFollowUpStatus(id, "done", "Relance marquée comme faite");
+}
+
+async function markFollowUpCancelled(id) {
+  if (!confirm("Marquer cette relance comme annulée ?")) return;
+
+  await updateFollowUpStatus(id, "cancelled", "Relance annulée");
+}
+
+async function updateFollowUpStatus(id, status, message) {
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/follow_ups?id=eq." + id,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        status,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur modification relance", "error");
+    return;
+  }
+
+  showToast(message);
+  window.currentPlanningSubPage = "followups-list";
+  await loadFollowUps();
+}
+
   function toggleAppointmentSave() {
   const btn = document.getElementById("appointment-save-btn");
   if (!btn) return;
