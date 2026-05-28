@@ -5455,8 +5455,8 @@ if (detail) {
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + currentUser.id +
-    "&appointment_date=lt." + today +
-    "&order=appointment_date.desc&order=appointment_time.desc",
+"&status=in.(done,cancelled,missed)" +
+"&order=appointment_date.desc&order=appointment_time.desc",
     {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
