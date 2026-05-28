@@ -6864,11 +6864,11 @@ list.innerHTML = relances.map((r, index) => `
         💾 Enregistrer
       </button>
 
-<button class="save-btn" onclick="markFollowUpDone('${r.id}')" type="button" style="margin-top:10px;">
+<button class="save-btn" onclick="event.stopPropagation(); markFollowUpDone('${r.id}')" type="button" style="margin-top:10px;">
   ✅ Marquer comme faite
 </button>
 
-<button class="sheet-btn" onclick="markFollowUpCancelled('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+<button class="sheet-btn" onclick="event.stopPropagation(); markFollowUpCancelled('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;">
   ❌ Marquer comme annulée
 </button>
 
@@ -7066,6 +7066,10 @@ function autoHideDictationBox(box, delay = 3500) {
 
   }, delay);
 }
+
+  window.markFollowUpDone = markFollowUpDone;
+window.markFollowUpCancelled = markFollowUpCancelled;
+window.updateFollowUpStatus = updateFollowUpStatus;
   
 </script>
 
