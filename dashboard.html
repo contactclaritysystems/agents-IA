@@ -5559,10 +5559,28 @@ if (detail) {
     return;
   }
 
-  list.innerHTML = relances.map((r, index) => `
+  list.innerHTML = relances.map((r, index) => {
+
+  let statusIcon = '🔄';
+  let statusColor = '#999';
+
+  if (r.status === 'done') {
+    statusIcon = '✅';
+    statusColor = '#22c55e';
+  }
+
+  if (r.status === 'cancelled') {
+    statusIcon = '❌';
+    statusColor = '#ef4444';
+  }
+
+  return `
     <div class="agent-card" onclick="openPastFollowUpDetail(${index})" style="cursor:pointer;">
       <div class="agent-head">
-        <div class="agent-emoji">🔁</div>
+
+        <div class="agent-emoji" style="color:${statusColor}">
+          ${statusIcon}
+        </div>
 
         <div class="agent-title-wrap">
           <div class="agent-name">
@@ -5578,7 +5596,8 @@ if (detail) {
         <div class="agent-status ok">Voir</div>
       </div>
     </div>
-  `).join("");
+  `;
+}).join("");
 }
 
   function openPastFollowUpDetail(index) {
