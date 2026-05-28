@@ -3427,8 +3427,12 @@ function renderAppointment(a) {
   if (!a) return;
 
   window.currentPlanningSubPage = "appointment-detail";
+
   currentAppointmentInitialNote = a.description || "";
-    currentAppointmentInitialTitle = a.title || "";
+  currentAppointmentInitialTitle = a.title || "";
+  currentAppointmentInitialContact = a.contact_name || "";
+  currentAppointmentInitialDate = a.appointment_date || "";
+  currentAppointmentInitialTime = a.appointment_time?.slice(0,5) || "";
 
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
@@ -3445,31 +3449,27 @@ function renderAppointment(a) {
 
   list.innerHTML = `
     <div class="agent-card" style="padding:22px;">
-      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
-        ${a.contact_name || "Rendez-vous"}
+
+      <div class="field-group" style="margin-bottom:14px;">
+        <div class="field-label">Contact</div>
+        <input class="field-input" id="appointment-contact-input" value="${a.contact_name || ""}" placeholder="Nom du contact" oninput="toggleAppointmentSave()">
       </div>
 
-      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
-        ${formatDateShort(a.appointment_date)} à ${a.appointment_time?.slice(0,5) || ""}
-      </div>
-
-      <div style="
-        background:#f7f7f8;
-        border-radius:16px;
-        padding:14px;
-        margin-bottom:18px;
-      ">
-        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
-          Motif
+      <div class="field-row" style="margin-bottom:14px;">
+        <div class="field-group">
+          <div class="field-label">Date</div>
+          <input class="field-input" id="appointment-date-input" type="date" value="${a.appointment_date || ""}" oninput="toggleAppointmentSave()">
         </div>
-        <input
-  class="field-input"
-  id="appointment-title-input"
-  value="${a.title || ""}"
-  placeholder="Motif du rendez-vous"
-  style="font-weight:700;"
-  oninput="toggleAppointmentSave()"
->
+
+        <div class="field-group">
+          <div class="field-label">Heure</div>
+          <input class="field-input" id="appointment-time-input" type="time" value="${a.appointment_time?.slice(0,5) || ""}" oninput="toggleAppointmentSave()">
+        </div>
+      </div>
+
+      <div style="background:#f7f7f8;border-radius:16px;padding:14px;margin-bottom:18px;">
+        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">Motif</div>
+        <input class="field-input" id="appointment-title-input" value="${a.title || ""}" placeholder="Motif du rendez-vous" style="font-weight:700;" oninput="toggleAppointmentSave()">
       </div>
 
       <div class="field-group">
@@ -3478,41 +3478,35 @@ function renderAppointment(a) {
       </div>
 
       <button class="save-btn" id="appointment-save-btn" onclick="saveAppointment('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
-  💾 Enregistrer
-</button>
+        💾 Enregistrer
+      </button>
 
-      <button
-  class="sheet-btn"
-  onclick="deleteAppointment('${a.id}')"
-  type="button"
-  style="
-    width:100%;
-    justify-content:center;
-    margin-top:10px;
-    color:#dc2626;
-  "
->
-  Supprimer le rendez-vous
-</button>
+      <button class="sheet-btn" onclick="deleteAppointment('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626;">
+        Supprimer le rendez-vous
+      </button>
 
     </div>
   `;
 }
 
-  async function saveAppointmentNote(appointmentId) {
-  const note = document.getElementById("appointment-note-input")?.value.trim() || "";
+  async function saveAppointment(id) {
+  const note = document.getElementById("appointment-note-input")?.value || "";
+  const title = document.getElementById("appointment-title-input")?.value || "";
+  const contact = document.getElementById("appointment-contact-input")?.value.trim() || "";
+  const date = document.getElementById("appointment-date-input")?.value || "";
+  const time = document.getElementById("appointment-time-input")?.value || "";
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
   if (!accessToken) {
-    showToast("Session expirée", "error");
+    showToast("Session expirée");
     return;
   }
 
   const response = await fetch(
-    SUPABASE_URL + "/rest/v1/appointments?id=eq." + appointmentId,
+    SUPABASE_URL + "/rest/v1/appointments?id=eq." + id,
     {
       method: "PATCH",
       headers: {
@@ -3522,6 +3516,10 @@ function renderAppointment(a) {
         "Prefer": "return=minimal"
       },
       body: JSON.stringify({
+        contact_name: contact,
+        appointment_date: date,
+        appointment_time: time,
+        title,
         description: note,
         updated_at: new Date().toISOString()
       })
@@ -3529,15 +3527,21 @@ function renderAppointment(a) {
   );
 
   if (!response.ok) {
-    showToast("Erreur sauvegarde note", "error");
+    showToast("Erreur sauvegarde", "error");
     return;
   }
 
-  showToast("Note enregistrée");
   currentAppointmentInitialNote = note;
+  currentAppointmentInitialTitle = title;
+  currentAppointmentInitialContact = contact;
+  currentAppointmentInitialDate = date;
+  currentAppointmentInitialTime = time;
+
+  window.currentPlanningSubPage = "appointments-list";
+
+  showToast("Rendez-vous mis à jour");
   await loadAppointments();
 }
-
   
 async function saveAppointment(id) {
 
@@ -5807,6 +5811,9 @@ function closeHistoryDetail() {
   let currentAppointmentInitialTitle = "";
   let currentFollowUpInitialDate = "";
   let currentFollowUpInitialContact = "";
+  let currentAppointmentInitialContact = "";
+  let currentAppointmentInitialDate = "";
+  let currentAppointmentInitialTime = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6719,10 +6726,16 @@ function closePlanningDetail() {
   if (window.currentPlanningSubPage === "appointment-detail") {
   const currentNote = document.getElementById("appointment-note-input")?.value || "";
   const currentTitle = document.getElementById("appointment-title-input")?.value || "";
+  const currentContact = document.getElementById("appointment-contact-input")?.value || "";
+  const currentDate = document.getElementById("appointment-date-input")?.value || "";
+  const currentTime = document.getElementById("appointment-time-input")?.value || "";
 
   if (
     currentNote.trim() !== currentAppointmentInitialNote.trim() ||
-    currentTitle.trim() !== currentAppointmentInitialTitle.trim()
+    currentTitle.trim() !== currentAppointmentInitialTitle.trim() ||
+    currentContact.trim() !== currentAppointmentInitialContact.trim() ||
+    currentDate !== currentAppointmentInitialDate ||
+    currentTime !== currentAppointmentInitialTime
   ) {
     const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
     if (!confirmLeave) return;
@@ -6999,21 +7012,21 @@ const hasChanges =
 }
 
   function toggleAppointmentSave() {
-
-  const btn =
-    document.getElementById("appointment-save-btn");
-
+  const btn = document.getElementById("appointment-save-btn");
   if (!btn) return;
 
-  const note =
-    document.getElementById("appointment-note-input")?.value || "";
-
-  const title =
-    document.getElementById("appointment-title-input")?.value || "";
+  const note = document.getElementById("appointment-note-input")?.value || "";
+  const title = document.getElementById("appointment-title-input")?.value || "";
+  const contact = document.getElementById("appointment-contact-input")?.value || "";
+  const date = document.getElementById("appointment-date-input")?.value || "";
+  const time = document.getElementById("appointment-time-input")?.value || "";
 
   const hasChanges =
     note.trim() !== currentAppointmentInitialNote.trim() ||
-    title.trim() !== currentAppointmentInitialTitle.trim();
+    title.trim() !== currentAppointmentInitialTitle.trim() ||
+    contact.trim() !== currentAppointmentInitialContact.trim() ||
+    date !== currentAppointmentInitialDate ||
+    time !== currentAppointmentInitialTime;
 
   btn.disabled = !hasChanges;
   btn.style.opacity = hasChanges ? "1" : ".45";
