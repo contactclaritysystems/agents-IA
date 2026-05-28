@@ -6864,6 +6864,14 @@ list.innerHTML = relances.map((r, index) => `
         💾 Enregistrer
       </button>
 
+<button class="save-btn" onclick="markFollowUpDone('${r.id}')" type="button" style="margin-top:10px;">
+  ✅ Marquer comme faite
+</button>
+
+<button class="sheet-btn" onclick="markFollowUpCancelled('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+  ❌ Marquer comme annulée
+</button>
+
       <button
   class="sheet-btn"
   onclick="deleteFollowUp('${r.id}')"
