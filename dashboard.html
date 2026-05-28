@@ -6875,7 +6875,7 @@ list.innerHTML = relances.map((r, index) => `
 
       <div class="field-group">
         <div class="field-label">Note</div>
-        <textarea class="field-input" id="followup-note-input" style="min-height:110px;" oninput="toggleFollowUpNoteSave(this)">${r.message_context || ""}</textarea>
+        <textarea class="field-input" id="followup-note-input" style="min-height:110px;" oninput="toggleFollowUpSave()">${r.message_context || ""}</textarea>
       </div>
 
       <button class="save-btn" id="followup-note-save-btn" onclick="saveFollowUpNote('${r.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
