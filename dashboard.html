@@ -5821,6 +5821,18 @@ if (objetMatch && objetMatch[1]) {
   const log = currentHistoryLogs[index];
   if (!log) return;
 
+const text = log.action || "";
+
+const toMatch = text.match(/DESTINATAIRE:\s*([\s\S]*?)\nOBJET:/i);
+const objectMatch = text.match(/OBJET:\s*(.+)/i);
+
+const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
+const subject = objectMatch && objectMatch[1] ? objectMatch[1].trim() : "Mail envoyé";
+
+const body = text
+  .replace(/DESTINATAIRE:\s*[\s\S]*?\nOBJET:\s*.+\n*/i, "")
+  .trim();
+    
   const list = document.getElementById("history-list");
   if (!list) return;
 
