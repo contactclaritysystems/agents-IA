@@ -5792,10 +5792,10 @@ if (objetMatch && objetMatch[1]) {
   if (!list) return;
 
     
-const cleanText = (log.action || "")
+  const cleanText = (log.action || "")
   .replace(/^Compte rendu\s*/i, "")
+  .replace(/OBJET\s*:\s*.+/i, "")
   .trim();
-
 
   window.currentHistorySubPage = "notes-detail";
 
