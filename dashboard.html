@@ -6929,6 +6929,7 @@ list.innerHTML = relances.map((r, index) => `
 
   const note = document.getElementById("followup-note-input")?.value || "";
   const reason = document.getElementById("followup-reason-input")?.value || "";
+  const contact = document.getElementById("followup-contact-input")?.value || "";
 
   const date =
   document.getElementById("followup-date-input")?.value || "";
@@ -6936,7 +6937,8 @@ list.innerHTML = relances.map((r, index) => `
 const hasChanges =
   note.trim() !== currentFollowUpInitialNote.trim() ||
   reason.trim() !== currentFollowUpInitialReason.trim() ||
-  date !== currentFollowUpInitialDate;
+  date !== currentFollowUpInitialDate ||
+  contact.trim() !== currentFollowUpInitialContact.trim();
 
   btn.disabled = !hasChanges;
   btn.style.opacity = hasChanges ? "1" : ".45";
@@ -6946,6 +6948,7 @@ const hasChanges =
   const note = document.getElementById("followup-note-input")?.value.trim() || "";
   const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
   const date = document.getElementById("followup-date-input")?.value || "";
+  const contact = document.getElementById("followup-contact-input")?.value.trim() || "";
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
@@ -6968,6 +6971,7 @@ const hasChanges =
       },
       body: JSON.stringify({
         reason: reason,
+        contact_name: contact,
         reminder_date: date,
         message_context: note,
         updated_at: new Date().toISOString()
@@ -6985,6 +6989,7 @@ const hasChanges =
   currentFollowUpInitialNote = note;
   currentFollowUpInitialReason = reason;
   currentFollowUpInitialDate = date;
+  currentFollowUpInitialContact = contact;
 
   window.currentPlanningSubPage = "followups-list";
   await loadFollowUps();
