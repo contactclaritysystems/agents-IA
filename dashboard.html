@@ -3475,7 +3475,7 @@ function renderAppointment(a) {
         <textarea class="field-input" id="appointment-note-input" style="min-height:110px;" oninput="toggleAppointmentNoteSave(this)">${a.description || ""}</textarea>
       </div>
 
-      <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointmentNote('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
+      <button class="save-btn" id="appointment-note-save-btn" onclick="saveAppointment('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
         💾 Enregistrer la note
       </button>
 
