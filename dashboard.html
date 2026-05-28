@@ -5806,6 +5806,7 @@ function closeHistoryDetail() {
   let currentFollowUpInitialReason = "";
   let currentAppointmentInitialTitle = "";
   let currentFollowUpInitialDate = "";
+  let currentFollowUpInitialContact = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6838,6 +6839,7 @@ list.innerHTML = relances.map((r, index) => `
   currentFollowUpInitialNote = r.message_context || "";
   currentFollowUpInitialReason = r.reason || "";
   currentFollowUpInitialDate = r.reminder_date || "";
+  currentFollowUpInitialContact = r.contact_name || "";
 
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
@@ -6853,9 +6855,16 @@ list.innerHTML = relances.map((r, index) => `
   if (!list) return;
 
   list.innerHTML = `
-    <div class="agent-card" style="padding:22px;">
-      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
-        ${r.contact_name || "Relance"}
+    <div class="field-group" style="margin-bottom:14px;">
+  <div class="field-label">Contact</div>
+  <input
+    class="field-input"
+    id="followup-contact-input"
+    value="${r.contact_name || ""}"
+    placeholder="Nom du contact"
+    oninput="toggleFollowUpSave()"
+  >
+</div>
       </div>
 
       <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
