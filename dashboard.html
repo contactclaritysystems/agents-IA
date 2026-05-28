@@ -5803,6 +5803,7 @@ function closeHistoryDetail() {
   let currentAppointmentInitialNote = "";
   let currentFollowUps = [];
   let currentFollowUpInitialNote = "";
+  let currentAppointmentInitialTitle = "";
 
 async function loadHistory(agentName) {
   window.currentHistorySubPage =
@@ -6713,17 +6714,21 @@ function openPlanningFollowUps() {
 function closePlanningDetail() {
 
   if (window.currentPlanningSubPage === "appointment-detail") {
-    const currentNote = document.getElementById("appointment-note-input")?.value || "";
+  const currentNote = document.getElementById("appointment-note-input")?.value || "";
+  const currentTitle = document.getElementById("appointment-title-input")?.value || "";
 
-    if (currentNote.trim() !== currentAppointmentInitialNote.trim()) {
-      const confirmLeave = confirm("Votre note n’est pas enregistrée. Si vous quittez, elle sera perdue.");
-      if (!confirmLeave) return;
-    }
-
-    window.currentPlanningSubPage = "appointments-list";
-    loadAppointments();
-    return;
+  if (
+    currentNote.trim() !== currentAppointmentInitialNote.trim() ||
+    currentTitle.trim() !== currentAppointmentInitialTitle.trim()
+  ) {
+    const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
+    if (!confirmLeave) return;
   }
+
+  window.currentPlanningSubPage = "appointments-list";
+  loadAppointments();
+  return;
+}
 
   // ICI ↓↓↓
 
