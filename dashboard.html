@@ -5853,15 +5853,27 @@ const body = text
         ${new Date(log.created_at).toLocaleString("fr-FR")}
       </div>
 
-      <div style="
-        margin-top:14px;
-        white-space:pre-wrap;
-        line-height:1.6;
-        font-size:14px;
-        word-break:break-word;
-      ">
-        ${log.action || "Mail vide"}
-      </div>
+      <div style="margin-top:18px;">
+  <div class="detail-line">
+    <span>À</span>
+    <strong>${recipient || "Non renseigné"}</strong>
+  </div>
+
+  <div class="detail-line">
+    <span>Objet</span>
+    <strong>${subject}</strong>
+  </div>
+</div>
+
+<div style="
+  margin-top:22px;
+  white-space:pre-wrap;
+  line-height:1.6;
+  font-size:14px;
+  word-break:break-word;
+">
+  ${body || text || "Mail vide"}
+</div>
     </div>
   `;
 }
