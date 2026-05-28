@@ -6739,11 +6739,13 @@ function closePlanningDetail() {
   const currentNote = document.getElementById("followup-note-input")?.value || "";
   const currentReason = document.getElementById("followup-reason-input")?.value || "";
   const currentDate = document.getElementById("followup-date-input")?.value || "";
+  const currentContact = document.getElementById("followup-contact-input")?.value || "";
 
   if (
     currentNote.trim() !== currentFollowUpInitialNote.trim() ||
     currentReason.trim() !== currentFollowUpInitialReason.trim() ||
     currentDate !== currentFollowUpInitialDate
+    currentContact.trim() !== currentFollowUpInitialContact.trim()
   ) {
     const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
     if (!confirmLeave) return;
