@@ -3428,6 +3428,7 @@ function renderAppointment(a) {
 
   window.currentPlanningSubPage = "appointment-detail";
   currentAppointmentInitialNote = a.description || "";
+    currentAppointmentInitialTitle = a.title || "";
 
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
@@ -6931,14 +6932,25 @@ list.innerHTML = relances.map((r, index) => `
   await loadFollowUps();
 }
 
-  function toggleAppointmentNoteSave(textarea) {
-  const btn = document.getElementById("appointment-note-save-btn");
+  function toggleAppointmentSave() {
+
+  const btn =
+    document.getElementById("appointment-save-btn");
+
   if (!btn) return;
 
-  const hasText = textarea.value.trim().length > 0;
+  const note =
+    document.getElementById("appointment-note-input")?.value || "";
 
-  btn.disabled = !hasText;
-  btn.style.opacity = hasText ? "1" : ".45";
+  const title =
+    document.getElementById("appointment-title-input")?.value || "";
+
+  const hasChanges =
+    note.trim() !== currentAppointmentInitialNote.trim() ||
+    title.trim() !== currentAppointmentInitialTitle.trim();
+
+  btn.disabled = !hasChanges;
+  btn.style.opacity = hasChanges ? "1" : ".45";
 }
 
   function setDictationBoxState(box, type = "success") {
