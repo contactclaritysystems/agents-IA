@@ -3297,7 +3297,9 @@ async function loadAppointments() {
   }
 
   const response = await fetch(
-  SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) + "&order=appointment_date.asc,appointment_time.asc",
+  SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) +
+"&status=eq.scheduled" +
+"&order=appointment_date.asc,appointment_time.asc",
     {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
