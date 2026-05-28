@@ -3536,6 +3536,71 @@ function renderAppointment(a) {
   await loadAppointments();
 }
 
+  
+async function saveAppointment(id) {
+
+  const note =
+    document.getElementById("appointment-note-input")?.value || "";
+
+  const title =
+    document.getElementById("appointment-title-input")?.value || "";
+
+  const storageKey =
+    "sb-vduqkeodewrdwsqwokmu-auth-token";
+
+  const rawSession =
+    localStorage.getItem(storageKey);
+
+  const accessToken =
+    rawSession
+      ? JSON.parse(rawSession)?.access_token
+      : null;
+
+  if (!accessToken) {
+    showToast("Session expirée");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL +
+    "/rest/v1/appointments?id=eq." + id,
+    {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify({
+        title,
+        description: note,
+        updated_at: new Date().toISOString()
+      })
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur sauvegarde", "error");
+    return;
+  }
+
+  currentAppointmentInitialNote = note;
+
+  showToast("Rendez-vous mis à jour");
+
+  const btn =
+    document.getElementById("appointment-note-save-btn");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = ".45";
+  }
+
+  loadAppointments();
+}
+
+
   async function deleteAppointment(id) {
 
   const confirmDelete = confirm(
