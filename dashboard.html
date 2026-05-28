@@ -6744,8 +6744,8 @@ function closePlanningDetail() {
   if (
     currentNote.trim() !== currentFollowUpInitialNote.trim() ||
     currentReason.trim() !== currentFollowUpInitialReason.trim() ||
-    currentDate !== currentFollowUpInitialDate
-    currentContact.trim() !== currentFollowUpInitialContact.trim()
+    currentDate !== currentFollowUpInitialDate ||
+currentContact.trim() !== currentFollowUpInitialContact.trim()
   ) {
     const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
     if (!confirmLeave) return;
@@ -6857,17 +6857,18 @@ list.innerHTML = relances.map((r, index) => `
   if (!list) return;
 
   list.innerHTML = `
+  <div class="agent-card" style="padding:22px;">
+
     <div class="field-group" style="margin-bottom:14px;">
-  <div class="field-label">Contact</div>
-  <input
-    class="field-input"
-    id="followup-contact-input"
-    value="${r.contact_name || ""}"
-    placeholder="Nom du contact"
-    oninput="toggleFollowUpSave()"
-  >
-</div>
-      </div>
+      <div class="field-label">Contact</div>
+      <input
+        class="field-input"
+        id="followup-contact-input"
+        value="${r.contact_name || ""}"
+        placeholder="Nom du contact"
+        oninput="toggleFollowUpSave()"
+      >
+    </div>
 
       <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
         ${formatDateShort(r.reminder_date)}
