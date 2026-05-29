@@ -6014,8 +6014,14 @@ async function loadHistory(agentName) {
   const toMatch = text.match(/DESTINATAIRE:\s*([^\n]+)/i);
   const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
 
-  const contactMatch = text.match(/CONTACT:\s*([^\n]+)/i);
-  const contactName = contactMatch && contactMatch[1] ? contactMatch[1].trim() : "";
+  const contactMatch =
+  text.match(/CONTACT:\s*([^\n]+)/i) ||
+  text.match(/NOM:\s*([^\n]+)/i) ||
+  text.match(/CLIENT:\s*([^\n]+)/i);
+
+const contactName = contactMatch && contactMatch[1]
+  ? contactMatch[1].trim()
+  : "";
 
   const objetMatch = text.match(/OBJET:\s*([^\n]+)/i);
   const title = objetMatch && objetMatch[1]
@@ -6024,10 +6030,10 @@ async function loadHistory(agentName) {
 
   return `
     <div class="agent-card" onclick="openMailHistoryDetail(${index})" style="cursor:pointer;">
-      <div class="agent-head" style="gap:12px;">
+      <div class="agent-head" style="gap:10px; align-items:flex-start;">
         <div class="agent-emoji">📧</div>
 
-        <div class="agent-title-wrap" style="min-width:0; flex:1; padding-right:8px;">
+        <div class="agent-title-wrap" style="min-width:0; flex:1; width:100%;">
           <div class="agent-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             ${title}
           </div>
@@ -6047,7 +6053,7 @@ async function loadHistory(agentName) {
           </div>
         </div>
 
-        <div class="agent-status ok" style="flex-shrink:0;">Envoyé</div>
+        <div class="agent-status ok" style="flex-shrink:0; margin-left:auto;">Envoyé</div>
       </div>
     </div>
   `;
