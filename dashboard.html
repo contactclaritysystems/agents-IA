@@ -6628,6 +6628,8 @@ if (!body) {
     const modalBox = document.querySelector("#mail-preview-modal .mail-choice-box");
 const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
 
+if (sendBtn?.disabled) return;
+
 if (sendBtn) {
   sendBtn.disabled = true;
   sendBtn.innerHTML = "📤 Envoi en cours...";
