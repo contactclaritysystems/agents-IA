@@ -796,7 +796,7 @@ select.field-input {
 /* TOAST */
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(env(safe-area-inset-bottom) + 110px);
   right: 24px;
   background: rgba(255,255,255,.92);
   border: 1px solid rgba(34,197,94,.28);
