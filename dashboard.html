@@ -4759,8 +4759,11 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   instruction,
   data.reason || data.error || "error"
 );
-      
-    console.log("DATA PREVIEW MAIL:", data);
+
+return;
+}
+
+console.log("DATA PREVIEW MAIL:", data);
 
      box.innerHTML = "✅ Mail préparé";
 openMailPreview(data, instruction);
