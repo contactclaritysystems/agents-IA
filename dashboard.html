@@ -3574,6 +3574,12 @@ if (btn) {
   );
 
   if (!response.ok) {
+
+    if (btn) {
+  btn.disabled = false;
+  btn.style.opacity = "1";
+}
+    
     showToast("Erreur sauvegarde", "error");
     return;
   }
@@ -3586,6 +3592,11 @@ if (btn) {
 
   window.currentPlanningSubPage = "appointments-list";
 
+if (btn) {
+  btn.disabled = true;
+  btn.style.opacity = ".45";
+}
+    
   showToast("Rendez-vous mis à jour");
   await loadAppointments();
 }
