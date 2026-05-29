@@ -7083,32 +7083,27 @@ const hasChanges =
 }
 
   async function saveFollowUpNote(followUpId) {
+  if (window.isSavingFollowUp) return;
+  window.isSavingFollowUp = true;
+
   const note = document.getElementById("followup-note-input")?.value.trim() || "";
+  const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
+  const date = document.getElementById("followup-date-input")?.value || "";
+  const contact = document.getElementById("followup-contact-input")?.value.trim() || "";
 
   const btn = document.getElementById("followup-note-save-btn");
 
-if (btn) {
-  btn.disabled = true;
-  btn.style.opacity = ".45";
-}
-  
-const btn =
-  document.getElementById("followup-note-save-btn");
-
-if (btn) {
-  btn.disabled = true;
-  btn.style.opacity = ".45";
-}
-    
-    const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
-  const date = document.getElementById("followup-date-input")?.value || "";
-  const contact = document.getElementById("followup-contact-input")?.value.trim() || "";
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = ".45";
+  }
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
   if (!accessToken) {
+    window.isSavingFollowUp = false;
     showToast("Session expirée", "error");
     return;
   }
@@ -7124,7 +7119,7 @@ if (btn) {
         "Prefer": "return=minimal"
       },
       body: JSON.stringify({
-        reason: reason,
+        reason,
         contact_name: contact,
         reminder_date: date,
         message_context: note,
@@ -7134,24 +7129,26 @@ if (btn) {
   );
 
   if (!response.ok) {
+    window.isSavingFollowUp = false;
 
-if (btn) {
-  btn.disabled = false;
-  btn.style.opacity = "1";
-}
-    
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+
     showToast("Erreur sauvegarde relance", "error");
     return;
   }
-
-  showToast("Relance mise à jour");
 
   currentFollowUpInitialNote = note;
   currentFollowUpInitialReason = reason;
   currentFollowUpInitialDate = date;
   currentFollowUpInitialContact = contact;
 
+  window.isSavingFollowUp = false;
   window.currentPlanningSubPage = "followups-list";
+
+  showToast("Relance mise à jour");
   await loadFollowUps();
 }
 
