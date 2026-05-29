@@ -4750,12 +4750,8 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   await saveActionLog(
   "mails",
-  `CONTACT: ${currentPreparedMail.contact_name || ""}
-DESTINATAIRE: ${to}
-OBJET: ${subject}
-
-${body}`,
-  "success"
+  instruction,
+  data.reason || data.error || "error"
 );
       
     console.log("DATA PREVIEW MAIL:", data);
@@ -6772,7 +6768,8 @@ setTimeout(async () => {
 
   await saveActionLog(
   "mails",
-  `DESTINATAIRE: ${to}
+  `CONTACT: ${currentPreparedMail.contact_name || ""}
+DESTINATAIRE: ${to}
 OBJET: ${subject}
 
 ${body}`,
