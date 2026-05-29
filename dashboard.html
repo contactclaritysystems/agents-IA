@@ -6010,32 +6010,44 @@ async function loadHistory(agentName) {
 
     if (agentName === "mails") {
   const text = log.action || "";
-      
-const toMatch = text.match(/DESTINATAIRE:\s*(.+)/i);
-const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
-      
-  const objetMatch = text.match(/OBJET:\s*(.+)/i);
+
+  const toMatch = text.match(/DESTINATAIRE:\s*([^\n]+)/i);
+  const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
+
+  const contactMatch = text.match(/CONTACT:\s*([^\n]+)/i);
+  const contactName = contactMatch && contactMatch[1] ? contactMatch[1].trim() : "";
+
+  const objetMatch = text.match(/OBJET:\s*([^\n]+)/i);
   const title = objetMatch && objetMatch[1]
     ? objetMatch[1].trim().slice(0, 80)
     : "Mail envoyé";
 
   return `
     <div class="agent-card" onclick="openMailHistoryDetail(${index})" style="cursor:pointer;">
-      <div class="agent-head">
+      <div class="agent-head" style="gap:12px;">
         <div class="agent-emoji">📧</div>
 
-        <div class="agent-title-wrap" style="min-width:0;">
-  <div class="agent-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-    ${title}
-  </div>
+        <div class="agent-title-wrap" style="min-width:0; flex:1; padding-right:8px;">
+          <div class="agent-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ${title}
+          </div>
 
-  <div class="agent-desc" style="white-space:normal;line-height:1.35;">
-  ${new Date(log.created_at).toLocaleString("fr-FR")}<br>
-  ${recipient || "Destinataire non renseigné"}
-</div>
-</div>
+          <div class="agent-desc" style="line-height:1.35;">
+            <div>${new Date(log.created_at).toLocaleString("fr-FR")}</div>
 
-<div class="agent-status ok" style="flex-shrink:0;">Envoyé</div>
+            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${recipient || "Destinataire non renseigné"}
+            </div>
+
+            ${
+              contactName
+                ? `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${contactName}</div>`
+                : ""
+            }
+          </div>
+        </div>
+
+        <div class="agent-status ok" style="flex-shrink:0;">Envoyé</div>
       </div>
     </div>
   `;
