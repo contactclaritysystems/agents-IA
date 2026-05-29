@@ -3725,32 +3725,41 @@ buttons.forEach(btn => {
 }
 
   async function deleteFollowUp(id) {
+  if (window.isDeletingFollowUp) return;
+  window.isDeletingFollowUp = true;
 
-  const confirmDelete = confirm(
-    "Supprimer cette relance ?"
-  );
+  const confirmDelete = confirm("Supprimer cette relance ?");
 
-  if (!confirmDelete) return;
+  if (!confirmDelete) {
+    window.isDeletingFollowUp = false;
+    return;
+  }
 
-  const storageKey =
-    "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const buttons = document.querySelectorAll("#planning-list button");
 
-  const rawSession =
-    localStorage.getItem(storageKey);
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = ".45";
+  });
 
-  const accessToken =
-    rawSession
-      ? JSON.parse(rawSession)?.access_token
-      : null;
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
   if (!accessToken) {
-    showToast("Session expirée");
+    window.isDeletingFollowUp = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Session expirée", "error");
     return;
   }
 
   const response = await fetch(
-    SUPABASE_URL +
-    "/rest/v1/follow_ups?id=eq." + id,
+    SUPABASE_URL + "/rest/v1/follow_ups?id=eq." + id,
     {
       method: "DELETE",
       headers: {
@@ -3762,15 +3771,22 @@ buttons.forEach(btn => {
   );
 
   if (!response.ok) {
+    window.isDeletingFollowUp = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
     showToast("Erreur suppression", "error");
     return;
   }
 
-  showToast("Relance supprimée");
-
+  window.isDeletingFollowUp = false;
   window.currentPlanningSubPage = "followups-list";
 
-  loadFollowUps();
+  showToast("Relance supprimée");
+  await loadFollowUps();
 }
 
   function handleGmailMobileCard() {
