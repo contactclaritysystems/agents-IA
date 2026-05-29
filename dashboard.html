@@ -4517,10 +4517,11 @@ function openMailPreview(data, instruction) {
   pendingMailInstruction = instruction || "";
 
   currentPreparedMail = {
-    to: data.to || data.email || data.recipient_email || "",
-    subject: data.subject || data.objet || "",
-    body: data.body || data.message || data.email_body || ""
-  };
+  to: data.to || data.email || data.recipient_email || "",
+  subject: data.subject || data.objet || "",
+  body: data.body || data.message || data.email_body || "",
+  contact_name: data.contact_name || data.contact || data.nom || data.client || ""
+};
 
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
@@ -4747,9 +4748,15 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   box.innerHTML = "❌ " + message;
   showToast(message);
 
-  await saveActionLog("mails", instruction, data.reason || data.error || "error");
-  return;
-}
+  await saveActionLog(
+  "mails",
+  `CONTACT: ${currentPreparedMail.contact_name || ""}
+DESTINATAIRE: ${to}
+OBJET: ${subject}
+
+${body}`,
+  "success"
+);
       
     console.log("DATA PREVIEW MAIL:", data);
 
