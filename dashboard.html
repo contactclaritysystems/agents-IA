@@ -4517,41 +4517,47 @@ function openMailPreview(data, instruction) {
   pendingMailInstruction = instruction || "";
 
   currentPreparedMail = {
-  to: data.to || data.email || data.recipient_email || "",
-  subject: data.subject || data.objet || "",
-  body: data.body || data.message || data.email_body || "",
-  contact_name: data.contact_name || data.contact || data.nom || data.client || ""
-};
+    to: data.to || data.email || data.recipient_email || "",
+    subject: data.subject || data.objet || "",
+    body: data.body || data.message || data.email_body || "",
+    contact_name:
+      data.contact_name ||
+      data.contact ||
+      data.nom ||
+      data.client ||
+      data.recipient_name ||
+      data.name ||
+      ""
+  };
 
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
   document.getElementById("preview-mail-body").value = currentPreparedMail.body;
 
-  const suggestions =
-  document.getElementById("mail-contact-suggestions");
+  const suggestions = document.getElementById("mail-contact-suggestions");
 
-if (suggestions) {
-  suggestions.style.display = "none";
-  suggestions.innerHTML = "";
-}
+  if (suggestions) {
+    suggestions.style.display = "none";
+    suggestions.innerHTML = "";
+  }
 
   const modal = document.getElementById("mail-preview-modal");
 
-modal.style.display = "block";
+  modal.style.display = "block";
 
-requestAnimationFrame(() => {
-  modal.scrollTop = 0;
+  requestAnimationFrame(() => {
+    modal.scrollTop = 0;
 
-  const box = modal.querySelector(".mail-choice-box");
+    const box = modal.querySelector(".mail-choice-box");
 
-  if (box) {
-    box.scrollTop = 0;
-    box.scrollIntoView({
-      behavior: "instant",
-      block: "center"
-    });
-  }
-});
+    if (box) {
+      box.scrollTop = 0;
+      box.scrollIntoView({
+        behavior: "instant",
+        block: "center"
+      });
+    }
+  });
 }
 
 function closeMailPreview(showCancel = true) {
@@ -6766,9 +6772,21 @@ setTimeout(async () => {
 
   showToast("Mail envoyé");
 
-  await saveActionLog(
+  let contactName = currentPreparedMail?.contact_name || "";
+
+if (!contactName && Array.isArray(contactsCache)) {
+  const foundContact = contactsCache.find(c =>
+    (c.email || "").toLowerCase() === to.toLowerCase()
+  );
+
+  if (foundContact) {
+    contactName = foundContact.full_name || "";
+  }
+}
+
+await saveActionLog(
   "mails",
-  `CONTACT: ${currentPreparedMail.contact_name || ""}
+  `CONTACT: ${contactName}
 DESTINATAIRE: ${to}
 OBJET: ${subject}
 
