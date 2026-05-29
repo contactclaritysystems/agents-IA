@@ -7082,7 +7082,16 @@ const hasChanges =
 
   async function saveFollowUpNote(followUpId) {
   const note = document.getElementById("followup-note-input")?.value.trim() || "";
-  const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
+  
+const btn =
+  document.getElementById("followup-note-save-btn");
+
+if (btn) {
+  btn.disabled = true;
+  btn.style.opacity = ".45";
+}
+    
+    const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
   const date = document.getElementById("followup-date-input")?.value || "";
   const contact = document.getElementById("followup-contact-input")?.value.trim() || "";
 
@@ -7116,6 +7125,12 @@ const hasChanges =
   );
 
   if (!response.ok) {
+
+if (btn) {
+  btn.disabled = false;
+  btn.style.opacity = "1";
+}
+    
     showToast("Erreur sauvegarde relance", "error");
     return;
   }
