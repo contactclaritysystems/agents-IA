@@ -6029,9 +6029,10 @@ const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
     ${title}
   </div>
 
-  <div class="agent-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-    ${recipient ? recipient + " · " : ""}${new Date(log.created_at).toLocaleString("fr-FR")}
-  </div>
+  <div class="agent-desc" style="white-space:normal;line-height:1.35;">
+  ${new Date(log.created_at).toLocaleString("fr-FR")}<br>
+  ${recipient || "Destinataire non renseigné"}
+</div>
 </div>
 
 <div class="agent-status ok" style="flex-shrink:0;">Envoyé</div>
