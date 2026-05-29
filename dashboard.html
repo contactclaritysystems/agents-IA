@@ -3602,12 +3602,24 @@ if (btn) {
 }
 
   async function deleteAppointment(id) {
+  if (window.isDeletingAppointment) return;
+  window.isDeletingAppointment = true;
 
   const confirmDelete = confirm(
     "Supprimer ce rendez-vous ?"
   );
 
-  if (!confirmDelete) return;
+  if (!confirmDelete) {
+    window.isDeletingAppointment = false;
+    return;
+  }
+
+  const buttons = document.querySelectorAll("#planning-list button");
+
+  buttons.forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = ".45";
+  });
 
   const storageKey =
     "sb-vduqkeodewrdwsqwokmu-auth-token";
@@ -3621,7 +3633,14 @@ if (btn) {
       : null;
 
   if (!accessToken) {
-    showToast("Session expirée");
+    window.isDeletingAppointment = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Session expirée", "error");
     return;
   }
 
@@ -3639,15 +3658,24 @@ if (btn) {
   );
 
   if (!response.ok) {
+    window.isDeletingAppointment = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
     showToast("Erreur suppression", "error");
     return;
   }
+
+  window.isDeletingAppointment = false;
 
   showToast("Rendez-vous supprimé");
 
   window.currentPlanningSubPage = "appointments-list";
 
-  loadAppointments();
+  await loadAppointments();
 }
 
   async function markAppointmentDone(id) {
