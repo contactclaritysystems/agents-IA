@@ -7159,6 +7159,16 @@ async function markFollowUpCancelled(id) {
 }
 
 async function updateFollowUpStatus(id, status, message) {
+  
+  const buttons = document.querySelectorAll(
+  "#planning-list button"
+);
+
+buttons.forEach(btn => {
+  btn.disabled = true;
+  btn.style.opacity = ".45";
+});
+  
   const note = document.getElementById("followup-note-input")?.value || "";
   const reason = document.getElementById("followup-reason-input")?.value || "";
   const contact = document.getElementById("followup-contact-input")?.value || "";
@@ -7195,6 +7205,12 @@ async function updateFollowUpStatus(id, status, message) {
   );
 
   if (!response.ok) {
+
+buttons.forEach(btn => {
+  btn.disabled = false;
+  btn.style.opacity = "1";
+});
+    
     showToast("Erreur modification relance", "error");
     return;
   }
