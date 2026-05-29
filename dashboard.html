@@ -3535,7 +3535,14 @@ function renderAppointment(a) {
   const contact = document.getElementById("appointment-contact-input")?.value.trim() || "";
   const date = document.getElementById("appointment-date-input")?.value || "";
   const time = document.getElementById("appointment-time-input")?.value || "";
+  const btn =
+  document.getElementById("appointment-save-btn");
 
+if (btn) {
+  btn.disabled = true;
+  btn.style.opacity = ".45";
+}
+    
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
