@@ -6031,9 +6031,15 @@ async function loadHistory(agentName) {
   text.match(/NOM:\s*([^\n]+)/i) ||
   text.match(/CLIENT:\s*([^\n]+)/i);
 
-const contactName = contactMatch && contactMatch[1]
+let contactName = contactMatch && contactMatch[1]
   ? contactMatch[1].trim()
   : "";
+
+if (
+  contactName.toUpperCase().startsWith("DESTINATAIRE")
+) {
+  contactName = "";
+}
 
   const objetMatch = text.match(/OBJET:\s*([^\n]+)/i);
   const title = objetMatch && objetMatch[1]
