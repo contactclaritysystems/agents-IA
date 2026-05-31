@@ -4483,12 +4483,13 @@ const currentActions = Math.min(actions.length, maxActions);
 
 const actionsEl = document.getElementById("actions-count");
 if (actionsEl) {
+  
   animateCounter(
   actionsEl,
   0,
   currentActions,
   1000,
-  ` / ${maxActions}`
+  (value) => `${value} / ${maxActions}`
 );
 }
 
