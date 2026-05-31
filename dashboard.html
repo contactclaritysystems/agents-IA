@@ -4435,6 +4435,31 @@ async function saveActionLog(agent, action, status) {
   let pendingMailInstruction = "";
   let currentPreparedMail = null;
 
+  function animateCounter(element, start, end, duration = 1200, suffix = "") {
+  if (!element) return;
+
+  const startTime = performance.now();
+
+  function update(currentTime) {
+    const progress = Math.min(
+      (currentTime - startTime) / duration,
+      1
+    );
+
+    const value = Math.floor(
+      start + (end - start) * progress
+    );
+
+    element.textContent = value + suffix;
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
   async function loadActionCounter() {
   if (!currentUser) return;
 
