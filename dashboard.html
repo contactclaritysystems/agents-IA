@@ -4451,10 +4451,13 @@ async function saveActionLog(agent, action, status) {
 
   const actions = data || [];
 
-  const actionsEl = document.getElementById("actions-count");
-  if (actionsEl) {
-    actionsEl.textContent = `${actions.length} / 50`;
-  }
+  const maxActions = 50;
+const currentActions = Math.min(actions.length, maxActions);
+
+const actionsEl = document.getElementById("actions-count");
+if (actionsEl) {
+  actionsEl.textContent = `${currentActions} / ${maxActions}`;
+}
 
   const timeSavedByAgent = {
     mails: 6,
