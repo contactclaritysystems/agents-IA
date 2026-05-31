@@ -511,6 +511,7 @@ body {
 .agent-title-wrap {
   flex: 1;
   min-width: 0;
+  max-width: calc(100% - 140px);
 }
 
 .agent-name {
@@ -537,6 +538,8 @@ body {
   padding: 5px 10px;
   border-radius: 999px;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .agent-status.ok {
@@ -1035,7 +1038,7 @@ select.field-input {
 
   .agent-head {
   padding: 16px;
-  gap: 11px;
+  gap: 11px;  
 }
 
 .agent-body {
