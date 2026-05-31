@@ -4206,6 +4206,18 @@ function syncAgentsVisibility() {
 syncPlanningStatus();
 syncRelanceStatus();
 syncNotesStatus();
+
+updateAgentsCount();
+}
+
+  function updateAgentsCount() {
+  const totalAgents = Object.keys(enabledAgents).length;
+  const activeAgents = Object.values(enabledAgents).filter(value => value === true).length;
+
+  const el = document.getElementById("agents-count");
+  if (el) {
+    el.textContent = `${activeAgents} / ${totalAgents}`;
+  }
 }
 
   async function toggleAgentEnabled(agentName) {
