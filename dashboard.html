@@ -4435,7 +4435,7 @@ async function saveActionLog(agent, action, status) {
   let pendingMailInstruction = "";
   let currentPreparedMail = null;
 
-  function animateCounter(element, start, end, duration = 1200, suffix = "") {
+  function animateCounter(element, start, end, duration = 1200, formatter = null) {
   if (!element) return;
 
   const startTime = performance.now();
@@ -4450,7 +4450,9 @@ async function saveActionLog(agent, action, status) {
       start + (end - start) * progress
     );
 
-    element.textContent = value + suffix;
+    element.textContent = formatter
+      ? formatter(value)
+      : value;
 
     if (progress < 1) {
       requestAnimationFrame(update);
@@ -4506,16 +4508,20 @@ if (actionsEl) {
 
   const timeEl = document.getElementById("time-saved-count");
   if (timeEl) {
-    const totalHours =
-Math.floor(totalMinutes / 60);
 
-animateCounter(
+    animateCounter(
   timeEl,
   0,
-  totalHours,
+  totalMinutes,
   1400,
-  "h"
+  (value) => {
+    const h = Math.floor(value / 60);
+    const m = value % 60;
+
+    return `${h}h${String(m).padStart(2, "0")}`;
+  }
 );
+
   }
 }
 
