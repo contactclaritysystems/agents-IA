@@ -4456,7 +4456,13 @@ const currentActions = Math.min(actions.length, maxActions);
 
 const actionsEl = document.getElementById("actions-count");
 if (actionsEl) {
-  actionsEl.textContent = `${currentActions} / ${maxActions}`;
+  animateCounter(
+  actionsEl,
+  0,
+  currentActions,
+  1000,
+  ` / ${maxActions}`
+);
 }
 
   const timeSavedByAgent = {
@@ -4475,7 +4481,16 @@ if (actionsEl) {
 
   const timeEl = document.getElementById("time-saved-count");
   if (timeEl) {
-    timeEl.textContent = `${hours}h${String(minutes).padStart(2, "0")}`;
+    const totalHours =
+Math.floor(totalMinutes / 60);
+
+animateCounter(
+  timeEl,
+  0,
+  totalHours,
+  1400,
+  "h"
+);
   }
 }
 
