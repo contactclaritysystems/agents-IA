@@ -6783,9 +6783,16 @@ setTimeout(async () => {
 
   let contactName = currentPreparedMail?.contact_name || "";
 
+await loadContacts();
+
+const firstEmail = to
+  .split(",")[0]
+  .trim()
+  .toLowerCase();
+
 if (!contactName && Array.isArray(contactsCache)) {
   const foundContact = contactsCache.find(c =>
-    (c.email || "").toLowerCase() === to.toLowerCase()
+    (c.email || "").trim().toLowerCase() === firstEmail
   );
 
   if (foundContact) {
