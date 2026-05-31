@@ -4438,9 +4438,9 @@ async function saveActionLog(agent, action, status) {
   async function loadActionCounter() {
   if (!currentUser) return;
 
-  const { count, error } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("action_event_logs")
-    .select("*", { count: "exact", head: true })
+    .select("agent")
     .eq("user_id", currentUser.id)
     .eq("status", "success");
 
@@ -4449,14 +4449,32 @@ async function saveActionLog(agent, action, status) {
     return;
   }
 
-  const el = document.getElementById("actions-count");
+  const actions = data || [];
 
-  if (el) {
-    el.textContent = `${count || 0} / 50`;
+  const actionsEl = document.getElementById("actions-count");
+  if (actionsEl) {
+    actionsEl.textContent = `${actions.length} / 50`;
+  }
+
+  const timeSavedByAgent = {
+    mails: 6,
+    planning: 5,
+    relance: 4,
+    notes: 12
+  };
+
+  const totalMinutes = actions.reduce((total, item) => {
+    return total + (timeSavedByAgent[item.agent] || 3);
+  }, 0);
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const timeEl = document.getElementById("time-saved-count");
+  if (timeEl) {
+    timeEl.textContent = `${hours}h${String(minutes).padStart(2, "0")}`;
   }
 }
-
-  let currentNotesSummary = "";
 
 function openNotesPreview(summary) {
   currentNotesSummary = summary || "";
