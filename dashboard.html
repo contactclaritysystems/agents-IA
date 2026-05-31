@@ -511,7 +511,7 @@ body {
 .agent-title-wrap {
   flex: 1;
   min-width: 0;
-  max-width: calc(100% - 140px);
+  max-width: calc(100% - 120px);
 }
 
 .agent-name {
@@ -540,6 +540,9 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
   margin-left: auto;
+  align-self: flex-start;
+  height: auto;
+  min-height: unset;
 }
 
 .agent-status.ok {
@@ -1040,11 +1043,6 @@ select.field-input {
   padding: 16px;
   gap: 14px;
 }
-
-  .agent-status {
-    order: 4;
-    margin-left: 55px;
-  }
 
   .agent-toggle {
     margin-left: auto;
