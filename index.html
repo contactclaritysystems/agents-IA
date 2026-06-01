@@ -1137,9 +1137,9 @@ async function signUp() {
     return;
   }
 
-  await supabaseClient
-    .from('subscriptions')
-    .insert([
+  const { error: subError } = await supabaseClient
+  .from('subscriptions')
+  .insert([
       {
         user_id: email,
         plan: 'trial',
