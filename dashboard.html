@@ -6679,6 +6679,39 @@ async function addContact() {
   window.location.href = "index.html";
 }
 
+  async function incrementActions() {
+
+  try {
+
+    const {
+      data: { user }
+    } = await supabaseClient.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabaseClient
+      .from('subscriptions')
+      .select('actions_used')
+      .eq('user_id', user.email)
+      .single();
+
+    if (error || !data) return;
+
+    await supabaseClient
+      .from('subscriptions')
+      .update({
+        actions_used: data.actions_used + 1,
+        updated_at: new Date()
+      })
+      .eq('user_id', user.email);
+
+  } catch (e) {
+
+    console.error('Erreur incrementActions:', e);
+
+  }
+}
+
   function isValidEmail(email) {
   email = email.trim();
   return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email);
