@@ -6886,6 +6886,8 @@ setTimeout(async () => {
 
   showToast("Mail envoyé");
 
+  await incrementActions();
+
   let contactName = currentPreparedMail?.contact_name || "";
 
 await loadContacts();
