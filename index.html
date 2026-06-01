@@ -1114,12 +1114,44 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function signUp() {
+
   const prenom = document.querySelector('#registerForm input[type="text"]').value;
   const email = document.querySelector('#registerForm input[type="email"]').value;
   const password = document.querySelector('#registerForm input[type="password"]').value;
-  if (!prenom || !email || !password) { alert("Merci de remplir tous les champs."); return; }
-  const { error } = await supabaseClient.auth.signUp({ email, password, options: { data: { prenom } } });
-  if (error) { alert(error.message); return; }
+
+  if (!prenom || !email || !password) {
+    alert("Merci de remplir tous les champs.");
+    return;
+  }
+
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { prenom }
+    }
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  await supabaseClient
+    .from('subscriptions')
+    .insert([
+      {
+        user_id: email,
+        plan: 'trial',
+        subscription_status: 'trial',
+        actions_used: 0,
+        actions_limit: 50,
+        extra_actions: 0,
+        trial_start: new Date(),
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      }
+    ]);
+
   window.location.href = "dashboard.html";
 }
 
