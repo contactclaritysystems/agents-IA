@@ -1152,6 +1152,10 @@ async function signUp() {
       }
     ]);
 
+  if (subError) {
+  console.error("Erreur subscription:", subError);
+}
+
   window.location.href = "dashboard.html";
 }
 
