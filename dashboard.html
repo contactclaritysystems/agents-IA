@@ -6824,6 +6824,30 @@ async function addContact() {
       el.textContent = `${daysRemaining} jours restants`;
     }
   });
+  updateLimitWarning();
+}
+
+  function updateLimitWarning() {
+  const card = document.getElementById("limit-warning-card");
+  const text = document.getElementById("limit-warning-text");
+
+  if (!card || !text || !window.currentSubscription) return;
+
+  const sub = window.currentSubscription;
+
+  if (sub.daysRemaining <= 2 || sub.actionsRemaining <= 10) {
+    card.style.display = "grid";
+
+    if (sub.daysRemaining <= 2 && sub.actionsRemaining <= 10) {
+      text.textContent = `Il vous reste ${sub.daysRemaining} jour(s) et ${sub.actionsRemaining} action(s).`;
+    } else if (sub.daysRemaining <= 2) {
+      text.textContent = `Il vous reste ${sub.daysRemaining} jour(s) d’essai.`;
+    } else {
+      text.textContent = `Il vous reste ${sub.actionsRemaining} action(s).`;
+    }
+  } else {
+    card.style.display = "none";
+  }
 }
 
   async function canUseAgents() {
