@@ -5021,6 +5021,9 @@ async function startPlanningDictation() {
       setDictationBoxState(box, "success");
       box.innerHTML = "✅ Rendez-vous créé";
       showToast("Rendez-vous ajouté");
+
+      await incrementActions();
+      
       autoHideDictationBox(box);
 
       await saveActionLog("planning", instruction, "success");
@@ -5229,6 +5232,9 @@ autoHideDictationBox(box);
       setDictationBoxState(box, "success");
 box.innerHTML = "✅ Relance enregistrée";
 showToast("Relance ajoutée");
+
+await incrementActions();
+      
 autoHideDictationBox(box);
 
       await saveActionLog("relance", instruction, "success");
@@ -5506,6 +5512,9 @@ if (
 setDictationBoxState(box, "success");
 box.innerHTML = "✅ Compte rendu enregistré dans l’historique";
 showToast("Compte rendu enregistré");
+
+await incrementActions();
+  
 autoHideDictationBox(box);
 
 openNotesPreview(summary);
