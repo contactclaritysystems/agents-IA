@@ -4637,6 +4637,10 @@ if (box) {
 }
 
 async function startMailDictation() {
+
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+  
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
@@ -4847,6 +4851,10 @@ openMailPreview(data, instruction);
 }
 
 async function startPlanningDictation() {
+
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+  
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
@@ -5051,6 +5059,10 @@ async function startPlanningDictation() {
 }
 
   async function startRelanceDictation() {
+
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+    
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
