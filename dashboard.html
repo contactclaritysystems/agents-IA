@@ -2597,6 +2597,48 @@ select.field-input {
       </div>
     </div>
   </div>
+
+<div class="status-row">
+    <div class="stat-card">
+      <div class="stat-icon-wrap green">✅</div>
+      <div>
+        <div class="stat-value" id="agents-count">0 / 0</div>
+        <div class="stat-label">Agents configurés</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap purple">⚡</div>
+      <div>
+        <div class="stat-value" id="actions-count">0 / 50</div>
+        <div class="stat-label">Actions utilisées</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon-wrap orange">⏱</div>
+      <div>
+        <div class="stat-value" id="time-saved-count">0h00</div>
+        <div class="stat-label">Temps économisé</div>
+      </div>
+    </div>
+</div>
+
+<div id="limit-warning-card" class="gmail-section" style="display:none; margin-bottom:22px;">
+  <div>
+    <div class="gmail-title">
+      <span>⚠️</span> Votre essai arrive bientôt à sa limite
+    </div>
+
+    <div class="gmail-desc" id="limit-warning-text">
+      Il vous reste peu de jours ou peu d’actions.
+    </div>
+  </div>
+
+  <button class="gmail-connect-btn" onclick="openPricingPage()" type="button">
+    Voir les plans
+  </button>
+</div>
   
   <div class="agents-grid">
     <div class="agent-card configured" id="card-mails-run">
