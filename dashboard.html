@@ -4471,21 +4471,6 @@ async function saveActionLog(agent, action, status) {
 
   const actions = data || [];
 
-  const maxActions = 50;
-const currentActions = Math.min(actions.length, maxActions);
-
-const actionsEl = document.getElementById("actions-count");
-if (actionsEl) {
-  
-  animateCounter(
-  actionsEl,
-  0,
-  currentActions,
-  1000,
-  (value) => `${value} / ${maxActions}`
-);
-}
-
   const timeSavedByAgent = {
     mails: 4,
     planning: 5,
@@ -5024,6 +5009,7 @@ async function startPlanningDictation() {
       showToast("Rendez-vous ajouté");
 
       await incrementActions();
+      await loadSubscription();
       
       autoHideDictationBox(box);
 
@@ -5235,6 +5221,7 @@ box.innerHTML = "✅ Relance enregistrée";
 showToast("Relance ajoutée");
 
 await incrementActions();
+await loadSubscription();
       
 autoHideDictationBox(box);
 
@@ -5515,6 +5502,7 @@ box.innerHTML = "✅ Compte rendu enregistré dans l’historique";
 showToast("Compte rendu enregistré");
 
 await incrementActions();
+await loadSubscription();
   
 autoHideDictationBox(box);
 
@@ -6956,6 +6944,7 @@ setTimeout(async () => {
   showToast("Mail envoyé");
 
   await incrementActions();
+  await loadSubscription();
 
   let contactName = currentPreparedMail?.contact_name || "";
 
