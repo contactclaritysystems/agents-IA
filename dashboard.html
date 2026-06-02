@@ -3202,7 +3202,8 @@ async function handleUser(user) {
   console.log("avant loadProfile");
   
   await loadProfile();
-await loadEnabledAgents();
+  await loadEnabledAgents();
+  await loadSubscription();
   await loadActionCounter();
   
   console.log("handleUser terminé");
@@ -6719,6 +6720,65 @@ async function addContact() {
     console.error('Erreur incrementActions:', e);
 
   }
+}
+
+  async function loadSubscription() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', currentUser.email)
+    .single();
+
+  if (error || !data) {
+    console.error("Erreur loadSubscription:", error);
+    return;
+  }
+
+  const now = new Date();
+
+  const limitDate =
+    data.plan === "trial"
+      ? new Date(data.trial_ends_at)
+      : new Date(data.current_period_end);
+
+  const daysRemaining = Math.max(
+    0,
+    Math.ceil((limitDate - now) / (1000 * 60 * 60 * 24))
+  );
+
+  const actionsLimit = data.actions_limit || 0;
+  const extraActions = data.extra_actions || 0;
+  const actionsUsed = data.actions_used || 0;
+
+  const actionsTotal = actionsLimit + extraActions;
+  const actionsRemaining = Math.max(0, actionsTotal - actionsUsed);
+
+  window.currentSubscription = {
+    plan: data.plan,
+    status: data.subscription_status,
+    actionsUsed,
+    actionsLimit,
+    extraActions,
+    actionsTotal,
+    actionsRemaining,
+    daysRemaining
+  };
+
+  const actionsEl = document.getElementById("actions-count");
+  if (actionsEl) {
+    actionsEl.textContent = `${actionsUsed} / ${actionsTotal}`;
+  }
+
+  const trialBadges = document.querySelectorAll(".trial-text strong, .mobile-account-badge strong");
+  trialBadges.forEach(el => {
+    if (data.plan === "trial") {
+      el.textContent = `${daysRemaining} jours d'essai`;
+    } else {
+      el.textContent = `${daysRemaining} jours restants`;
+    }
+  });
 }
 
   function isValidEmail(email) {
