@@ -7072,11 +7072,23 @@ function openPricingPage() {
       <div class="mail-choice-title">Gérer mon abonnement</div>
       <div class="mail-choice-subtitle">Plan actuel : ${sub.plan}</div>
 
-      <div class="pricing-plan">
-        <strong>Actions supplémentaires</strong>
-        <span>Ajoutez des actions sans changer de plan.</span>
-        <button type="button" onclick="showToast('Packs bientôt disponibles')">Voir les packs</button>
-      </div>
+     <div class="pricing-plan">
+  <strong>+25 actions</strong>
+  <span>Pack dépannage · 7€</span>
+  <button type="button" onclick="buyExtraActions(25)">Ajouter</button>
+</div>
+
+<div class="pricing-plan">
+  <strong>+50 actions</strong>
+  <span>Pack confort · 12€</span>
+  <button type="button" onclick="buyExtraActions(50)">Ajouter</button>
+</div>
+
+<div class="pricing-plan">
+  <strong>+100 actions</strong>
+  <span>Pack intensif · 20€</span>
+  <button type="button" onclick="buyExtraActions(100)">Ajouter</button>
+</div>
 
       <div class="pricing-plan featured">
         <strong>Changer de plan</strong>
