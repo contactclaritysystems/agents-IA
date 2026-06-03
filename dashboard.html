@@ -3075,25 +3075,25 @@ select.field-input {
     <div class="pricing-plan">
       <strong>Découverte</strong>
       <span>19€ · 50 actions/mois</span>
-      <button type="button" onclick="showToast('Paiement bientôt disponible')">
-        Choisir
-      </button>
+      <button type="button" onclick="choosePlan('decouverte')">
+  Choisir
+</button>
     </div>
 
     <div class="pricing-plan featured">
       <strong>Pro</strong>
       <span>39€ · 250 actions/mois</span>
-      <button type="button" onclick="showToast('Paiement bientôt disponible')">
-        Choisir
-      </button>
+      <button type="button" onclick="choosePlan('pro')">
+  Choisir
+</button>
     </div>
 
     <div class="pricing-plan">
       <strong>Business</strong>
       <span>69€ · 600 actions/mois</span>
-      <button type="button" onclick="showToast('Paiement bientôt disponible')">
-        Choisir
-      </button>
+      <button type="button" onclick="choosePlan('business')">
+  Choisir
+</button>
     </div>
 
     <button class="mail-choice-close" onclick="closePricingPage()" type="button">
@@ -7018,6 +7018,39 @@ function closePricingPage() {
   window.scrollTo(0, pricingScrollY);
 }
 
+async function choosePlan(plan) {
+  if (!currentUser) return;
+
+  let actionsLimit = 50;
+
+  if (plan === "pro") actionsLimit = 250;
+  if (plan === "business") actionsLimit = 600;
+
+  const { error } = await supabaseClient
+    .from("subscriptions")
+    .update({
+      plan: plan,
+      subscription_status: "active",
+      actions_limit: actionsLimit,
+      actions_used: 0,
+      extra_actions: 0,
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq("user_id", currentUser.email);
+
+  if (error) {
+    console.error("Erreur choix plan:", error);
+    showToast("Erreur activation plan", "error");
+    return;
+  }
+
+  await loadSubscription();
+  closePricingPage();
+  showToast("Plan activé");
+}
+  
   async function canUseAgents() {
   await loadSubscription();
 
