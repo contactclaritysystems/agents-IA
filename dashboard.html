@@ -6939,11 +6939,12 @@ async function addContact() {
 
   const sub = window.currentSubscription;
 
-  if (sub.plan === "trial") {
+ if (sub.plan === "trial") {
   button.style.display = "block";
   button.textContent = "Voir les plans";
 } else {
-  button.style.display = "none";
+  button.style.display = "block";
+  button.textContent = "Gérer l’abonnement";
 }
 
   const limitReached =
