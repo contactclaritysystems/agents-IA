@@ -7001,15 +7001,15 @@ function closePricingPage() {
     return false;
   }
 
-  if (sub.daysRemaining <= 0) {
-    showToast("Votre essai est terminé. Consultez les plans.", "error");
-    return false;
-  }
+ if (sub.daysRemaining <= 0) {
+  openPricingPage();
+  return false;
+}
 
-  if (sub.actionsRemaining <= 0) {
-    showToast("Vous avez utilisé toutes vos actions. Consultez les plans.", "error");
-    return false;
-  }
+if (sub.actionsRemaining <= 0) {
+  openPricingPage();
+  return false;
+}
 
   return true;
 }
