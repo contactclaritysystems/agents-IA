@@ -3076,41 +3076,7 @@ select.field-input {
 
   <div id="pricing-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closePricingPage()"></div>
-
-  <div class="mail-choice-box">
-    <div class="mail-choice-title">Choisir un plan</div>
-    <div class="mail-choice-subtitle">
-      Continuez à utiliser vos agents sans interruption.
-    </div>
-
-    <div class="pricing-plan">
-      <strong>Découverte</strong>
-      <span>19€ · 50 actions/mois</span>
-      <button type="button" onclick="choosePlan('decouverte')">
-  Choisir
-</button>
-    </div>
-
-    <div class="pricing-plan featured">
-      <strong>Pro</strong>
-      <span>39€ · 250 actions/mois</span>
-      <button type="button" onclick="choosePlan('pro')">
-  Choisir
-</button>
-    </div>
-
-    <div class="pricing-plan">
-      <strong>Business</strong>
-      <span>69€ · 600 actions/mois</span>
-      <button type="button" onclick="choosePlan('business')">
-  Choisir
-</button>
-    </div>
-
-    <button class="mail-choice-close" onclick="closePricingPage()" type="button">
-      Fermer
-    </button>
-  </div>
+  <div class="mail-choice-box" id="pricing-modal-content"></div>
 </div>
 
 <!-- TOAST -->
