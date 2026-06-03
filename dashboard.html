@@ -351,6 +351,37 @@ body {
   cursor: pointer;
 }
 
+  #pricing-modal .mail-choice-box {
+  max-width: 390px;
+  padding: 14px;
+}
+
+.pricing-plan {
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.pricing-plan strong {
+  font-size: 17px;
+}
+
+.pricing-plan span {
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+
+.pricing-plan button {
+  height: 36px;
+}
+
+.pricing-cancel-link {
+  margin-top: 8px;
+  background: transparent;
+  color: #8a8a8e;
+  border: none;
+  box-shadow: none;
+}
+
   .limit-warning-header {
   display: flex;
   align-items: center;
@@ -7090,21 +7121,28 @@ function openPricingPage() {
   <button type="button" onclick="buyExtraActions(100)">Ajouter</button>
 </div>
 
-      <div class="pricing-plan featured">
-        <strong>Changer de plan</strong>
-        <span>Découverte, Pro ou Business.</span>
-        <button type="button" onclick="showToast('Changement de plan bientôt disponible')">Modifier</button>
-      </div>
+     <div class="pricing-plan featured">
+  <strong>Gérer le plan</strong>
+  <span>Modifier ou résilier l’abonnement.</span>
 
-      <button class="pricing-cancel-link" onclick="showToast('Résiliation bientôt disponible')" type="button">
-        Résiliation
-      </button>
+  <button type="button" onclick="showToast('Changement de plan bientôt disponible')">
+    Modifier
+  </button>
+
+  <button class="pricing-cancel-link" onclick="showToast('Résiliation bientôt disponible')" type="button">
+    Résilier
+  </button>
+</div>
 
       <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
     `;
   }
 
   modal.style.display = "flex";
+  pricingScrollY = window.scrollY;
+
+document.documentElement.style.overflow = "hidden";
+document.body.style.overflow = "hidden";
 }
 
 function closePricingPage() {
