@@ -7099,43 +7099,37 @@ function openPricingPage() {
       <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
     `;
   } else {
-    content.innerHTML = `
-      <div class="mail-choice-title">Gérer mon abonnement</div>
-      <div class="mail-choice-subtitle">Plan actuel : ${sub.plan}</div>
+  content.innerHTML = `
+    <div class="mail-choice-title">Gérer mon abonnement</div>
+    <div class="mail-choice-subtitle">Plan actuel : ${sub.plan}</div>
 
-     <div class="pricing-plan">
-  <strong>+25 actions</strong>
-  <span>Pack dépannage · 7€</span>
-  <button type="button" onclick="buyExtraActions(25)">Ajouter</button>
-</div>
+    <div class="pricing-plan">
+      <strong>+25 actions</strong>
+      <span>Extra pour ce mois-ci · 7€</span>
+      <button type="button" onclick="buyExtraActions(25)">Ajouter</button>
+    </div>
 
-<div class="pricing-plan">
-  <strong>+50 actions</strong>
-  <span>Pack confort · 12€</span>
-  <button type="button" onclick="buyExtraActions(50)">Ajouter</button>
-</div>
+    <div class="pricing-plan">
+      <strong>+50 actions</strong>
+      <span>Extra pour ce mois-ci · 12€</span>
+      <button type="button" onclick="buyExtraActions(50)">Ajouter</button>
+    </div>
 
-<div class="pricing-plan">
-  <strong>+100 actions</strong>
-  <span>Pack intensif · 20€</span>
-  <button type="button" onclick="buyExtraActions(100)">Ajouter</button>
-</div>
+    <div class="pricing-plan">
+      <strong>+100 actions</strong>
+      <span>Extra pour ce mois-ci · 20€</span>
+      <button type="button" onclick="buyExtraActions(100)">Ajouter</button>
+    </div>
 
-     <div class="pricing-plan featured">
-  <strong>Gérer le plan</strong>
-  <span>Modifier ou résilier l’abonnement.</span>
+    <div class="pricing-plan featured">
+      <strong>Changer de plan</strong>
+      <span>Modifier votre abonnement actuel.</span>
+      <button type="button" onclick="openChangePlanPage()">Modifier</button>
+    </div>
 
-  <button type="button" onclick="showToast('Changement de plan bientôt disponible')">
-    Modifier
-  </button>
-
-  <button class="pricing-cancel-link" onclick="showToast('Résiliation bientôt disponible')" type="button">
-    Résilier
-  </button>
-</div>
-
-      <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
-    `;
+    <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
+  `;
+}
   }
 
   modal.style.display = "flex";
@@ -7145,6 +7139,43 @@ document.documentElement.style.overflow = "hidden";
 document.body.style.overflow = "hidden";
 }
 
+  function openChangePlanPage() {
+  const content = document.getElementById("pricing-modal-content");
+  if (!content) return;
+
+  content.innerHTML = `
+    <div class="mail-choice-title">Modifier l’abonnement</div>
+    <div class="mail-choice-subtitle">
+      Choisissez un nouveau plan ou résiliez votre abonnement.
+    </div>
+
+    <div class="pricing-plan">
+      <strong>Découverte</strong>
+      <span>19€ · 50 actions/mois</span>
+      <button type="button" onclick="choosePlan('decouverte')">Choisir</button>
+    </div>
+
+    <div class="pricing-plan featured">
+      <strong>Pro</strong>
+      <span>39€ · 250 actions/mois</span>
+      <button type="button" onclick="choosePlan('pro')">Choisir</button>
+    </div>
+
+    <div class="pricing-plan">
+      <strong>Business</strong>
+      <span>69€ · 600 actions/mois</span>
+      <button type="button" onclick="choosePlan('business')">Choisir</button>
+    </div>
+
+    <button class="pricing-cancel-link" onclick="showToast('Résiliation bientôt disponible')" type="button">
+      Résilier mon abonnement
+    </button>
+
+    <button class="mail-choice-close" onclick="openPricingPage()" type="button">
+      Retour
+    </button>
+  `;
+}
 function closePricingPage() {
   const modal = document.getElementById("pricing-modal");
   if (!modal) return;
