@@ -6955,12 +6955,23 @@ async function addContact() {
   }
 }
 
-  function openPricingPage() {
+  let pricingScrollY = 0;
+
+function openPricingPage() {
   const modal = document.getElementById("pricing-modal");
   if (!modal) return;
 
+  pricingScrollY = window.scrollY;
+
   modal.style.display = "flex";
+
+  document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${pricingScrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
 }
 
 function closePricingPage() {
@@ -6968,7 +6979,16 @@ function closePricingPage() {
   if (!modal) return;
 
   modal.style.display = "none";
+
+  document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+
+  window.scrollTo(0, pricingScrollY);
 }
 
   async function canUseAgents() {
