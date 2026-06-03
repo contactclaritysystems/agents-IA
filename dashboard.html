@@ -6923,6 +6923,20 @@ async function addContact() {
   }
 }
 
+  function openPricingPage() {
+  const modal = document.getElementById("pricing-modal");
+  if (modal) {
+    modal.style.display = "flex";
+  }
+}
+
+function closePricingPage() {
+  const modal = document.getElementById("pricing-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
   async function canUseAgents() {
   await loadSubscription();
 
