@@ -321,6 +321,16 @@ body {
   cursor: pointer;
 }
 
+  #pricing-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -1009,11 +1019,11 @@ select.field-input {
 }
 
 .pricing-plan button {
+  background: #f3f3f5;
+  color: #111;
+  border: 1px solid #e5e5e7;
   width: 100%;
-  border: none;
   border-radius: 999px;
-  background: #111;
-  color: white;
   padding: 12px;
   font-family: inherit;
   font-weight: 800;
@@ -1028,6 +1038,11 @@ select.field-input {
 .pricing-plan.featured strong,
 .pricing-plan.featured span {
   color: white;
+}
+
+.pricing-plan.featured button {
+  background: white;
+  color: #111;
 }
 
 /* MOBILE */
