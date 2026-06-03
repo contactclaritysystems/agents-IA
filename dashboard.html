@@ -7156,6 +7156,30 @@ async function choosePlan(plan) {
   closePricingPage();
   showToast("Plan activé");
 }
+
+  async function buyExtraActions(amount) {
+  if (!currentUser || !window.currentSubscription) return;
+
+  const currentExtra = window.currentSubscription.extraActions || 0;
+
+  const { error } = await supabaseClient
+    .from("subscriptions")
+    .update({
+      extra_actions: currentExtra + amount,
+      updated_at: new Date().toISOString()
+    })
+    .eq("user_id", currentUser.email);
+
+  if (error) {
+    console.error("Erreur ajout pack actions:", error);
+    showToast("Erreur ajout pack", "error");
+    return;
+  }
+
+  await loadSubscription();
+  closePricingPage();
+  showToast(`+${amount} actions ajoutées`);
+}
   
   async function canUseAgents() {
   await loadSubscription();
