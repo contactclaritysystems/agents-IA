@@ -331,6 +331,12 @@ body {
   padding: 20px;
 }
 
+#pricing-modal .mail-choice-box {
+  max-height: 78vh;
+  overflow-y: auto;
+  border-radius: 28px;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -999,9 +1005,9 @@ select.field-input {
 .pricing-plan {
   background: #f5f5f7;
   border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 16px;
-  margin-bottom: 10px;
+  border-radius: 22px;
+  padding: 18px;
+  margin-bottom: 12px;
 }
 
 .pricing-plan strong {
@@ -1028,10 +1034,11 @@ select.field-input {
   font-family: inherit;
   font-weight: 800;
   font-size: 14px;
+  height: 48px;
 }
 
 .pricing-plan.featured {
-  background: #111;
+  background: #1d1d1f;
   color: white;
 }
 
@@ -1044,6 +1051,8 @@ select.field-input {
   background: white;
   color: #111;
 }
+
+  
 
 /* MOBILE */
 @media (max-width: 1100px) {
