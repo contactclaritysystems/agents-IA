@@ -340,6 +340,17 @@ body {
   padding: 20px;
 }
 
+  .pricing-cancel-link {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #8a8a8e;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px;
+  cursor: pointer;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -6986,19 +6997,63 @@ async function addContact() {
 
 function openPricingPage() {
   const modal = document.getElementById("pricing-modal");
-  if (!modal) return;
+  const content = document.getElementById("pricing-modal-content");
 
-  pricingScrollY = window.scrollY;
+  if (!modal || !content) return;
+
+  const sub = window.currentSubscription;
+
+  if (!sub || sub.plan === "trial") {
+    content.innerHTML = `
+      <div class="mail-choice-title">Choisir un plan</div>
+      <div class="mail-choice-subtitle">Continuez à utiliser vos agents sans interruption.</div>
+
+      <div class="pricing-plan">
+        <strong>Découverte</strong>
+        <span>19€/mois · 50 actions</span>
+        <button type="button" onclick="choosePlan('decouverte')">Choisir</button>
+      </div>
+
+      <div class="pricing-plan featured">
+        <strong>Pro</strong>
+        <span>39€/mois · 250 actions</span>
+        <button type="button" onclick="choosePlan('pro')">Choisir</button>
+      </div>
+
+      <div class="pricing-plan">
+        <strong>Business</strong>
+        <span>69€/mois · 600 actions</span>
+        <button type="button" onclick="choosePlan('business')">Choisir</button>
+      </div>
+
+      <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
+    `;
+  } else {
+    content.innerHTML = `
+      <div class="mail-choice-title">Gérer mon abonnement</div>
+      <div class="mail-choice-subtitle">Plan actuel : ${sub.plan}</div>
+
+      <div class="pricing-plan">
+        <strong>Actions supplémentaires</strong>
+        <span>Ajoutez des actions sans changer de plan.</span>
+        <button type="button" onclick="showToast('Packs bientôt disponibles')">Voir les packs</button>
+      </div>
+
+      <div class="pricing-plan featured">
+        <strong>Changer de plan</strong>
+        <span>Découverte, Pro ou Business.</span>
+        <button type="button" onclick="showToast('Changement de plan bientôt disponible')">Modifier</button>
+      </div>
+
+      <button class="pricing-cancel-link" onclick="showToast('Résiliation bientôt disponible')" type="button">
+        Résiliation
+      </button>
+
+      <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
+    `;
+  }
 
   modal.style.display = "flex";
-
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${pricingScrollY}px`;
-  document.body.style.left = "0";
-  document.body.style.right = "0";
-  document.body.style.width = "100%";
 }
 
 function closePricingPage() {
