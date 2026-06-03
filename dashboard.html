@@ -6913,8 +6913,10 @@ async function addContact() {
   const card = document.getElementById("limit-warning-card");
   const text = document.getElementById("limit-warning-text");
   const title = card ? card.querySelector(".gmail-title") : null;
+  const button = card ? card.querySelector("button") : null;
 
   if (!card || !text || !title || !window.currentSubscription) return;
+  if (!card || !text || !title || !button || !window.currentSubscription) return;
 
   const sub = window.currentSubscription;
 
@@ -6925,6 +6927,11 @@ async function addContact() {
     sub.daysRemaining <= 2 || sub.actionsRemaining <= 10;
 
   if (limitReached) {
+    if (sub.plan === "trial") {
+  button.textContent = "Voir les plans";
+} else {
+  button.textContent = "Gérer l’abonnement";
+}
     card.style.display = "grid";
 
     title.innerHTML = `<span>🚫</span> Votre quota est atteint`;
