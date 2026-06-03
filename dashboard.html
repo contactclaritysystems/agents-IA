@@ -6935,13 +6935,38 @@ async function addContact() {
   function updateLimitWarning() {
   const card = document.getElementById("limit-warning-card");
   const text = document.getElementById("limit-warning-text");
+  const title = card ? card.querySelector(".gmail-title") : null;
 
-  if (!card || !text || !window.currentSubscription) return;
+  if (!card || !text || !title || !window.currentSubscription) return;
 
   const sub = window.currentSubscription;
 
-  if (sub.daysRemaining <= 2 || sub.actionsRemaining <= 10) {
+  const limitReached =
+    sub.daysRemaining <= 0 || sub.actionsRemaining <= 0;
+
+  const limitSoon =
+    sub.daysRemaining <= 2 || sub.actionsRemaining <= 10;
+
+  if (limitReached) {
     card.style.display = "grid";
+
+    title.innerHTML = `<span>🚫</span> Votre quota est atteint`;
+
+    if (sub.daysRemaining <= 0 && sub.actionsRemaining <= 0) {
+      text.textContent = "Votre essai est terminé et toutes vos actions ont été utilisées.";
+    } else if (sub.daysRemaining <= 0) {
+      text.textContent = "Votre période d’essai est terminée.";
+    } else {
+      text.textContent = "Vous avez utilisé toutes vos actions disponibles.";
+    }
+
+    return;
+  }
+
+  if (limitSoon) {
+    card.style.display = "grid";
+
+    title.innerHTML = `<span>⚠️</span> Votre essai arrive bientôt à sa limite`;
 
     if (sub.daysRemaining <= 2 && sub.actionsRemaining <= 10) {
       text.textContent = `Il vous reste ${sub.daysRemaining} jour(s) et ${sub.actionsRemaining} action(s).`;
@@ -6950,9 +6975,11 @@ async function addContact() {
     } else {
       text.textContent = `Il vous reste ${sub.actionsRemaining} action(s).`;
     }
-  } else {
-    card.style.display = "none";
+
+    return;
   }
+
+  card.style.display = "none";
 }
 
   let pricingScrollY = 0;
