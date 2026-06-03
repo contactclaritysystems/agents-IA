@@ -6950,7 +6950,11 @@ async function addContact() {
   if (limitSoon) {
     card.style.display = "grid";
 
-    title.innerHTML = `<span>⚠️</span> Votre essai arrive bientôt à sa limite`;
+   if (sub.plan === "trial") {
+  title.innerHTML = `<span>⚠️</span> Votre essai arrive bientôt à sa limite`;
+} else {
+  title.innerHTML = `<span>⚠️</span> Votre quota mensuel arrive bientôt à sa limite`;
+}
 
     if (sub.daysRemaining <= 2 && sub.actionsRemaining <= 10) {
       text.textContent = `Il vous reste ${sub.daysRemaining} jour(s) et ${sub.actionsRemaining} action(s).`;
