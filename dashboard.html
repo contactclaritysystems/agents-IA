@@ -6957,16 +6957,18 @@ async function addContact() {
 
   function openPricingPage() {
   const modal = document.getElementById("pricing-modal");
-  if (modal) {
-    modal.style.display = "flex";
-  }
+  if (!modal) return;
+
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
 }
 
 function closePricingPage() {
   const modal = document.getElementById("pricing-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (!modal) return;
+
+  modal.style.display = "none";
+  document.body.style.overflow = "";
 }
 
   async function canUseAgents() {
