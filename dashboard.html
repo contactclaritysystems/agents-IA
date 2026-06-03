@@ -6939,6 +6939,13 @@ async function addContact() {
 
   const sub = window.currentSubscription;
 
+  if (sub.plan === "trial") {
+  button.style.display = "block";
+  button.textContent = "Voir les plans";
+} else {
+  button.style.display = "none";
+}
+
   const limitReached =
     sub.daysRemaining <= 0 || sub.actionsRemaining <= 0;
 
@@ -6947,8 +6954,10 @@ async function addContact() {
 
   if (limitReached) {
     if (sub.plan === "trial") {
+  button.style.display = "block";
   button.textContent = "Voir les plans";
 } else {
+  button.style.display = "block";
   button.textContent = "Gérer l’abonnement";
 }
     card.style.display = "grid";
