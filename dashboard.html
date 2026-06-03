@@ -7205,34 +7205,31 @@ function closePricingPage() {
 async function choosePlan(plan) {
   if (!currentUser) return;
 
-  let actionsLimit = 50;
+  try {
+    const response = await fetch("https://hook.eu1.make.com/fh2opjizojn0jrs4q7km8m318ywlpppm", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        user_email: currentUser.email,
+        plan: plan
+      })
+    });
 
-  if (plan === "pro") actionsLimit = 250;
-  if (plan === "business") actionsLimit = 600;
+    const data = await response.json();
 
-  const { error } = await supabaseClient
-    .from("subscriptions")
-    .update({
-      plan: plan,
-      subscription_status: "active",
-      actions_limit: actionsLimit,
-      actions_used: 0,
-      extra_actions: 0,
-      current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .eq("user_id", currentUser.email);
+    if (data.url) {
+      window.location.href = data.url;
+      return;
+    }
 
-  if (error) {
-    console.error("Erreur choix plan:", error);
-    showToast("Erreur activation plan", "error");
-    return;
+    showToast("Erreur ouverture paiement", "error");
+
+  } catch (error) {
+    console.error("Erreur Stripe Checkout:", error);
+    showToast("Erreur paiement", "error");
   }
-
-  await loadSubscription();
-  closePricingPage();
-  showToast("Plan activé");
 }
 
   async function buyExtraActions(amount) {
