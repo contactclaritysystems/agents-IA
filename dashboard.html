@@ -986,6 +986,50 @@ select.field-input {
   border-color: var(--line-strong);
 }
 
+.pricing-plan {
+  background: #f5f5f7;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.pricing-plan strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 850;
+  color: var(--text);
+}
+
+.pricing-plan span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 4px 0 12px;
+}
+
+.pricing-plan button {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  background: #111;
+  color: white;
+  padding: 12px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.pricing-plan.featured {
+  background: #111;
+  color: white;
+}
+
+.pricing-plan.featured strong,
+.pricing-plan.featured span {
+  color: white;
+}
+
 /* MOBILE */
 @media (max-width: 1100px) {
   .main {
@@ -2982,6 +3026,45 @@ select.field-input {
     </button>
 
     <button class="sheet-btn" onclick="closeNotesPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
+</div>
+
+  <div id="pricing-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closePricingPage()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Choisir un plan</div>
+    <div class="mail-choice-subtitle">
+      Continuez à utiliser vos agents sans interruption.
+    </div>
+
+    <div class="pricing-plan">
+      <strong>Découverte</strong>
+      <span>19€/mois · 50 actions</span>
+      <button type="button" onclick="showToast('Paiement bientôt disponible')">
+        Choisir
+      </button>
+    </div>
+
+    <div class="pricing-plan featured">
+      <strong>Pro</strong>
+      <span>39€/mois · 250 actions</span>
+      <button type="button" onclick="showToast('Paiement bientôt disponible')">
+        Choisir
+      </button>
+    </div>
+
+    <div class="pricing-plan">
+      <strong>Business</strong>
+      <span>69€/mois · 600 actions</span>
+      <button type="button" onclick="showToast('Paiement bientôt disponible')">
+        Choisir
+      </button>
+    </div>
+
+    <button class="mail-choice-close" onclick="closePricingPage()" type="button">
       Fermer
     </button>
   </div>
