@@ -6884,6 +6884,29 @@ async function addContact() {
 
   const now = new Date();
 
+  if (
+  data.plan !== "trial" &&
+  data.current_period_end &&
+  new Date(data.current_period_end) < now
+) {
+
+  const nextPeriodEnd = new Date();
+  nextPeriodEnd.setDate(nextPeriodEnd.getDate() + 30);
+
+  await supabaseClient
+    .from("subscriptions")
+    .update({
+      actions_used: 0,
+      extra_actions: 0,
+      current_period_start: now.toISOString(),
+      current_period_end: nextPeriodEnd.toISOString(),
+      updated_at: now.toISOString()
+    })
+    .eq("user_id", currentUser.email);
+
+  return loadSubscription();
+}
+
   const limitDate =
     data.plan === "trial"
       ? new Date(data.trial_ends_at)
