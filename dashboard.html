@@ -7212,19 +7212,6 @@ async function choosePlan(plan) {
     return;
   }
 
-  await loadSubscription();
-
-  const subId = window.currentSubscription?.subscriptionId;
-  const subUserEmail = window.currentSubscription?.userId || currentUser.email;
-
-  console.log("STRIPE SUB ID:", subId);
-  console.log("STRIPE USER EMAIL:", subUserEmail);
-
-  if (!subId) {
-    showToast("Abonnement introuvable, rechargez la page", "error");
-    return;
-  }
-
   try {
     showToast("Ouverture du paiement...");
 
@@ -7234,8 +7221,7 @@ async function choosePlan(plan) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        subscription_id: subId,
-        user_email: subUserEmail,
+        user_email: currentUser.email,
         plan: plan
       })
     });
