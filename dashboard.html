@@ -6968,6 +6968,8 @@ async function addContact() {
     daysRemaining
   };
 
+    alert("SUB ID: " + data.id);
+
   const actionsEl = document.getElementById("actions-count");
   if (actionsEl) {
     actionsEl.textContent = `${actionsUsed} / ${actionsTotal}`;
