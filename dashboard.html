@@ -7223,9 +7223,10 @@ async function choosePlan(plan) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        user_email: currentUser.email,
-        plan: plan
-      })
+  subscription_id: window.currentSubscription?.subscriptionId,
+  user_email: currentUser.email,
+  plan: plan
+})
     });
 
     const text = await response.text();
