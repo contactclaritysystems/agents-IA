@@ -6956,6 +6956,8 @@ async function addContact() {
   const actionsRemaining = Math.max(0, actionsTotal - actionsUsed);
 
   window.currentSubscription = {
+    subscriptionId: data.id,
+    userId: data.user_id,
     plan: data.plan,
     status: data.subscription_status,
     actionsUsed,
@@ -7219,7 +7221,8 @@ async function choosePlan(plan) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        user_email: currentUser.email,
+        subscription_id: window.currentSubscription?.subscriptionId,
+        user_email: window.currentSubscription?.userId || currentUser.email,
         plan: plan
       })
     });
