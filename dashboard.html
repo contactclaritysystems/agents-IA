@@ -2766,8 +2766,24 @@ select.field-input {
   Voir les plans
 </button>
 </div>
+
+<div id="reactivate-home-card" class="gmail-section" style="display:none; margin-bottom:22px;">
+  <div>
+    <div class="gmail-title">
+      <span>✅</span> Réactiver votre abonnement
+    </div>
+    <div class="gmail-desc">
+      Votre abonnement est prévu pour s’arrêter bientôt. Vous pouvez le réactiver sans repayer maintenant.
+    </div>
+  </div>
+
+  <button class="warning-plan-btn" onclick="reactivateSubscription()" type="button">
+    Réactiver
+  </button>
+</div>
   
   <div class="agents-grid">
+
     <div class="agent-card configured" id="card-mails-run">
       <div class="agent-head">
         <div class="agent-emoji">✉️</div>
@@ -6999,6 +7015,14 @@ if (subLabel) {
 }
     
   updateLimitWarning();
+
+const reactivateHomeCard = document.getElementById("reactivate-home-card");
+
+if (reactivateHomeCard) {
+  reactivateHomeCard.style.display =
+    data.cancel_at_period_end === true ? "grid" : "none";
+}
+    
 }
 
   function updateLimitWarning() {
@@ -7202,16 +7226,17 @@ document.body.style.overflow = "hidden";
     onclick="reactivateSubscription()"
     style="
       width:100%;
-      height:48px;
+      min-height:58px;
       border:none;
-      border-radius:16px;
-      background:#000;
-      color:#fff;
-      font-weight:600;
-      font-size:16px;
+      border-radius:22px;
+      background:linear-gradient(135deg,#dcfce7,#bbf7d0);
+      color:#166534;
+      font-weight:900;
+      font-size:17px;
       cursor:pointer;
+      box-shadow:0 10px 30px rgba(34,197,94,.18);
     ">
-    Réactiver l’abonnement
+    ✅ Réactiver mon abonnement
   </button>
 </div>
 ` : `
