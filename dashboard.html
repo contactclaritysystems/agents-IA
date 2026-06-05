@@ -5120,18 +5120,6 @@ openMailPreview(data, instruction);
 
 async function startPlanningDictation() {
 
-  const planningBtn = document.getElementById("planning-dictation-btn");
-lockAgentButtons(planningBtn, "⏳ Agent en cours...");
-
-  if (planningBtn) {
-    planningBtn.innerHTML = "⏹ Arrêter la dictée";
-    planningBtn.onclick = () => {
- lockActiveAgentButton(planningBtn, "⏳ Création du rendez-vous...");
-
-  try { recognition.stop(); } catch(e) {}
-};
-  }
-
   const allowed = await canUseAgents();
   if (!allowed) return;
 
@@ -5173,6 +5161,22 @@ lockAgentButtons(planningBtn, "⏳ Agent en cours...");
   recognition.interimResults = true;
   recognition.continuous = true;
   recognition.maxAlternatives = 1;
+
+  const planningBtn = document.getElementById("planning-dictation-btn");
+
+lockAgentButtons(planningBtn, "⏳ Agent en cours...");
+
+if (planningBtn) {
+  planningBtn.innerHTML = "⏹ Arrêter la dictée";
+
+  planningBtn.onclick = () => {
+    lockActiveAgentButton(planningBtn, "⏳ Création du rendez-vous...");
+
+    try {
+      recognition.stop();
+    } catch(e) {}
+  };
+}
 
   let finalText = "";
   let latestText = "";
@@ -5321,8 +5325,12 @@ lockAgentButtons(planningBtn, "⏳ Agent en cours...");
     clearTimeout(silenceTimer);
     console.error("Erreur dictée planning:", event.error);
 
-    if (planningBtn) {
-    }
+   if (planningBtn) {
+  planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
+  planningBtn.onclick = startPlanningDictation;
+}
+
+unlockAgentButtons();
 
     setDictationBoxState(box, "error");
     box.innerHTML = "✕ Autorisez le micro pour utiliser la dictée";
