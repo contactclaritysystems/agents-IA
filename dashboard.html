@@ -4851,18 +4851,34 @@ if (box) {
   currentPreparedMail = null;
 }
 
-  function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
+ function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
   agentIsWorking = true;
 
   document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
+    if (!btn.dataset.originalText) {
+      btn.dataset.originalText = btn.innerHTML;
+    }
+
     if (btn === activeButton) return;
 
     btn.disabled = true;
-    btn.dataset.originalText = btn.innerHTML;
     btn.innerHTML = message;
     btn.style.opacity = ".55";
     btn.style.pointerEvents = "none";
   });
+}
+
+function lockActiveAgentButton(btn, message = "⏳ Traitement en cours...") {
+  if (!btn) return;
+
+  if (!btn.dataset.originalText) {
+    btn.dataset.originalText = btn.innerHTML;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = message;
+  btn.style.opacity = ".55";
+  btn.style.pointerEvents = "none";
 }
 
 function unlockAgentButtons() {
@@ -4940,10 +4956,7 @@ lockAgentButtons(mailBtn, "⏳ Agent en cours...");
   if (mailBtn) {
   mailBtn.innerHTML = "⏹ Arrêter la dictée";
   mailBtn.onclick = () => {
-  mailBtn.disabled = true;
-  mailBtn.innerHTML = "⏳ Préparation du mail...";
-  mailBtn.style.opacity = ".55";
-  mailBtn.style.pointerEvents = "none";
+ lockActiveAgentButton(mailBtn, "⏳ Préparation du mail...");
 
   try { recognition.stop(); } catch(e) {}
 };
@@ -5158,10 +5171,7 @@ async function startPlanningDictation() {
   if (planningBtn) {
     planningBtn.innerHTML = "⏹ Arrêter la dictée";
     planningBtn.onclick = () => {
-  planningBtn.disabled = true;
-  planningBtn.innerHTML = "⏳ Création du rendez-vous...";
-  planningBtn.style.opacity = ".55";
-  planningBtn.style.pointerEvents = "none";
+ lockActiveAgentButton(planningBtn, "⏳ Création du rendez-vous...");
 
   try { recognition.stop(); } catch(e) {}
 };
