@@ -6918,6 +6918,37 @@ async function addContact() {
   async function loadSubscription() {
   if (!currentUser) return;
 
+    const cachedSub = localStorage.getItem(`subscription_cache_${currentUser.email}`);
+
+if (cachedSub) {
+  try {
+    window.currentSubscription = JSON.parse(cachedSub);
+
+    const actionsCount = document.getElementById("actions-count");
+    const trialBadge = document.getElementById("trial-badge");
+    const subLabel = document.getElementById("subscription-label");
+
+    if (actionsCount && window.currentSubscription.actionsUsed !== undefined) {
+      actionsCount.textContent =
+        `${window.currentSubscription.actionsUsed} / ${window.currentSubscription.actionsTotal}`;
+    }
+
+    if (trialBadge && window.currentSubscription.daysRemaining !== undefined) {
+      trialBadge.textContent = window.currentSubscription.cancelAtPeriodEnd
+        ? `Résiliation dans ${window.currentSubscription.daysRemaining} jours`
+        : `${window.currentSubscription.daysRemaining} jours restants`;
+    }
+
+    if (subLabel && window.currentSubscription.plan) {
+      subLabel.textContent = window.currentSubscription.cancelAtPeriodEnd
+        ? `${window.currentSubscription.plan} · résiliation prévue`
+        : `${window.currentSubscription.plan} · actif`;
+    }
+  } catch (e) {
+    console.warn("Cache abonnement invalide", e);
+  }
+}
+
   const { data, error } = await supabaseClient
     .from('subscriptions')
     .select('*')
@@ -6985,6 +7016,11 @@ async function addContact() {
     actionsRemaining,
     daysRemaining
   };
+
+    localStorage.setItem(
+  `subscription_cache_${currentUser.email}`,
+  JSON.stringify(window.currentSubscription)
+);
 
   const actionsEl = document.getElementById("actions-count");
   if (actionsEl) {
