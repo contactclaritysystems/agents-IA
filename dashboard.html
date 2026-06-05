@@ -5086,9 +5086,9 @@ openMailPreview(data, instruction);
 
     } catch (err) {
       console.error("Erreur envoi Make:", err);
+      unlockAgentButtons();
       box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
       await saveActionLog("mails", instruction, "error");
-      unlockAgentButtons();
     }
   };
 
