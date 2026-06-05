@@ -5120,6 +5120,18 @@ openMailPreview(data, instruction);
 
 async function startPlanningDictation() {
 
+  const planningBtn = document.getElementById("planning-dictation-btn");
+lockAgentButtons(planningBtn, "⏳ Agent en cours...");
+
+  if (planningBtn) {
+    planningBtn.innerHTML = "⏹ Arrêter la dictée";
+    planningBtn.onclick = () => {
+ lockActiveAgentButton(planningBtn, "⏳ Création du rendez-vous...");
+
+  try { recognition.stop(); } catch(e) {}
+};
+  }
+
   const allowed = await canUseAgents();
   if (!allowed) return;
 
@@ -5127,9 +5139,6 @@ async function startPlanningDictation() {
   showToast("Un agent est déjà en cours", "error");
   return;
 }
-
-const planningBtn = document.getElementById("planning-dictation-btn");
-lockAgentButtons(planningBtn, "⏳ Agent en cours...");
   
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -5169,15 +5178,6 @@ lockAgentButtons(planningBtn, "⏳ Agent en cours...");
   let latestText = "";
   let hasSent = false;
   let silenceTimer = null;
-
-  if (planningBtn) {
-    planningBtn.innerHTML = "⏹ Arrêter la dictée";
-    planningBtn.onclick = () => {
- lockActiveAgentButton(planningBtn, "⏳ Création du rendez-vous...");
-
-  try { recognition.stop(); } catch(e) {}
-};
-  }
 
   function resetSilenceTimer() {
     clearTimeout(silenceTimer);
@@ -5322,8 +5322,6 @@ lockAgentButtons(planningBtn, "⏳ Agent en cours...");
     console.error("Erreur dictée planning:", event.error);
 
     if (planningBtn) {
-      planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
-      planningBtn.onclick = startPlanningDictation;
     }
 
     setDictationBoxState(box, "error");
