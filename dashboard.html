@@ -7117,6 +7117,16 @@ function openPricingPage() {
     <div class="mail-choice-title">Gérer mon abonnement</div>
     <div class="mail-choice-subtitle">Plan actuel : ${sub.plan}</div>
 
+    ${sub.cancelAtPeriodEnd ? `
+  <div class="info-box" style="margin-bottom:12px;">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>Résiliation programmée</strong><br>
+      Votre abonnement reste actif jusqu’à la fin de la période.
+    </div>
+  </div>
+` : ""}
+
     <div class="pricing-plan">
       <strong>+25 actions</strong>
       <span>Extra pour ce mois-ci · 7€</span>
@@ -7180,9 +7190,16 @@ document.body.style.overflow = "hidden";
       <button type="button" onclick="choosePlan('business')">Choisir</button>
     </div>
 
-   <button class="pricing-cancel-link" onclick="cancelSubscription()" type="button">
-  Résilier mon abonnement
-</button>
+  ${window.currentSubscription?.cancelAtPeriodEnd ? `
+  <div class="info-box" style="margin-top:10px;">
+    <span class="info-icon">ℹ️</span>
+    <div>Résiliation déjà programmée.</div>
+  </div>
+` : `
+  <button class="pricing-cancel-link" onclick="cancelSubscription()" type="button">
+    Résilier mon abonnement
+  </button>
+`}
 
     <button class="mail-choice-close" onclick="openPricingPage()" type="button">
       Retour
