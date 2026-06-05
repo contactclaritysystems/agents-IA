@@ -4851,7 +4851,7 @@ if (box) {
   currentPreparedMail = null;
 }
 
- function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
+function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
   agentIsWorking = true;
 
   document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
@@ -4859,12 +4859,12 @@ if (box) {
       btn.dataset.originalText = btn.innerHTML;
     }
 
-    if (btn === activeButton) return;
-
-    btn.disabled = true;
-    btn.innerHTML = message;
-    btn.style.opacity = ".55";
-    btn.style.pointerEvents = "none";
+    if (btn !== activeButton) {
+      btn.disabled = true;
+      btn.innerHTML = message;
+      btn.style.opacity = ".55";
+      btn.style.pointerEvents = "none";
+    }
   });
 }
 
@@ -5169,8 +5169,6 @@ lockAgentButtons(planningBtn, "⏳ Agent en cours...");
   let latestText = "";
   let hasSent = false;
   let silenceTimer = null;
-
-  const planningBtn = document.getElementById("planning-dictation-btn");
 
   if (planningBtn) {
     planningBtn.innerHTML = "⏹ Arrêter la dictée";
