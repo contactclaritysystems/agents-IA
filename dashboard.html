@@ -3184,6 +3184,7 @@ const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboar
 let currentUser = null;
   document.body.classList.add("loading-subscription");
 let currentProfile = null;
+let agentIsWorking = false;
 const mailsEnabled = true;
 const planningEnabled = true;
 
@@ -4848,6 +4849,34 @@ if (box) {
 }
 
   currentPreparedMail = null;
+}
+
+  function lockAgentButtons(message = "⏳ Agent en cours...") {
+  agentIsWorking = true;
+
+  document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
+    btn.disabled = true;
+    btn.dataset.originalText = btn.innerHTML;
+    btn.innerHTML = message;
+    btn.style.opacity = ".55";
+    btn.style.pointerEvents = "none";
+  });
+}
+
+function unlockAgentButtons() {
+  agentIsWorking = false;
+
+  document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
+    btn.disabled = false;
+
+    if (btn.dataset.originalText) {
+      btn.innerHTML = btn.dataset.originalText;
+      delete btn.dataset.originalText;
+    }
+
+    btn.style.opacity = "1";
+    btn.style.pointerEvents = "";
+  });
 }
 
 async function startMailDictation() {
