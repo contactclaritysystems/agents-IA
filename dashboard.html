@@ -6980,14 +6980,19 @@ async function addContact() {
     if (data.plan === "trial") {
       el.textContent = `${daysRemaining} jours d'essai`;
     } else {
-      el.textContent = `${daysRemaining} jours restants`;
+      el.textContent = data.cancel_at_period_end === true
+  ? `Résiliation dans ${daysRemaining} jours`
+  : `${daysRemaining} jours restants`;
     }
   });
 
     const subLabel = document.getElementById("subscription-status-label");
+    
 if (subLabel) {
   if (data.plan === "trial") {
     subLabel.textContent = "Essai gratuit";
+  } else if (data.cancel_at_period_end === true) {
+    subLabel.textContent = `${data.plan} · résiliation prévue`;
   } else {
     subLabel.textContent = `${data.plan} · actif`;
   }
