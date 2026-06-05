@@ -61,6 +61,14 @@ body {
   width: 100%;
 }
 
+body.loading-subscription .agents-page {
+  opacity: 0;
+}
+
+.agents-page {
+  transition: opacity .18s ease;
+}
+  
 ::selection {
   background: var(--dark);
   color: white;
@@ -3159,6 +3167,7 @@ const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.go
 const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
 
 let currentUser = null;
+  document.body.classList.add("loading-subscription");
 let currentProfile = null;
 const mailsEnabled = true;
 const planningEnabled = true;
@@ -7051,6 +7060,7 @@ if (subLabel) {
 }
     
   updateLimitWarning();
+    document.body.classList.remove("loading-subscription");
 
 const reactivateHomeCard = document.getElementById("reactivate-home-card");
 
