@@ -4851,10 +4851,12 @@ if (box) {
   currentPreparedMail = null;
 }
 
-  function lockAgentButtons(message = "⏳ Agent en cours...") {
+  function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
   agentIsWorking = true;
 
   document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
+    if (btn === activeButton) return;
+
     btn.disabled = true;
     btn.dataset.originalText = btn.innerHTML;
     btn.innerHTML = message;
@@ -4889,7 +4891,8 @@ async function startMailDictation() {
   return;
 }
 
-lockAgentButtons("⏳ Préparation...");
+const mailBtn = document.getElementById("mail-dictation-btn");
+lockAgentButtons(mailBtn, "⏳ Agent en cours...");
   
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -4991,7 +4994,6 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   mailBtn.onclick = startMailDictation;
 }
     const instruction = latestText.trim();
-    unlockAgentButtons();
 
     const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
 
@@ -5080,11 +5082,13 @@ console.log("DATA PREVIEW MAIL:", data);
 
      box.innerHTML = "✅ Mail préparé";
 openMailPreview(data, instruction);
+      unlockAgentButtons();
 
     } catch (err) {
       console.error("Erreur envoi Make:", err);
       box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
       await saveActionLog("mails", instruction, "error");
+      unlockAgentButtons();
     }
   };
 
