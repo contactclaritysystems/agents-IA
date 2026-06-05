@@ -2290,9 +2290,83 @@ select.field-input {
   }
 }
 
+  #app-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: linear-gradient(180deg, #f7f7f8, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-card {
+  text-align: center;
+  animation: loaderFadeIn .35s ease;
+}
+
+.loader-card img {
+  width: 78px;
+  height: auto;
+  margin-bottom: 22px;
+}
+
+.loader-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1c1c1e;
+}
+
+.loader-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #8a8a8e;
+  font-weight: 600;
+}
+
+.loader-spinner {
+  width: 34px;
+  height: 34px;
+  margin: 24px auto 0;
+  border-radius: 50%;
+  border: 3px solid rgba(0,0,0,.08);
+  border-top-color: #111;
+  animation: spin .8s linear infinite;
+}
+
+#app-loader.hide {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .35s ease;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loaderFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 </style>
 </head>
 <body>
+
+  <div id="app-loader">
+  <div class="loader-card">
+    <img src="ton-logo.png" alt="Clarity Systems">
+    <div class="loader-title">Préparation de votre espace</div>
+    <div class="loader-subtitle">Chargement de vos agents...</div>
+    <div class="loader-spinner"></div>
+  </div>
+</div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -7881,6 +7955,17 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
+  function hideAppLoader() {
+  const loader = document.getElementById("app-loader");
+  if (!loader) return;
+
+  loader.classList.add("hide");
+
+  setTimeout(() => {
+    loader.remove();
+  }, 400);
+}
+
   (async function init() {
   const { data } = await supabaseClient.auth.getSession();
 
@@ -7890,6 +7975,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
   }
 
   await handleUser(data.session.user);
+hideAppLoader();
 })();
 
   window.disconnectGmail = disconnectGmail;
