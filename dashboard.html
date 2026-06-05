@@ -7196,10 +7196,9 @@ document.body.style.overflow = "hidden";
     </div>
 
   ${window.currentSubscription?.cancelAtPeriodEnd ? `
-  <div class="info-box" style="margin-top:10px;">
-    <span class="info-icon">ℹ️</span>
-    <div>Résiliation déjà programmée.</div>
-  </div>
+  <button class="pricing-plan featured" onclick="reactivateSubscription()" type="button">
+    Réactiver l’abonnement
+  </button>
 ` : `
   <button class="pricing-cancel-link" onclick="cancelSubscription()" type="button">
     Résilier mon abonnement
@@ -7252,6 +7251,43 @@ document.body.style.overflow = "hidden";
   } catch (error) {
     console.error("Erreur résiliation:", error);
     showToast("Erreur résiliation", "error");
+  }
+}
+
+async function reactivateSubscription() {
+  if (!window.currentSubscription?.subscriptionId || !window.currentSubscription?.stripeSubscriptionId) {
+    showToast("Abonnement introuvable", "error");
+    return;
+  }
+
+  try {
+    showToast("Réactivation en cours...");
+
+    const response = await fetch("https://hook.eu1.make.com/2ej4em73xmvk5u62jdmv0q6ennorlvws", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        subscription_id: window.currentSubscription.subscriptionId,
+        stripe_subscription_id: window.currentSubscription.stripeSubscriptionId
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || data.success === false) {
+      showToast("Erreur réactivation", "error");
+      return;
+    }
+
+    await loadSubscription();
+    closePricingPage();
+    showToast("Abonnement réactivé");
+
+  } catch (error) {
+    console.error("Erreur réactivation:", error);
+    showToast("Erreur réactivation", "error");
   }
 }
   
