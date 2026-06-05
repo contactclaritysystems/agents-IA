@@ -2806,7 +2806,7 @@ select.field-input {
   
   <div class="mobile-agent-top">
   <img src="https://i.imgur.com/1ZFTLIo.png" alt="Clarity Systems" style="height:40px; object-fit:contain;">
-  <div class="mobile-account-badge">
+  <div class="mobile-account-badge" style="display:none;">
     <span>🎁</span>
     <strong>-</strong>
   </div>
@@ -2818,7 +2818,7 @@ select.field-input {
     <div class="page-subtitle">Lancez vos agents prêts à l’emploi.</div>
   </div>
 
-  <div class="trial-banner desktop-trial-banner">
+  <div class="trial-banner desktop-trial-banner" style="display:none;">
     <div class="trial-icon">🎁</div>
     <div class="trial-text"><strong>6 jours</strong> restants dans votre essai gratuit</div>
   </div>
@@ -2847,7 +2847,10 @@ select.field-input {
         <div class="stat-label">Temps économisé</div>
       </div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card"
+     onclick="openSubscriptionInfo()"
+     style="cursor:pointer;">
+     
   <div class="stat-icon-wrap blue" id="subscription-mini-icon">🎁</div>
   <div>
     <div class="stat-value" id="subscription-mini-value">--</div>
@@ -7204,19 +7207,22 @@ if (cachedSub) {
   const actionsRemaining = Math.max(0, actionsTotal - actionsUsed);
 
   window.currentSubscription = {
-    subscriptionId: data.id,
-    userId: data.user_id,
-    stripeSubscriptionId: data.stripe_subscription_id,
-    cancelAtPeriodEnd: data.cancel_at_period_end,
-    plan: data.plan,
-    status: data.subscription_status,
-    actionsUsed,
-    actionsLimit,
-    extraActions,
-    actionsTotal,
-    actionsRemaining,
-    daysRemaining
-  };
+  subscriptionId: data.id,
+  userId: data.user_id,
+  stripeSubscriptionId: data.stripe_subscription_id,
+  cancelAtPeriodEnd: data.cancel_at_period_end,
+  plan: data.plan,
+  status: data.subscription_status,
+  actionsUsed,
+  actionsLimit,
+  extraActions,
+  actionsTotal,
+  actionsRemaining,
+  daysRemaining,
+  currentPeriodStart: data.current_period_start,
+  currentPeriodEnd: data.current_period_end,
+  trialEndsAt: data.trial_ends_at
+};
 
     updateSubscriptionMiniCard();
 
@@ -8132,6 +8138,59 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
 
   if (folders) folders.classList.remove("is-hidden");
   if (list) list.innerHTML = "";
+}
+
+  function openSubscriptionInfo() {
+
+  if (!window.currentSubscription) return;
+
+  const s = window.currentSubscription;
+
+  let title = "Abonnement";
+  let icon = "💳";
+
+  if (s.plan === "trial") {
+    title = "Essai gratuit";
+    icon = "🎁";
+  }
+
+  if (s.plan === "decouverte") {
+    title = "Plan Découverte";
+    icon = "💳";
+  }
+
+  if (s.plan === "pro") {
+    title = "Plan Pro";
+    icon = "🚀";
+  }
+
+  if (s.plan === "business") {
+    title = "Plan Business";
+    icon = "👑";
+  }
+
+  document.getElementById("pricing-modal-content").innerHTML = `
+    <div class="limit-warning-header">
+      <span>${icon}</span>
+      <strong>${title}</strong>
+    </div>
+
+    <div class="gmail-desc" style="margin-bottom:18px;">
+      Actions utilisées : ${s.actionsUsed} / ${s.actionsTotal}
+      <br><br>
+      Actions restantes : ${s.actionsRemaining}
+      <br><br>
+      Prochain renouvellement :
+      ${new Date(s.currentPeriodEnd).toLocaleDateString("fr-FR")}
+    </div>
+
+    <button class="save-btn"
+            onclick="closePricingPage()">
+      Fermer
+    </button>
+  `;
+
+  document.getElementById("pricing-modal").style.display = "block";
 }
 
 async function loadFollowUps() {
