@@ -5158,8 +5158,13 @@ async function startPlanningDictation() {
   if (planningBtn) {
     planningBtn.innerHTML = "⏹ Arrêter la dictée";
     planningBtn.onclick = () => {
-      try { recognition.stop(); } catch(e) {}
-    };
+  planningBtn.disabled = true;
+  planningBtn.innerHTML = "⏳ Création du rendez-vous...";
+  planningBtn.style.opacity = ".55";
+  planningBtn.style.pointerEvents = "none";
+
+  try { recognition.stop(); } catch(e) {}
+};
   }
 
   function resetSilenceTimer() {
@@ -5275,6 +5280,8 @@ async function startPlanningDictation() {
       box.innerHTML = "✅ Rendez-vous créé";
       showToast("Rendez-vous ajouté");
 
+      unlockAgentButtons();
+
       await incrementActions();
       await loadSubscription();
       
@@ -5290,6 +5297,7 @@ async function startPlanningDictation() {
       clearTimeout(step1);
       clearTimeout(step2);
       clearTimeout(step3);
+      unlockAgentButtons();
 
       console.error("Erreur planning Make:", err);
 
@@ -5319,8 +5327,13 @@ async function startPlanningDictation() {
 
   async function startRelanceDictation() {
 
-  const allowed = await canUseAgents();
-  if (!allowed) return;
+  if (agentIsWorking) {
+  showToast("Un agent est déjà en cours", "error");
+  return;
+}
+
+const planningBtn = document.getElementById("planning-dictation-btn");
+lockAgentButtons(planningBtn, "⏳ Agent en cours...");
     
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
