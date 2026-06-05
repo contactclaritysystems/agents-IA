@@ -8,7 +8,7 @@
 <style>
 :root {
   --white: #ffffff;
-  --page: #f7f7f5;
+  --page: #ffffff;
   --surface: #ffffff;
   --surface-soft: #f1f1ef;
   --surface-card: #fbfbfa;
@@ -51,8 +51,8 @@ html {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background:
-    radial-gradient(circle at 50% -10%, rgba(0,0,0,0.055), transparent 36%),
-    var(--page);
+    radial-gradient(circle at 50% -10%, rgba(0,0,0,0.025), transparent 36%),
+    #ffffff;
   color: var(--text);
   min-height: 100svh;
   display: flex;
@@ -1520,6 +1520,10 @@ select.field-input {
   font-size: 12px !important;
   border-radius: 999px !important;
 }
+  
+  #main-agents {
+    background: #ffffff !important;
+  }
 }
 
    .history-folder-card {
