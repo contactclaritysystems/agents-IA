@@ -2846,6 +2846,13 @@ select.field-input {
         <div class="stat-label">Temps économisé</div>
       </div>
     </div>
+    <div class="stat-card">
+  <div class="stat-icon-wrap blue" id="subscription-mini-icon">🎁</div>
+  <div>
+    <div class="stat-value" id="subscription-mini-value">--</div>
+    <div class="stat-label" id="subscription-mini-label">Abonnement</div>
+  </div>
+</div>
   </div>
 
 <div id="limit-warning-card" class="gmail-section" style="display:none; margin-bottom:22px;">
@@ -7210,6 +7217,8 @@ if (cachedSub) {
     daysRemaining
   };
 
+    updateSubscriptionMiniCard();
+
     localStorage.setItem(
   `subscription_cache_${currentUser.email}`,
   JSON.stringify(window.currentSubscription)
@@ -7258,6 +7267,39 @@ if (reactivateHomeCard) {
     data.cancel_at_period_end === true ? "grid" : "none";
 }
     
+}
+
+  function updateSubscriptionMiniCard() {
+
+  const data = window.currentSubscription;
+
+  const miniIcon = document.getElementById("subscription-mini-icon");
+  const miniValue = document.getElementById("subscription-mini-value");
+  const miniLabel = document.getElementById("subscription-mini-label");
+
+  if (!miniIcon || !miniValue || !miniLabel || !data) return;
+
+  if (data.cancelAtPeriodEnd === true) {
+    miniIcon.textContent = "⏳";
+    miniValue.textContent = `${data.daysRemaining}j`;
+    miniLabel.textContent = "Résiliation";
+  } else if (data.plan === "trial") {
+    miniIcon.textContent = "🎁";
+    miniValue.textContent = `${data.daysRemaining}j`;
+    miniLabel.textContent = "Essai gratuit";
+  } else if (data.plan === "decouverte") {
+    miniIcon.textContent = "💳";
+    miniValue.textContent = "Découverte";
+    miniLabel.textContent = "Abonnement";
+  } else if (data.plan === "pro") {
+    miniIcon.textContent = "🚀";
+    miniValue.textContent = "Pro";
+    miniLabel.textContent = "Abonnement";
+  } else if (data.plan === "business") {
+    miniIcon.textContent = "👑";
+    miniValue.textContent = "Business";
+    miniLabel.textContent = "Abonnement";
+  }
 }
 
   function updateLimitWarning() {
