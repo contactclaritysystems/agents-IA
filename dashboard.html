@@ -5005,11 +5005,7 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
 
   recognition.onend = async function() {
     clearTimeout(silenceTimer);
-
-    if (mailBtn) {
-  mailBtn.innerHTML = "🎙️ Dicter un mail";
-  mailBtn.onclick = startMailDictation;
-}
+    
     const instruction = latestText.trim();
 
     const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
@@ -5126,6 +5122,14 @@ async function startPlanningDictation() {
 
   const allowed = await canUseAgents();
   if (!allowed) return;
+
+  if (agentIsWorking) {
+  showToast("Un agent est déjà en cours", "error");
+  return;
+}
+
+const planningBtn = document.getElementById("planning-dictation-btn");
+lockAgentButtons(planningBtn, "⏳ Agent en cours...");
   
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -5215,11 +5219,6 @@ async function startPlanningDictation() {
 
   recognition.onend = async function() {
     clearTimeout(silenceTimer);
-
-    if (planningBtn) {
-      planningBtn.innerHTML = "🎙️ Créer un rendez-vous";
-      planningBtn.onclick = startPlanningDictation;
-    }
 
     const instruction = (latestText || finalText).trim();
 
@@ -5341,9 +5340,6 @@ async function startPlanningDictation() {
   showToast("Un agent est déjà en cours", "error");
   return;
 }
-
-const planningBtn = document.getElementById("planning-dictation-btn");
-lockAgentButtons(planningBtn, "⏳ Agent en cours...");
     
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
