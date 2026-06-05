@@ -3918,9 +3918,14 @@ buttons.forEach(btn => {
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
   if (!accessToken) {
-    showToast("Session expirée", "error");
-    return;
-  }
+  buttons.forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  });
+
+  showToast("Session expirée", "error");
+  return;
+}
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/appointments?id=eq." + id,
@@ -5280,7 +5285,9 @@ if (planningBtn) {
       }
 
       if (!data.success) {
-        const message = data.message || data.error || data.reason || "Impossible de créer le rendez-vous.";
+  unlockAgentButtons();
+
+  const message = data.message || data.error || data.reason || "Impossible de créer le rendez-vous.";
 
         setDictationBoxState(box, "error");
         box.innerHTML = "✕ " + message;
@@ -8279,10 +8286,15 @@ async function updateFollowUpStatus(id, status, message) {
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-  if (!accessToken) {
-    showToast("Session expirée", "error");
-    return;
-  }
+ if (!accessToken) {
+  buttons.forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  });
+
+  showToast("Session expirée", "error");
+  return;
+}
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/follow_ups?id=eq." + id,
