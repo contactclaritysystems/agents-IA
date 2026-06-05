@@ -4940,8 +4940,13 @@ lockAgentButtons(mailBtn, "⏳ Agent en cours...");
   if (mailBtn) {
   mailBtn.innerHTML = "⏹ Arrêter la dictée";
   mailBtn.onclick = () => {
-    try { recognition.stop(); } catch(e) {}
-  };
+  mailBtn.disabled = true;
+  mailBtn.innerHTML = "⏳ Préparation du mail...";
+  mailBtn.style.opacity = ".55";
+  mailBtn.style.pointerEvents = "none";
+
+  try { recognition.stop(); } catch(e) {}
+};
 }
 
   function resetSilenceTimer() {
