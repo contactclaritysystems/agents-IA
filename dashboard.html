@@ -5121,7 +5121,10 @@ openMailPreview(data, instruction);
 async function startPlanningDictation() {
 
   const allowed = await canUseAgents();
-  if (!allowed) return;
+  if (!allowed) {
+  unlockAgentButtons();
+  return;
+}
 
   if (agentIsWorking) {
   showToast("Un agent est déjà en cours", "error");
@@ -5225,11 +5228,12 @@ if (planningBtn) {
     const instruction = (latestText || finalText).trim();
 
     if (!instruction) {
-      setDictationBoxState(box, "error");
-      box.innerHTML = "✕ Aucune instruction détectée.";
-      autoHideDictationBox(box);
-      return;
-    }
+  unlockAgentButtons();
+  setDictationBoxState(box, "error");
+  box.innerHTML = "✕ Aucune instruction détectée.";
+  autoHideDictationBox(box);
+  return;
+}
 
     if (hasSent) return;
     hasSent = true;
