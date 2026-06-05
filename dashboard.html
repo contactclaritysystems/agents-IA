@@ -4883,6 +4883,13 @@ async function startMailDictation() {
 
   const allowed = await canUseAgents();
   if (!allowed) return;
+
+  if (agentIsWorking) {
+  showToast("Un agent est déjà en cours", "error");
+  return;
+}
+
+lockAgentButtons("⏳ Préparation...");
   
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -4984,6 +4991,7 @@ box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
   mailBtn.onclick = startMailDictation;
 }
     const instruction = latestText.trim();
+    unlockAgentButtons();
 
     const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
 
