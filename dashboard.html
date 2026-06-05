@@ -4937,8 +4937,7 @@ lockAgentButtons(mailBtn, "⏳ Agent en cours...");
   let hasSent = false;
   let silenceTimer = null;
 
-  const mailBtn = document.getElementById("mail-dictation-btn");
-if (mailBtn) {
+  if (mailBtn) {
   mailBtn.innerHTML = "⏹ Arrêter la dictée";
   mailBtn.onclick = () => {
     try { recognition.stop(); } catch(e) {}
