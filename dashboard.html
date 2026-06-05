@@ -1393,6 +1393,15 @@ select.field-input {
   overflow: hidden;
 }
 
+  #main-agents .mobile-agent-top {
+  min-height: 48px;
+}
+
+#main-agents .mobile-account-badge {
+  min-width: 165px;
+  justify-content: center;
+}
+
 #main-contacts .gmail-section {
   margin: 0 18px 24px;
   border-radius: 22px;
@@ -7043,13 +7052,18 @@ if (cachedSub) {
   }
 
   const trialBadges = document.querySelectorAll(".trial-text strong, .mobile-account-badge strong");
+  const mobileBadgeIcon = document.querySelector(".mobile-account-badge span");
   trialBadges.forEach(el => {
+
     if (data.plan === "trial") {
       el.textContent = `${daysRemaining} jours d'essai`;
+      if (mobileBadgeIcon) mobileBadgeIcon.textContent = "🎁";
     } else {
       el.textContent = data.cancel_at_period_end === true
   ? `Résiliation dans ${daysRemaining} jours`
   : `${daysRemaining} jours restants`;
+      if (mobileBadgeIcon) mobileBadgeIcon.textContent =
+  data.cancel_at_period_end === true ? "⚠️" : "💳";
     }
   });
 
