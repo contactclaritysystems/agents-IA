@@ -61,12 +61,15 @@ body {
   width: 100%;
 }
 
-body.loading-subscription #main-agents {
+body.loading-subscription .trial-banner,
+body.loading-subscription .mobile-account-badge,
+body.loading-subscription #actions-count {
   opacity: 0;
-  pointer-events: none;
 }
 
-#main-agents {
+.trial-banner,
+.mobile-account-badge,
+#actions-count {
   transition: opacity .18s ease;
 }
   
