@@ -4891,18 +4891,19 @@ async function saveActionLog(agent, action, status) {
   timeEl,
   0,
   totalMinutes,
+  1400,
   (value) => {
-  const safeValue = Number(value) || 0;
+    const safeValue = Number(value) || 0;
 
-  const h = Math.floor(safeValue / 60);
-  const m = safeValue % 60;
+    const h = Math.floor(safeValue / 60);
+    const m = safeValue % 60;
 
-  if (h === 0) {
-    return `${m} min`;
+    if (h === 0) {
+      return `${m} min`;
+    }
+
+    return `${h}h${String(m).padStart(2, "0")}`;
   }
-
-  return `${h}h${String(m).padStart(2, "0")}`;
-}
 );
 
   }
