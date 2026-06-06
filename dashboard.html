@@ -4686,10 +4686,20 @@ updateAgentsCount();
   }
 
   if (sub && subBar) {
-    const maxDays = sub.plan === "trial" ? 7 : 30;
-    const days = sub.daysRemaining || 0;
-    subBar.style.width = `${Math.min((days / maxDays) * 100, 100)}%`;
+  if (sub.cancelAtPeriodEnd === true) {
+    subBar.style.width = "15%";
+  } else if (sub.plan === "trial") {
+    subBar.style.width = "0%";
+  } else if (sub.plan === "decouverte") {
+    subBar.style.width = "33%";
+  } else if (sub.plan === "pro") {
+    subBar.style.width = "66%";
+  } else if (sub.plan === "business") {
+    subBar.style.width = "100%";
+  } else {
+    subBar.style.width = "0%";
   }
+}
 }
 
   async function toggleAgentEnabled(agentName) {
