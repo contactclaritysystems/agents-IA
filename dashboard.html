@@ -2866,28 +2866,39 @@ select.field-input {
 </div>
 
 <!-- STATS -->
-  <div class="status-row">
-    <div class="stat-card">
-      <div class="stat-icon-wrap green">✅</div>
-      <div>
-        <div class="stat-value" id="agents-count">0 / 0</div>
-        <div class="stat-label">Agents configurés</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon-wrap purple">⚡</div>
-      <div>
-        <div class="stat-value" id="actions-count">—</div>
-<div class="stat-label">Actions utilisées</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon-wrap orange">⏱</div>
-      <div>
-        <div class="stat-value" id="time-saved-count">0h00</div>
-        <div class="stat-label">Temps économisé</div>
-      </div>
-    </div>
+  Oui c’est exactement ce bloc. Remplace-le par :
+
+<div class="status-row">
+  <div class="stat-card">
+    <div class="stat-icon-wrap green">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div>
+      <div class="stat-value" id="agents-count">0 / 0</div>
+      <div class="stat-label">Agents configurés</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon-wrap purple">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6e6e73" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <div>
+      <div class="stat-value" id="actions-count">—</div>
+      <div class="stat-label">Actions utilisées</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon-wrap orange">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b7791f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <div>
+      <div class="stat-value" id="time-saved-count">0h00</div>
+      <div class="stat-label">Temps économisé</div>
+    </div>
+  </div>
+  
     <div class="stat-card"
      onclick="openSubscriptionInfo()"
      style="cursor:pointer;">
