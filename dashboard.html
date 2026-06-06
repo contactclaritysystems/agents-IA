@@ -1426,6 +1426,36 @@ select.field-input {
   justify-content: center;
 }
 
+  #main-agents .stat-icon-wrap svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#main-agents .stat-icon-wrap.green {
+  background: rgba(34,197,94,.10);
+  color: #16a34a;
+}
+
+#main-agents .stat-icon-wrap.yellow {
+  background: rgba(245,158,11,.12);
+  color: #f59e0b;
+}
+
+#main-agents .stat-icon-wrap.blue {
+  background: rgba(59,130,246,.10);
+  color: #2563eb;
+}
+
+#main-agents .stat-icon-wrap.purple {
+  background: rgba(139,92,246,.10);
+  color: #7c3aed;
+}
+
 #main-contacts .gmail-section {
   margin: 0 18px 24px;
   border-radius: 22px;
@@ -2887,24 +2917,27 @@ select.field-input {
   </div>
 
   <div class="stat-card">
-    <div class="stat-icon-wrap purple">⚡</div>
-    <div>
+    <div class="stat-icon-wrap yellow">
+  <svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+</div>
       <div class="stat-value" id="actions-count">—</div>
       <div class="stat-label">Actions utilisées</div>
     </div>
   </div>
 
   <div class="stat-card">
-    <div class="stat-icon-wrap orange">⏱</div>
-    <div>
+    <div class="stat-icon-wrap blue">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2"/><path d="M9 2h6"/></svg>
+</div>
       <div class="stat-value" id="time-saved-count">0h00</div>
       <div class="stat-label">Temps économisé</div>
     </div>
   </div>
 
   <div class="stat-card" onclick="openSubscriptionInfo()" style="cursor:pointer;">
-    <div class="stat-icon-wrap blue" id="subscription-mini-icon">🎁</div>
-    <div>
+    <div class="stat-icon-wrap purple" id="subscription-mini-icon">
+  <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+</div>
       <div class="stat-value" id="subscription-mini-value">--</div>
       <div class="stat-label" id="subscription-mini-label">Abonnement</div>
     </div>
