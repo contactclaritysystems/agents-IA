@@ -2936,7 +2936,7 @@ select.field-input {
       <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2"/><path d="M9 2h6"/></svg>
     </div>
     <div>
-      <div class="stat-value" id="time-saved-count">0h00</div>
+      <div class="stat-value" id="time-saved-count">0 min</div>
       <div class="stat-label">Temps gagné</div>
     </div>
   </div>
@@ -4892,8 +4892,10 @@ async function saveActionLog(agent, action, status) {
   0,
   totalMinutes,
   (value) => {
-  const h = Math.floor(value / 60);
-  const m = value % 60;
+  const safeValue = Number(value) || 0;
+
+  const h = Math.floor(safeValue / 60);
+  const m = safeValue % 60;
 
   if (h === 0) {
     return `${m} min`;
