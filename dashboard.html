@@ -2908,10 +2908,12 @@ select.field-input {
 
 <!-- STATS -->
 <div class="status-row">
+
   <div class="stat-card">
     <div class="stat-icon-wrap green">
-  <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-</div>
+      <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+    </div>
+    <div>
       <div class="stat-value" id="agents-count">0 / 0</div>
       <div class="stat-label">Agents configurés</div>
     </div>
@@ -2919,8 +2921,9 @@ select.field-input {
 
   <div class="stat-card">
     <div class="stat-icon-wrap yellow">
-  <svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
-</div>
+      <svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>
+    </div>
+    <div>
       <div class="stat-value" id="actions-count">—</div>
       <div class="stat-label">Actions utilisées</div>
     </div>
@@ -2928,8 +2931,9 @@ select.field-input {
 
   <div class="stat-card">
     <div class="stat-icon-wrap blue">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2"/><path d="M9 2h6"/></svg>
-</div>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2"/><path d="M9 2h6"/></svg>
+    </div>
+    <div>
       <div class="stat-value" id="time-saved-count">0h00</div>
       <div class="stat-label">Temps économisé</div>
     </div>
@@ -2937,12 +2941,14 @@ select.field-input {
 
   <div class="stat-card" onclick="openSubscriptionInfo()" style="cursor:pointer;">
     <div class="stat-icon-wrap purple" id="subscription-mini-icon">
-  <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-</div>
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+    </div>
+    <div>
       <div class="stat-value" id="subscription-mini-value">--</div>
       <div class="stat-label" id="subscription-mini-label">Abonnement</div>
     </div>
   </div>
+
 </div>
 
 <div id="limit-warning-card" class="gmail-section" style="display:none; margin-bottom:22px;">
