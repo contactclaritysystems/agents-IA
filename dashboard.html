@@ -2437,7 +2437,45 @@ select.field-input {
   }
 }
 
-  
+  #main-agents .stat-card {
+  position: relative;
+  padding-bottom: 20px;
+}
+
+#main-agents .stat-progress {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 10px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.07);
+  overflow: hidden;
+}
+
+#main-agents .stat-progress span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width .45s ease;
+}
+
+#main-agents .stat-progress.green span {
+  background: #16a34a;
+}
+
+#main-agents .stat-progress.yellow span {
+  background: #f59e0b;
+}
+
+#main-agents .stat-progress.blue span {
+  background: #2563eb;
+}
+
+#main-agents .stat-progress.purple span {
+  background: #7c3aed;
+}
 
 </style>
 </head>
@@ -4613,6 +4651,36 @@ updateAgentsCount();
   if (el) {
     el.textContent = `${activeAgents} / ${totalAgents}`;
   }
+    updateStatProgresses();
+}
+
+  function updateStatProgresses() {
+  const agentsBar = document.getElementById("agents-progress");
+  const actionsBar = document.getElementById("actions-progress");
+  const timeBar = document.getElementById("time-progress");
+  const subBar = document.getElementById("subscription-progress");
+
+  const totalAgents = Object.keys(enabledAgents).length || 1;
+  const activeAgents = Object.values(enabledAgents).filter(v => v === true).length;
+  if (agentsBar) agentsBar.style.width = `${Math.min((activeAgents / totalAgents) * 100, 100)}%`;
+
+  const sub = window.currentSubscription;
+  if (sub && actionsBar) {
+    const total = sub.actionsTotal || 1;
+    const used = sub.actionsUsed || 0;
+    actionsBar.style.width = `${Math.min((used / total) * 100, 100)}%`;
+  }
+
+  const minutes = window.currentTimeSavedMinutes || 0;
+  if (timeBar) {
+    timeBar.style.width = `${Math.min((minutes / 240) * 100, 100)}%`;
+  }
+
+  if (sub && subBar) {
+    const maxDays = sub.plan === "trial" ? 7 : 30;
+    const days = sub.daysRemaining || 0;
+    subBar.style.width = `${Math.min((days / maxDays) * 100, 100)}%`;
+  }
 }
 
   async function toggleAgentEnabled(agentName) {
@@ -4883,6 +4951,9 @@ async function saveActionLog(agent, action, status) {
   const totalMinutes = actions.reduce((total, item) => {
     return total + (timeSavedByAgent[item.agent] || 3);
   }, 0);
+
+    window.currentTimeSavedMinutes = totalMinutes;
+updateStatProgresses();
 
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
@@ -7328,6 +7399,7 @@ if (cachedSub) {
 };
 
     updateSubscriptionMiniCard();
+    updateStatProgresses();
 
     localStorage.setItem(
   `subscription_cache_${currentUser.email}`,
