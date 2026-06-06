@@ -7378,7 +7378,7 @@ if (reactivateHomeCard) {
   const sub = window.currentSubscription;
 
   if (sub.cancelAtPeriodEnd === true) {
-    icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>`;
+    icon.textContent = "⚠️";
     icon.className = "stat-icon-wrap orange";
     value.textContent = `${sub.daysRemaining}j`;
     label.textContent = "Résiliation";
@@ -7386,7 +7386,7 @@ if (reactivateHomeCard) {
   }
 
   if (sub.plan === "trial") {
-    icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>`;
+    icon.textContent = "🎁";
     icon.className = "stat-icon-wrap purple";
     value.textContent = `${sub.daysRemaining}j`;
     label.textContent = "Essai";
@@ -7394,7 +7394,7 @@ if (reactivateHomeCard) {
   }
 
   if (sub.plan === "decouverte") {
-    icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5L18.5 21 12 16.8 5.5 21l2-7.5L2 9h7z"/></svg>`;
+    icon.textContent = "⭐";
     icon.className = "stat-icon-wrap blue";
     value.textContent = "Découverte";
     label.textContent = "Plan";
@@ -7402,15 +7402,15 @@ if (reactivateHomeCard) {
   }
 
   if (sub.plan === "pro") {
-    icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M13 2L3 14h8l-1 8 10-12h-8l1-8z"/></svg>`;
-    icon.className = "stat-icon-wrap yellow";
+    icon.textContent = "💎";
+    icon.className = "stat-icon-wrap purple";
     value.textContent = "Pro";
     label.textContent = "Plan";
     return;
   }
 
   if (sub.plan === "business") {
-    icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 7l4 10h10l4-10-6 4-3-7-3 7-6-4z"/><path d="M7 21h10"/></svg>`;
+    icon.textContent = "👑";
     icon.className = "stat-icon-wrap purple";
     value.textContent = "Business";
     label.textContent = "Plan";
