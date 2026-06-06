@@ -4891,13 +4891,16 @@ async function saveActionLog(agent, action, status) {
   timeEl,
   0,
   totalMinutes,
-  1400,
   (value) => {
-    const h = Math.floor(value / 60);
-    const m = value % 60;
+  const h = Math.floor(value / 60);
+  const m = value % 60;
 
-    return `${h}h${String(m).padStart(2, "0")}`;
+  if (h === 0) {
+    return `${m} min`;
   }
+
+  return `${h}h${String(m).padStart(2, "0")}`;
+}
 );
 
   }
