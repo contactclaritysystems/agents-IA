@@ -169,7 +169,20 @@ body.loading-subscription #agents-count {
   font-size: 15px;
   width: 18px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+  .nav-item .icon svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.nav-item.active .icon svg {
+  stroke: white;
+}
+
 
 .nav-item .badge {
   margin-left: auto;
