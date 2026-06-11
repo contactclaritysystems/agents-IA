@@ -1046,6 +1046,11 @@ Bonne journée
     <p class="msub">7 jours gratuits, sans carte bancaire.</p>
     <div class="tab-row">
       <button class="tbtn active" onclick="switchTab('login',this)">Connexion</button>
+
+ <button type="button" onclick="forgotPassword()" class="forgot-password-btn">
+  Mot de passe oublié ?
+</button>
+      
       <button class="tbtn" onclick="switchTab('register',this)">Créer un compte</button>
     </div>
     <div id="loginForm">
@@ -1157,6 +1162,27 @@ async function signUp() {
 }
 
   window.location.href = "dashboard.html";
+}
+
+  async function forgotPassword() {
+  const email = document.getElementById('email').value.trim();
+
+  if (!email) {
+    alert("Entre ton email.");
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://contactclaritysystems.github.io/agents-IA/dashboard.html'
+  });
+
+  if (error) {
+    console.error(error);
+    alert("Erreur lors de l'envoi.");
+    return;
+  }
+
+  alert("Email de réinitialisation envoyé.");
 }
 
 async function signIn() {
