@@ -1191,7 +1191,7 @@ async function signUp() {
   }
 
   const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://contactclaritysystems.github.io/agents-IA/dashboard.html'
+    redirectTo: 'https://contactclaritysystems.github.io/agents-IA/reset-password.html'
   });
 
   if (error) {
