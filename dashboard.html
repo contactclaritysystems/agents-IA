@@ -7544,7 +7544,7 @@ if (reactivateHomeCard) {
   if (sub.plan === "decouverte") {
     icon.textContent = "⭐";
     icon.className = "stat-icon-wrap blue";
-    value.textContent = "Découverte";
+    value.textContent = "Starter";
     label.textContent = "Abonnement";
     return;
   }
@@ -7663,7 +7663,7 @@ function openPricingPage() {
       <div class="mail-choice-subtitle">Continuez à utiliser vos agents sans interruption.</div>
 
       <div class="pricing-plan">
-        <strong>Découverte</strong>
+        <strong>Starter</strong>
         <span>19€/mois · 50 actions</span>
         <button type="button" onclick="choosePlan('decouverte')">Choisir</button>
       </div>
@@ -7743,7 +7743,7 @@ document.body.style.overflow = "hidden";
     </div>
 
     <div class="pricing-plan">
-      <strong>Découverte</strong>
+      <strong>Starter</strong>
       <span>19€ · 50 actions/mois</span>
       <button type="button" onclick="choosePlan('decouverte')">Choisir</button>
     </div>
@@ -8412,7 +8412,7 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
   }
 
   if (s.plan === "decouverte") {
-    title = "Plan Découverte";
+    title = "Plan Starter";
     icon = "💳";
   }
 
