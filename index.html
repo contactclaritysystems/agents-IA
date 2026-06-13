@@ -1096,6 +1096,7 @@ Bonne journée
       <div class="field"><label>Prénom</label><input type="text" placeholder="Jean"/></div>
       <div class="field"><label>Email</label><input type="email" placeholder="vous@exemple.fr"/></div>
       <div class="field"><label>Mot de passe</label><input type="password" placeholder="Minimum 8 caractères"/></div>
+      <div id="registerError" class="error" style="display:none;"></div>
       <button class="btn-sub" onclick="signUp()">Démarrer mon essai gratuit</button>
     </div>
   </div>
@@ -1172,9 +1173,18 @@ async function signUp() {
   });
 
   if (error) {
-    alert(error.message);
-    return;
+
+  const errorBox = document.getElementById("registerError");
+
+  if (error.message.toLowerCase().includes("already")) {
+    errorBox.textContent = "Cette adresse email est déjà utilisée.";
+  } else {
+    errorBox.textContent = error.message;
   }
+
+  errorBox.style.display = "block";
+  return;
+}
 
   const { error: subError } = await supabaseClient
   .from('subscriptions')
