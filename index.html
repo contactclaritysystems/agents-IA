@@ -1349,7 +1349,7 @@ function animateHeroDemo() {
 
   let i = 0;
 
-  const interval = setInterval(() => {
+  return setInterval(() => {
     textEl.textContent += dictationSentence.charAt(i);
     i++;
 
@@ -1374,10 +1374,14 @@ window.addEventListener("load", () => {
   const card = document.querySelector(".hcard");
   if (!card) return;
 
+  let currentInterval = null;
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        animateHeroDemo();
+        currentInterval = animateHeroDemo();
+      } else {
+        clearInterval(currentInterval);
       }
     });
   }, { threshold: 0.6 });
