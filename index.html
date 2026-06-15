@@ -891,24 +891,32 @@ header {
 .atile-custom { grid-column: span 1 !important; flex-direction: column; gap: 14px; padding: 20px; }
 .atile-custom .btn-dark { width: 100%; justify-content: center; }
 
-    .pgrid {
+   .pgrid {
   display: flex !important;
   flex-direction: row !important;
   overflow-x: auto !important;
   scroll-snap-type: x mandatory !important;
   -webkit-overflow-scrolling: touch !important;
-  gap: 12px !important;
-  padding-bottom: 12px !important;
+  gap: 10px !important;
   margin: 0 -18px !important;
-  padding-left: 18px !important;
-  padding-right: 18px !important;
+  padding: 0 18px 12px !important;
 }
 
 .pcard {
-  min-width: 78vw !important;
+  min-width: 72vw !important;
   scroll-snap-align: start !important;
   flex-shrink: 0 !important;
+  padding: 18px 16px !important;
+  border-radius: 20px !important;
 }
+
+.pprice { font-size: 2rem !important; margin-bottom: 2px !important; }
+.pper { font-size: .7rem !important; margin-bottom: 12px !important; }
+.pdiv { margin-bottom: 10px !important; }
+.pfeats { gap: 6px !important; margin-bottom: 16px !important; }
+.pli { font-size: .72rem !important; }
+.pname { margin-bottom: 8px !important; }
+.pop-tag { font-size: .55rem !important; padding: 4px 10px !important; }
 }
   
 </style>
