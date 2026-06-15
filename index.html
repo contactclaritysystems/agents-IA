@@ -1287,8 +1287,18 @@ function animateHeroDemo() {
 }
 
 window.addEventListener("load", () => {
-  animateHeroDemo();
-  setInterval(animateHeroDemo, 15000);
+  const card = document.querySelector(".hcard");
+  if (!card) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        animateHeroDemo();
+      }
+    });
+  }, { threshold: 0.6 });
+
+  observer.observe(card);
 });
 
 /* CHATBOT */
