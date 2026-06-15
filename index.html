@@ -1354,7 +1354,7 @@ function animateHeroDemo() {
 
   let i = 0;
 
-  return setInterval(() => {
+  const interval = setInterval(() => {
     textEl.textContent += dictationSentence.charAt(i);
     i++;
 
@@ -1373,6 +1373,8 @@ function animateHeroDemo() {
       }, 1200);
     }
   }, 45);
+
+  return interval;
 }
 
 window.addEventListener("load", () => {
