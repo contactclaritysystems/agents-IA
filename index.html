@@ -890,6 +890,25 @@ header {
 .atile-desc { font-size: .84rem; line-height: 1.55; }
 .atile-custom { grid-column: span 1 !important; flex-direction: column; gap: 14px; padding: 20px; }
 .atile-custom .btn-dark { width: 100%; justify-content: center; }
+
+    .pgrid {
+  display: flex !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  -webkit-overflow-scrolling: touch !important;
+  gap: 12px !important;
+  padding-bottom: 12px !important;
+  margin: 0 -18px !important;
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+
+.pcard {
+  min-width: 78vw !important;
+  scroll-snap-align: start !important;
+  flex-shrink: 0 !important;
+}
 }
   
 </style>
