@@ -891,32 +891,8 @@ header {
 .atile-custom { grid-column: span 1 !important; flex-direction: column; gap: 14px; padding: 20px; }
 .atile-custom .btn-dark { width: 100%; justify-content: center; }
 
-   .pgrid {
-  display: flex !important;
-  flex-direction: row !important;
-  overflow-x: auto !important;
-  scroll-snap-type: x mandatory !important;
-  -webkit-overflow-scrolling: touch !important;
-  gap: 10px !important;
-  margin: 0 -18px !important;
-  padding: 0 18px 12px !important;
-}
-
-.pcard {
-  min-width: 72vw !important;
-  scroll-snap-align: start !important;
-  flex-shrink: 0 !important;
-  padding: 18px 16px !important;
-  border-radius: 20px !important;
-}
-
-.pprice { font-size: 2rem !important; margin-bottom: 2px !important; }
-.pper { font-size: .7rem !important; margin-bottom: 12px !important; }
-.pdiv { margin-bottom: 10px !important; }
-.pfeats { gap: 6px !important; margin-bottom: 16px !important; }
-.pli { font-size: .72rem !important; }
-.pname { margin-bottom: 8px !important; }
-.pop-tag { font-size: .55rem !important; padding: 4px 10px !important; }
+   .pgrid { display: none !important; }
+#pricing-mobile { display: block !important; }
 }
   
 </style>
@@ -1113,6 +1089,69 @@ Bonne journée
   <h2 class="stitle rv">7 jours gratuits<br/>sur tous les plans.</h2>
   <p class="ssub rv">Aucune carte bancaire. Accès complet. Annulation à tout moment.</p>
 
+<div id="pricing-mobile" style="display:none;">
+  <div style="display:flex; gap:8px; background:#f1f1ef; border-radius:14px; padding:4px; margin-bottom:20px;">
+    <button onclick="switchPlan('starter',this)" class="plan-tab active" style="flex:1;padding:10px;border:none;border-radius:10px;background:white;font-weight:700;font-size:.82rem;font-family:Inter,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);">Starter</button>
+    <button onclick="switchPlan('pro',this)" class="plan-tab" style="flex:1;padding:10px;border:none;border-radius:10px;background:transparent;font-weight:700;font-size:.82rem;font-family:Inter,sans-serif;cursor:pointer;color:#6e6e73;">Pro</button>
+    <button onclick="switchPlan('business',this)" class="plan-tab" style="flex:1;padding:10px;border:none;border-radius:10px;background:transparent;font-weight:700;font-size:.82rem;font-family:Inter,sans-serif;cursor:pointer;color:#6e6e73;">Business</button>
+  </div>
+
+  <div id="plan-starter" class="plan-panel">
+    <div class="pcard" style="display:block;">
+      <div class="pname">Starter</div>
+      <div class="pprice"><sup>€</sup>19</div>
+      <div class="pper">par mois après l'essai</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">50 actions par mois</li>
+        <li class="pli">Tous les agents inclus</li>
+        <li class="pli">Connexion Gmail & Outlook</li>
+        <li class="pli">Carnet contacts</li>
+        <li class="pli">Historique des actions</li>
+      </ul>
+      <a href="#" class="btn-outline-full" onclick="openRegisterFromChat(event)">Commencer gratuitement</a>
+    </div>
+  </div>
+
+  <div id="plan-pro" class="plan-panel" style="display:none;">
+    <div class="pcard feat" style="display:block;">
+      <div class="pop-tag">Le plus populaire</div>
+      <div class="pname">Pro</div>
+      <div class="pprice"><sup>€</sup>39</div>
+      <div class="pper">par mois après l'essai</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">250 actions par mois</li>
+        <li class="pli">Tous les agents inclus</li>
+        <li class="pli">Connexion Gmail & Outlook</li>
+        <li class="pli">Carnet contacts illimité</li>
+        <li class="pli">Historique complet</li>
+        <li class="pli">Support prioritaire</li>
+      </ul>
+      <a href="#" class="btn-white-full" onclick="openRegisterFromChat(event)">Commencer gratuitement</a>
+    </div>
+  </div>
+
+  <div id="plan-business" class="plan-panel" style="display:none;">
+    <div class="pcard" style="display:block;">
+      <div class="pname">Business</div>
+      <div class="pprice"><sup>€</sup>69</div>
+      <div class="pper">par mois après l'essai</div>
+      <div class="pdiv"></div>
+      <ul class="pfeats">
+        <li class="pli">600 actions par mois</li>
+        <li class="pli">Tous les agents inclus</li>
+        <li class="pli">Connexion Gmail & Outlook</li>
+        <li class="pli">Carnet contacts illimité</li>
+        <li class="pli">Historique complet</li>
+        <li class="pli">Support prioritaire 7j/7</li>
+        <li class="pli">Agent sur-mesure inclus</li>
+      </ul>
+      <a href="#" class="btn-outline-full" onclick="openRegisterFromChat(event)">Commencer gratuitement</a>
+    </div>
+  </div>
+</div>
+  
   <div class="pgrid rv">
 
     <div class="pcard">
@@ -1238,6 +1277,19 @@ Bonne journée
 function closeBanner() {
   document.getElementById('promoBanner').style.display = 'none';
   document.getElementById('mainNav').classList.add('banner-hidden');
+}
+
+  function switchPlan(plan, btn) {
+  document.querySelectorAll('.plan-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.plan-tab').forEach(t => {
+    t.style.background = 'transparent';
+    t.style.color = '#6e6e73';
+    t.style.boxShadow = 'none';
+  });
+  document.getElementById('plan-' + plan).style.display = 'block';
+  btn.style.background = 'white';
+  btn.style.color = '#1d1d1f';
+  btn.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
 }
 
 function openModal(e) {
