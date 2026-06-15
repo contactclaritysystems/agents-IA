@@ -1234,7 +1234,17 @@ async function signIn() {
   const password = document.querySelector('#loginForm input[type="password"]').value;
   if (!email || !password) { alert("Merci de renseigner votre email et votre mot de passe."); return; }
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) { alert(error.message); return; }
+  if (error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("invalid") || msg.includes("credentials") || msg.includes("password")) {
+      alert("Email ou mot de passe incorrect.");
+    } else if (msg.includes("email not confirmed")) {
+      alert("Veuillez confirmer votre adresse email avant de vous connecter.");
+    } else {
+      alert("Erreur de connexion. Veuillez réessayer.");
+    }
+    return;
+  }
   window.location.href = "dashboard.html";
 }
 
