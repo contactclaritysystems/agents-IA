@@ -1267,9 +1267,12 @@ Bonne journée
   </div>
 
   <div class="field">
-    <label>Mot de passe</label>
-    <input type="password" placeholder="••••••••"/>
+  <label>Mot de passe</label>
+  <div style="position:relative;">
+    <input type="password" id="loginPassword" placeholder="••••••••" style="padding-right:44px;"/>
+    <button type="button" onclick="toggleLoginPassword(this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1rem;padding:0;line-height:1;">👁</button>
   </div>
+</div>
 
   <div class="forgot-password">
     <a href="#" onclick="forgotPassword(); return false;">Mot de passe oublié ?</a>
@@ -1321,6 +1324,17 @@ function closeBanner() {
  
 function toggleRegisterPassword(btn) {
   const input = document.getElementById('registerPassword');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
+  function toggleLoginPassword(btn) {
+  const input = document.getElementById('loginPassword');
   if (input.type === 'password') {
     input.type = 'text';
     btn.textContent = '🙈';
@@ -1452,7 +1466,7 @@ async function signUp() {
 
 async function signIn() {
   const email = document.querySelector('#loginForm input[type="email"]').value;
-  const password = document.querySelector('#loginForm input[type="password"]').value;
+  const password = document.getElementById('loginPassword').value;
   if (!email || !password) { alert("Merci de renseigner votre email et votre mot de passe."); return; }
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) {
