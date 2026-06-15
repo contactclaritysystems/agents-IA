@@ -1522,130 +1522,6 @@ function toggleChatbot() {
   chat.classList.toggle('open');
 }
 
-function selectNeed(type) {
-
-  const body = document.getElementById('chatbotBody');
-
-  if (type === 'unknown') {
-
-    body.innerHTML = `
-      <div class="bot-msg">
-        Pas de souci 👌<br><br>
-        Parmi ces situations, laquelle vous ressemble le plus ?
-      </div>
-
-      <div class="chat-options">
-
-        <button onclick="painPoint('mails')">
-          Je passe beaucoup de temps à répondre aux messages
-        </button>
-
-        <button onclick="painPoint('devis')">
-          Je fais souvent des devis ou documents
-        </button>
-
-        <button onclick="painPoint('relances')">
-          J’oublie parfois de relancer des clients
-        </button>
-
-        <button onclick="painPoint('planning')">
-          Mon organisation / planning me fatigue
-        </button>
-
-        <button onclick="painPoint('contenu')">
-          Je voudrais être plus actif sur les réseaux
-        </button>
-
-      </div>
-    `;
-
-    return;
-  }
-
-  painPoint(type);
-}
-
-function painPoint(type) {
-
-  const body = document.getElementById('chatbotBody');
-
-  body.innerHTML = `
-    <div class="bot-msg">
-      Qu’est-ce qui vous dérange le plus dans cette tâche ?
-    </div>
-
-    <div class="chat-options">
-
-      <button onclick="recommendAgent('${type}')">
-        Ça me prend trop de temps
-      </button>
-
-      <button onclick="recommendAgent('${type}')">
-        Je repousse toujours
-      </button>
-
-      <button onclick="recommendAgent('${type}')">
-        J’oublie parfois
-      </button>
-
-      <button onclick="recommendAgent('${type}')">
-        Je veux aller plus vite
-      </button>
-
-    </div>
-  `;
-}
-
-function recommendAgent(agent) {
-  const body = document.getElementById('chatbotBody');
-
-  const recommendations = {
-    mails: {
-      icon: "✉️",
-      name: "Agent Mails",
-      text: "Vous répondez souvent aux mêmes messages. L’Agent Mails est le plus simple pour commencer : vous parlez, il rédige et peut envoyer le mail à votre place."
-    },
-    devis: {
-      icon: "📄",
-      name: "Agent Devis",
-      text: "Si vous faites régulièrement des devis, c’est probablement l’agent qui vous fera gagner le plus de temps. Vous dictez la demande, il prépare un devis propre."
-    },
-    relances: {
-      icon: "🔁",
-      name: "Agent Relance",
-      text: "Si vous oubliez parfois de relancer vos clients ou prospects, l’Agent Relance est le plus utile. Il vous aide à ne plus laisser de demandes sans suite."
-    },
-    contenu: {
-      icon: "✍️",
-      name: "Agent Réseaux",
-      text: "Si vous voulez communiquer plus souvent sans perdre du temps à écrire, l’Agent Réseaux vous propose des posts prêts à améliorer."
-    },
-    planning: {
-      icon: "📅",
-      name: "Agent Planning",
-      text: "Si vous gérez beaucoup de rendez-vous, l’Agent Planning vous aide à créer, confirmer et suivre vos rendez-vous plus facilement."
-    }
-  };
-
-  const r = recommendations[agent] || recommendations.mails;
-
-  body.innerHTML = `
-    <div class="bot-msg">
-      ${r.icon} Je vous conseille de tester <strong>${r.name}</strong> en premier.<br><br>
-      ${r.text}
-    </div>
-
-    <div class="chat-options">
-      <button onclick="openRegisterFromChat(event)">
-        Tester ${r.name} gratuitement →
-      </button>
-      <button onclick="resetChatbot()">
-        Choisir un autre besoin
-      </button>
-    </div>
-  `;
-}
-
 function openRegisterFromChat(e) {
   if (e) e.preventDefault();
 
@@ -1669,21 +1545,78 @@ function openRegisterFromChat(e) {
   
 function resetChatbot() {
   const body = document.getElementById('chatbotBody');
-
   body.innerHTML = `
     <div class="bot-msg">
-  👋 Bonjour.<br><br>
-  Je peux vous aider à trouver l’agent le plus utile pour vous.<br><br>
-  Qu’est-ce qui vous prend le plus de temps dans une semaine ?
-</div>
-
+      👋 Bonjour !<br><br>
+      Une question sur Clarity Systems ? Je suis là pour y répondre.
+    </div>
     <div class="chat-options">
-      <button onclick="selectNeed('mails')">✉️ Répondre / envoyer des messages</button>
-<button onclick="selectNeed('devis')">📄 Préparer des devis ou documents</button>
-<button onclick="selectNeed('relances')">🔁 Relancer des clients</button>
-<button onclick="selectNeed('planning')">📅 Organiser des rendez-vous</button>
-<button onclick="selectNeed('contenu')">✍️ Trouver quoi publier</button>
-<button onclick="selectNeed('unknown')">🤔 Je ne sais pas trop</button>
+      <button onclick="showCategory('gratuit')">🎁 Essai gratuit & engagement</button>
+      <button onclick="showCategory('technique')">⚙️ Questions techniques</button>
+      <button onclick="showCategory('utilisation')">🎙️ Utilisation</button>
+      <button onclick="showCategory('tarifs')">💳 Tarifs & actions</button>
+    </div>
+  `;
+}
+
+const faqData = {
+  gratuit: {
+    label: "🎁 Essai gratuit & engagement",
+    questions: [
+      { q: "Est-ce vraiment gratuit les 7 premiers jours ?", a: "Oui, totalement gratuit. Vous accédez à tous les agents pendant 7 jours sans payer quoi que ce soit." },
+      { q: "Faut-il une carte bancaire pour s'inscrire ?", a: "Non. Aucune carte bancaire requise pour démarrer l'essai. Vous renseignez vos coordonnées uniquement si vous choisissez de continuer." },
+      { q: "Puis-je annuler à tout moment ?", a: "Oui, sans aucune condition. Si vous ne souhaitez pas continuer après l'essai, vous ne payez rien." }
+    ]
+  },
+  technique: {
+    label: "⚙️ Questions techniques",
+    questions: [
+      { q: "Ça marche avec quel compte mail ?", a: "Gmail et Outlook sont supportés. Une adresse professionnelle SMTP (OVH, Ionos, etc.) est également compatible." },
+      { q: "C'est compliqué à configurer ?", a: "Non. Inscription en 2 minutes, connexion de votre mail, ajout d'un contact — et c'est parti. Aucune compétence technique requise." },
+      { q: "Mes mails sont-ils sécurisés ?", a: "Oui. Vos données ne sont jamais revendues. Les agents agissent uniquement sur votre instruction et depuis votre propre compte mail." },
+      { q: "Faut-il télécharger une application ?", a: "Non. Clarity Systems fonctionne directement depuis votre navigateur, sur mobile comme sur ordinateur." }
+    ]
+  },
+  utilisation: {
+    label: "🎙️ Utilisation",
+    questions: [
+      { q: "Comment ça marche concrètement ?", a: "Vous appuyez sur un bouton, vous parlez naturellement — comme à une secrétaire — et l'agent comprend et agit immédiatement." },
+      { q: "Combien de temps pour commencer ?", a: "Moins de 2 minutes. Créez votre compte, connectez votre mail, ajoutez un contact et testez votre premier agent." },
+      { q: "Tous les agents sont-ils disponibles dès le départ ?", a: "Oui. Dès votre inscription, vous avez accès à tous les agents sans restriction pendant 7 jours." }
+    ]
+  },
+  tarifs: {
+    label: "💳 Tarifs & actions",
+    questions: [
+      { q: "Que se passe-t-il après les 7 jours ?", a: "Vous choisissez un plan pour continuer. Si vous ne faites rien, votre accès s'arrête simplement — sans frais." },
+      { q: "C'est quoi une action ?", a: "Une action correspond à une tâche réalisée par un agent : un mail envoyé, un rendez-vous créé, une relance programmée, un compte rendu généré." },
+      { q: "Peut-on acheter des actions supplémentaires ?", a: "Oui. Si vous atteignez votre quota mensuel, vous pouvez acheter des packs d'actions supplémentaires à tout moment depuis votre espace." },
+      { q: "Les prix peuvent-ils changer ?", a: "Les tarifs affichés sont garantis pour la durée de votre abonnement en cours." }
+    ]
+  }
+};
+
+function showCategory(cat) {
+  const body = document.getElementById('chatbotBody');
+  const data = faqData[cat];
+  body.innerHTML = `
+    <div class="bot-msg">${data.label}</div>
+    <div class="chat-options">
+      ${data.questions.map((item, i) => `<button onclick="showAnswer('${cat}', ${i})">${item.q}</button>`).join('')}
+      <button onclick="resetChatbot()" style="color:#8a8a8e;background:transparent;border:1px solid rgba(255,255,255,.12);">← Retour</button>
+    </div>
+  `;
+}
+
+function showAnswer(cat, index) {
+  const body = document.getElementById('chatbotBody');
+  const item = faqData[cat].questions[index];
+  body.innerHTML = `
+    <div class="bot-msg"><strong>${item.q}</strong><br><br>${item.a}</div>
+    <div class="chat-options">
+      <button onclick="openRegisterFromChat(event)">Commencer gratuitement →</button>
+      <button onclick="showCategory('${cat}')" style="color:#8a8a8e;background:transparent;border:1px solid rgba(255,255,255,.12);">← Autres questions</button>
+      <button onclick="resetChatbot()" style="color:#8a8a8e;background:transparent;border:1px solid rgba(255,255,255,.12);">↩ Menu principal</button>
     </div>
   `;
 }
@@ -1719,12 +1652,10 @@ function resetChatbot() {
 </div>
 
     <div class="chat-options">
-      <button onclick="selectNeed('mails')">✉️ Répondre / envoyer des messages</button>
-<button onclick="selectNeed('devis')">📄 Préparer des devis ou documents</button>
-<button onclick="selectNeed('relances')">🔁 Relancer des clients</button>
-<button onclick="selectNeed('planning')">📅 Organiser des rendez-vous</button>
-<button onclick="selectNeed('contenu')">✍️ Trouver quoi publier</button>
-<button onclick="selectNeed('unknown')">🤔 Je ne sais pas trop</button>
+      <button onclick="showCategory('gratuit')">🎁 Essai gratuit & engagement</button>
+<button onclick="showCategory('technique')">⚙️ Questions techniques</button>
+<button onclick="showCategory('utilisation')">🎙️ Utilisation</button>
+<button onclick="showCategory('tarifs')">💳 Tarifs & actions</button>
     </div>
 
   </div>
