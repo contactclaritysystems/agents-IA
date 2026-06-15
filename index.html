@@ -1653,6 +1653,20 @@ function showAnswer(cat, index) {
   `;
 }
 
+  document.addEventListener('click', function(e) {
+  const chat = document.getElementById('chatbotWindow');
+  const launcher = document.querySelector('.chatbot-launcher');
+  const nudge = document.querySelector('.chatbot-nudge');
+  if (
+    chat.classList.contains('open') &&
+    !chat.contains(e.target) &&
+    !launcher.contains(e.target) &&
+    !nudge.contains(e.target)
+  ) {
+    chat.classList.remove('open');
+  }
+});
+
   setTimeout(() => {
   const nudge = document.querySelector('.chatbot-nudge');
   if (nudge) nudge.classList.add('show');
