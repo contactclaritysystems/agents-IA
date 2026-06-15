@@ -1285,7 +1285,14 @@ Bonne journée
     <div id="registerForm" style="display:none">
       <div class="field"><label>Prénom</label><input type="text" placeholder="Jean"/></div>
       <div class="field"><label>Email</label><input type="email" placeholder="vous@exemple.fr"/></div>
-      <div class="field"><label>Mot de passe</label><input type="password" placeholder="Minimum 8 caractères"/></div>
+      <div class="field">
+  <label>Mot de passe</label>
+  <div style="position:relative;">
+    <input type="password" id="registerPassword" placeholder="Minimum 8 caractères" style="padding-right:44px;"/>
+    <button type="button" onclick="toggleRegisterPassword(this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1rem;padding:0;line-height:1;">👁</button>
+  </div>
+</div>
+
       <div id="registerError" class="error" style="display:none;"></div>
       <button class="btn-sub" onclick="signUp()">Démarrer mon essai gratuit</button>
     </div>
@@ -1310,6 +1317,17 @@ function closeBanner() {
   btn.style.background = 'white';
   btn.style.color = '#1d1d1f';
   btn.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
+}
+ 
+function toggleRegisterPassword(btn) {
+  const input = document.getElementById('registerPassword');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
 }
 
 function openModal(e) {
@@ -1360,7 +1378,7 @@ async function signUp() {
 
   const prenom = document.querySelector('#registerForm input[type="text"]').value;
   const email = document.querySelector('#registerForm input[type="email"]').value;
-  const password = document.querySelector('#registerForm input[type="password"]').value;
+  const password = document.getElementById('registerPassword').value;
 
   if (!prenom || !email || !password) {
     alert("Merci de remplir tous les champs.");
