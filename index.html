@@ -854,6 +854,23 @@ header {
   .pfeats { gap: 8px; }
   .pli { font-size: .8rem; }
 }
+
+  @media (max-width: 600px) {
+  .vbubble {
+    max-width: 100% !important;
+    font-size: .82rem !important;
+    word-break: break-word !important;
+  }
+
+  .abubble {
+    max-width: 100% !important;
+    font-size: .82rem !important;
+  }
+
+  .hcard {
+    padding: 20px 16px !important;
+  }
+}
   
 </style>
 </head>
@@ -1350,7 +1367,7 @@ function animateHeroDemo() {
         statusEl.innerHTML = '<span class="dot"></span>Mail envoyé via Gmail · il y a 2 secondes';
       }, 1200);
     }
-  }, 28);
+  }, 45);
 }
 
 window.addEventListener("load", () => {
