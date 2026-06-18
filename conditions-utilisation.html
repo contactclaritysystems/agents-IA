@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Conditions d'utilisation — Clarity Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+:root {
+  --page: #f7f7f5;
+  --surface: #ffffff;
+  --line: rgba(29,29,31,.10);
+  --line-strong: rgba(29,29,31,.18);
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --muted-2: #8a8a8e;
+  --dark: #141416;
+  --success: #22c55e;
+  --warning: #b7791f;
+  --warning-bg: rgba(183,121,31,.09);
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--page);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+nav {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 42px;
+  background: rgba(247,247,245,.88);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.nav-logo { font-size: .98rem; font-weight: 700; letter-spacing: -.025em; text-decoration: none; color: var(--text); }
+
+.nav-back {
+  font-size: .78rem; font-weight: 600;
+  color: var(--text); text-decoration: none;
+  opacity: .64; transition: opacity .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.nav-back:hover { opacity: 1; }
+
+main { max-width: 760px; margin: 0 auto; padding: 72px 24px 100px; }
+
+.eye {
+  display: inline-block; font-size: .68rem; font-weight: 750;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+}
+
+h1 { font-size: clamp(2rem, 4vw, 2.9rem); font-weight: 760; letter-spacing: -.05em; line-height: 1.05; margin-bottom: 12px; }
+
+.updated { font-size: .82rem; color: var(--muted-2); margin-bottom: 48px; }
+
+section { margin-bottom: 40px; }
+
+h2 {
+  font-size: 1.15rem; font-weight: 720; letter-spacing: -.02em;
+  margin-bottom: 14px; padding-top: 4px;
+}
+
+p, li { font-size: .92rem; color: var(--muted); font-weight: 400; line-height: 1.75; }
+
+p { margin-bottom: 12px; }
+
+strong { color: var(--text); font-weight: 600; }
+
+ul { padding-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 6px; }
+
+a.inline { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line-strong); }
+a.inline:hover { text-decoration-color: var(--text); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 24px 28px; margin-bottom: 12px;
+}
+
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+.note-box {
+  background: var(--warning-bg); border: 1px solid rgba(183,121,31,.18);
+  border-radius: 16px; padding: 16px 20px; font-size: .88rem;
+  color: var(--warning); line-height: 1.65; margin-bottom: 12px;
+}
+
+footer { background: var(--page); border-top: 1px solid var(--line); padding: 44px 24px; text-align: center; }
+.flogo { font-size: .95rem; font-weight: 750; margin-bottom: 14px; letter-spacing: -.02em; }
+.flinks { display: flex; justify-content: center; gap: 28px; list-style: none; margin-bottom: 18px; flex-wrap: wrap; }
+.flinks a { font-size: .75rem; color: var(--muted); text-decoration: none; }
+.flinks a:hover { color: var(--text); }
+.fcopy { font-size: .72rem; color: var(--muted-2); }
+
+@media(max-width: 600px) {
+  nav { padding: 0 20px; }
+  main { padding: 48px 20px 72px; }
+  .card { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Clarity Systems</a>
+  <a href="index.html" class="nav-back">← Retour au site</a>
+</nav>
+
+<main>
+  <div class="eye">Conditions générales</div>
+  <h1>Conditions d'utilisation</h1>
+  <div class="updated">Dernière mise à jour : 18 juin 2026</div>
+
+  <section>
+    <h2>1. Présentation du service</h2>
+    <div class="card">
+      <p>Clarity Systems est un service en ligne (SaaS) proposant des agents IA destinés à automatiser des tâches répétitives pour les artisans, indépendants et petites entreprises (envoi de mails, gestion de planning, relances clients, comptes-rendus, etc.).</p>
+      <p>Le service est édité par <strong>Anthony Rinaldi</strong>, micro-entrepreneur, SIRET 103 247 409 00016, 96 rue Paradis, 13006 Marseille.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Acceptation des conditions</h2>
+    <p>En créant un compte ou en utilisant le service Clarity Systems, vous acceptez sans réserve les présentes conditions d'utilisation. Si vous ne les acceptez pas, vous ne devez pas utiliser le service.</p>
+  </section>
+
+  <section>
+    <h2>3. Création de compte</h2>
+    <div class="card">
+      <ul>
+        <li>Vous devez fournir une adresse email valide et exacte lors de l'inscription.</li>
+        <li>Vous êtes responsable de la confidentialité de votre mot de passe et de toute activité réalisée depuis votre compte.</li>
+        <li>Un essai gratuit de 7 jours est proposé sans carte bancaire requise. À l'issue de cette période, l'accès est suspendu sauf souscription à un plan payant.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Description des plans et tarifs</h2>
+    <p>Clarity Systems propose plusieurs plans d'abonnement mensuels (Starter, Pro, Business), chacun associé à un nombre d'actions mensuelles inclus. Des packs d'actions supplémentaires peuvent être achetés en cas de dépassement du quota. Les tarifs en vigueur sont affichés sur la page de tarification du site et peuvent évoluer ; tout changement de tarif sera communiqué aux utilisateurs concernés avant application.</p>
+  </section>
+
+  <section>
+    <h2>5. Connexion de comptes tiers</h2>
+    <div class="note-box">
+      ⚠️ En connectant votre compte Gmail ou Outlook, vous autorisez Clarity Systems à envoyer des emails en votre nom, uniquement sur votre instruction explicite via un agent. Cette autorisation peut être révoquée à tout moment depuis les paramètres de votre compte Google ou Microsoft, ou directement depuis votre espace Clarity Systems.
+    </div>
+    <p>Clarity Systems n'accède jamais à votre boîte de réception en lecture et n'envoie des messages que lorsque vous le demandez explicitement à un agent.</p>
+  </section>
+
+  <section>
+    <h2>6. Utilisation autorisée</h2>
+    <p>Vous vous engagez à utiliser le service de manière loyale et conforme à la loi, notamment à ne pas :</p>
+    <div class="card">
+      <ul>
+        <li>Utiliser les agents pour envoyer des messages non sollicités, frauduleux ou diffamatoires</li>
+        <li>Tenter de contourner les limites techniques ou de sécurité du service</li>
+        <li>Revendre ou redistribuer l'accès au service sans autorisation</li>
+        <li>Utiliser le service à des fins illégales ou contraires à l'ordre public</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Disponibilité du service</h2>
+    <p>Clarity Systems met tout en œuvre pour assurer la disponibilité et le bon fonctionnement du service, sans pouvoir garantir une disponibilité continue. Le service dépend de prestataires tiers (Supabase, Make, Stripe, OpenAI, Google) dont la disponibilité échappe au contrôle de l'éditeur. Des interruptions ponctuelles pour maintenance peuvent survenir.</p>
+  </section>
+
+  <section>
+    <h2>8. Résiliation</h2>
+    <div class="card">
+      <p>Vous pouvez résilier votre abonnement à tout moment depuis votre espace client. La résiliation prend effet à la fin de la période déjà payée ; aucun remboursement au prorata n'est effectué.</p>
+      <p>L'éditeur se réserve le droit de suspendre ou clôturer un compte en cas de non-respect des présentes conditions, notamment en cas d'utilisation abusive ou frauduleuse du service.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>9. Responsabilité</h2>
+    <p>Clarity Systems agit en tant qu'outil d'assistance et d'automatisation. L'utilisateur reste seul responsable du contenu des messages envoyés via les agents, des rendez-vous créés et des actions déclenchées depuis son compte. L'éditeur ne saurait être tenu responsable des conséquences d'une mauvaise utilisation du service ou d'une instruction mal formulée par l'utilisateur.</p>
+  </section>
+
+  <section>
+    <h2>10. Propriété intellectuelle</h2>
+    <p>L'ensemble des éléments du service (code, interface, marque, logo) est la propriété exclusive de Clarity Systems. Les données saisies par l'utilisateur (contacts, notes, configurations) restent sa propriété.</p>
+  </section>
+
+  <section>
+    <h2>11. Modification des conditions</h2>
+    <p>Les présentes conditions peuvent être modifiées à tout moment pour refléter des évolutions du service ou des obligations légales. La date de dernière mise à jour est indiquée en haut de cette page. En cas de changement substantiel, les utilisateurs en seront informés par email.</p>
+  </section>
+
+  <section>
+    <h2>12. Droit applicable</h2>
+    <p>Les présentes conditions sont soumises au droit français. En cas de litige, et après tentative de résolution amiable, les tribunaux français seront seuls compétents.</p>
+  </section>
+
+  <section>
+    <h2>13. Contact</h2>
+    <p>Pour toute question relative à ces conditions : <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a></p>
+  </section>
+</main>
+
+<footer>
+  <div class="flogo">Clarity Systems</div>
+  <ul class="flinks">
+    <li><a href="mentions-legales.html">Mentions légales</a></li>
+    <li><a href="confidentialite.html">Confidentialité</a></li>
+    <li><a href="conditions-utilisation.html">Conditions d'utilisation</a></li>
+    <li><a href="mailto:contact@clarity-systems.fr">Contact</a></li>
+  </ul>
+  <div class="fcopy">© 2026 Clarity Systems. Tous droits réservés.</div>
+</footer>
+
+</body>
+</html>
