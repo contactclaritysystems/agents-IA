@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Politique de confidentialité — Clarity Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+:root {
+  --page: #f7f7f5;
+  --surface: #ffffff;
+  --line: rgba(29,29,31,.10);
+  --line-strong: rgba(29,29,31,.18);
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --muted-2: #8a8a8e;
+  --dark: #141416;
+  --success: #22c55e;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--page);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+nav {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 42px;
+  background: rgba(247,247,245,.88);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.nav-logo { font-size: .98rem; font-weight: 700; letter-spacing: -.025em; text-decoration: none; color: var(--text); }
+
+.nav-back {
+  font-size: .78rem; font-weight: 600;
+  color: var(--text); text-decoration: none;
+  opacity: .64; transition: opacity .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.nav-back:hover { opacity: 1; }
+
+main { max-width: 760px; margin: 0 auto; padding: 72px 24px 100px; }
+
+.eye {
+  display: inline-block; font-size: .68rem; font-weight: 750;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+}
+
+h1 { font-size: clamp(2rem, 4vw, 2.9rem); font-weight: 760; letter-spacing: -.05em; line-height: 1.05; margin-bottom: 12px; }
+
+.updated { font-size: .82rem; color: var(--muted-2); margin-bottom: 20px; }
+
+.intro {
+  font-size: .95rem; color: var(--muted); font-weight: 400;
+  line-height: 1.75; margin-bottom: 48px;
+  padding: 20px 24px; background: rgba(34,197,94,.07);
+  border: 1px solid rgba(34,197,94,.18); border-radius: 16px;
+}
+
+.intro strong { color: var(--text); }
+
+section { margin-bottom: 40px; }
+
+h2 {
+  font-size: 1.15rem; font-weight: 720; letter-spacing: -.02em;
+  margin-bottom: 14px; padding-top: 4px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.h2-n {
+  font-size: .68rem; font-weight: 800; color: white;
+  background: var(--dark); width: 22px; height: 22px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+p, li { font-size: .92rem; color: var(--muted); font-weight: 400; line-height: 1.75; }
+
+p { margin-bottom: 12px; }
+
+strong { color: var(--text); font-weight: 600; }
+
+ul { padding-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 6px; }
+
+a.inline { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line-strong); }
+a.inline:hover { text-decoration-color: var(--text); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 24px 28px; margin-bottom: 12px;
+}
+
+.card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; overflow: hidden; margin-bottom: 12px;
+  font-size: .86rem;
+}
+
+th, td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child th, tr:last-child td { border-bottom: none; }
+th { font-weight: 700; color: var(--text); background: rgba(0,0,0,.02); width: 38%; }
+td { color: var(--muted); }
+
+.rights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+.right-item {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 16px; padding: 18px 20px;
+}
+
+.right-item .rt { font-size: .88rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.right-item .rd { font-size: .82rem; color: var(--muted); line-height: 1.6; }
+
+footer { background: var(--page); border-top: 1px solid var(--line); padding: 44px 24px; text-align: center; }
+.flogo { font-size: .95rem; font-weight: 750; margin-bottom: 14px; letter-spacing: -.02em; }
+.flinks { display: flex; justify-content: center; gap: 28px; list-style: none; margin-bottom: 18px; flex-wrap: wrap; }
+.flinks a { font-size: .75rem; color: var(--muted); text-decoration: none; }
+.flinks a:hover { color: var(--text); }
+.fcopy { font-size: .72rem; color: var(--muted-2); }
+
+@media(max-width: 600px) {
+  nav { padding: 0 20px; }
+  main { padding: 48px 20px 72px; }
+  .card { padding: 20px; }
+  .rights-grid { grid-template-columns: 1fr; }
+  table, th, td { font-size: .82rem; }
+  th { width: 42%; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Clarity Systems</a>
+  <a href="index.html" class="nav-back">← Retour au site</a>
+</nav>
+
+<main>
+  <div class="eye">Vie privée & données</div>
+  <h1>Politique de confidentialité</h1>
+  <div class="updated">Dernière mise à jour : 18 juin 2026</div>
+
+  <div class="intro">
+    Clarity Systems accède à vos données (email, contacts, agenda) uniquement pour exécuter les actions que <strong>vous demandez explicitement</strong> à un agent. Vos données ne sont jamais vendues ni utilisées à des fins publicitaires.
+  </div>
+
+  <section>
+    <h2><span class="h2-n">1</span>Responsable du traitement</h2>
+    <div class="card">
+      <p>Le responsable du traitement des données collectées sur clarity-systems.fr et dans l'application Clarity Systems est :</p>
+      <p><strong>Anthony Rinaldi</strong>, micro-entrepreneur exerçant sous le nom commercial Clarity Systems<br/>
+      96 rue Paradis, 13006 Marseille, France<br/>
+      SIRET : 103 247 409 00016</p>
+      <p>Email : <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a></p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">2</span>Données collectées</h2>
+    <p>Selon votre usage de l'application, nous collectons :</p>
+    <table>
+      <tr><th>Données de compte</th><td>Prénom, adresse email, mot de passe (chiffré), plan d'abonnement, nombre d'actions utilisées</td></tr>
+      <tr><th>Données de facturation</th><td>Gérées et stockées directement par Stripe (nous n'avons jamais accès à votre numéro de carte bancaire)</td></tr>
+      <tr><th>Données métier saisies</th><td>Contacts, rendez-vous, notes, comptes-rendus, et autres informations que vous renseignez ou dictez à un agent</td></tr>
+      <tr><th>Données de connexion tierces</th><td>Jetons d'accès (tokens) Gmail/Google ou Outlook, si vous connectez votre messagerie à un agent</td></tr>
+      <tr><th>Journal d'activité</th><td>Historique des actions réalisées par les agents (date, type d'action, statut)</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">3</span>Finalités du traitement</h2>
+    <div class="card">
+      <ul>
+        <li>Fournir et faire fonctionner les agents IA (envoi de mails, gestion d'agenda, relances, comptes-rendus, etc.)</li>
+        <li>Gérer votre compte, votre abonnement et la facturation</li>
+        <li>Assurer le support client et répondre à vos demandes</li>
+        <li>Améliorer la fiabilité et la sécurité du service</li>
+        <li>Respecter nos obligations légales et comptables</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">4</span>Base légale</h2>
+    <p>Les traitements reposent sur : l'<strong>exécution du contrat</strong> qui vous lie à Clarity Systems (fourniture du service), votre <strong>consentement explicite</strong> lors de la connexion d'un compte tiers (Gmail, Outlook), et nos <strong>obligations légales</strong> (facturation, comptabilité).</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">5</span>Destinataires et sous-traitants</h2>
+    <p>Vos données peuvent être transmises aux prestataires suivants, qui interviennent en tant que sous-traitants techniques :</p>
+    <table>
+      <tr><th>Supabase</th><td>Hébergement de la base de données et authentification des comptes</td></tr>
+      <tr><th>Make (Celonis / Integromat)</th><td>Orchestration des automatisations entre les agents et vos outils</td></tr>
+      <tr><th>Stripe</th><td>Traitement sécurisé des paiements et de la facturation</td></tr>
+      <tr><th>OpenAI</th><td>Traitement du langage naturel pour la compréhension et la génération de texte par les agents</td></tr>
+      <tr><th>Google (Gmail)</th><td>Envoi d'emails en votre nom, uniquement si vous connectez votre compte Gmail à un agent</td></tr>
+      <tr><th>GitHub Pages</th><td>Hébergement du site et de l'application</td></tr>
+    </table>
+    <p>Chacun de ces prestataires est susceptible de traiter des données en dehors de l'Union européenne (notamment aux États-Unis), dans le cadre de garanties appropriées (clauses contractuelles types, ou certification au cadre de protection des données UE-États-Unis selon le prestataire).</p>
+    <p>Vos données ne sont jamais vendues à des tiers ni utilisées à des fins publicitaires.</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">6</span>Durée de conservation</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Données de compte :</strong> conservées tant que votre compte est actif, supprimées dans les 30 jours suivant une demande de suppression</li>
+        <li><strong>Données de facturation :</strong> conservées 10 ans conformément aux obligations légales comptables</li>
+        <li><strong>Jetons de connexion tiers (Gmail/Outlook) :</strong> supprimés immédiatement en cas de déconnexion du compte</li>
+        <li><strong>Journal d'activité :</strong> conservé pendant la durée de vie du compte à des fins de support et de suivi</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">7</span>Vos droits</h2>
+    <p>Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi Informatique et Libertés, vous disposez des droits suivants :</p>
+    <div class="rights-grid">
+      <div class="right-item"><div class="rt">Droit d'accès</div><div class="rd">Obtenir une copie des données vous concernant</div></div>
+      <div class="right-item"><div class="rt">Droit de rectification</div><div class="rd">Corriger des données inexactes ou incomplètes</div></div>
+      <div class="right-item"><div class="rt">Droit à l'effacement</div><div class="rd">Demander la suppression de vos données</div></div>
+      <div class="right-item"><div class="rt">Droit à la portabilité</div><div class="rd">Recevoir vos données dans un format structuré</div></div>
+      <div class="right-item"><div class="rt">Droit d'opposition</div><div class="rd">Vous opposer à un traitement de vos données</div></div>
+      <div class="right-item"><div class="rt">Droit à la limitation</div><div class="rd">Demander la suspension d'un traitement</div></div>
+    </div>
+    <p>Pour exercer ces droits, contactez-nous à <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a>. Nous répondrons dans un délai maximum d'un mois. Vous pouvez également introduire une réclamation auprès de la <a href="https://www.cnil.fr" class="inline" target="_blank" rel="noopener">CNIL</a> si vous estimez que vos droits ne sont pas respectés.</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">8</span>Sécurité des données</h2>
+    <p>Nous mettons en œuvre des mesures techniques pour protéger vos données, notamment des règles d'accès strictes au niveau de la base de données (chaque utilisateur ne peut accéder qu'à ses propres données), le chiffrement des mots de passe, et l'utilisation de connexions sécurisées (HTTPS) sur l'ensemble du site et de l'application.</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">9</span>Cookies</h2>
+    <p>Le site utilise uniquement des cookies strictement nécessaires au fonctionnement du service (maintien de votre session de connexion). Aucun cookie publicitaire ou de tracking tiers n'est utilisé.</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">10</span>Modifications de cette politique</h2>
+    <p>Cette politique de confidentialité peut être mise à jour pour refléter des évolutions légales ou du service. La date de dernière mise à jour est indiquée en haut de cette page. En cas de changement substantiel, vous en serez informé par email.</p>
+  </section>
+
+  <section>
+    <h2><span class="h2-n">11</span>Contact</h2>
+    <p>Pour toute question relative à cette politique ou à vos données personnelles : <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a></p>
+  </section>
+</main>
+
+<footer>
+  <div class="flogo">Clarity Systems</div>
+  <ul class="flinks">
+    <li><a href="mentions-legales.html">Mentions légales</a></li>
+    <li><a href="confidentialite.html">Confidentialité</a></li>
+    <li><a href="mailto:contact@clarity-systems.fr">Contact</a></li>
+  </ul>
+  <div class="fcopy">© 2026 Clarity Systems. Tous droits réservés.</div>
+</footer>
+
+</body>
+</html>
