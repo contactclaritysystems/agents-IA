@@ -7498,9 +7498,9 @@ if (cachedSub) {
   JSON.stringify(window.currentSubscription)
 );
 
-  const actionsEl = document.getElementById("actions-count");
+ const actionsEl = document.getElementById("actions-count");
   if (actionsEl) {
-    actionsEl.textContent = `${actionsUsed} / ${actionsTotal}`;
+    actionsEl.textContent = data.plan === "founder" ? "Illimité" : `${actionsUsed} / ${actionsTotal}`;
   }
 
   const trialBadges = document.querySelectorAll(".trial-text strong, .mobile-account-badge strong");
@@ -7584,11 +7584,19 @@ if (reactivateHomeCard) {
     return;
   }
 
-  if (sub.plan === "business") {
+ if (sub.plan === "business") {
     icon.textContent = "👑";
     icon.className = "stat-icon-wrap purple";
     value.textContent = "Business";
     label.textContent = "Abonnement";
+    return;
+  }
+
+  if (sub.plan === "founder") {
+    icon.textContent = "♾️";
+    icon.className = "stat-icon-wrap purple";
+    value.textContent = "Founder";
+    label.textContent = "Accès illimité";
     return;
   }
 }
@@ -7603,6 +7611,11 @@ if (reactivateHomeCard) {
   if (!card || !text || !title || !button || !window.currentSubscription) return;
 
   const sub = window.currentSubscription;
+
+  if (sub.plan === "founder") {
+    card.style.display = "none";
+    return;
+  }
 
  if (sub.plan === "trial") {
   button.style.display = "block";
