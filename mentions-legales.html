@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mentions légales — Clarity Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+:root {
+  --page: #f7f7f5;
+  --surface: #ffffff;
+  --line: rgba(29,29,31,.10);
+  --line-strong: rgba(29,29,31,.18);
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --muted-2: #8a8a8e;
+  --dark: #141416;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--page);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+nav {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 42px;
+  background: rgba(247,247,245,.88);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.nav-logo { font-size: .98rem; font-weight: 700; letter-spacing: -.025em; text-decoration: none; color: var(--text); }
+
+.nav-back {
+  font-size: .78rem; font-weight: 600;
+  color: var(--text); text-decoration: none;
+  opacity: .64; transition: opacity .2s;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.nav-back:hover { opacity: 1; }
+
+main { max-width: 760px; margin: 0 auto; padding: 72px 24px 100px; }
+
+.eye {
+  display: inline-block; font-size: .68rem; font-weight: 750;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
+}
+
+h1 { font-size: clamp(2rem, 4vw, 2.9rem); font-weight: 760; letter-spacing: -.05em; line-height: 1.05; margin-bottom: 12px; }
+
+.updated { font-size: .82rem; color: var(--muted-2); margin-bottom: 48px; }
+
+section { margin-bottom: 40px; }
+
+h2 {
+  font-size: 1.15rem; font-weight: 720; letter-spacing: -.02em;
+  margin-bottom: 14px; padding-top: 4px;
+}
+
+p, li { font-size: .92rem; color: var(--muted); font-weight: 400; line-height: 1.75; }
+
+p { margin-bottom: 12px; }
+
+strong { color: var(--text); font-weight: 600; }
+
+ul { padding-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 6px; }
+
+a.inline { color: var(--text); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line-strong); }
+a.inline:hover { text-decoration-color: var(--text); }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 18px; padding: 24px 28px; margin-bottom: 12px;
+}
+
+.card p:last-child { margin-bottom: 0; }
+
+footer { background: var(--page); border-top: 1px solid var(--line); padding: 44px 24px; text-align: center; }
+.flogo { font-size: .95rem; font-weight: 750; margin-bottom: 14px; letter-spacing: -.02em; }
+.flinks { display: flex; justify-content: center; gap: 28px; list-style: none; margin-bottom: 18px; flex-wrap: wrap; }
+.flinks a { font-size: .75rem; color: var(--muted); text-decoration: none; }
+.flinks a:hover { color: var(--text); }
+.fcopy { font-size: .72rem; color: var(--muted-2); }
+
+@media(max-width: 600px) {
+  nav { padding: 0 20px; }
+  main { padding: 48px 20px 72px; }
+  .card { padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Clarity Systems</a>
+  <a href="index.html" class="nav-back">← Retour au site</a>
+</nav>
+
+<main>
+  <div class="eye">Informations légales</div>
+  <h1>Mentions légales</h1>
+  <div class="updated">Dernière mise à jour : 18 juin 2026</div>
+
+  <section>
+    <h2>Éditeur du site</h2>
+    <div class="card">
+      <p>Le site clarity-systems.fr est édité par <strong>Anthony Rinaldi</strong>, exerçant sous le statut de micro-entrepreneur (entreprise individuelle), sous le nom commercial <strong>Clarity Systems</strong>.</p>
+      <p><strong>Adresse :</strong> 96 rue Paradis, 13006 Marseille, France</p>
+      <p><strong>SIRET :</strong> 103 247 409 00016</p>
+      <p><strong>Code APE / NAF :</strong> 6202A — Conseil en systèmes et logiciels informatiques</p>
+      <p><strong>Email :</strong> <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a></p>
+      <p>En sa qualité de micro-entrepreneur, l'éditeur n'est pas assujetti à la TVA (article 293 B du Code général des impôts) et n'est pas inscrit au Registre du Commerce et des Sociétés.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Hébergement</h2>
+    <div class="card">
+      <p>Le site est hébergé par :</p>
+      <p><strong>GitHub Inc.</strong> (GitHub Pages)<br/>88 Colin P Kelly Jr St, San Francisco, CA 94107, États-Unis</p>
+      <p>Site : <a href="https://github.com" class="inline" target="_blank" rel="noopener">github.com</a></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Conception et développement</h2>
+    <p>Le site et l'application Clarity Systems sont conçus et développés par Anthony Rinaldi.</p>
+  </section>
+
+  <section>
+    <h2>Propriété intellectuelle</h2>
+    <p>L'ensemble des contenus présents sur ce site (textes, visuels, structure, code, logo, identité de marque) est la propriété exclusive de Clarity Systems, sauf mention contraire. Toute reproduction, représentation, modification ou exploitation, totale ou partielle, sans autorisation préalable est interdite.</p>
+  </section>
+
+  <section>
+    <h2>Responsabilité</h2>
+    <p>Clarity Systems met tout en œuvre pour assurer l'exactitude et la mise à jour des informations diffusées sur ce site, mais ne peut garantir l'absence d'erreur ou d'omission. L'éditeur ne saurait être tenu responsable des dommages directs ou indirects résultant de l'utilisation du site ou de l'impossibilité d'y accéder.</p>
+  </section>
+
+  <section>
+    <h2>Liens hypertextes</h2>
+    <p>Le site peut contenir des liens vers des sites tiers (Stripe, Google, etc.). Clarity Systems n'exerce aucun contrôle sur ces sites et n'assume aucune responsabilité quant à leur contenu.</p>
+  </section>
+
+  <section>
+    <h2>Droit applicable</h2>
+    <p>Les présentes mentions légales sont soumises au droit français. En cas de litige, et après tentative de résolution amiable, les tribunaux français seront seuls compétents.</p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>Pour toute question relative au site ou à son contenu : <a href="mailto:contact@clarity-systems.fr" class="inline">contact@clarity-systems.fr</a></p>
+  </section>
+</main>
+
+<footer>
+  <div class="flogo">Clarity Systems</div>
+  <ul class="flinks">
+    <li><a href="mentions-legales.html">Mentions légales</a></li>
+    <li><a href="confidentialite.html">Confidentialité</a></li>
+    <li><a href="mailto:contact@clarity-systems.fr">Contact</a></li>
+  </ul>
+  <div class="fcopy">© 2026 Clarity Systems. Tous droits réservés.</div>
+</footer>
+
+</body>
+</html>
