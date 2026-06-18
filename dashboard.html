@@ -4593,13 +4593,17 @@ async function loadProfile() {
   if (!currentUser) return;
     
   try {
+    const storageKey0 = "sb-vduqkeodewrdwsqwokmu-auth-token";
+    const rawSession0 = localStorage.getItem(storageKey0);
+    const accessToken0 = rawSession0 ? JSON.parse(rawSession0)?.access_token : null;
+
     const response = await fetch(
       SUPABASE_URL + "/rest/v1/agent_configs?user_id=eq." + encodeURIComponent(currentUser.id) + "&agent_name=eq.profile&select=*",
       {
         method: "GET",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + (accessToken0 || SUPABASE_ANON_KEY),
           "Content-Type": "application/json"
         }
       }
@@ -4884,13 +4888,24 @@ async function createContactsSheet(btn) {
     const profile = currentProfile || {};
     profile.contacts_created = true;
 
+    const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+    const rawSession = localStorage.getItem(storageKey);
+    const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+    if (!accessToken) {
+      showToast("Session expirée");
+      btn.disabled = false;
+      btn.innerHTML = "📒 Créer mon carnet contacts";
+      return;
+    }
+
     const response = await fetch(
       SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
       {
         method: "POST",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
-          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
           "Content-Type": "application/json",
           "Prefer": "resolution=merge-duplicates,return=representation"
         },
