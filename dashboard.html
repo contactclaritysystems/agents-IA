@@ -8018,6 +8018,10 @@ async function choosePlan(plan) {
     return false;
   }
 
+  if (sub.plan === "founder") {
+    return true;
+  }
+
  if (sub.daysRemaining <= 0) {
   openPricingPage();
   return false;
