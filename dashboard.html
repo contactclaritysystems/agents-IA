@@ -4126,6 +4126,9 @@ function getStepSelectors(step) {
   if (step === "confirm_send") {
     return ['#mail-preview-modal .mail-choice-box'];
   }
+  if (step === "retry_dictation") {
+    return ['#mail-dictation-btn'];
+  }
   return [];
 }
 
@@ -4161,6 +4164,10 @@ const ONBOARDING_MESSAGES = {
   confirm_send: {
     title: "Vérifiez et envoyez",
     text: "Relisez votre mail puis cliquez sur \"Envoyer le mail\"."
+  },
+  retry_dictation: {
+    title: "Pas de souci, réessayons",
+    text: () => `Cliquez ici puis dites clairement : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
@@ -4294,14 +4301,25 @@ function onboardingOnEvent(event) {
     return;
   }
   
-if (event === "dictation_started" && onboardingStep === "dictate_mail") {
+const DICTATION_STEPS = ["dictate_mail", "stop_dictation", "confirm_send", "retry_dictation"];
+
+  if (event === "dictation_started" && (onboardingStep === "dictate_mail" || onboardingStep === "retry_dictation")) {
     onboardingStep = "stop_dictation";
     showOnboardingStep();
     return;
   }
 
-  if (event === "mail_prepared" && (onboardingStep === "dictate_mail" || onboardingStep === "stop_dictation")) {
+  if (event === "mail_prepared" && DICTATION_STEPS.includes(onboardingStep)) {
     onboardingStep = "confirm_send";
+    showOnboardingStep();
+    return;
+  }
+
+  if (
+    ["dictation_empty", "dictation_error", "dictation_failed", "preview_cancelled"].includes(event) &&
+    DICTATION_STEPS.includes(onboardingStep)
+  ) {
+    onboardingStep = "retry_dictation";
     showOnboardingStep();
     return;
   }
@@ -6013,6 +6031,8 @@ if (box) {
 
   autoHideDictationBox(box);
 }
+
+  onboardingOnEvent("preview_cancelled");
 }
 
   currentPreparedMail = null;
@@ -6186,6 +6206,7 @@ try {
 
     if (!instruction) {
       box.innerHTML = "❌ Aucune instruction détectée. Réessayez.";
+      onboardingOnEvent("dictation_empty");
       return;
     }
 
@@ -6256,6 +6277,7 @@ try {
   data.reason || data.error || "error"
 );
 
+  onboardingOnEvent("dictation_failed");
 return;
 }
 
@@ -6271,6 +6293,7 @@ openMailPreview(data, instruction);
       unlockAgentButtons();
       box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
       await saveActionLog("mails", instruction, "error");
+      onboardingOnEvent("dictation_failed");
     }
   };
 
@@ -6284,6 +6307,7 @@ openMailPreview(data, instruction);
 }
     
     box.innerHTML = "🎤 Autorisez le micro pour utiliser la dictée";
+    onboardingOnEvent("dictation_error");
   };
 }
 
