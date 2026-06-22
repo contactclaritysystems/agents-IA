@@ -6159,6 +6159,15 @@ function unlockAgentButtons() {
   });
 }
 
+  function resetMailDictationButton() {
+  unlockAgentButtons();
+  const btn = document.getElementById("mail-dictation-btn");
+  if (btn) {
+    btn.innerHTML = "🎙️ Dicter un mail";
+    btn.onclick = startMailDictation;
+  }
+}
+
 async function startMailDictation() {
 
   const allowed = await canUseAgents();
@@ -6276,11 +6285,13 @@ try {
     if (!gmailConnected) {
       box.innerHTML = "❌ Connectez d’abord votre compte mail dans Réglages.";
       showToast("Compte mail non connecté");
+      resetMailDictationButton();
       return;
     }
 
     if (!instruction) {
       box.innerHTML = "❌ Aucune instruction détectée. Réessayez.";
+      resetMailDictationButton();
       onboardingOnEvent("dictation_empty");
       return;
     }
@@ -6360,7 +6371,7 @@ console.log("DATA PREVIEW MAIL:", data);
       
 box.innerHTML = "✅ Mail préparé";
 openMailPreview(data, instruction);
-      unlockAgentButtons();
+      resetMailDictationButton();
       onboardingOnEvent("mail_prepared");
 
     } catch (err) {
