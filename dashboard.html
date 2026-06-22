@@ -2903,40 +2903,6 @@ select.field-input {
     </button>
   </div>
 </div>
-    
-  <!-- AGENT SUIVI -->
-  <div class="agent-card" id="card-suivi">
-    <div class="agent-head" onclick="toggleCard('suivi')">
-      <div class="agent-emoji">📊</div>
-
-      <div class="agent-title-wrap">
-        <div class="agent-name">Agent Suivi</div>
-        <div class="agent-desc">
-          Détecte les retards et les dossiers oubliés automatiquement.
-        </div>
-      </div>
-
-      <div class="agent-status pending">Bientôt</div>
-      <div class="agent-toggle">▾</div>
-    </div>
-
-    <div class="agent-body">
-      <div class="info-box">
-        <span class="info-icon">📊</span>
-        <div>
-          Cet agent aide à suivre vos dossiers et repérer les oublis.
-          <br><br>
-
-          Exemple :
-          <strong>“Quels dossiers n’ont pas bougé depuis plus de 14 jours ?”</strong>
-
-          <br><br>
-
-          Vous recevez automatiquement des alertes lorsqu’une action est nécessaire.
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- AGENT DEVIS -->
   <div class="agent-card" id="card-devis">
@@ -2967,6 +2933,174 @@ select.field-input {
           <br><br>
 
           Les documents peuvent être préparés automatiquement à partir de vos informations.
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- AGENT AVIS CLIENTS -->
+  <div class="agent-card" id="card-avis">
+    <div class="agent-head" onclick="toggleCard('avis')">
+      <div class="agent-emoji">⭐</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Avis Clients</div>
+        <div class="agent-desc">
+          Demande automatiquement un avis Google après une intervention.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">⭐</span>
+        <div>
+          Cet agent envoie automatiquement une demande d'avis à vos clients après une prestation terminée.
+          <br><br>
+          Exemple :
+          <strong>"Demande un avis à Lucas après son rendez-vous d'hier."</strong>
+          <br><br>
+          Le client reçoit un lien direct vers votre fiche Google pour laisser son avis en quelques secondes.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT RESEAUX SOCIAUX -->
+  <div class="agent-card" id="card-social">
+    <div class="agent-head" onclick="toggleCard('social')">
+      <div class="agent-emoji">📱</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Réseaux Sociaux</div>
+        <div class="agent-desc">
+          Publie du contenu automatiquement sur Facebook et Instagram.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📱</span>
+        <div>
+          Cet agent publie du contenu sur vos réseaux sociaux professionnels.
+          <br><br>
+          Exemple :
+          <strong>"Publie une photo de mon dernier chantier avec une légende."</strong>
+          <br><br>
+          Idéal pour rester visible sans y passer du temps chaque semaine.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT NEWSLETTER -->
+  <div class="agent-card" id="card-newsletter">
+    <div class="agent-head" onclick="toggleCard('newsletter')">
+      <div class="agent-emoji">📰</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Newsletter</div>
+        <div class="agent-desc">
+          Envoie une newsletter mensuelle automatique à vos clients.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📰</span>
+        <div>
+          Cet agent prépare et envoie une newsletter régulière à votre carnet de contacts.
+          <br><br>
+          Exemple :
+          <strong>"Envoie une newsletter pour annoncer mes nouveaux horaires d'été."</strong>
+          <br><br>
+          Gardez le contact avec vos clients sans rédiger un mail chaque mois.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT REPONDEUR INTELLIGENT -->
+  <div class="agent-card" id="card-repondeur">
+    <div class="agent-head" onclick="toggleCard('repondeur')">
+      <div class="agent-emoji">📞</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Répondeur Intelligent</div>
+        <div class="agent-desc">
+          Transcrit et résume vos messages vocaux d'appels manqués.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">📞</span>
+        <div>
+          Cet agent transcrit automatiquement vos messages vocaux et vous envoie un résumé clair.
+          <br><br>
+          Exemple :
+          <strong>Un client laisse un message → vous recevez un résumé écrit par mail.</strong>
+          <br><br>
+          Ne perdez plus le fil d'un appel manqué en intervention.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT PARRAINAGE -->
+  <div class="agent-card" id="card-parrainage">
+    <div class="agent-head" onclick="toggleCard('parrainage')">
+      <div class="agent-emoji">🤝</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Parrainage</div>
+        <div class="agent-desc">
+          Encourage vos clients satisfaits à recommander votre activité.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">🤝</span>
+        <div>
+          Cet agent propose automatiquement à vos clients satisfaits de parrainer leur entourage.
+          <br><br>
+          Exemple :
+          <strong>Après un avis positif, le client reçoit un message de parrainage.</strong>
+          <br><br>
+          Développez votre activité grâce au bouche-à-oreille, sans effort de votre part.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENT RESERVATION EN LIGNE -->
+  <div class="agent-card" id="card-reservation">
+    <div class="agent-head" onclick="toggleCard('reservation')">
+      <div class="agent-emoji">🔗</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Réservation en Ligne</div>
+        <div class="agent-desc">
+          Génère un lien de réservation à partager avec vos clients.
+        </div>
+      </div>
+      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">🔗</span>
+        <div>
+          Cet agent crée un lien public où vos clients choisissent un créneau disponible.
+          <br><br>
+          Exemple :
+          <strong>Partagez le lien sur votre site ou vos réseaux sociaux.</strong>
+          <br><br>
+          Vos clients réservent seuls, sans appel ni échange de mails.
         </div>
       </div>
     </div>
