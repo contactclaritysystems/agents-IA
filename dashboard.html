@@ -3921,6 +3921,7 @@ async function handleUser(user) {
   console.log("avant loadProfile");
   
   await loadProfile();
+  await ensureAssistanceContact();
   await loadEnabledAgents();
   await loadActionCounter();
   await loadSubscription();
@@ -4813,6 +4814,47 @@ function unlockProfileFields() {
 profileHasUnsavedChanges = true;
 }
 
+  async function ensureAssistanceContact() {
+  if (!currentUser) return;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) return;
+
+  const checkResp = await fetch(
+    SUPABASE_URL + "/rest/v1/contacts?user_id=eq." + currentUser.id + "&email=eq.contact@clarity-systems.fr&limit=1",
+    {
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken
+      }
+    }
+  );
+
+  if (!checkResp.ok) return;
+
+  const existing = await checkResp.json();
+  if (existing && existing.length > 0) return;
+
+  await fetch(SUPABASE_URL + "/rest/v1/contacts", {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal"
+    },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      full_name: "Assistance",
+      company: "Clarity Systems",
+      email: "contact@clarity-systems.fr",
+      phone: ""
+    })
+  });
+}
+
 async function loadProfile() {
   console.log("=== LOAD PROFILE ===");
   console.log("currentUser:", currentUser?.id);
@@ -5020,8 +5062,10 @@ function renderContacts() {
 
   const search = (document.getElementById("contact-search")?.value || "").toLowerCase();
 
-  const contacts = contactsCache.filter(c =>
-    (c.full_name || "").toLowerCase().includes(search) ||
+ const contacts = contactsCache
+    .filter(c => c.email !== "contact@clarity-systems.fr")
+    .filter(c =>
+      (c.full_name || "").toLowerCase().includes(search) ||
     (c.company || "").toLowerCase().includes(search) ||
     (c.email || "").toLowerCase().includes(search) ||
     (c.phone || "").toLowerCase().includes(search)
