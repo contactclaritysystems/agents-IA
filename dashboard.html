@@ -2552,7 +2552,7 @@ select.field-input {
   position: fixed;
   z-index: 6001;
   border-radius: 14px;
-  box-shadow: 0 0 0 4px rgba(255,255,255,.95), 0 0 24px 6px rgba(255,255,255,.55);
+  box-shadow: 0 0 0 3px #ffffff, 0 0 0 6px #141416, 0 0 18px 4px rgba(0,0,0,.35);
   pointer-events: none;
   transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
   display: none;
@@ -2571,18 +2571,18 @@ select.field-input {
   display: none;
 }
 
-#onboarding-bubble .onboarding-title {
+.onboarding-title {
   font-weight: 800;
-  font-size: 14.5px;
+  font-size: 15.5px;
   color: #1d1d1f;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   letter-spacing: -0.02em;
 }
 
-#onboarding-bubble .onboarding-text {
-  font-size: 13px;
-  color: #6e6e73;
-  line-height: 1.55;
+.onboarding-text {
+  font-size: 13.5px;
+  color: #3a3a3d;
+  line-height: 1.6;
 }
 
   #onboarding-tips {
@@ -2594,7 +2594,8 @@ select.field-input {
   background: #fff;
   border-radius: 18px;
   padding: 18px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.22);
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 22px 60px rgba(0,0,0,.30);
   font-family: 'Inter', sans-serif;
   display: none;
 }
@@ -4057,15 +4058,15 @@ async function goToDictateMailStep() {
 
   const ONBOARDING_TIPS = [
   {
-    title: "Activez vos agents",
+    title: "⚙️ Activez vos agents",
     text: "Vous pouvez activer ou désactiver chaque agent à tout moment dans Réglages."
   },
   {
-    title: "Enregistrez vos contacts",
+    title: "📒 Enregistrez vos contacts",
     text: "Ajoutez vos clients dans le Carnet Contacts pour que vos agents les retrouvent automatiquement."
   },
   {
-    title: "C'est tout !",
+    title: "🎙️ C'est tout !",
     text: "Pour dicter une action, il suffit de donner le prénom (ou nom et prénom) du contact."
   }
 ];
@@ -4228,14 +4229,14 @@ const ONBOARDING_MESSAGES = {
   dictate_mail: {
     title: "Dernière étape",
     text: () => {
-      const base = `Cliquez ici puis dites : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`;
+      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`;
       if (onboardingMicAlreadyGranted) return base;
       return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
     }
   },
   stop_dictation: {
     title: "Parlez maintenant",
-    text: "Dictez votre message, puis appuyez sur ce bouton dès que vous avez terminé."
+    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."<br><br>Appuyez sur ce bouton dès que vous avez terminé de parler.`
   },
   confirm_send: {
     title: "Vérifiez et envoyez",
@@ -4243,7 +4244,7 @@ const ONBOARDING_MESSAGES = {
   },
   retry_dictation: {
     title: "Pas de souci, réessayons",
-    text: () => `Cliquez ici puis dites clairement : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
+    text: () => `Cliquez ici puis dictez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
