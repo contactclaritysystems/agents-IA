@@ -3110,6 +3110,18 @@ select.field-input {
     </div>
   </div>
 
+    <!-- BLOC SUR MESURE -->
+  <div class="gmail-section" style="display:block; margin-top:8px;">
+    <div class="gmail-title">
+      <span>✨</span> Besoin d'un agent sur mesure ?
+    </div>
+    <div class="gmail-desc">
+      Ces agents sont conçus pour s'adapter facilement à votre activité. Mais chaque métier a ses spécificités : si vous avez un besoin précis, nous pouvons créer un agent sur mesure pour vous.
+      <br><br>
+      Une idée d'agent qui vous simplifierait le quotidien ? <a href="#" onclick="openContactChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on l'étudie avec vous.
+    </div>
+  </div>
+
 </div>
 
   <!-- GUIDE -->
@@ -3584,6 +3596,51 @@ select.field-input {
   <div class="mail-choice-box" id="pricing-modal-content"></div>
 </div>
 
+  <div id="contact-choice-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeContactChoiceModal()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Nous contacter</div>
+    <div class="mail-choice-subtitle">Choisissez le sujet de votre message.</div>
+
+    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Id%C3%A9e%20d%27agent&body=Bonjour%2C%0A%0AJ%27ai%20une%20id%C3%A9e%20d%27agent%20%3A%0A%0A" style="text-decoration:none;">
+      <span>💡</span>
+      <div>
+        <strong>J'ai une idée d'agent</strong>
+        <small>Suggérez un agent qui vous simplifierait le quotidien</small>
+      </div>
+    </a>
+
+    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Probl%C3%A8me%20technique&body=Bonjour%2C%0A%0AJ%27ai%20un%20probl%C3%A8me%20avec%20%3A%0A%0A" style="text-decoration:none;">
+      <span>🛠️</span>
+      <div>
+        <strong>J'ai un problème technique</strong>
+        <small>Signalez un bug ou un dysfonctionnement</small>
+      </div>
+    </a>
+
+    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Question&body=Bonjour%2C%0A%0A" style="text-decoration:none;">
+      <span>❓</span>
+      <div>
+        <strong>J'ai une question</strong>
+        <small>Sur votre abonnement, un agent, ou autre</small>
+      </div>
+    </a>
+
+    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Autre%20demande&body=Bonjour%2C%0A%0A" style="text-decoration:none;">
+      <span>💬</span>
+      <div>
+        <strong>Autre demande</strong>
+        <small>Tout autre sujet</small>
+      </div>
+    </a>
+
+    <button class="mail-choice-close" onclick="closeContactChoiceModal()">Annuler</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+
 <!-- TOAST -->
 <div class="toast" id="toast">✓ Configuration enregistrée</div>
 
@@ -3648,6 +3705,16 @@ if (lbl) lbl.textContent = "Non connecté";
 
 function closeMailChoiceModal() {
   const modal = document.getElementById("mail-choice-modal");
+  if (modal) modal.style.display = "none";
+}
+
+  function openContactChoiceModal() {
+  const modal = document.getElementById("contact-choice-modal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeContactChoiceModal() {
+  const modal = document.getElementById("contact-choice-modal");
   if (modal) modal.style.display = "none";
 }
 
