@@ -2536,6 +2536,70 @@ select.field-input {
   }
 }
 
+  #onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  background: rgba(15,15,17,.55);
+  display: none;
+}
+
+#onboarding-overlay.active {
+  display: block;
+}
+
+#onboarding-ring {
+  position: fixed;
+  z-index: 6001;
+  border-radius: 14px;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.95), 0 0 24px 6px rgba(255,255,255,.55);
+  pointer-events: none;
+  transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+  display: none;
+}
+
+#onboarding-bubble {
+  position: fixed;
+  z-index: 6002;
+  width: 290px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.28);
+  font-family: 'Inter', sans-serif;
+  transition: top .3s ease, left .3s ease;
+}
+
+#onboarding-bubble .onboarding-title {
+  font-weight: 800;
+  font-size: 14.5px;
+  color: #1d1d1f;
+  margin-bottom: 5px;
+  letter-spacing: -0.02em;
+}
+
+#onboarding-bubble .onboarding-text {
+  font-size: 13px;
+  color: #6e6e73;
+  line-height: 1.55;
+}
+
+#profil-stat-card {
+  position: relative;
+}
+
+#profil-stat-card.needs-attention::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.18);
+}
+
 </style>
 </head>
 <body>
@@ -2694,7 +2758,7 @@ select.field-input {
     <div class="stat-label" id="gmail-status-label">Non connecté</div>
   </div>
 
-  <div class="stat-card" onclick="handleProfilMobileCard()" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
+  <div class="stat-card needs-attention" id="profil-stat-card" onclick="handleProfilMobileCard()" style="flex-direction:column; align-items:center; text-align:center; padding:14px 8px; cursor:pointer;">
     <div style="font-size:22px;">👤</div>
     <div class="stat-value" style="font-size:13px; margin-top:6px;">Profil</div>
     <div class="stat-label" id="profil-status-label">À compléter</div>
@@ -3641,9 +3705,13 @@ select.field-input {
       </div>
     </button>
 
-    <button class="mail-choice-close" onclick="closeContactChoiceModal()">Annuler</button>
+   <button class="mail-choice-close" onclick="closeContactChoiceModal()">Annuler</button>
   </div>
 </div>
+
+  <div id="onboarding-overlay"></div>
+  <div id="onboarding-ring"></div>
+  <div id="onboarding-bubble"></div>
 
 <!-- TOAST -->
 <div class="toast" id="toast">✓ Configuration enregistrée</div>
@@ -3684,6 +3752,7 @@ function renderGmailConnected(gmailEmail) {
     </div>`;
   const lbl = document.getElementById("gmail-status-label");
 if (lbl) lbl.textContent = "Connecté ✓";
+  onboardingOnEvent("gmail_connected");
 }
 
 function renderGmailDisconnected() {
@@ -3901,6 +3970,257 @@ async function disconnectGmail() {
 
   if (error) console.error("Erreur déconnexion Gmail:", error);
 }
+
+  // ─── ONBOARDING ──────────────────────────────────────────
+
+let onboardingActive = false;
+let onboardingStep = null;
+
+function getOnboardingFirstName() {
+  return currentUser?.user_metadata?.prenom || "vous";
+}
+
+function getStepSelectors(step) {
+  if (step === "goto_settings") {
+    return ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'];
+  }
+  if (step === "connect_gmail") {
+    return ['#gmail-ui .gmail-connect-btn'];
+  }
+  if (step === "goto_agents") {
+    return ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'];
+  }
+  if (step === "dictate_mail") {
+    return ['#mail-dictation-btn'];
+  }
+  return [];
+}
+
+function pickVisibleElement(selectors) {
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (el && el.offsetParent !== null) return el;
+  }
+  return null;
+}
+
+const ONBOARDING_MESSAGES = {
+  goto_settings: {
+    title: () => `Bienvenue ${getOnboardingFirstName()} !`,
+    text: "Pour activer vos agents, commencez par connecter votre compte mail dans Réglages."
+  },
+  connect_gmail: {
+    title: "Connectez votre compte mail",
+    text: "Cliquez sur ce bouton pour connecter Gmail."
+  },
+  goto_agents: {
+    title: "Parfait !",
+    text: "Retournons tester vos agents."
+  },
+  dictate_mail: {
+    title: "Dernière étape",
+    text: () => `Cliquez ici puis dites : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
+  },
+  done: {
+    title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
+    text: "Vous venez d'envoyer votre premier mail."
+  }
+};
+
+function renderOnboardingBubble(title, text) {
+  const overlay = document.getElementById("onboarding-overlay");
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!overlay || !bubble) return;
+
+  overlay.classList.add("active");
+
+  bubble.innerHTML = `
+    <div class="onboarding-title">${title}</div>
+    <div class="onboarding-text">${text}</div>
+  `;
+}
+
+function positionBubbleNear(bubble, rect) {
+  bubble.style.transform = "none";
+
+  const margin = 14;
+  const bubbleWidth = 290;
+
+  let top = rect.bottom + margin;
+  let left = rect.left;
+
+  if (left + bubbleWidth > window.innerWidth - 16) {
+    left = window.innerWidth - bubbleWidth - 16;
+  }
+
+  if (top + 140 > window.innerHeight) {
+    top = rect.top - margin - 140;
+  }
+
+  bubble.style.top = Math.max(16, top) + "px";
+  bubble.style.left = Math.max(16, left) + "px";
+}
+
+function positionBubbleCenter(bubble) {
+  bubble.style.top = "50%";
+  bubble.style.left = "50%";
+  bubble.style.transform = "translate(-50%, -50%)";
+}
+
+function positionOnboardingSpotlight(target) {
+  const overlay = document.getElementById("onboarding-overlay");
+  const ring = document.getElementById("onboarding-ring");
+  const bubble = document.getElementById("onboarding-bubble");
+
+  if (!overlay || !ring || !bubble) return;
+
+  if (!target) {
+    overlay.style.clipPath = "none";
+    ring.style.display = "none";
+    positionBubbleCenter(bubble);
+    return;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+
+  const x = rect.left - pad;
+  const y = rect.top - pad;
+  const w = rect.width + pad * 2;
+  const h = rect.height + pad * 2;
+
+  overlay.style.clipPath =
+    "polygon(0% 0%, 0% 100%, " + x + "px 100%, " + x + "px " + y + "px, " +
+    (x + w) + "px " + y + "px, " + (x + w) + "px " + (y + h) + "px, " +
+    x + "px " + (y + h) + "px, " + x + "px 100%, 100% 100%, 100% 0%)";
+
+  ring.style.display = "block";
+  ring.style.left = x + "px";
+  ring.style.top = y + "px";
+  ring.style.width = w + "px";
+  ring.style.height = h + "px";
+
+  positionBubbleNear(bubble, rect);
+}
+
+function showOnboardingStep() {
+  const config = ONBOARDING_MESSAGES[onboardingStep];
+  if (!config) return;
+
+  const title = typeof config.title === "function" ? config.title() : config.title;
+  const text = typeof config.text === "function" ? config.text() : config.text;
+
+  renderOnboardingBubble(title, text);
+
+  if (onboardingStep === "done") {
+    positionOnboardingSpotlight(null);
+    setTimeout(() => {
+      endOnboarding();
+    }, 3500);
+    return;
+  }
+
+  const selectors = getStepSelectors(onboardingStep);
+  const target = pickVisibleElement(selectors);
+
+  if (!target) {
+    setTimeout(showOnboardingStep, 150);
+    return;
+  }
+
+  positionOnboardingSpotlight(target);
+}
+
+function onboardingOnEvent(event) {
+  if (!onboardingActive) return;
+
+  if (event === "page:settings" && onboardingStep === "goto_settings") {
+    onboardingStep = "connect_gmail";
+    showOnboardingStep();
+    return;
+  }
+
+  if (event === "gmail_connected" && onboardingStep === "connect_gmail") {
+    onboardingStep = "goto_agents";
+    showOnboardingStep();
+    return;
+  }
+
+  if (event === "page:agents" && onboardingStep === "goto_agents") {
+    onboardingStep = "dictate_mail";
+    showOnboardingStep();
+    return;
+  }
+
+  if (event === "mail_sent" && onboardingStep === "dictate_mail") {
+    onboardingStep = "done";
+    showOnboardingStep();
+  }
+}
+
+async function loadOnboardingStatus() {
+  if (!currentUser) return true;
+
+  const { data, error } = await supabaseClient
+    .from("agent_configs")
+    .select("config")
+    .eq("user_id", currentUser.id)
+    .eq("agent_name", "onboarding")
+    .limit(1);
+
+  if (error) return true;
+
+  if (data && data.length > 0 && data[0].config && data[0].config.completed === true) {
+    return true;
+  }
+
+  return false;
+}
+
+async function markOnboardingComplete() {
+  if (!currentUser) return;
+
+  await supabaseClient
+    .from("agent_configs")
+    .upsert({
+      user_id: currentUser.id,
+      agent_name: "onboarding",
+      config: { completed: true },
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id,agent_name" });
+}
+
+async function startOnboardingIfNeeded() {
+  const completed = await loadOnboardingStatus();
+  if (completed) return;
+
+  onboardingActive = true;
+
+  const gmailConnected = !!localStorage.getItem("gmail_" + currentUser.email);
+  onboardingStep = gmailConnected ? "goto_agents" : "goto_settings";
+
+  showOnboardingStep();
+}
+
+async function endOnboarding() {
+  onboardingActive = false;
+  onboardingStep = null;
+
+  const overlay = document.getElementById("onboarding-overlay");
+  const ring = document.getElementById("onboarding-ring");
+
+  if (overlay) overlay.classList.remove("active");
+  if (ring) ring.style.display = "none";
+
+  await markOnboardingComplete();
+}
+
+window.addEventListener("resize", () => {
+  if (onboardingActive && onboardingStep && onboardingStep !== "done") {
+    const target = pickVisibleElement(getStepSelectors(onboardingStep));
+    if (target) positionOnboardingSpotlight(target);
+  }
+});
   
 // ─── USER ────────────────────────────────────────────────
 
@@ -3926,6 +4246,7 @@ async function handleUser(user) {
   await loadEnabledAgents();
   await loadActionCounter();
   await loadSubscription();
+  await startOnboardingIfNeeded();
   
   console.log("handleUser terminé");
 }
@@ -4935,11 +5256,13 @@ async function loadProfile() {
 ) {
   renderContactsSheetCreated();
 }
-
-    const profilLbl = document.getElementById("profil-status-label");
+    
+const profilLbl = document.getElementById("profil-status-label");
+const profilCard = document.getElementById("profil-stat-card");
 if (profilLbl) {
   const isComplete = profile.firstname && profile.lastname && profile.phone && profile.company;
   profilLbl.textContent = isComplete ? "Complété ✓" : "À compléter";
+  if (profilCard) profilCard.classList.toggle("needs-attention", !isComplete);
 }
     
     document.getElementById("profile-firstname").value = profile.firstname || "";
@@ -6567,16 +6890,18 @@ function showSection(section, btn) {
   document.querySelectorAll(".bottom-tab").forEach(item => {
   item.classList.remove("active");
 });
-
-  if (section === "agents") {
+  
+if (section === "agents") {
     document.getElementById("main-agents").classList.add("active");
     if (btn) btn.classList.add("active");
+    onboardingOnEvent("page:agents");
     return;
   }
-
-  if (section === "settings") {
+  
+if (section === "settings") {
     document.getElementById("main-settings").classList.add("active");
     if (btn) btn.classList.add("active");
+    onboardingOnEvent("page:settings");
     return;
   }
 
@@ -8557,7 +8882,7 @@ if (!contactName && Array.isArray(contactsCache)) {
     contactName = foundContact.full_name || "";
   }
 }
-
+  
 await saveActionLog(
   "mails",
   `CONTACT: ${contactName}
@@ -8569,6 +8894,7 @@ ${body}`,
 );
 
   await loadActionCounter();
+  onboardingOnEvent("mail_sent");
   
 }, 550);
 
