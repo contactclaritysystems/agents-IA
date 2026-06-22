@@ -4070,6 +4070,55 @@ async function goToDictateMailStep() {
   }
 ];
 
+const TIP_TARGET_SELECTORS = [
+  ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+  ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
+  ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']
+];
+
+let onboardingTipsPositionInterval = null;
+
+function showTipsRing(selectors) {
+  const ring = document.getElementById("onboarding-ring");
+  if (!ring) return;
+
+  const target = pickVisibleElement(selectors || []);
+
+  if (!target) {
+    ring.style.display = "none";
+    return;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const pad = 8;
+
+  ring.style.display = "block";
+  ring.style.left = (rect.left - pad) + "px";
+  ring.style.top = (rect.top - pad) + "px";
+  ring.style.width = (rect.width + pad * 2) + "px";
+  ring.style.height = (rect.height + pad * 2) + "px";
+}
+
+function hideTipsRing() {
+  const ring = document.getElementById("onboarding-ring");
+  if (ring) ring.style.display = "none";
+}
+
+function startTipsPositionLoop(selectors) {
+  stopTipsPositionLoop();
+  showTipsRing(selectors);
+  onboardingTipsPositionInterval = setInterval(() => {
+    showTipsRing(selectors);
+  }, 300);
+}
+
+function stopTipsPositionLoop() {
+  if (onboardingTipsPositionInterval) {
+    clearInterval(onboardingTipsPositionInterval);
+    onboardingTipsPositionInterval = null;
+  }
+}
+
 let onboardingTipIndex = 0;
 
 function showOnboardingTip(index) {
@@ -4093,6 +4142,8 @@ function showOnboardingTip(index) {
       <button type="button" class="save-btn" onclick="onboardingTipNext()">${isLast ? "Terminer" : "Suivant"}</button>
     </div>
   `;
+
+  startTipsPositionLoop(TIP_TARGET_SELECTORS[index]);
 }
 
 function onboardingTipNext() {
@@ -4115,6 +4166,9 @@ function startOnboardingTips() {
 }
 
 async function finishOnboardingTips() {
+  stopTipsPositionLoop();
+  hideTipsRing();
+
   const tipsBox = document.getElementById("onboarding-tips");
   if (tipsBox) {
     tipsBox.style.display = "none";
