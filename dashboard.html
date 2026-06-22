@@ -2568,6 +2568,7 @@ select.field-input {
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
   font-family: 'Inter', sans-serif;
   transition: top .3s ease, left .3s ease;
+  display: none;
 }
 
 #onboarding-bubble .onboarding-title {
@@ -3975,6 +3976,23 @@ async function disconnectGmail() {
 
 let onboardingActive = false;
 let onboardingStep = null;
+let onboardingPositionInterval = null;
+
+function startOnboardingPositionLoop() {
+  stopOnboardingPositionLoop();
+  onboardingPositionInterval = setInterval(() => {
+    if (!onboardingActive || !onboardingStep || onboardingStep === "done") return;
+    const target = pickVisibleElement(getStepSelectors(onboardingStep));
+    if (target) positionOnboardingSpotlight(target);
+  }, 300);
+}
+
+function stopOnboardingPositionLoop() {
+  if (onboardingPositionInterval) {
+    clearInterval(onboardingPositionInterval);
+    onboardingPositionInterval = null;
+  }
+}
 
 function getOnboardingFirstName() {
   return currentUser?.user_metadata?.prenom || "vous";
@@ -3994,6 +4012,12 @@ function getStepSelectors(step) {
   }
   if (step === "dictate_mail") {
     return ['#mail-dictation-btn'];
+  }
+  if (step === "stop_dictation") {
+    return ['#mail-dictation-btn'];
+  }
+  if (step === "confirm_send") {
+    return ['#mail-preview-modal .mail-choice-box'];
   }
   return [];
 }
@@ -4023,18 +4047,27 @@ const ONBOARDING_MESSAGES = {
     title: "Dernière étape",
     text: () => `Cliquez ici puis dites : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
   },
+  stop_dictation: {
+    title: "Parlez maintenant",
+    text: "Dictez votre message, puis appuyez sur ce bouton dès que vous avez terminé."
+  },
+  confirm_send: {
+    title: "Vérifiez et envoyez",
+    text: "Relisez votre mail puis cliquez sur \"Envoyer le mail\"."
+  },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
     text: "Vous venez d'envoyer votre premier mail."
   }
 };
-
+  
 function renderOnboardingBubble(title, text) {
   const overlay = document.getElementById("onboarding-overlay");
   const bubble = document.getElementById("onboarding-bubble");
   if (!overlay || !bubble) return;
 
   overlay.classList.add("active");
+  bubble.style.display = "block";
 
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
@@ -4153,8 +4186,20 @@ function onboardingOnEvent(event) {
     showOnboardingStep();
     return;
   }
+  
+if (event === "dictation_started" && onboardingStep === "dictate_mail") {
+    onboardingStep = "stop_dictation";
+    showOnboardingStep();
+    return;
+  }
 
-  if (event === "mail_sent" && onboardingStep === "dictate_mail") {
+  if (event === "mail_prepared" && (onboardingStep === "dictate_mail" || onboardingStep === "stop_dictation")) {
+    onboardingStep = "confirm_send";
+    showOnboardingStep();
+    return;
+  }
+
+  if (event === "mail_sent" && onboardingActive) {
     onboardingStep = "done";
     showOnboardingStep();
   }
@@ -4191,12 +4236,13 @@ async function markOnboardingComplete() {
       updated_at: new Date().toISOString()
     }, { onConflict: "user_id,agent_name" });
 }
-
+  
 async function startOnboardingIfNeeded() {
   const completed = await loadOnboardingStatus();
   if (completed) return;
 
   onboardingActive = true;
+  startOnboardingPositionLoop();
 
   const gmailConnected = !!localStorage.getItem("gmail_" + currentUser.email);
   onboardingStep = gmailConnected ? "goto_agents" : "goto_settings";
@@ -4207,12 +4253,15 @@ async function startOnboardingIfNeeded() {
 async function endOnboarding() {
   onboardingActive = false;
   onboardingStep = null;
+  stopOnboardingPositionLoop();
 
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
+  const bubble = document.getElementById("onboarding-bubble");
 
   if (overlay) overlay.classList.remove("active");
   if (ring) ring.style.display = "none";
+  if (bubble) bubble.style.display = "none";
 
   await markOnboardingComplete();
 }
@@ -5970,14 +6019,15 @@ lockAgentButtons(mailBtn, "⏳ Agent en cours...");
 setDictationBoxState(box, "info");
 box.style.opacity = "1";
 box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
-
-  try {
+try {
     recognition.start();
     resetSilenceTimer();
   } catch (e) {
     box.innerHTML = "❌ Impossible de démarrer le micro.";
     return;
   }
+
+  onboardingOnEvent("dictation_started");
 
   recognition.onresult = function(event) {
     resetSilenceTimer();
@@ -6087,10 +6137,11 @@ return;
 }
 
 console.log("DATA PREVIEW MAIL:", data);
-
-     box.innerHTML = "✅ Mail préparé";
+      
+box.innerHTML = "✅ Mail préparé";
 openMailPreview(data, instruction);
       unlockAgentButtons();
+      onboardingOnEvent("mail_prepared");
 
     } catch (err) {
       console.error("Erreur envoi Make:", err);
