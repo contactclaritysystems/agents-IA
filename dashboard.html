@@ -3609,37 +3609,37 @@ select.field-input {
     <div class="mail-choice-title">Nous contacter</div>
     <div class="mail-choice-subtitle">Choisissez le sujet de votre message.</div>
 
-    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Id%C3%A9e%20d%27agent&body=Bonjour%2C%0A%0AJ%27ai%20une%20id%C3%A9e%20d%27agent%20%3A%0A%0A" style="text-decoration:none;">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Idée d\'agent', 'Bonjour,\n\nJ\'ai une idée d\'agent :\n\n')">
       <span>💡</span>
       <div>
         <strong>J'ai une idée d'agent</strong>
         <small>Suggérez un agent qui vous simplifierait le quotidien</small>
       </div>
-    </a>
+    </button>
 
-    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Probl%C3%A8me%20technique&body=Bonjour%2C%0A%0AJ%27ai%20un%20probl%C3%A8me%20avec%20%3A%0A%0A" style="text-decoration:none;">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Problème technique', 'Bonjour,\n\nJ\'ai un problème avec :\n\n')">
       <span>🛠️</span>
       <div>
         <strong>J'ai un problème technique</strong>
         <small>Signalez un bug ou un dysfonctionnement</small>
       </div>
-    </a>
+    </button>
 
-    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Question&body=Bonjour%2C%0A%0A" style="text-decoration:none;">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Question', 'Bonjour,\n\n')">
       <span>❓</span>
       <div>
         <strong>J'ai une question</strong>
         <small>Sur votre abonnement, un agent, ou autre</small>
       </div>
-    </a>
+    </button>
 
-    <a class="mail-choice-btn" href="mailto:contact@clarity-systems.fr?subject=Autre%20demande&body=Bonjour%2C%0A%0A" style="text-decoration:none;">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Autre demande', 'Bonjour,\n\n')">
       <span>💬</span>
       <div>
         <strong>Autre demande</strong>
         <small>Tout autre sujet</small>
       </div>
-    </a>
+    </button>
 
     <button class="mail-choice-close" onclick="closeContactChoiceModal()">Annuler</button>
   </div>
@@ -3720,6 +3720,23 @@ function closeMailChoiceModal() {
 function closeContactChoiceModal() {
   const modal = document.getElementById("contact-choice-modal");
   if (modal) modal.style.display = "none";
+}
+
+  function sendContactMessage(subject, body) {
+  closeContactChoiceModal();
+
+  const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
+
+  if (!gmailConnected) {
+    showToast("Connectez d'abord votre compte mail dans Réglages");
+    return;
+  }
+
+  openMailPreview({
+    to: "contact@clarity-systems.fr",
+    subject: subject,
+    body: body
+  }, "Message envoyé à Clarity Systems");
 }
 
 function connectOutlook() {
