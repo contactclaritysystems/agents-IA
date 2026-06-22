@@ -6095,6 +6095,7 @@ function openMailPreview(data, instruction) {
 
 function closeMailPreview(showCancel = true) {
   document.getElementById("mail-preview-modal").style.display = "none";
+  unlockAgentButtons();
 
  if (showCancel) {
   showToast("Envoi annulé", "error");
@@ -6165,6 +6166,17 @@ function unlockAgentButtons() {
   if (btn) {
     btn.innerHTML = "🎙️ Dicter un mail";
     btn.onclick = startMailDictation;
+  }
+}
+
+  function resetMailDictationButtonKeepLocked() {
+  const btn = document.getElementById("mail-dictation-btn");
+  if (btn) {
+    btn.innerHTML = "🎙️ Dicter un mail";
+    btn.onclick = startMailDictation;
+    btn.disabled = true;
+    btn.style.opacity = ".55";
+    btn.style.pointerEvents = "none";
   }
 }
 
@@ -6363,6 +6375,7 @@ try {
   data.reason || data.error || "error"
 );
 
+  resetMailDictationButton();
   onboardingOnEvent("dictation_failed");
 return;
 }
@@ -6371,14 +6384,14 @@ console.log("DATA PREVIEW MAIL:", data);
       
 box.innerHTML = "✅ Mail préparé";
 openMailPreview(data, instruction);
-      resetMailDictationButton();
+      resetMailDictationButtonKeepLocked();
       onboardingOnEvent("mail_prepared");
 
     } catch (err) {
       console.error("Erreur envoi Make:", err);
-      unlockAgentButtons();
       box.innerHTML = "❌ Erreur lors de l’envoi à l’agent.";
       await saveActionLog("mails", instruction, "error");
+      resetMailDictationButton();
       onboardingOnEvent("dictation_failed");
     }
   };
