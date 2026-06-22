@@ -4037,6 +4037,24 @@ function getOnboardingFirstName() {
   return currentUser?.user_metadata?.prenom || "vous";
 }
 
+  async function checkMicPermissionGranted() {
+  try {
+    if (!navigator.permissions || !navigator.permissions.query) return false;
+    const status = await navigator.permissions.query({ name: "microphone" });
+    return status.state === "granted";
+  } catch (e) {
+    return false;
+  }
+}
+
+let onboardingMicAlreadyGranted = false;
+
+async function goToDictateMailStep() {
+  onboardingMicAlreadyGranted = await checkMicPermissionGranted();
+  onboardingStep = "dictate_mail";
+  showOnboardingStep();
+}
+
   const ONBOARDING_TIPS = [
   {
     title: "Activez vos agents",
@@ -4155,7 +4173,11 @@ const ONBOARDING_MESSAGES = {
   },
   dictate_mail: {
     title: "Dernière étape",
-    text: () => `Cliquez ici puis dites : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
+    text: () => {
+      const base = `Cliquez ici puis dites : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`;
+      if (onboardingMicAlreadyGranted) return base;
+      return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
+    }
   },
   stop_dictation: {
     title: "Parlez maintenant",
@@ -4296,8 +4318,7 @@ function onboardingOnEvent(event) {
   }
 
   if (event === "page:agents" && onboardingStep === "goto_agents") {
-    onboardingStep = "dictate_mail";
-    showOnboardingStep();
+    goToDictateMailStep();
     return;
   }
   
