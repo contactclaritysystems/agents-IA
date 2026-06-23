@@ -3519,8 +3519,45 @@ select.field-input {
       🎙️ Dicter un compte rendu
     </button>
   </div>
+
 </div>
   
+</div>
+
+  <div class="agent-card configured" id="card-redaction-run">
+  <div class="agent-head">
+    <div class="agent-emoji">✍️</div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Rédaction</div>
+      <div class="agent-desc">
+        Exemple : “Écris un message professionnel pour prévenir mon client du retard.”
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-body" style="display:flex;">
+    <button class="save-btn" id="redaction-dictation-btn" onclick="startRedactionDictation()">
+      🎙️ Dicter un texte
+    </button>
+  </div>
+</div>
+
+<div class="agent-card configured" id="card-assistant-run">
+  <div class="agent-head">
+    <div class="agent-emoji">🤖</div>
+    <div class="agent-title-wrap">
+      <div class="agent-name">Agent Assistant</div>
+      <div class="agent-desc">
+        Exemple : “Comment répondre à ce client sans le vexer ?”
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-body" style="display:flex;">
+    <button class="save-btn" id="assistant-dictation-btn" onclick="startAssistantDictation()">
+      🎙️ Poser une question
+    </button>
+  </div>
 </div>
     
   </div>
@@ -3890,7 +3927,9 @@ let enabledAgents = {
   relance: false,
   suivi: false,
   devis: false,
-  notes: true
+  notes: true,
+  redaction: true,
+  assistant: true
 };
 
 // ─── GMAIL UI ────────────────────────────────────────────
