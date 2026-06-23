@@ -7354,6 +7354,14 @@ async function startNotesDictation() {
   };
 }
 
+  async function startRedactionDictation() {
+  showToast("Agent Rédaction en cours de création", "success");
+}
+
+async function startAssistantDictation() {
+  showToast("Agent Assistant en cours de création", "success");
+}
+
   function closeAllAgentCards() {
   document.querySelectorAll(".agent-card.open").forEach(card => {
     card.classList.remove("open");
