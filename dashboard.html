@@ -4271,16 +4271,23 @@ function positionBubbleNear(bubble, rect) {
 
   const margin = 14;
   const bubbleWidth = 290;
+  const bubbleHeight = bubble.offsetHeight || 140;
 
-  let top = rect.bottom + margin;
+  let referenceRect = rect;
+  const dictationBox = document.querySelector(".page-view.active #dictation-box");
+  if (dictationBox) {
+    referenceRect = dictationBox.getBoundingClientRect();
+  }
+
+  let top = referenceRect.top - margin - bubbleHeight;
   let left = rect.left;
+
+  if (top < 16) {
+    top = referenceRect.bottom + margin;
+  }
 
   if (left + bubbleWidth > window.innerWidth - 16) {
     left = window.innerWidth - bubbleWidth - 16;
-  }
-
-  if (top + 140 > window.innerHeight) {
-    top = rect.top - margin - 140;
   }
 
   bubble.style.top = Math.max(16, top) + "px";
