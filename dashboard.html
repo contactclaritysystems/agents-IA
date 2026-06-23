@@ -3326,8 +3326,8 @@ select.field-input {
     </div>
   </div>
 
-    <!-- BLOC SUR MESURE -->
-  <div class="gmail-section" style="display:block; margin-top:8px; grid-column: 1 / -1;">
+      <!-- BLOC SUR MESURE -->
+  <div class="gmail-section" id="custom-agent-block" style="display:block; margin-top:8px; grid-column: 1 / -1;">
     <div class="gmail-title">
       <span>✨</span> Besoin d'un agent sur mesure ?
     </div>
@@ -4187,6 +4187,10 @@ async function goToDictateMailStep() {
   {
     title: "🎁 Votre essai gratuit",
     text: "Vous profitez de 7 jours d'essai gratuit ou 50 actions offertes, selon ce qui arrive en premier."
+  },
+  {
+    title: "✨ Une idée d'agent ?",
+    text: "Dites-le-nous en bas de cette page : nous étudions chaque demande."
   }
 ];
 
@@ -4196,10 +4200,11 @@ const TIP_TARGET_SELECTORS = [
   ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
   ['.nav-item[onclick*="historique"]', '.bottom-tab[data-section="historique"]'],
   ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
-  ['#subscription-stat-card']
+  ['#subscription-stat-card'],
+  ['#custom-agent-block']
 ];
 
-const TIP_TARGET_SECTIONS = ["settings", "contacts", "planning", "historique", "agents", null];
+const TIP_TARGET_SECTIONS = ["settings", "contacts", "planning", "historique", "agents", null, "settings"];
 
 let onboardingTipsPositionInterval = null;
 
@@ -4260,10 +4265,16 @@ function showOnboardingTip(index) {
   const selectors = TIP_TARGET_SELECTORS[index];
   const section = TIP_TARGET_SECTIONS[index];
 
-  if (section) {
+    if (section) {
     const target = pickVisibleElement(selectors);
     showSection(section, target);
+
+    const visibleTarget = pickVisibleElement(selectors);
+    if (visibleTarget && visibleTarget.scrollIntoView) {
+      visibleTarget.scrollIntoView({ behavior: "instant", block: "center" });
+    }
   }
+
 
   tipsBox.style.display = "block";
   tipsBox.innerHTML = `
@@ -4301,6 +4312,9 @@ function startOnboardingTips() {
 async function finishOnboardingTips() {
   stopTipsPositionLoop();
   hideTipsRing();
+
+  const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+  showSection("agents", homeBtn);
 
   const tipsBox = document.getElementById("onboarding-tips");
   if (tipsBox) {
