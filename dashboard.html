@@ -4226,6 +4226,13 @@ function showOnboardingTip(index) {
   }
 
   const isLast = index === ONBOARDING_TIPS.length - 1;
+  const selectors = TIP_TARGET_SELECTORS[index];
+  const section = TIP_TARGET_SECTIONS[index];
+
+  if (section) {
+    const target = pickVisibleElement(selectors);
+    showSection(section, target);
+  }
 
   tipsBox.style.display = "block";
   tipsBox.innerHTML = `
@@ -4237,8 +4244,9 @@ function showOnboardingTip(index) {
     </div>
   `;
 
-  startTipsPositionLoop(TIP_TARGET_SELECTORS[index]);
+  startTipsPositionLoop(selectors);
 }
+
 
 function onboardingTipNext() {
   onboardingTipIndex++;
