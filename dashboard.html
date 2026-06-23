@@ -2924,6 +2924,71 @@ select.field-input {
     </div>
   </div>
 
+    <!-- AGENT REDACTION -->
+  <div class="agent-card" id="card-redaction">
+    <div class="agent-head" onclick="toggleCard('redaction')">
+      <div class="agent-emoji">✍️</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Rédaction</div>
+        <div class="agent-desc">
+          Transforme une dictée en mail, SMS, courrier ou réponse client.
+        </div>
+      </div>
+      <div class="agent-status ok">Actif</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">✍️</span>
+        <div>
+          Cet agent transforme une simple dictée en texte adapté à chaque usage : mail, SMS, WhatsApp, courrier, réponse client...
+          <br><br>
+          Exemple :
+          <strong>"Explique au client que le chantier aura une semaine de retard."</strong>
+          <br><br>
+          Choisissez ensuite le format et le style d'écriture souhaités : professionnel, amical, formel...
+        </div>
+      </div>
+      <button class="save-btn" onclick="toggleAgentEnabled('redaction')" type="button">
+  Activer / Désactiver l’agent
+</button>
+    </div>
+  </div>
+
+  <!-- AGENT ASSISTANT -->
+  <div class="agent-card" id="card-assistant">
+    <div class="agent-head" onclick="toggleCard('assistant')">
+      <div class="agent-emoji">🤖</div>
+      <div class="agent-title-wrap">
+        <div class="agent-name">Agent Assistant</div>
+        <div class="agent-desc">
+          Posez vos questions, l'agent vous aide au quotidien.
+        </div>
+      </div>
+      <div class="agent-status ok">Actif</div>
+      <div class="agent-toggle">▾</div>
+    </div>
+    <div class="agent-body">
+      <div class="info-box">
+        <span class="info-icon">🤖</span>
+        <div>
+          Cet agent répond à vos questions du quotidien, comme un assistant toujours disponible.
+          <br><br>
+          Exemples :
+          <strong>
+            "Comment répondre à ce client ?"<br>
+            "Résume-moi ce document."<br>
+            "Explique-moi cette facture."<br>
+            "Aide-moi à préparer mon rendez-vous."
+          </strong>
+        </div>
+      </div>
+      <button class="save-btn" onclick="toggleAgentEnabled('assistant')" type="button">
+  Activer / Désactiver l’agent
+</button>
+    </div>
+  </div>
+
   <!-- AGENT PLANNING -->
   <div class="agent-card" id="card-planning">
     <div class="agent-head" onclick="toggleCard('planning')">
@@ -3240,71 +3305,6 @@ select.field-input {
     </div>
   </div>
 
-  <!-- AGENT REDACTION -->
-  <div class="agent-card" id="card-redaction">
-    <div class="agent-head" onclick="toggleCard('redaction')">
-      <div class="agent-emoji">✍️</div>
-      <div class="agent-title-wrap">
-        <div class="agent-name">Agent Rédaction</div>
-        <div class="agent-desc">
-          Transforme une dictée en mail, SMS, courrier ou réponse client.
-        </div>
-      </div>
-      <div class="agent-status ok">Actif</div>
-      <div class="agent-toggle">▾</div>
-    </div>
-    <div class="agent-body">
-      <div class="info-box">
-        <span class="info-icon">✍️</span>
-        <div>
-          Cet agent transforme une simple dictée en texte adapté à chaque usage : mail, SMS, WhatsApp, courrier, réponse client...
-          <br><br>
-          Exemple :
-          <strong>"Explique au client que le chantier aura une semaine de retard."</strong>
-          <br><br>
-          Choisissez ensuite le format et le style d'écriture souhaités : professionnel, amical, formel...
-        </div>
-      </div>
-      <button class="save-btn" onclick="toggleAgentEnabled('redaction')" type="button">
-  Activer / Désactiver l’agent
-</button>
-    </div>
-  </div>
-
-  <!-- AGENT ASSISTANT -->
-  <div class="agent-card" id="card-assistant">
-    <div class="agent-head" onclick="toggleCard('assistant')">
-      <div class="agent-emoji">🤖</div>
-      <div class="agent-title-wrap">
-        <div class="agent-name">Agent Assistant</div>
-        <div class="agent-desc">
-          Posez vos questions, l'agent vous aide au quotidien.
-        </div>
-      </div>
-      <div class="agent-status ok">Actif</div>
-      <div class="agent-toggle">▾</div>
-    </div>
-    <div class="agent-body">
-      <div class="info-box">
-        <span class="info-icon">🤖</span>
-        <div>
-          Cet agent répond à vos questions du quotidien, comme un assistant toujours disponible.
-          <br><br>
-          Exemples :
-          <strong>
-            "Comment répondre à ce client ?"<br>
-            "Résume-moi ce document."<br>
-            "Explique-moi cette facture."<br>
-            "Aide-moi à préparer mon rendez-vous."
-          </strong>
-        </div>
-      </div>
-      <button class="save-btn" onclick="toggleAgentEnabled('assistant')" type="button">
-  Activer / Désactiver l’agent
-</button>
-    </div>
-  </div>
-
   <!-- AGENT RECHERCHE -->
   <div class="agent-card" id="card-recherche">
     <div class="agent-head" onclick="toggleCard('recherche')">
@@ -3525,8 +3525,6 @@ select.field-input {
       🎙️ Dicter un compte rendu
     </button>
   </div>
-
-</div>
   
 </div>
 
