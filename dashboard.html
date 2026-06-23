@@ -2573,6 +2573,11 @@ select.field-input {
   display: none;
 }
 
+#onboarding-bubble.onboarding-center {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .onboarding-title {
   font-weight: 800;
   font-size: 15.5px;
@@ -2590,17 +2595,33 @@ select.field-input {
   #onboarding-tips {
   position: fixed;
   z-index: 6002;
-  top: max(16px, env(safe-area-inset-top));
   left: 50%;
+  bottom: 92px;
   transform: translateX(-50%);
-  width: min(320px, calc(100% - 32px));
+  width: min(270px, calc(100% - 32px));
   background: #fff;
-  border-radius: 18px;
-  padding: 18px;
+  border-radius: 26px;
+  padding: 14px 18px;
   border: 1px solid rgba(0,0,0,.06);
-  box-shadow: 0 22px 60px rgba(0,0,0,.30);
+  box-shadow: 0 16px 40px rgba(0,0,0,.22);
   font-family: 'Inter', sans-serif;
   display: none;
+}
+
+#onboarding-tips .onboarding-title {
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+#onboarding-tips .onboarding-text {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  #onboarding-tips {
+    bottom: calc(72px + env(safe-area-inset-bottom) + 14px);
+  }
 }
 
 #onboarding-tips-actions {
@@ -2613,9 +2634,9 @@ select.field-input {
 #onboarding-tips-actions .sheet-btn,
 #onboarding-tips-actions .save-btn {
   width: auto;
-  height: 38px;
-  padding: 0 16px;
-  font-size: 12.5px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 12px;
 }
 
 #profil-stat-card {
@@ -4361,13 +4382,14 @@ const ONBOARDING_MESSAGES = {
   }
 };
   
-function renderOnboardingBubble(title, text) {
+function renderOnboardingBubble(title, text, centered = false) {
   const overlay = document.getElementById("onboarding-overlay");
   const bubble = document.getElementById("onboarding-bubble");
   if (!overlay || !bubble) return;
 
   overlay.classList.add("active");
   bubble.style.display = "block";
+  bubble.classList.toggle("onboarding-center", centered);
 
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
@@ -4415,7 +4437,7 @@ function showOnboardingStep() {
   const title = typeof config.title === "function" ? config.title() : config.title;
   const text = typeof config.text === "function" ? config.text() : config.text;
 
-  renderOnboardingBubble(title, text);
+    renderOnboardingBubble(title, text, onboardingStep === "done");
 
   if (onboardingStep === "done") {
     positionOnboardingSpotlight(null);
