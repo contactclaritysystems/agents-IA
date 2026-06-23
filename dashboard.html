@@ -2590,9 +2590,10 @@ select.field-input {
   #onboarding-tips {
   position: fixed;
   z-index: 6002;
-  right: 20px;
-  bottom: 20px;
-  width: 300px;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100% - 32px));
   background: #fff;
   border-radius: 18px;
   padding: 18px;
@@ -2615,15 +2616,6 @@ select.field-input {
   height: 38px;
   padding: 0 16px;
   font-size: 12.5px;
-}
-
-@media (max-width: 600px) {
-  #onboarding-tips {
-    left: 16px;
-    right: 16px;
-    width: auto;
-    bottom: calc(env(safe-area-inset-bottom) + 86px);
-  }
 }
 
 #profil-stat-card {
@@ -3393,7 +3385,7 @@ select.field-input {
 </div>
   </div>
 
-  <div class="stat-card" onclick="openSubscriptionInfo()" style="cursor:pointer;">
+    <div class="stat-card" id="subscription-stat-card" onclick="openSubscriptionInfo()" style="cursor:pointer;">
     <div class="stat-icon-wrap purple" id="subscription-mini-icon">
       <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
     </div>
@@ -4158,19 +4150,33 @@ async function goToDictateMailStep() {
     text: "Ajoutez vos clients dans le Carnet Contacts pour que vos agents les retrouvent automatiquement."
   },
   {
+    title: "📅 Suivez votre planning",
+    text: "Consultez vos rendez-vous et relances à venir dans Planning."
+  },
+  {
+    title: "🗂️ Retrouvez l'historique",
+    text: "Toutes les actions de vos agents sont enregistrées dans Historique."
+  },
+  {
     title: "🎙️ C'est tout !",
     text: "Pour dicter une action, il suffit de donner le prénom (ou nom et prénom) du contact."
+  },
+  {
+    title: "🎁 Votre essai gratuit",
+    text: "Vous profitez de 7 jours d'essai gratuit ou 50 actions offertes, selon ce qui arrive en premier."
   }
 ];
 
 const TIP_TARGET_SELECTORS = [
   ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
   ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
-  ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']
+  ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
+  ['.nav-item[onclick*="historique"]', '.bottom-tab[data-section="historique"]'],
+  ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
+  ['#subscription-stat-card']
 ];
 
-const TIP_TARGET_SECTIONS = ["settings", "contacts", "agents"];
-
+const TIP_TARGET_SECTIONS = ["settings", "contacts", "planning", "historique", "agents", null];
 
 let onboardingTipsPositionInterval = null;
 
