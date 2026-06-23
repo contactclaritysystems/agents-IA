@@ -4406,7 +4406,7 @@ const ONBOARDING_MESSAGES = {
   dictate_mail: {
     title: "Dernière étape",
     text: () => {
-      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue sur Clarity Systems."`;
+      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue."`;
       if (onboardingMicAlreadyGranted) return base;
       return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
     }
