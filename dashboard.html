@@ -2608,6 +2608,10 @@ select.field-input {
   display: none;
 }
 
+#onboarding-tips.onboarding-tips-top {
+  top: max(16px, env(safe-area-inset-top));
+  bottom: auto;
+}
 
 #onboarding-tips .onboarding-title {
   font-size: 13.5px;
@@ -4275,6 +4279,7 @@ function showOnboardingTip(index) {
     }
   }
 
+  tipsBox.classList.toggle("onboarding-tips-top", isLast);
 
   tipsBox.style.display = "block";
   tipsBox.innerHTML = `
@@ -4401,14 +4406,15 @@ const ONBOARDING_MESSAGES = {
   dictate_mail: {
     title: "Dernière étape",
     text: () => {
-      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`;
+      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue sur Clarity Systems."`;
       if (onboardingMicAlreadyGranted) return base;
       return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
     }
   },
+  
   stop_dictation: {
     title: "Parlez maintenant",
-    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."<br><br>Appuyez sur ce bouton dès que vous avez terminé de parler.`
+    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue sur Clarity Systems."<br><br>Appuyez sur ce bouton dès que vous avez terminé de parler.`
   },
   confirm_send: {
     title: "Vérifiez et envoyez",
@@ -4416,7 +4422,7 @@ const ONBOARDING_MESSAGES = {
   },
   retry_dictation: {
     title: "Pas de souci, réessayons",
-    text: () => `Cliquez ici puis dictez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour dire bonjour."`
+    text: () => `Cliquez ici puis dictez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue sur Clarity Systems."`
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
