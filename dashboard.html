@@ -3848,6 +3848,30 @@ select.field-input {
   </div>
 </div>
 
+  <div id="simple-agent-preview-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeSimpleAgentPreview()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title" id="simple-agent-modal-title">Résultat prêt</div>
+    <div class="mail-choice-subtitle" id="simple-agent-modal-subtitle">
+      Vous pouvez modifier le texte.
+    </div>
+
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label" id="simple-agent-result-title">Résultat</div>
+      <textarea class="field-input" id="simple-agent-result-content" style="min-height:240px;"></textarea>
+    </div>
+
+    <button class="save-btn" onclick="copySimpleAgentResult()" type="button">
+      📋 Copier le texte
+    </button>
+
+    <button class="sheet-btn" onclick="closeSimpleAgentPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
+</div>
+
   <div id="pricing-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closePricingPage()"></div>
   <div class="mail-choice-box" id="pricing-modal-content"></div>
@@ -6166,6 +6190,42 @@ updateStatProgresses();
   }
 );
 
+  }
+}
+
+  function openSimpleAgentPreview(data) {
+  const modal = document.getElementById("simple-agent-preview-modal");
+  const title = document.getElementById("simple-agent-modal-title");
+  const subtitle = document.getElementById("simple-agent-modal-subtitle");
+  const resultTitle = document.getElementById("simple-agent-result-title");
+  const content = document.getElementById("simple-agent-result-content");
+
+  if (title) title.textContent = data.modalTitle || "Résultat prêt";
+  if (subtitle) subtitle.textContent = data.modalSubtitle || "Vous pouvez modifier le texte.";
+  if (resultTitle) resultTitle.textContent = data.title || "Résultat";
+  if (content) content.value = data.content || "";
+
+  if (modal) modal.style.display = "block";
+}
+
+function closeSimpleAgentPreview() {
+  const modal = document.getElementById("simple-agent-preview-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function copySimpleAgentResult() {
+  const content = document.getElementById("simple-agent-result-content")?.value || "";
+
+  if (!content.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(content);
+    showToast("Texte copié");
+  } catch(e) {
+    showToast("Impossible de copier automatiquement", "error");
   }
 }
 
