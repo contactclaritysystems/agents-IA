@@ -2599,14 +2599,15 @@ select.field-input {
   bottom: 92px;
   transform: translateX(-50%);
   width: min(270px, calc(100% - 32px));
-  background: #fff;
+  background: #ffffff;
   border-radius: 26px;
   padding: 14px 18px;
-  border: 1px solid rgba(0,0,0,.06);
-  box-shadow: 0 16px 40px rgba(0,0,0,.22);
+  border: 2px solid #141416;
+  box-shadow: 0 16px 44px rgba(0,0,0,.38);
   font-family: 'Inter', sans-serif;
   display: none;
 }
+
 
 #onboarding-tips .onboarding-title {
   font-size: 13.5px;
@@ -4125,11 +4126,12 @@ let onboardingPositionInterval = null;
 
 function startOnboardingPositionLoop() {
   stopOnboardingPositionLoop();
-  onboardingPositionInterval = setInterval(() => {
+    onboardingPositionInterval = setInterval(() => {
     if (!onboardingActive || !onboardingStep || onboardingStep === "done") return;
-    const target = pickVisibleElement(getStepSelectors(onboardingStep));
+    const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
   }, 300);
+
 }
 
 function stopOnboardingPositionLoop() {
@@ -4343,6 +4345,32 @@ function pickVisibleElement(selectors) {
   return null;
 }
 
+  function getOnboardingSpotlightTarget(step) {
+  if (step === "stop_dictation") {
+    const btn = document.querySelector('#mail-dictation-btn');
+    if (!btn || btn.offsetParent === null) return null;
+
+    const box = document.querySelector('.page-view.active #dictation-box');
+    const btnRect = btn.getBoundingClientRect();
+
+    let rect = btnRect;
+
+    if (box) {
+      const boxRect = box.getBoundingClientRect();
+      const left = Math.min(btnRect.left, boxRect.left);
+      const top = Math.min(btnRect.top, boxRect.top);
+      const right = Math.max(btnRect.right, boxRect.right);
+      const bottom = Math.max(btnRect.bottom, boxRect.bottom);
+      rect = { left, top, right, bottom, width: right - left, height: bottom - top };
+    }
+
+    return { getBoundingClientRect: () => rect };
+  }
+
+  return pickVisibleElement(getStepSelectors(step));
+}
+
+
 const ONBOARDING_MESSAGES = {
   goto_settings: {
     title: () => `Bienvenue ${getOnboardingFirstName()} !`,
@@ -4447,8 +4475,7 @@ function showOnboardingStep() {
     return;
   }
 
-  const selectors = getStepSelectors(onboardingStep);
-  const target = pickVisibleElement(selectors);
+    const target = getOnboardingSpotlightTarget(onboardingStep);
 
   if (!target) {
     setTimeout(showOnboardingStep, 150);
@@ -4586,7 +4613,7 @@ async function endOnboarding() {
 
 window.addEventListener("resize", () => {
   if (onboardingActive && onboardingStep && onboardingStep !== "done") {
-    const target = pickVisibleElement(getStepSelectors(onboardingStep));
+    const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
   }
 });
