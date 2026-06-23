@@ -3250,7 +3250,7 @@ select.field-input {
           Transforme une dictée en mail, SMS, courrier ou réponse client.
         </div>
       </div>
-      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-status ok">Actif</div>
       <div class="agent-toggle">▾</div>
     </div>
     <div class="agent-body">
@@ -3265,6 +3265,9 @@ select.field-input {
           Choisissez ensuite le format et le style d'écriture souhaités : professionnel, amical, formel...
         </div>
       </div>
+      <button class="save-btn" onclick="toggleAgentEnabled('redaction')" type="button">
+  Activer / Désactiver l’agent
+</button>
     </div>
   </div>
 
@@ -3278,7 +3281,7 @@ select.field-input {
           Posez vos questions, l'agent vous aide au quotidien.
         </div>
       </div>
-      <div class="agent-status pending">Bientôt</div>
+      <div class="agent-status ok">Actif</div>
       <div class="agent-toggle">▾</div>
     </div>
     <div class="agent-body">
@@ -3296,6 +3299,9 @@ select.field-input {
           </strong>
         </div>
       </div>
+      <button class="save-btn" onclick="toggleAgentEnabled('assistant')" type="button">
+  Activer / Désactiver l’agent
+</button>
     </div>
   </div>
 
