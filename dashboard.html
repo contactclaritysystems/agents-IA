@@ -2561,13 +2561,15 @@ select.field-input {
 #onboarding-bubble {
   position: fixed;
   z-index: 6002;
-  width: 290px;
+  top: max(16px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100% - 32px));
   background: #fff;
   border-radius: 18px;
   padding: 16px 18px;
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
   font-family: 'Inter', sans-serif;
-  transition: top .3s ease, left .3s ease;
   display: none;
 }
 
@@ -4367,51 +4369,15 @@ function renderOnboardingBubble(title, text) {
   `;
 }
 
-function positionBubbleNear(bubble, rect) {
-  bubble.style.transform = "none";
-
-  const margin = 14;
-  const bubbleWidth = 290;
-  const bubbleHeight = bubble.offsetHeight || 140;
-
-  let referenceRect = rect;
-  const dictationBox = document.querySelector(".page-view.active #dictation-box");
-  if (dictationBox) {
-    referenceRect = dictationBox.getBoundingClientRect();
-  }
-
-  let top = referenceRect.top - margin - bubbleHeight;
-  let left = rect.left;
-
-  if (top < 16) {
-    top = referenceRect.bottom + margin;
-  }
-
-  if (left + bubbleWidth > window.innerWidth - 16) {
-    left = window.innerWidth - bubbleWidth - 16;
-  }
-
-  bubble.style.top = Math.max(16, top) + "px";
-  bubble.style.left = Math.max(16, left) + "px";
-}
-
-function positionBubbleCenter(bubble) {
-  bubble.style.top = "50%";
-  bubble.style.left = "50%";
-  bubble.style.transform = "translate(-50%, -50%)";
-}
-
 function positionOnboardingSpotlight(target) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
-  const bubble = document.getElementById("onboarding-bubble");
 
-  if (!overlay || !ring || !bubble) return;
+  if (!overlay || !ring) return;
 
   if (!target) {
     overlay.style.clipPath = "none";
     ring.style.display = "none";
-    positionBubbleCenter(bubble);
     return;
   }
 
@@ -4433,9 +4399,8 @@ function positionOnboardingSpotlight(target) {
   ring.style.top = y + "px";
   ring.style.width = w + "px";
   ring.style.height = h + "px";
-
-  positionBubbleNear(bubble, rect);
 }
+
 
 function showOnboardingStep() {
   const config = ONBOARDING_MESSAGES[onboardingStep];
