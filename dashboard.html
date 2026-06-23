@@ -4800,6 +4800,16 @@ function syncPlanningStatus() {
   }
 }
 
+  function syncSimpleAgentStatus(agentName) {
+  const active = enabledAgents[agentName] === true;
+
+  const settingsStatus = document.querySelector("#card-" + agentName + " .agent-status");
+  if (settingsStatus) {
+    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
+    settingsStatus.textContent = active ? "Actif" : "Désactivé";
+  }
+}
+
   function formatDateShort(dateStr) {
   if (!dateStr) return "";
   const [year, month, day] = dateStr.split("-");
@@ -5804,10 +5814,16 @@ async function loadEnabledAgents() {
   }
 
   if (data && data.length > 0 && data[0].config) {
-    enabledAgents = {
-      ...enabledAgents,
-      ...data[0].config
-    };
+    const savedConfig = data[0].config || {};
+
+enabledAgents = {
+  mails: savedConfig.mails ?? true,
+  planning: savedConfig.planning ?? true,
+  relance: savedConfig.relance ?? false,
+  notes: savedConfig.notes ?? true,
+  redaction: savedConfig.redaction ?? true,
+  assistant: savedConfig.assistant ?? true
+};
   }
 
   syncAgentsVisibility();
@@ -5832,6 +5848,8 @@ function syncAgentsVisibility() {
 syncPlanningStatus();
 syncRelanceStatus();
 syncNotesStatus();
+syncSimpleAgentStatus("redaction");
+syncSimpleAgentStatus("assistant");
 
 updateAgentsCount();
 }
