@@ -7357,11 +7357,228 @@ async function startNotesDictation() {
 }
 
   async function startRedactionDictation() {
-  showToast("Agent Rédaction en cours de création", "success");
+  await startSimpleAgentDictation({
+    agent: "redaction",
+    buttonId: "redaction-dictation-btn",
+    cardId: "card-redaction-run",
+    boxId: "redaction-dictation-box",
+    webhookUrl: REDACTION_WEBHOOK_URL,
+    loadingText: "✍️ Rédaction du texte...",
+    successText: "✅ Texte prêt",
+    modalTitle: "Texte rédigé",
+    modalSubtitle: "Vous pouvez modifier le texte avant de le copier."
+  });
 }
 
 async function startAssistantDictation() {
-  showToast("Agent Assistant en cours de création", "success");
+  await startSimpleAgentDictation({
+    agent: "assistant",
+    buttonId: "assistant-dictation-btn",
+    cardId: "card-assistant-run",
+    boxId: "assistant-dictation-box",
+    webhookUrl: ASSISTANT_WEBHOOK_URL,
+    loadingText: "🤖 Réflexion de l’assistant...",
+    successText: "✅ Réponse prête",
+    modalTitle: "Réponse de l’assistant",
+    modalSubtitle: "Voici la réponse générée par votre assistant."
+  });
+}
+
+  async function startSimpleAgentDictation(config) {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
+  if (agentIsWorking) {
+    showToast("Un agent est déjà en cours", "error");
+    return;
+  }
+
+  if (!config.webhookUrl) {
+    showToast("Webhook " + config.agent + " non connecté", "error");
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("La dictée vocale n'est pas compatible avec ce navigateur.");
+    return;
+  }
+
+  const btn = document.getElementById(config.buttonId);
+  lockAgentButtons(btn, "⏳ Agent en cours...");
+
+  let box = document.querySelector(".page-view.active #" + config.boxId);
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = config.boxId;
+    box.style.marginTop = "12px";
+    box.style.padding = "12px 14px";
+    box.style.borderRadius = "14px";
+    box.style.fontSize = "13px";
+    box.style.fontWeight = "600";
+
+    const targetCard = document.getElementById(config.cardId);
+    if (!targetCard) {
+      unlockAgentButtons();
+      return;
+    }
+
+    targetCard.querySelector(".agent-head").after(box);
+  }
+
+  setDictationBoxState(box, "info");
+  box.style.opacity = "1";
+  box.innerHTML = "🎙️ Écoute en cours… Parlez maintenant.";
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
+
+  let finalText = "";
+  let latestText = "";
+  let hasSent = false;
+  let silenceTimer = null;
+
+  if (btn) {
+    btn.innerHTML = "⏹ Arrêter la dictée";
+    btn.onclick = () => {
+      lockActiveAgentButton(btn, "⏳ Traitement...");
+      try { recognition.stop(); } catch(e) {}
+    };
+  }
+
+  function resetSilenceTimer() {
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      try { recognition.stop(); } catch(e) {}
+    }, 9000);
+  }
+
+  try {
+    recognition.start();
+    resetSilenceTimer();
+  } catch(e) {
+    unlockAgentButtons();
+    setDictationBoxState(box, "error");
+    box.innerHTML = "✕ Impossible de démarrer le micro.";
+    autoHideDictationBox(box);
+    return;
+  }
+
+  recognition.onresult = function(event) {
+    resetSilenceTimer();
+
+    let interimText = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const text = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalText += text + " ";
+      } else {
+        interimText += text;
+      }
+    }
+
+    latestText = (finalText + interimText).trim();
+    box.innerHTML = "🎙️ " + latestText;
+  };
+
+  recognition.onend = async function() {
+    clearTimeout(silenceTimer);
+
+    const instruction = (latestText || finalText).trim();
+
+    if (!instruction) {
+      unlockAgentButtons();
+      setDictationBoxState(box, "error");
+      box.innerHTML = "✕ Aucune instruction détectée.";
+      autoHideDictationBox(box);
+      return;
+    }
+
+    if (hasSent) return;
+    hasSent = true;
+
+    setDictationBoxState(box, "info");
+    box.innerHTML = config.loadingText;
+
+    try {
+      const response = await fetch(config.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_email: currentUser.email,
+          user_id: currentUser.id,
+          instruction
+        })
+      });
+
+      const text = await response.text();
+
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch(e) {
+        data = { success: false, message: "Réponse Make invalide" };
+      }
+
+      if (!data.success) {
+        unlockAgentButtons();
+        const message = data.message || data.error || "Impossible de générer la réponse.";
+        setDictationBoxState(box, "error");
+        box.innerHTML = "✕ " + message;
+        showToast(message, "error");
+        autoHideDictationBox(box);
+        await saveActionLog(config.agent, instruction, "error");
+        return;
+      }
+
+      const title = data.title || data.titre || config.modalTitle;
+      const content = data.content || data.response || data.message || "";
+
+      setDictationBoxState(box, "success");
+      box.innerHTML = config.successText;
+
+      openSimpleAgentPreview({
+        title,
+        content,
+        modalTitle: config.modalTitle,
+        modalSubtitle: config.modalSubtitle
+      });
+
+      unlockAgentButtons();
+
+      await incrementActions();
+      await loadSubscription();
+      await saveActionLog(config.agent, instruction, "success");
+      await loadActionCounter();
+
+      autoHideDictationBox(box);
+
+    } catch(err) {
+      console.error("Erreur agent simple:", err);
+      unlockAgentButtons();
+      setDictationBoxState(box, "error");
+      box.innerHTML = "✕ Erreur lors de l’envoi à l’agent.";
+      showToast("Erreur agent", "error");
+      autoHideDictationBox(box);
+      await saveActionLog(config.agent, instruction, "error");
+    }
+  };
+
+  recognition.onerror = function(event) {
+    clearTimeout(silenceTimer);
+    unlockAgentButtons();
+
+    setDictationBoxState(box, "error");
+    box.innerHTML = "✕ Autorisez le micro pour utiliser la dictée";
+    autoHideDictationBox(box);
+  };
 }
 
   function closeAllAgentCards() {
