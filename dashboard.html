@@ -3834,14 +3834,23 @@ select.field-input {
   <div class="agent-status ok">Voir</div>
 </div>
 
-    <div class="agent-card history-folder-card" style="opacity:.5;">
-      <div class="history-folder-icon">📄</div>
-      <div>
-        <div class="agent-name">Agent Devis</div>
-        <div class="agent-desc">Aucune action pour le moment.</div>
-      </div>
-      <div class="agent-status empty">Vide</div>
-    </div>
+    <div class="agent-card history-folder-card" onclick="openHistoryAgent('redaction')">
+  <div class="history-folder-icon">✍️</div>
+  <div>
+    <div class="agent-name">Rédaction</div>
+    <div class="agent-desc">Textes générés</div>
+  </div>
+  <div class="agent-status ok">Historique</div>
+</div>
+
+<div class="agent-card history-folder-card" onclick="openHistoryAgent('assistant')">
+  <div class="history-folder-icon">🤖</div>
+  <div>
+    <div class="agent-name">Assistant</div>
+    <div class="agent-desc">Questions et réponses</div>
+  </div>
+  <div class="agent-status ok">Historique</div>
+</div>
   </div>
 
   <div id="history-detail" style="display:none;">
