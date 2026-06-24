@@ -6324,8 +6324,16 @@ updateStatProgresses();
   if (subtitle) subtitle.textContent = data.modalSubtitle || "Vous pouvez modifier le texte.";
   if (resultTitle) resultTitle.textContent = data.title || "Résultat";
   if (content) content.value = data.content || "";
-window.scrollTo({ top: 0, behavior: "smooth" });
   if (modal) modal.style.display = "block";
+    requestAnimationFrame(() => {
+  const box = modal.querySelector(".mail-choice-box");
+  if (box) {
+    box.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+});
 }
 
 function closeSimpleAgentPreview() {
