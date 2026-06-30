@@ -4140,10 +4140,23 @@ function connectOutlook() {
     currentUser.email
   );
 
-  showToast("Connexion Outlook bientôt disponible");
+  const clientId = "bffdb39a-a6ed-4818-8c61-16ca7f44fe45";
+  const redirectUri = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
+  const scope = "offline_access https://graph.microsoft.com/Mail.Send https://graph.microsoft.com/User.Read";
 
+  const authUrl =
+    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize" +
+    "?client_id=" + encodeURIComponent(clientId) +
+    "&response_type=code" +
+    "&redirect_uri=" + encodeURIComponent(redirectUri) +
+    "&response_mode=query" +
+    "&scope=" + encodeURIComponent(scope) +
+    "&state=outlook" +
+    "&prompt=select_account";
+
+  window.location.href = authUrl;
 }
-
+  
 function connectProfessionalEmail() {
   showToast("Adresse professionnelle à configurer");
 }
