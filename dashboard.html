@@ -4222,7 +4222,8 @@ console.log("Code brut:", code);
       const outlookEmail = result.email || result.outlook_email;
 
       localStorage.setItem("gmail_" + clarityEmail, outlookEmail);
-      localStorage.removeItem("clarity_email_before_oauth");
+localStorage.setItem("mail_provider_" + clarityEmail, "microsoft");
+localStorage.removeItem("clarity_email_before_oauth");
 
       renderGmailConnected(outlookEmail);
       showToast("Compte Outlook connecté");
@@ -4281,6 +4282,7 @@ console.log("Code brut:", code);
 
     if (result.gmail_email && result.access_token) {
      localStorage.setItem("gmail_" + clarityEmail, result.gmail_email);
+localStorage.setItem("mail_provider_" + clarityEmail, "google");
 localStorage.removeItem("clarity_email_before_oauth");
 
 renderGmailConnected(result.gmail_email);
