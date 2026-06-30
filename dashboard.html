@@ -9791,10 +9791,13 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
 const connectedEmail =
   localStorage.getItem("gmail_" + currentUser.email) || "";
 
+const connectedProvider =
+  localStorage.getItem("mail_provider_" + currentUser.email) || "google";
+
 const payload = {
   user_email: currentUser.email,
   user_id: currentUser.id,
-  provider: localStorage.getItem("mail_provider_" + currentUser.email) || "google",
+  provider: connectedProvider,
   sender_email: connectedEmail,
   to,
   subject,
