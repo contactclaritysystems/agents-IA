@@ -9792,7 +9792,7 @@ const connectedEmail =
 const payload = {
   user_email: currentUser.email,
   user_id: currentUser.id,
-  provider: "microsoft",
+  provider: localStorage.getItem("mail_provider_" + currentUser.email) || "google",
   sender_email: connectedEmail,
   to,
   subject,
