@@ -9785,10 +9785,15 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
     showToast("Mail introuvable", "error");
     return;
   }
+    
+const connectedEmail =
+  localStorage.getItem("gmail_" + currentUser.email) || "";
 
-  const payload = {
+const payload = {
   user_email: currentUser.email,
   user_id: currentUser.id,
+  provider: "microsoft",
+  sender_email: connectedEmail,
   to,
   subject,
   body
