@@ -4186,6 +4186,60 @@ console.log("Code brut:", code);
 
   const state = params.get("state");
 
+  if (code && state === "outlook") {
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  const clarityEmail = localStorage.getItem("clarity_email_before_oauth");
+  if (!clarityEmail) return false;
+
+  try {
+    const response = await fetch("https://hook.eu1.make.com/64hvqh8czkwwu76vcdqufsfbbggpq569", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        redirect_uri: REDIRECT_URI,
+        clarity_email: clarityEmail,
+        user_id: currentUser.id
+      })
+    });
+
+    const rawText = await response.text();
+    console.log("Outlook Make response raw:", rawText);
+
+    let result;
+    try {
+      result = JSON.parse(rawText);
+    } catch(e) {
+      console.error("Make Outlook n'a pas renvoyé du JSON:", rawText);
+      showToast("Erreur connexion Outlook", "error");
+      return false;
+    }
+
+    console.log("Outlook Make result:", result);
+
+    if (result.email || result.outlook_email) {
+      const outlookEmail = result.email || result.outlook_email;
+
+      localStorage.setItem("gmail_" + clarityEmail, outlookEmail);
+      localStorage.removeItem("clarity_email_before_oauth");
+
+      renderGmailConnected(outlookEmail);
+      showToast("Compte Outlook connecté");
+
+      return true;
+    }
+
+    showToast("Connexion Outlook incomplète", "error");
+    return false;
+
+  } catch (err) {
+    console.error("Outlook OAuth callback error:", err);
+    showToast("Erreur connexion Outlook", "error");
+    return false;
+  }
+}
+
   if (!code || state !== "gmail_connect") return false;
 
   // Nettoyer l'URL
