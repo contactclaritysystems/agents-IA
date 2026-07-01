@@ -9791,8 +9791,25 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
 const connectedEmail =
   localStorage.getItem("gmail_" + currentUser.email) || "";
 
-const connectedProvider =
-  localStorage.getItem("mail_provider_" + currentUser.email) || "google";
+let connectedProvider =
+  localStorage.getItem("mail_provider_" + currentUser.email);
+
+if (!connectedProvider) {
+  const emailLower = (connectedEmail || "").toLowerCase();
+
+  if (
+    emailLower.includes("@hotmail.") ||
+    emailLower.includes("@outlook.") ||
+    emailLower.includes("@live.") ||
+    emailLower.includes("@msn.")
+  ) {
+    connectedProvider = "microsoft";
+  } else {
+    connectedProvider = "google";
+  }
+
+  localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
+}
 
 const payload = {
   user_email: currentUser.email,
