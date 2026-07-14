@@ -1010,6 +1010,28 @@ select.field-input {
   z-index: 9999;
 }
 
+  #smtp-config-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+#smtp-config-modal .mail-choice-box {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+
+  width: 100%;
+  max-width: 420px;
+  margin: 40px auto;
+
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
   #contact-choice-modal {
   position: fixed;
   inset: 0;
@@ -4252,6 +4274,30 @@ function connectProfessionalEmail() {
   if (modal) {
     modal.style.display = "none";
   }
+}
+
+  async function saveSmtpConnection() {
+
+  const email = document.getElementById("smtp-email").value.trim();
+  const host = document.getElementById("smtp-host").value.trim();
+  const port = document.getElementById("smtp-port").value.trim();
+  const security = document.getElementById("smtp-security").value;
+  const password = document.getElementById("smtp-password").value;
+
+  if (!email || !host || !port || !password) {
+    showToast("Veuillez remplir tous les champs.");
+    return;
+  }
+
+  console.log({
+    email,
+    host,
+    port,
+    security,
+    password
+  });
+
+  showToast("Connexion SMTP en cours...");
 }
 
 function connectGmail() {
