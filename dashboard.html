@@ -4277,7 +4277,6 @@ function connectProfessionalEmail() {
 }
 
   async function saveSmtpConnection() {
-
   const email = document.getElementById("smtp-email").value.trim();
   const host = document.getElementById("smtp-host").value.trim();
   const port = document.getElementById("smtp-port").value.trim();
@@ -4285,19 +4284,83 @@ function connectProfessionalEmail() {
   const password = document.getElementById("smtp-password").value;
 
   if (!email || !host || !port || !password) {
-    showToast("Veuillez remplir tous les champs.");
+    showToast("Veuillez remplir tous les champs.", "error");
     return;
   }
 
-  console.log({
-    email,
-    host,
-    port,
-    security,
-    password
-  });
+  const btn = document.querySelector(
+    '#smtp-config-modal .save-btn'
+  );
 
-  showToast("Connexion SMTP en cours...");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "⏳ Vérification en cours...";
+  }
+
+  try {
+    const response = await fetch(
+      "https://hook.eu1.make.com/vg736qe4zhrhp3f0mbcjnc5ejkggw2hr",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          account_email: currentUser.email,
+          email,
+          host,
+          port: Number(port),
+          security,
+          password
+        })
+      }
+    );
+
+    const rawText = await response.text();
+
+    let result;
+
+    try {
+      result = JSON.parse(rawText);
+    } catch (e) {
+      console.error("Réponse SMTP invalide :", rawText);
+      showToast("Erreur de vérification SMTP", "error");
+      return;
+    }
+
+    if (result.success === true) {
+      localStorage.setItem(
+        "gmail_" + currentUser.email,
+        result.email || email
+      );
+
+      localStorage.setItem(
+        "mail_provider_" + currentUser.email,
+        "smtp"
+      );
+
+      closeSmtpConfigModal();
+      renderGmailConnected(result.email || email);
+      showToast("Adresse professionnelle connectée");
+      return;
+    }
+
+    showToast(
+      result.message || "Connexion SMTP impossible",
+      "error"
+    );
+
+  } catch (error) {
+    console.error("Erreur connexion SMTP :", error);
+    showToast("Impossible de vérifier cette adresse", "error");
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Connecter cette adresse";
+    }
+  }
 }
 
 function connectGmail() {
