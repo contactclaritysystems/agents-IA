@@ -3901,6 +3901,85 @@ select.field-input {
   </div>
 </div>
 
+  <div id="smtp-config-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeSmtpConfigModal()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Connecter une adresse professionnelle</div>
+
+    <div class="mail-choice-subtitle">
+      Pour OVH, Ionos, Infomaniak ou un autre hébergeur.
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Adresse email</div>
+      <input
+        class="field-input"
+        id="smtp-email"
+        type="email"
+        placeholder="contact@entreprise.fr"
+      >
+    </div>
+
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Serveur SMTP</div>
+      <input
+        class="field-input"
+        id="smtp-host"
+        type="text"
+        placeholder="smtp.exemple.fr"
+      >
+    </div>
+
+    <div class="field-row" style="margin-top:12px;">
+      <div class="field-group">
+        <div class="field-label">Port</div>
+        <input
+          class="field-input"
+          id="smtp-port"
+          type="number"
+          placeholder="587"
+        >
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Sécurité</div>
+        <select class="field-input" id="smtp-security">
+          <option value="starttls">STARTTLS</option>
+          <option value="ssl">SSL / TLS</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Mot de passe de la boîte mail</div>
+      <input
+        class="field-input"
+        id="smtp-password"
+        type="password"
+        placeholder="Mot de passe"
+      >
+    </div>
+
+    <button
+      class="save-btn"
+      onclick="saveSmtpConnection()"
+      type="button"
+      style="margin-top:16px;"
+    >
+      Connecter cette adresse
+    </button>
+
+    <button
+      class="mail-choice-close"
+      onclick="closeSmtpConfigModal()"
+      type="button"
+    >
+      Annuler
+    </button>
+  </div>
+</div>
+
   <div id="mail-preview-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closeMailPreview()"></div>
 
@@ -4158,7 +4237,21 @@ function connectOutlook() {
 }
   
 function connectProfessionalEmail() {
-  showToast("Adresse professionnelle à configurer");
+  closeMailChoiceModal();
+
+  const modal = document.getElementById("smtp-config-modal");
+
+  if (modal) {
+    modal.style.display = "block";
+  }
+}
+
+  function closeSmtpConfigModal() {
+  const modal = document.getElementById("smtp-config-modal");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
 }
 
 function connectGmail() {
