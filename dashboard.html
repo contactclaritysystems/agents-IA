@@ -4559,19 +4559,27 @@ async function disconnectGmail() {
   const email = currentUser?.email;
   if (!email) return;
 
+  const provider =
+    localStorage.getItem("mail_provider_" + email) || "google";
+
   localStorage.removeItem("gmail_" + email);
+  localStorage.removeItem("mail_provider_" + email);
+
   renderGmailDisconnected();
   showToast("Compte mail déconnecté");
 
   const { error } = await supabaseClient
     .from("user_integrations")
-    .update({ connected: false, updated_at: new Date().toISOString() })
+    .update({
+      connected: false,
+      updated_at: new Date().toISOString()
+    })
     .eq("account_email", email)
-    .eq("provider", "google");
+    .eq("provider", provider);
 
-  if (error) console.error("Erreur déconnexion Gmail:", error);
+  if (error) console.error(error);
 }
-
+  
   // ─── ONBOARDING ──────────────────────────────────────────
 
 let onboardingActive = false;
