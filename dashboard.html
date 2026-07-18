@@ -4328,6 +4328,9 @@ console.log("account_email =", currentUser?.email);
 
     try {
       result = JSON.parse(rawText);
+
+      console.log("Réponse de Make :", result);
+      
     } catch (e) {
       console.error("Réponse SMTP invalide :", rawText);
       showToast("Erreur de vérification SMTP", "error");
