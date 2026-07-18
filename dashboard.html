@@ -3585,6 +3585,30 @@ select.field-input {
   
   <div class="agents-grid">
 
+    <div class="agent-card configured" id="card-orchestrator-run">
+
+  <div class="agent-head">
+    <div class="agent-emoji">🧠</div>
+
+    <div class="agent-title-wrap">
+      <div class="agent-name">Clarity IA</div>
+
+      <div class="agent-desc">
+        Exemple : « Envoie un mail à Lucas, planifie un rendez-vous demain à 14h et rappelle-moi de le relancer vendredi. »
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-body" style="display:flex;">
+    <button class="save-btn"
+            id="orchestrator-dictation-btn"
+            onclick="startOrchestratorDictation()">
+      🎙️ Parler à Clarity
+    </button>
+  </div>
+
+</div>
+
     <div class="agent-card configured" id="card-mails-run">
       <div class="agent-head">
         <div class="agent-emoji">✉️</div>
@@ -4151,7 +4175,8 @@ const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.go
 const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
 const REDACTION_WEBHOOK_URL = "https://hook.eu1.make.com/w7m1od2sa1679zi84jijsshv9soikkba";
 const ASSISTANT_WEBHOOK_URL = "https://hook.eu1.make.com/x8qh7pbkjj56g4hr1vdovk4vwlpnb443";
-
+const ORCHESTRATOR_WEBHOOK_URL = "https://hook.eu1.make.com/qgixxebcacs27wfchphxg6bo5ffxhlry";
+  
 let currentUser = null;
   document.body.classList.add("loading-subscription");
 let currentProfile = null;
@@ -7865,6 +7890,20 @@ async function startAssistantDictation() {
     successText: "✅ Réponse prête",
     modalTitle: "Réponse de l’assistant",
     modalSubtitle: "Voici la réponse générée par votre assistant."
+  });
+}
+
+  async function startOrchestratorDictation() {
+  await startSimpleAgentDictation({
+    agent: "orchestrator",
+    buttonId: "orchestrator-dictation-btn",
+    cardId: "card-orchestrator-run",
+    boxId: "orchestrator-dictation-box",
+    webhookUrl: ORCHESTRATOR_WEBHOOK_URL,
+    loadingText: "🧠 Clarity IA réfléchit...",
+    successText: "✅ Réponse prête",
+    modalTitle: "Clarity IA",
+    modalSubtitle: "Je m'occupe de votre demande."
   });
 }
 
