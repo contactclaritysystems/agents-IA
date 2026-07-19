@@ -6634,6 +6634,8 @@ updateStatProgresses();
   }
 }
 
+  
+
   function openSimpleAgentPreview(data) {
   const modal = document.getElementById("simple-agent-preview-modal");
   const title = document.getElementById("simple-agent-modal-title");
@@ -8061,6 +8063,24 @@ async function startAssistantDictation() {
         return;
       }
 
+// NOUVEAU : détection d'une réponse mail (Chef d'orchestre → Agent Mail)
+      if (data.to || data.subject || data.body) {
+        setDictationBoxState(box, "success");
+        box.innerHTML = "✅ Mail préparé";
+
+        openMailPreview(data, instruction);
+
+        unlockAgentButtons();
+
+        await incrementActions();
+        await loadSubscription();
+        await saveActionLog(config.agent, instruction, "success");
+        await loadActionCounter();
+
+        autoHideDictationBox(box);
+        return;
+      }
+      
       const title = data.title || data.titre || config.modalTitle;
       const content = data.content || data.response || data.message || "";
 
