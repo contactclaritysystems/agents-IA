@@ -8222,7 +8222,7 @@ console.log("MESSAGE =", message);
 
     console.log("Réponse Agent Mail :", data);
 
-    if (data.contact_found === false) {
+    if (!data.success && data.reason === "contact_not_found") {
       if (box) {
         setDictationBoxState(box, "error");
         box.innerHTML = "⚠️ Contact introuvable.";
