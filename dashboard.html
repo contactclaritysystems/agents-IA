@@ -6418,7 +6418,11 @@ function deleteSelectedContact() {
   closeContactDetail();
 }
 
-  function openAddContactPopup({ name, pendingInstruction }) {
+  function openAddContactPopup({
+    name,
+    pendingInstruction,
+    fromAgent = false
+}) {
 
     console.log("OPEN ADD CONTACT POPUP", name, pendingInstruction);
 
@@ -6428,13 +6432,16 @@ function deleteSelectedContact() {
         instruction: pendingInstruction
     };
 
-showSection(
-  "contacts",
-  document.querySelector('.bottom-tab[data-section="contacts"]')
-);
+    if (fromAgent) {
+    const popup = document.getElementById("contact-mobile-section");
+
+    if (popup && popup.parentElement !== document.body) {
+        document.body.appendChild(popup);
+    }
+}
     
     // Ouvre la page / popup existante
-    openContactPage();
+    openContactPage(null, fromAgent);
 
     // Pré-remplit le nom du contact
     document.getElementById("contact-name").value = name;
@@ -8085,6 +8092,10 @@ console.log("REPONSE BRUTE :", text);
         data = JSON.parse(text);
 
 if (data.agent === "mail") {
+
+  unlockAgentButtons();
+  autoHideDictationBox(box);
+
   return callMailAgent(data.instruction);
 }
         
@@ -8198,25 +8209,22 @@ if (!data.success) {
     "Le mail n’a pas pu être préparé.";
 
   if (data.reason === "contact_not_found") {
-
+    
 const box = document.querySelector(".page-view.active #orchestrator-dictation-box");
+
 if (box) {
-  box.innerHTML = "⚠️ Je ne trouve pas ce contact.<br>Ajoutons-le pour continuer.";
+    box.innerHTML = "⚠️ Je ne trouve pas ce contact.<br>Ajoutons-le pour continuer.";
+}
 
 setTimeout(() => {
     openAddContactPopup({
         name: data.contact_name,
-        pendingInstruction: instruction
+        pendingInstruction: instruction,
+        fromAgent: true
     });
 }, 800);
-  
-}
-    
-    openAddContactPopup({
-        name: data.contact_name,
-        pendingInstruction: instruction
-    });
-    return;
+
+return;
 }
 
   showToast(message, "error");
@@ -9216,8 +9224,8 @@ function setContactFormState(contact) {
   document.getElementById("contact-email").value = contact.email || "";
   document.getElementById("contact-phone").value = contact.phone || "";
 }
-
-function openContactPage(contactId = null) {
+  
+function openContactPage(contactId = null, fromAgent = false) {function openContactPage(contactId = null) {
   editingContactId = contactId;
 
   const title = document.getElementById("contact-form-title");
@@ -9242,6 +9250,13 @@ function openContactPage(contactId = null) {
 
 console.log(section);
 
+if (!fromAgent) {
+    showSection(
+        "contacts",
+        document.querySelector('.bottom-tab[data-section="contacts"]')
+    );
+}
+  
 section.classList.add("open");
 }
 
