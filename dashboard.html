@@ -8054,7 +8054,7 @@ async function startAssistantDictation() {
         data = { success: false, message: "Réponse Make invalide" };
       }
 
-      if (!data.success) {
+      if (data.success === false) {
         unlockAgentButtons();
         const message = data.message || data.error || "Impossible de générer la réponse.";
         setDictationBoxState(box, "error");
