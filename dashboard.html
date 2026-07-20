@@ -7217,15 +7217,15 @@ try {
         box.innerHTML = "👤 Recherche du contact...";
     }
 
-}, 1000);
+}, 600);
 
       const step2 = setTimeout(() => {
         box.innerHTML = "✍️ Génération du mail...";
-      }, 2000);
+      }, 2200);
 
       const step3 = setTimeout(() => {
         box.innerHTML = "✅ Mail prêt à valider";
-      }, 2600);
+      }, 2800);
       
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
