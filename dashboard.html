@@ -7217,15 +7217,11 @@ try {
         box.innerHTML = "👤 Recherche du contact...";
     }
 
-}, 100);
+}, 1000);
 
-      const step2 = setTimeout(() => {
-        box.innerHTML = "✍️ Génération du mail...";
-      }, 300);
-
-      const step3 = setTimeout(() => {
-        box.innerHTML = "✅ Mail prêt à valider";
-      }, 500);
+const step2 = setTimeout(() => {
+    box.innerHTML = "✍️ Préparation du mail...";
+}, 2000);
       
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
@@ -7241,8 +7237,7 @@ try {
 
       clearTimeout(timeout);
       clearTimeout(step1);
-      clearTimeout(step2);
-      clearTimeout(step3);
+clearTimeout(step2);
 
       const text = await response.text();
       console.log("REPONSE MAKE PREPARATION:", text);
