@@ -8154,6 +8154,15 @@ console.log("MESSAGE =", message);
   });
 
   const text = await response.text();
+
+const data = JSON.parse(text);
+
+openMailPreview(
+  data.to,
+  data.subject,
+  data.body
+);
+    
   console.log("Réponse Agent Mail :", text);
 }
 
