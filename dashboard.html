@@ -6603,6 +6603,7 @@ function deleteSelectedContact() {
     document.getElementById("contact-company").value = "";
 
 }
+  
   function renderContactsSheetCreated() {
   const ui = document.getElementById("contacts-sheet-ui");
   if (!ui) return;
@@ -7208,8 +7209,10 @@ try {
 
     try {
       const step1 = setTimeout(() => {
-        box.innerHTML = "👤 Recherche du contact...";
-      }, 1000);
+    box.innerHTML = contactJustCreated
+        ? "📄 Récupération des informations..."
+        : "👤 Recherche du contact...";
+}, 1000);
 
       const step2 = setTimeout(() => {
         box.innerHTML = "✍️ Génération du mail...";
@@ -8366,7 +8369,8 @@ console.log("MESSAGE =", message);
       openAddContactPopup({
   name: data.contact_name || data.name || "",
   pendingInstruction: instruction,
-  fromAgent: true
+  fromAgent: true,
+  newContact: true
 });
       return;
     }
@@ -9373,6 +9377,9 @@ async function deleteContact(id) {
   let contactInitialState = {};
 let editingContactId = null;
 
+  // Le contact vient d'être créé depuis l'Agent Mail
+let contactJustCreated = false;
+
 function getContactFormState() {
   return {
     name: document.getElementById("contact-name")?.value || "",
@@ -9507,10 +9514,14 @@ async function saveContactFromPage() {
 
   try {
     if (editingContactId) {
-      saved = await updateContact(editingContactId);
-    } else {
-      saved = await addContact();
+    saved = await updateContact(editingContactId);
+} else {
+    saved = await addContact();
+
+    if (saved && openedFromMailAgent) {
+        contactJustCreated = true;
     }
+}
 
     // L'enregistrement a échoué
     if (saved !== true) {
