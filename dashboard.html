@@ -6419,12 +6419,23 @@ function deleteSelectedContact() {
 }
 
   function openAddContactPopup({ name, pendingInstruction }) {
-    window.pendingMailInstruction = pendingInstruction;
 
-    document.getElementById("contactName").value = name;
+    // On mémorise l'action en attente
+    window.pendingAction = {
+        type: "mail",
+        instruction: pendingInstruction
+    };
 
-    // ouvre la popup existante
-    openAddContactModal();
+    // Ouvre la page / popup existante
+    openContactPage();
+
+    // Pré-remplit le nom du contact
+    document.getElementById("contact-name").value = name;
+
+    // Vide les autres champs
+    document.getElementById("contact-email").value = "";
+    document.getElementById("contact-phone").value = "";
+    document.getElementById("contact-company").value = "";
 }
 
   function renderContactsSheetCreated() {
