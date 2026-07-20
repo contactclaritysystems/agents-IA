@@ -9219,7 +9219,11 @@ function openContactPage(contactId = null) {
 
   contactInitialState = getContactFormState();
 
-  document.getElementById("contact-mobile-section").classList.add("open");
+  const section = document.getElementById("contact-mobile-section");
+
+console.log(section);
+
+section.classList.add("open");
 }
 
 function closeContactPage() {
