@@ -6442,11 +6442,13 @@ function deleteSelectedContact() {
   closeContactDetail();
 }
 
-  function openAddContactPopup({
+ function openAddContactPopup({
     name,
     pendingInstruction,
     fromAgent = false
 }) {
+
+    console.log("openAddContactPopup appelée");
 
     console.log("OPEN ADD CONTACT POPUP", name, pendingInstruction);
 
@@ -6455,7 +6457,9 @@ function deleteSelectedContact() {
         type: "mail",
         instruction: pendingInstruction
     };
-    
+
+    console.log("Ouverture de la page contact");
+
     // Ouvre la page / popup existante
     openContactPage(null, fromAgent);
 
@@ -9255,6 +9259,9 @@ function setContactFormState(contact) {
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
+
+  console.log("openContactPage appelée", { contact, fromAgent });
+  
   editingContactId = contactId;
 
   const title = document.getElementById("contact-form-title");
@@ -9289,6 +9296,9 @@ function openContactPage(contactId = null, fromAgent = false) {
       document.querySelector('.bottom-tab[data-section="contacts"]')
     );
   }
+
+  console.log(section);
+console.log(getComputedStyle(section).display);
 
   section.classList.add("open");
 }
