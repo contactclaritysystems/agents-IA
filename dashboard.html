@@ -2727,6 +2727,39 @@ select.field-input {
     line-height:1.6;
     color:#555;
 }
+
+    .contact-info-card{
+    background:#F7F9FC;
+    border:1px solid #E3E8EF;
+    border-radius:16px;
+    padding:18px;
+    margin:20px;
+}
+
+.contact-info-icon{
+    font-size:28px;
+    margin-bottom:10px;
+}
+
+.contact-info-title{
+    font-size:18px;
+    font-weight:700;
+    color:#111827;
+    margin-bottom:8px;
+}
+
+.contact-info-text{
+    font-size:15px;
+    color:#4B5563;
+    line-height:1.5;
+    margin-bottom:12px;
+}
+
+.contact-info-success{
+    font-size:14px;
+    color:#0F766E;
+    font-weight:600;
+}
 }
 
 </style>
@@ -3825,13 +3858,45 @@ select.field-input {
     </div>
 
    <div id="contact-agent-message" class="contact-agent-message">
-    <div class="contact-agent-title">
-        ⚠️ Contact introuvable
+
+    <div class="contact-agent-header">
+
+        <div class="contact-agent-avatar">
+            🤖
+        </div>
+
+        <div>
+
+            <div class="contact-agent-title">
+                Clarity
+            </div>
+
+            <div class="contact-agent-subtitle">
+                Assistant IA
+            </div>
+
+        </div>
+
     </div>
-    <div class="contact-agent-text">
-        Ajoutez son adresse e-mail.<br>
-        Je préparerai ensuite automatiquement votre mail.
+
+    <div class="contact-agent-message-text">
+
+        Je n'ai pas trouvé ce contact.
+
     </div>
+
+    <div class="contact-agent-description">
+
+        Ajoutez simplement son adresse e-mail ci-dessous.
+
+    </div>
+
+    <div class="contact-agent-success">
+
+        ✓ Je reprendrai automatiquement la préparation de votre mail dès que ce contact sera enregistré.
+
+    </div>
+
 </div>
 
     <div class="gmail-section" style="display:block;">
@@ -6482,7 +6547,6 @@ function deleteSelectedContact() {
 }) {
 
     console.log("openAddContactPopup appelée");
-
     console.log("OPEN ADD CONTACT POPUP", name, pendingInstruction);
 
     // On mémorise l'action en attente
@@ -6496,15 +6560,22 @@ function deleteSelectedContact() {
     // Ouvre la page / popup existante
     openContactPage(null, fromAgent);
 
+    // Affiche ou masque la carte Clarity
+    const card = document.getElementById("contact-agent-message");
+
+    if (card) {
+        card.style.display = fromAgent ? "block" : "none";
+    }
+
     // Pré-remplit le nom du contact
-    document.getElementById("contact-name").value = name;
+    document.getElementById("contact-name").value = name || "";
 
     // Vide les autres champs
     document.getElementById("contact-email").value = "";
     document.getElementById("contact-phone").value = "";
     document.getElementById("contact-company").value = "";
-}
 
+}
   function renderContactsSheetCreated() {
   const ui = document.getElementById("contacts-sheet-ui");
   if (!ui) return;
