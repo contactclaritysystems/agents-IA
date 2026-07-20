@@ -8170,6 +8170,14 @@ if (!data.success) {
     data.reason ||
     "Le mail n’a pas pu être préparé.";
 
+  if (data.reason === "contact_not_found") {
+    openAddContactPopup({
+        name: data.contact_name,
+        pendingInstruction: instruction
+    });
+    return;
+}
+
   showToast(message, "error");
   return;
 }
