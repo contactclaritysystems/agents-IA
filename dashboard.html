@@ -2704,6 +2704,18 @@ select.field-input {
     max-width: 620px;
     margin: 0 auto;
   }
+
+    .contact-agent-message{
+    display:none;
+    background:#FFF8E6;
+    border:1px solid #F6C453;
+    color:#9A6700;
+    padding:14px;
+    border-radius:12px;
+    margin:18px 0;
+    font-size:15px;
+    line-height:1.4;
+}
 }
 
 </style>
@@ -3800,6 +3812,11 @@ select.field-input {
       <button class="sheet-btn" type="button" onclick="closeContactPage()">← Retour</button>
       <div class="section-title" id="contact-form-title">Nouveau contact</div>
     </div>
+
+    <div id="contact-agent-message" class="contact-agent-message">
+    ⚠️ Je n'ai pas trouvé ce contact.<br>
+    Ajoutez simplement son adresse e-mail, je reprendrai ensuite automatiquement la préparation du mail.
+</div>
 
     <div class="gmail-section" style="display:block;">
       <div class="field-group">
@@ -9264,6 +9281,7 @@ function openContactPage(contactId = null, fromAgent = false) {
   const title = document.getElementById("contact-form-title");
   const btn = document.getElementById("contact-save-page-btn");
   const section = document.getElementById("contact-mobile-section");
+  const agentMessage = document.getElementById("contact-agent-message");
 
   if (!section) {
     console.error("ERREUR : contact-mobile-section introuvable");
@@ -9306,6 +9324,10 @@ function openContactPage(contactId = null, fromAgent = false) {
     "contacts",
     document.querySelector('.bottom-tab[data-section="contacts"]')
   );
+
+  if (agentMessage) {
+    agentMessage.style.display = fromAgent ? "block" : "none";
+}
 
   // Ouvre ensuite le formulaire
   section.classList.add("open");
