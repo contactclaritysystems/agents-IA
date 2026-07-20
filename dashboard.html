@@ -9268,6 +9268,11 @@ async function saveContactFromPage() {
     // On vide l'action en attente
     window.pendingAction = null;
 
+    showSection(
+  "agents",
+  document.querySelector('.bottom-tab[data-section="agents"]')
+);
+
     // On relance automatiquement l'Agent Mail
     callMailAgent(instruction);
 
