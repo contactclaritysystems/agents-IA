@@ -6418,6 +6418,15 @@ function deleteSelectedContact() {
   closeContactDetail();
 }
 
+  function openAddContactPopup({ name, pendingInstruction }) {
+    window.pendingMailInstruction = pendingInstruction;
+
+    document.getElementById("contactName").value = name;
+
+    // ouvre la popup existante
+    openAddContactModal();
+}
+
   function renderContactsSheetCreated() {
   const ui = document.getElementById("contacts-sheet-ui");
   if (!ui) return;
