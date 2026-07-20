@@ -7209,9 +7209,14 @@ try {
 
     try {
       const step1 = setTimeout(() => {
-    box.innerHTML = contactJustCreated
-        ? "📄 Récupération des informations..."
-        : "👤 Recherche du contact...";
+
+    if (contactJustCreated) {
+        box.innerHTML = "📄 Récupération des informations...";
+        contactJustCreated = false;
+    } else {
+        box.innerHTML = "👤 Recherche du contact...";
+    }
+
 }, 1000);
 
       const step2 = setTimeout(() => {
