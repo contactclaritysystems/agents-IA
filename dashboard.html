@@ -9259,51 +9259,56 @@ function setContactFormState(contact) {
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
-  
   editingContactId = contactId;
 
   const title = document.getElementById("contact-form-title");
   const btn = document.getElementById("contact-save-page-btn");
+  const section = document.getElementById("contact-mobile-section");
+
+  if (!section) {
+    console.error("ERREUR : contact-mobile-section introuvable");
+    return;
+  }
 
   if (contactId) {
     const contact = contactsCache.find(c => c.id === contactId);
-    if (!contact) return;
+
+    if (!contact) {
+      console.error("Contact introuvable dans contactsCache :", contactId);
+      return;
+    }
 
     setContactFormState(contact);
-    if (title) title.textContent = "Modifier le contact";
-    if (btn) btn.innerHTML = "💾 Enregistrer les modifications";
+
+    if (title) {
+      title.textContent = "Modifier le contact";
+    }
+
+    if (btn) {
+      btn.innerHTML = "💾 Enregistrer les modifications";
+    }
   } else {
     setContactFormState({});
-    if (title) title.textContent = "Nouveau contact";
-    if (btn) btn.innerHTML = "💾 Enregistrer le contact";
+
+    if (title) {
+      title.textContent = "Nouveau contact";
+    }
+
+    if (btn) {
+      btn.innerHTML = "💾 Enregistrer le contact";
+    }
   }
 
   contactInitialState = getContactFormState();
 
-  const section = document.getElementById("contact-mobile-section");
+  // Rend obligatoirement visible le parent main-contacts
+  showSection(
+    "contacts",
+    document.querySelector('.bottom-tab[data-section="contacts"]')
+  );
 
-if (!section) {
-    console.error("ERREUR : contact-mobile-section introuvable");
-    return;
-}
-
-console.log("contact ouvert", section);
-console.log("classes :", section.className);
-console.log("display :", getComputedStyle(section).display);
-console.log("visibility :", getComputedStyle(section).visibility);
-console.log("parent :", section.parentElement);
-
-if (!fromAgent) {
-    showSection(
-        "contacts",
-        document.querySelector('.bottom-tab[data-section="contacts"]')
-    );
-}
-
-section.classList.add("open");
-
-console.log("Après open :", section.className);
-console.log("display :", getComputedStyle(section).display);
+  // Ouvre ensuite le formulaire
+  section.classList.add("open");
 }
 
 function closeContactPage() {
