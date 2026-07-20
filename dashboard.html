@@ -9276,6 +9276,9 @@ function setContactFormState(contact) {
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
+  
+  window.contactOpenedFromAgent = fromAgent;
+  
   editingContactId = contactId;
 
   const title = document.getElementById("contact-form-title");
@@ -9359,6 +9362,14 @@ if (window.pendingAction?.type === "mail") {
   }
 
   window.pendingAction = null;
+}
+
+  if (window.contactOpenedFromAgent) {
+    showSection(
+        "agents",
+        document.querySelector('.bottom-tab[data-section="home"]')
+    );
+    window.contactOpenedFromAgent = false;
 }
   
   section.classList.remove("open");
