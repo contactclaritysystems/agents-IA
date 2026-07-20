@@ -1608,11 +1608,13 @@ select.field-input {
 }
 
 .mobile-subpage-header .sheet-btn {
+  align-self: flex-start;
   width: auto !important;
   height: 34px !important;
   padding: 0 12px !important;
   font-size: 12px !important;
   border-radius: 999px !important;
+  margin-bottom: 16px;
 }
   
   #main-agents {
@@ -2071,10 +2073,10 @@ select.field-input {
 
   .mobile-subpage-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 18px;
-  }
+    margin-bottom: 24px;
+}
 
   #profil-mobile-section .gmail-section {
     margin: 0 !important;
@@ -3885,11 +3887,18 @@ select.field-input {
 
   <div id="contact-mobile-section">
     <div class="mobile-subpage-header">
-    <button class="sheet-btn contact-back-btn" type="button" onclick="closeContactPage()">← Retour</button>
 
-    <div class="section-title-wrapper">
-        <div class="section-title" id="contact-form-title">Nouveau contact</div>
+    <button class="sheet-btn contact-back-btn"
+            type="button"
+            onclick="closeContactPage()">
+        ← Retour
+    </button>
+
+    <div class="section-title"
+         id="contact-form-title">
+        Nouveau contact
     </div>
+
 </div>
 
    <div id="contact-agent-message" class="contact-agent-message">
