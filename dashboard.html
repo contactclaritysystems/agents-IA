@@ -6428,6 +6428,11 @@ function deleteSelectedContact() {
         instruction: pendingInstruction
     };
 
+showSection(
+  "contacts",
+  document.querySelector('.bottom-tab[data-section="contacts"]')
+);
+    
     // Ouvre la page / popup existante
     openContactPage();
 
