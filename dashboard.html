@@ -620,7 +620,7 @@ body.loading-subscription #agents-count {
 .agent-head {
   padding: 20px 22px 18px;
   display: flex;
-  align-items: flex-start
+  align-items: flex-start;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
   user-select: none;
@@ -2680,6 +2680,30 @@ select.field-input {
   border-radius: 50%;
   background: #ef4444;
   box-shadow: 0 0 0 3px rgba(239,68,68,.18);
+}
+
+  @media (min-width: 601px) {
+  #contact-mobile-section.open {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: var(--page);
+    padding: 40px;
+    overflow-y: auto;
+  }
+
+  #contact-mobile-section.open .mobile-subpage-header {
+    display: flex;
+    max-width: 620px;
+    margin: 0 auto 18px;
+  }
+
+  #contact-mobile-section.open .gmail-section {
+    display: block;
+    max-width: 620px;
+    margin: 0 auto;
+  }
 }
 
 </style>
@@ -9301,35 +9325,39 @@ if (window.pendingAction?.type === "mail") {
 }
 
 async function saveContactFromPage() {
+  let saved = false;
 
   if (editingContactId) {
-    await updateContact(editingContactId);
+    saved = await updateContact(editingContactId);
   } else {
-    await addContact();
+    saved = await addContact();
   }
 
-  editingContactId = null;
-  document.getElementById("contact-mobile-section").classList.remove("open");
-
-  // Si ce contact a été créé suite à un mail
-  if (window.pendingAction?.type === "mail") {
-
-    const instruction = window.pendingAction.instruction;
-
-    // On vide l'action en attente
-    window.pendingAction = null;
-
-    showSection(
-  "agents",
-  document.querySelector('.bottom-tab[data-section="agents"]')
-);
-
-    // On relance automatiquement l'Agent Mail
-    callMailAgent(instruction);
-
+  // Ne rien fermer et ne rien relancer si l'enregistrement a échoué
+  if (saved !== true) {
     return;
   }
 
+  editingContactId = null;
+
+  const section = document.getElementById("contact-mobile-section");
+  if (section) {
+    section.classList.remove("open");
+  }
+
+  // Si le contact a été créé depuis l'Agent Mail
+  if (window.pendingAction?.type === "mail") {
+    const instruction = window.pendingAction.instruction;
+
+    window.pendingAction = null;
+
+    showSection(
+      "agents",
+      document.querySelector('.bottom-tab[data-section="agents"]')
+    );
+
+    await callMailAgent(instruction);
+  }
 }
 
 async function addContact() {
@@ -9341,9 +9369,9 @@ async function addContact() {
   const phone = document.getElementById("contact-phone").value.trim();
 
   if (!rawName) {
-    showToast("Ajoutez au moins un nom");
-    return;
-  }
+  showToast("Ajoutez au moins un nom", "error");
+  return false;
+}
 
   // Normalisation : majuscule à chaque mot, sans tirets
   const fullName = rawName
@@ -9358,9 +9386,9 @@ async function addContact() {
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
   if (!accessToken) {
-    showToast("Session expirée, reconnectez-vous");
-    return;
-  }
+  showToast("Session expirée, reconnectez-vous", "error");
+  return false;
+}
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/contacts",
@@ -9383,11 +9411,11 @@ async function addContact() {
   );
 
   if (!response.ok) {
-    const err = await response.text();
-    console.error("Erreur ajout contact:", err);
-    showToast("Erreur ajout contact");
-    return;
-  }
+  const err = await response.text();
+  console.error("Erreur ajout contact:", err);
+  showToast("Erreur ajout contact", "error");
+  return false;
+}
 
   document.getElementById("contact-name").value = "";
   document.getElementById("contact-company").value = "";
@@ -9395,7 +9423,10 @@ async function addContact() {
   document.getElementById("contact-phone").value = "";
 
   showToast("Contact ajouté");
-  loadContacts();
+
+await loadContacts();
+
+return true;
 }
 
   function confirmLogout() {
