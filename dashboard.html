@@ -8046,6 +8046,8 @@ async function startAssistantDictation() {
       const text = await response.text();
 
       console.log("REPONSE BRUTE CHEF:", text);
+      console.log("HTTP STATUS :", response.status);
+console.log("REPONSE BRUTE :", text);
 
       let data = {};
       try {
@@ -8059,6 +8061,10 @@ async function startAssistantDictation() {
         const message = data.message || data.error || "Impossible de générer la réponse.";
         setDictationBoxState(box, "error");
         box.innerHTML = "✕ " + message;
+
+console.log("DATA =", data);
+console.log("MESSAGE =", message);
+        
         showToast(message, "error");
         autoHideDictationBox(box);
         await saveActionLog(config.agent, instruction, "error");
