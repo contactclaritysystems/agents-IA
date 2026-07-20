@@ -8198,6 +8198,20 @@ if (!data.success) {
     "Le mail n’a pas pu être préparé.";
 
   if (data.reason === "contact_not_found") {
+
+const box = document.querySelector(".page-view.active #orchestrator-dictation-box");
+if (box) {
+  box.innerHTML = "⚠️ Je ne trouve pas ce contact.<br>Ajoutons-le pour continuer.";
+
+setTimeout(() => {
+    openAddContactPopup({
+        name: data.contact_name,
+        pendingInstruction: instruction
+    });
+}, 800);
+  
+}
+    
     openAddContactPopup({
         name: data.contact_name,
         pendingInstruction: instruction
