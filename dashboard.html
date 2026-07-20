@@ -6420,6 +6420,8 @@ function deleteSelectedContact() {
 
   function openAddContactPopup({ name, pendingInstruction }) {
 
+    console.log("OPEN ADD CONTACT POPUP", name, pendingInstruction);
+
     // On mémorise l'action en attente
     window.pendingAction = {
         type: "mail",
