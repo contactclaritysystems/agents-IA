@@ -8148,8 +8148,9 @@ console.log("MESSAGE =", message);
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      instruction
-    })
+  user_id: currentUser.id,
+  instruction
+})
   });
 
   const text = await response.text();
