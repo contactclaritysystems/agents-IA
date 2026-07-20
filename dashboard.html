@@ -2095,8 +2095,8 @@ select.field-input {
   }
 
   #contact-mobile-section .gmail-section {
-    margin: 0 !important;
-  }
+    margin: 28px 0 0 !important;
+}
 
   .contact-row {
   width: 100%;
@@ -6526,7 +6526,8 @@ function deleteSelectedContact() {
     }
 
     // Pré-remplit le nom du contact
-    document.getElementById("contact-name").value = name || "";
+    document.getElementById("contact-name").value =
+    (name || "").replace(/\b\p{L}/gu, l => l.toUpperCase());
 
     // Vide les autres champs
     document.getElementById("contact-email").value = "";
@@ -9362,7 +9363,7 @@ function openContactPage(contactId = null, fromAgent = false) {
 
     if (btn) {
       btn.innerHTML = fromAgent
-        ? "Enregistrer et continuer →"
+        ? "Continuer →"
         : "💾 Enregistrer le contact";
     }
 }
