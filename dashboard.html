@@ -9239,6 +9239,7 @@ function closeContactPage() {
 }
 
 async function saveContactFromPage() {
+
   if (editingContactId) {
     await updateContact(editingContactId);
   } else {
@@ -9247,6 +9248,21 @@ async function saveContactFromPage() {
 
   editingContactId = null;
   document.getElementById("contact-mobile-section").classList.remove("open");
+
+  // Si ce contact a été créé suite à un mail
+  if (window.pendingAction?.type === "mail") {
+
+    const instruction = window.pendingAction.instruction;
+
+    // On vide l'action en attente
+    window.pendingAction = null;
+
+    // On relance automatiquement l'Agent Mail
+    callMailAgent(instruction);
+
+    return;
+  }
+
 }
 
 async function addContact() {
