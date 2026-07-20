@@ -9259,8 +9259,6 @@ function setContactFormState(contact) {
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
-
-  console.log("openContactPage appelée", { contact, fromAgent });
   
   editingContactId = contactId;
 
@@ -9284,23 +9282,28 @@ function openContactPage(contactId = null, fromAgent = false) {
 
   const section = document.getElementById("contact-mobile-section");
 
-  console.log("contact ouvert", section);
-  console.log("classes :", section.className);
-  console.log("display :", getComputedStyle(section).display);
-  console.log("visibility :", getComputedStyle(section).visibility);
-  console.log("parent :", section.parentElement);
+if (!section) {
+    console.error("ERREUR : contact-mobile-section introuvable");
+    return;
+}
 
-  if (!fromAgent) {
+console.log("contact ouvert", section);
+console.log("classes :", section.className);
+console.log("display :", getComputedStyle(section).display);
+console.log("visibility :", getComputedStyle(section).visibility);
+console.log("parent :", section.parentElement);
+
+if (!fromAgent) {
     showSection(
-      "contacts",
-      document.querySelector('.bottom-tab[data-section="contacts"]')
+        "contacts",
+        document.querySelector('.bottom-tab[data-section="contacts"]')
     );
-  }
+}
 
-  console.log(section);
-console.log(getComputedStyle(section).display);
+section.classList.add("open");
 
-  section.classList.add("open");
+console.log("Après open :", section.className);
+console.log("display :", getComputedStyle(section).display);
 }
 
 function closeContactPage() {
