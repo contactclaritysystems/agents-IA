@@ -7909,7 +7909,10 @@ async function startAssistantDictation() {
   });
 }
 
-  async function startSimpleAgentDictation(config) 
+  async function startSimpleAgentDictation(config) {
+
+  console.log("START SIMPLE AGENT");
+    
   const allowed = await canUseAgents();
   if (!allowed) return;
 
