@@ -8154,12 +8154,29 @@ console.log("MESSAGE =", message);
   });
 
   const text = await response.text();
+console.log("REPONSE MAKE PREPARATION:", text);
 
-const data = JSON.parse(JSON.parse(text));
+let data = {};
+try {
+  data = JSON.parse(text);
+} catch (e) {
+  data = { success: false, reason: "bad_make_response" };
+}
+
+if (!data.success) {
+  const message =
+    data.message ||
+    data.error ||
+    data.reason ||
+    "Le mail n’a pas pu être préparé.";
+
+  showToast(message, "error");
+  return;
+}
+
+console.log("DATA PREVIEW MAIL:", data);
 
 openMailPreview(data, instruction);
-    
-  console.log("Réponse Agent Mail :", text);
 }
 
   function closeAllAgentCards() {
