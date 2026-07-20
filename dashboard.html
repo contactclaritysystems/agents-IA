@@ -2709,12 +2709,23 @@ select.field-input {
     display:none;
     background:#FFF8E6;
     border:1px solid #F6C453;
-    color:#9A6700;
-    padding:14px;
-    border-radius:12px;
-    margin:18px 0;
+    border-radius:16px;
+    padding:18px;
+    margin:18px 0 24px;
+    text-align:center;
+}
+
+.contact-agent-title{
+    font-size:18px;
+    font-weight:700;
+    color:#8A5A00;
+    margin-bottom:10px;
+}
+
+.contact-agent-text{
     font-size:15px;
-    line-height:1.4;
+    line-height:1.6;
+    color:#555;
 }
 }
 
@@ -3813,9 +3824,14 @@ select.field-input {
       <div class="section-title" id="contact-form-title">Nouveau contact</div>
     </div>
 
-    <div id="contact-agent-message" class="contact-agent-message">
-    ⚠️ Je n'ai pas trouvé ce contact.<br>
-    Ajoutez simplement son adresse e-mail, je reprendrai ensuite automatiquement la préparation du mail.
+   <div id="contact-agent-message" class="contact-agent-message">
+    <div class="contact-agent-title">
+        ⚠️ Contact introuvable
+    </div>
+    <div class="contact-agent-text">
+        Ajoutez son adresse e-mail.<br>
+        Je préparerai ensuite automatiquement votre mail.
+    </div>
 </div>
 
     <div class="gmail-section" style="display:block;">
