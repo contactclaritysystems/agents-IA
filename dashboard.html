@@ -9288,6 +9288,19 @@ function closeContactPage() {
   }
 
   editingContactId = null;
+
+if (window.pendingAction?.type === "mail") {
+  const box = document.getElementById("orchestrator-dictation-box");
+
+  if (box) {
+    setDictationBoxState(box, "error");
+    box.innerHTML = "❌ Envoi du mail annulé. Aucun contact n'a été ajouté.";
+    autoHideDictationBox(box);
+  }
+
+  window.pendingAction = null;
+}
+  
   section.classList.remove("open");
 }
 
