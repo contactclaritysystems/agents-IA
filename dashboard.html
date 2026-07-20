@@ -8157,11 +8157,7 @@ console.log("MESSAGE =", message);
 
 const data = JSON.parse(JSON.parse(text));
 
-openMailPreview(
-  data.to,
-  data.subject,
-  data.body
-);
+openMailPreview(data, instruction);
     
   console.log("Réponse Agent Mail :", text);
 }
