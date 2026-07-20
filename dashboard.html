@@ -9403,9 +9403,11 @@ function openContactPage(contactId = null, fromAgent = false) {
     }
 
     if (btn) {
-      btn.innerHTML = "💾 Enregistrer le contact";
+      btn.innerHTML = fromAgent
+        ? "Enregistrer et continuer →"
+        : "💾 Enregistrer le contact";
     }
-  }
+}
 
   contactInitialState = getContactFormState();
 
@@ -9463,38 +9465,110 @@ if (window.pendingAction?.type === "mail") {
 }
 
 async function saveContactFromPage() {
+  const btn = document.getElementById("contact-save-page-btn");
+  const openedFromMailAgent =
+    window.pendingAction?.type === "mail";
+
+  // Empêche les doubles clics
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+    btn.innerHTML = "⏳ Enregistrement...";
+  }
+
   let saved = false;
 
-  if (editingContactId) {
-    saved = await updateContact(editingContactId);
-  } else {
-    saved = await addContact();
-  }
+  try {
+    if (editingContactId) {
+      saved = await updateContact(editingContactId);
+    } else {
+      saved = await addContact();
+    }
 
-  // Ne rien fermer et ne rien relancer si l'enregistrement a échoué
-  if (saved !== true) {
-    return;
-  }
+    // L'enregistrement a échoué
+    if (saved !== true) {
+      if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.innerHTML = openedFromMailAgent
+          ? "Enregistrer et continuer →"
+          : editingContactId
+            ? "💾 Enregistrer les modifications"
+            : "💾 Enregistrer le contact";
+      }
 
-  editingContactId = null;
+      return;
+    }
 
-  const section = document.getElementById("contact-mobile-section");
-  if (section) {
-    section.classList.remove("open");
-  }
+    editingContactId = null;
 
-  // Si le contact a été créé depuis l'Agent Mail
-  if (window.pendingAction?.type === "mail") {
-    const instruction = window.pendingAction.instruction;
+    // Animation uniquement lorsque le contact vient de l'Agent Mail
+    if (openedFromMailAgent) {
+      if (btn) {
+        btn.innerHTML = "✓ Contact enregistré";
+        btn.style.opacity = "1";
+      }
 
-    window.pendingAction = null;
+      await new Promise(resolve => setTimeout(resolve, 700));
 
-    showSection(
-      "agents",
-      document.querySelector('.bottom-tab[data-section="agents"]')
+      if (btn) {
+        btn.innerHTML = "🤖 Préparation du mail...";
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 700));
+
+      const instruction = window.pendingAction.instruction;
+
+      window.pendingAction = null;
+      window.contactOpenedFromAgent = false;
+
+      const section =
+        document.getElementById("contact-mobile-section");
+
+      if (section) {
+        section.classList.remove("open");
+      }
+
+      showSection(
+        "agents",
+        document.querySelector(
+          '.bottom-tab[data-section="agents"]'
+        )
+      );
+
+      await callMailAgent(instruction);
+
+      return;
+    }
+
+    // Ajout ou modification manuelle
+    const section =
+      document.getElementById("contact-mobile-section");
+
+    if (section) {
+      section.classList.remove("open");
+    }
+
+  } catch (error) {
+    console.error(
+      "Erreur saveContactFromPage :",
+      error
     );
 
-    await callMailAgent(instruction);
+    showToast(
+      "Impossible d'enregistrer le contact",
+      "error"
+    );
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.innerHTML = openedFromMailAgent
+        ? "Enregistrer et continuer →"
+        : editingContactId
+          ? "💾 Enregistrer les modifications"
+          : "💾 Enregistrer le contact";
+    }
   }
 }
 
