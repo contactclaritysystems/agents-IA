@@ -2692,12 +2692,26 @@ select.field-input {
     padding: 40px;
     overflow-y: auto;
   }
-
-  #contact-mobile-section.open .mobile-subpage-header {
+    
+#contact-mobile-section.open .mobile-subpage-header {
     display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
     max-width: 620px;
     margin: 0 auto 18px;
-  }
+}
+
+    #contact-mobile-section.open .mobile-subpage-header .sheet-btn{
+    position:absolute;
+    left:0;
+}
+
+    #contact-mobile-section.open .mobile-subpage-header .section-title{
+    margin:0;
+    width:100%;
+    text-align:center;
+}
 
   #contact-mobile-section.open .gmail-section {
     display: block;
