@@ -6431,14 +6431,6 @@ function deleteSelectedContact() {
         type: "mail",
         instruction: pendingInstruction
     };
-
-    if (fromAgent) {
-    const popup = document.getElementById("contact-mobile-section");
-
-    if (popup && popup.parentElement !== document.body) {
-        document.body.appendChild(popup);
-    }
-}
     
     // Ouvre la page / popup existante
     openContactPage(null, fromAgent);
