@@ -4176,6 +4176,7 @@ const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboar
 const REDACTION_WEBHOOK_URL = "https://hook.eu1.make.com/w7m1od2sa1679zi84jijsshv9soikkba";
 const ASSISTANT_WEBHOOK_URL = "https://hook.eu1.make.com/x8qh7pbkjj56g4hr1vdovk4vwlpnb443";
 const ORCHESTRATOR_WEBHOOK_URL = "https://hook.eu1.make.com/qgixxebcacs27wfchphxg6bo5ffxhlry";
+const AGENT_MAIL_WEBHOOK_URL = "https://hook.eu1.make.com/f1ygm8lv4du3nnv5urqex5kxef9xuvit";
   
 let currentUser = null;
   document.body.classList.add("loading-subscription");
@@ -8138,6 +8139,21 @@ console.log("MESSAGE =", message);
     box.innerHTML = "✕ Autorisez le micro pour utiliser la dictée";
     autoHideDictationBox(box);
   };
+}
+
+  async function callMailAgent(instruction) {
+  const response = await fetch(AGENT_MAIL_WEBHOOK_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      instruction
+    })
+  });
+
+  const text = await response.text();
+  console.log("Réponse Agent Mail :", text);
 }
 
   function closeAllAgentCards() {
