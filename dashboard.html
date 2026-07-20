@@ -8204,7 +8204,11 @@ console.log("MESSAGE =", message);
         box.innerHTML = "⚠️ Contact introuvable.";
       }
 
-      openAddContactPopup(instruction);
+      openAddContactPopup({
+  name: data.contact_name || data.name || "",
+  pendingInstruction: instruction,
+  fromAgent: true
+});
       return;
     }
 
