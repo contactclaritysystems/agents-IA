@@ -9225,7 +9225,7 @@ function setContactFormState(contact) {
   document.getElementById("contact-phone").value = contact.phone || "";
 }
   
-function openContactPage(contactId = null, fromAgent = false) {function openContactPage(contactId = null) {
+function openContactPage(contactId = null, fromAgent = false) {
   editingContactId = contactId;
 
   const title = document.getElementById("contact-form-title");
@@ -9248,16 +9248,20 @@ function openContactPage(contactId = null, fromAgent = false) {function openCont
 
   const section = document.getElementById("contact-mobile-section");
 
-console.log(section);
+  console.log("contact ouvert", section);
+  console.log("classes :", section.className);
+  console.log("display :", getComputedStyle(section).display);
+  console.log("visibility :", getComputedStyle(section).visibility);
+  console.log("parent :", section.parentElement);
 
-if (!fromAgent) {
+  if (!fromAgent) {
     showSection(
-        "contacts",
-        document.querySelector('.bottom-tab[data-section="contacts"]')
+      "contacts",
+      document.querySelector('.bottom-tab[data-section="contacts"]')
     );
-}
-  
-section.classList.add("open");
+  }
+
+  section.classList.add("open");
 }
 
 function closeContactPage() {
