@@ -7217,11 +7217,8 @@ try {
     hasSent = true;
 
     box.innerHTML = "🎙️ Analyse de votre demande...";
-
-const requestId = crypto.randomUUID();
     
     const payload = {
-  request_id: requestId,
   user_email: currentUser.email,
   user_id: currentUser.id,
   instruction
