@@ -8084,6 +8084,112 @@ async function startAssistantDictation() {
   });
 }
 
+  function updateAgentProgress(box, config = {}) {
+  if (!box) return;
+
+  const {
+    title = "Agent",
+    icon = "🤖",
+    steps = [],
+    finalText = "",
+    finalStatus = "success"
+  } = config;
+
+  box.style.opacity = "1";
+  box.style.padding = "16px";
+  box.style.borderRadius = "16px";
+
+  const stepsHtml = steps.map(step => {
+    let symbol = "⏳";
+    let color = "#6e6e73";
+
+    if (step.status === "done") {
+      symbol = "✓";
+      color = "#15803d";
+    }
+
+    if (step.status === "warning") {
+      symbol = "⚠️";
+      color = "#b7791f";
+    }
+
+    if (step.status === "error") {
+      symbol = "✕";
+      color = "#d64545";
+    }
+
+    return `
+      <div style="
+        display:flex;
+        align-items:flex-start;
+        gap:9px;
+        margin-top:9px;
+        color:${color};
+        font-size:13px;
+        line-height:1.45;
+      ">
+        <span style="
+          width:18px;
+          flex-shrink:0;
+          font-weight:800;
+          text-align:center;
+        ">${symbol}</span>
+
+        <span>${step.text}</span>
+      </div>
+    `;
+  }).join("");
+
+  let finalHtml = "";
+
+  if (finalText) {
+    const finalColor =
+      finalStatus === "error"
+        ? "#d64545"
+        : finalStatus === "warning"
+        ? "#b7791f"
+        : "#15803d";
+
+    const finalIcon =
+      finalStatus === "error"
+        ? "✕"
+        : finalStatus === "warning"
+        ? "⚠️"
+        : "✅";
+
+    finalHtml = `
+      <div style="
+        margin-top:14px;
+        padding-top:12px;
+        border-top:1px solid rgba(0,0,0,.07);
+        color:${finalColor};
+        font-size:13.5px;
+        font-weight:800;
+      ">
+        ${finalIcon} ${finalText}
+      </div>
+    `;
+  }
+
+  box.innerHTML = `
+    <div style="
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:14px;
+      font-weight:800;
+      color:#1d1d1f;
+      margin-bottom:4px;
+    ">
+      <span>${icon}</span>
+      <span>${title}</span>
+    </div>
+
+    ${stepsHtml}
+    ${finalHtml}
+  `;
+}
+
   async function startOrchestratorDictation() {
   await startSimpleAgentDictation({
     agent: "orchestrator",
@@ -8091,7 +8197,9 @@ async function startAssistantDictation() {
     cardId: "card-orchestrator-run",
     boxId: "orchestrator-dictation-box",
     webhookUrl: ORCHESTRATOR_WEBHOOK_URL,
-    loadingText: "🧠 Analyse de votre demande...",
+    loadingText: "",
+progressTitle: "Clarity",
+progressIcon: "🧠",
     successText: "✅ Réponse prête",
     modalTitle: "Clarity",
     modalSubtitle: "Je m'occupe de votre demande."
@@ -8222,7 +8330,21 @@ async function startAssistantDictation() {
     hasSent = true;
 
     setDictationBoxState(box, "info");
-    box.innerHTML = config.loadingText;
+
+if (config.agent === "orchestrator") {
+  updateAgentProgress(box, {
+    title: config.progressTitle || "Clarity",
+    icon: config.progressIcon || "🧠",
+    steps: [
+      {
+        text: "Compréhension de votre demande...",
+        status: "loading"
+      }
+    ]
+  });
+} else {
+  box.innerHTML = config.loadingText;
+}
 
     try {
       const response = await fetch(config.webhookUrl, {
