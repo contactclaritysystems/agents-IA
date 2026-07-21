@@ -8517,17 +8517,32 @@ setAgentProgress(
     }
 
     if (box) {
-      setDictationBoxState(box, "info");
-      box.innerHTML = "✍️ Génération du mail...";
-    }
+  setAgentProgress(
+    box,
+    "Agent Mail",
+    "🤖",
+    [
+      { text: "Demande comprise", status: "done" },
+      { text: "Contact trouvé", status: "done" },
+      { text: "Rédaction du mail...", status: "loading" }
+    ]
+  );
+}
 
-    await new Promise(resolve => setTimeout(resolve, 400));
-
-    if (box) {
-      setDictationBoxState(box, "success");
-      box.innerHTML = "✅ Mail prêt à être envoyé.";
-    }
-
+if (box) {
+  setAgentProgress(
+    box,
+    "Agent Mail",
+    "🤖",
+    [
+      { text: "Demande comprise", status: "done" },
+      { text: "Contact trouvé", status: "done" },
+      { text: "Mail rédigé", status: "done" }
+    ],
+    "Prêt à valider"
+  );
+}
+    
     openMailPreview(data, instruction);
 
     unlockAgentButtons();
