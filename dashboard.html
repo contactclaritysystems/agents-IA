@@ -8190,6 +8190,16 @@ async function startAssistantDictation() {
   `;
 }
 
+  function setAgentProgress(box, title, icon, steps, finalText = "", finalStatus = "success") {
+  updateAgentProgress(box, {
+    title,
+    icon,
+    steps,
+    finalText,
+    finalStatus
+  });
+}
+
   async function startOrchestratorDictation() {
   await startSimpleAgentDictation({
     agent: "orchestrator",
@@ -8462,8 +8472,17 @@ console.log("MESSAGE =", message);
 
     if (box) {
       setDictationBoxState(box, "info");
-      box.style.opacity = "1";
-      box.innerHTML = "🔎 Recherche du contact...";
+box.style.opacity = "1";
+
+setAgentProgress(
+  box,
+  "Agent Mail",
+  "🤖",
+  [
+    { text: "Demande comprise", status: "done" },
+    { text: "Recherche du contact...", status: "loading" }
+  ]
+);
     }
 
     const response = await fetch(AGENT_MAIL_WEBHOOK_URL, {
