@@ -4324,15 +4324,17 @@ supabaseClient
   .on(
     "postgres_changes",
     {
-      event: "INSERT",
+      event: "*",
       schema: "public",
       table: "agent_progress"
     },
     (payload) => {
-      console.log("Progression :", payload.new);
+      console.log("REALTIME :", payload);
     }
   )
-  .subscribe();
+  .subscribe((status) => {
+    console.log("CHANNEL :", status);
+  });
 
 const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.googleusercontent.com";
 const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
