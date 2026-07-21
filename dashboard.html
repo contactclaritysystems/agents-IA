@@ -7218,11 +7218,14 @@ try {
 
     box.innerHTML = "🎙️ Analyse de votre demande...";
 
+const requestId = crypto.randomUUID();
+    
     const payload = {
-      user_email: currentUser.email,
-      user_id: currentUser.id,
-      instruction
-    };
+  request_id: requestId,
+  user_email: currentUser.email,
+  user_id: currentUser.id,
+  instruction
+};
 
     try {
       const step1 = setTimeout(() => {
