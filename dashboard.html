@@ -4319,6 +4319,21 @@ const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+supabaseClient
+  .channel("agent-progress")
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "agent_progress"
+    },
+    (payload) => {
+      console.log("Progression :", payload.new);
+    }
+  )
+  .subscribe();
+
 const GOOGLE_CLIENT_ID = "1074194918829-0khu2lso1h1n0onfiuq0gb1se4437rks.apps.googleusercontent.com";
 const REDIRECT_URI = "https://contactclaritysystems.github.io/agents-IA/dashboard.html";
 const REDACTION_WEBHOOK_URL = "https://hook.eu1.make.com/w7m1od2sa1679zi84jijsshv9soikkba";
