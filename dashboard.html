@@ -8379,11 +8379,14 @@ if (config.agent === "orchestrator") {
       const response = await fetch(config.webhookUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        
         body: JSON.stringify({
-          user_email: currentUser.email,
-          user_id: currentUser.id,
-          instruction
-        })
+  request_id: requestId,
+  user_email: currentUser.email,
+  user_id: currentUser.id,
+  instruction
+})
+        
       });
 
       const text = await response.text();
