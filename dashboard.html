@@ -7426,6 +7426,8 @@ if (planningBtn) {
 
     const instruction = (latestText || finalText).trim();
 
+const requestId = crypto.randomUUID();
+
     if (!instruction) {
   unlockAgentButtons();
   setDictationBoxState(box, "error");
