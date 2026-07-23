@@ -8376,6 +8376,7 @@ if (config.agent === "orchestrator") {
 }
 
     const requestId = crypto.randomUUID();
+    window.currentRequestId = requestId;
 
     try {
       const response = await fetch(config.webhookUrl, {
