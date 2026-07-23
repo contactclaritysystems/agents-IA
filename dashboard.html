@@ -8375,6 +8375,8 @@ if (config.agent === "orchestrator") {
   box.innerHTML = config.loadingText;
 }
 
+    const requestId = crypto.randomUUID();
+
     try {
       const response = await fetch(config.webhookUrl, {
         method: "POST",
