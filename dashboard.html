@@ -8402,6 +8402,11 @@ console.log("REPONSE BRUTE :", text);
       try {
         data = JSON.parse(text);
 
+        if (data.request_id && data.request_id !== window.currentRequestId) {
+  console.log("Réponse ignorée :", data.request_id);
+  return;
+}
+
 if (data.agent === "mail") {
   setDictationBoxState(box, "info");
   box.innerHTML = "🔎 Recherche du contact...";
