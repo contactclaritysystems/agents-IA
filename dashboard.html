@@ -8716,37 +8716,6 @@ async function loadAgentProgress(requestId) {
   }
 }
 
-  async function loadAgentProgress(requestId) {
-
-  const { data, error } = await supabaseClient
-    .from("agent_progress")
-    .select("status,message")
-    .eq("request_id", requestId)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (error || !data?.length) return;
-
-  const progress = data[0];
-
-  switch (progress.status) {
-
-    case "contact_found":
-      updateAgentLoadingText(`👤 Contact trouvé : ${progress.message}`);
-      break;
-
-    case "generating_mail":
-      updateAgentLoadingText("✍️ Préparation du mail...");
-      break;
-
-    case "ready":
-      clearInterval(agentProgressInterval);
-      break;
-
-  }
-
-}
-
   function closeAllAgentCards() {
   document.querySelectorAll(".agent-card.open").forEach(card => {
     card.classList.remove("open");
