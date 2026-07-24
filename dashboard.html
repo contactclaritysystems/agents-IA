@@ -8631,11 +8631,11 @@ function startAgentProgressPolling(requestId) {
   switch (progress.status) {
 
     case "contact_found":
-      updateLoadingText(`👤 Contact trouvé : ${progress.message}`);
+      updateAgentLoadingText(`👤 Contact trouvé : ${progress.message}`);
       break;
 
     case "generating_mail":
-      updateLoadingText("✍️ Préparation du mail...");
+      updateAgentLoadingText("✍️ Préparation du mail...");
       break;
 
     case "ready":
