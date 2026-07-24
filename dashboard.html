@@ -8589,7 +8589,11 @@ console.log("REPONSE BRUTE =", text);
 let data;
 
 try {
-  data = JSON.parse(text);
+  let data = JSON.parse(text);
+
+if (typeof data === "string") {
+    data = JSON.parse(data);
+}
 } catch (e) {
   console.error("JSON invalide :", text);
   throw e;
