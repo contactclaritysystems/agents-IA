@@ -8589,7 +8589,15 @@ console.log(text);
 let data;
 
 try {
-  data = JSON.parse(text);
+  let cleaned = text.trim();
+
+if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+    cleaned = cleaned.replace(/\\"/g, '"');
+    cleaned = cleaned.replace(/\\n/g, "");
+}
+
+data = JSON.parse(cleaned);
 
 if (typeof data === "string") {
     data = JSON.parse(data);
