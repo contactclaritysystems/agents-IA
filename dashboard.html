@@ -2878,6 +2878,7 @@ select.field-input {
 </div>
     </div>
   </div>
+    </div>
 </aside>
   
 <!-- MAIN PAGE REGLAGES -->
@@ -6544,6 +6545,13 @@ function renderContacts() {
 }
 
   function openContactDetail(contactId) {
+
+    const contactFormPage = document.getElementById("contact-mobile-section");
+
+if (contactFormPage) {
+  contactFormPage.classList.remove("open");
+}
+    
   const contact = contactsCache.find(c => c.id === contactId);
   if (!contact) return;
 
@@ -9718,6 +9726,14 @@ function setContactFormState(contact) {
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
+
+  const detailPage = document.getElementById("contact-detail-page");
+
+if (detailPage) {
+  detailPage.classList.remove("open");
+}
+
+selectedContactId = null;
   
   window.contactOpenedFromAgent = fromAgent;
   
