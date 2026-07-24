@@ -8411,7 +8411,11 @@ if (data.agent === "mail") {
   setDictationBoxState(box, "info");
   box.innerHTML = "🔎 Recherche du contact...";
 
-  return callMailAgent(data.instruction, box);
+  return callMailAgent(
+  data.instruction,
+  box,
+  data.request_id || requestId
+);
 }
         
       } catch(e) {
@@ -8494,7 +8498,11 @@ console.log("MESSAGE =", message);
   };
 }
 
-  async function callMailAgent(instruction, box = null) {
+  async function callMailAgent(
+  instruction,
+  box = null,
+  requestId = window.currentRequestId
+) {
   try {
     if (!box) {
       box = document.getElementById("orchestrator-dictation-box");
@@ -8521,9 +8529,10 @@ setAgentProgress(
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        user_id: currentUser.id,
-        instruction
-      })
+  user_id: currentUser.id,
+  instruction,
+  request_id: requestId
+})
     });
 
     const text = await response.text();
