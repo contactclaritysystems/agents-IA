@@ -4401,8 +4401,42 @@ function closeMailChoiceModal() {
 }
 
   function openContactChoiceModal(contacts, instruction, requestId) {
+
   const modal = document.getElementById("contact-choice-modal");
-  if (modal) modal.style.display = "block";
+  const list = document.getElementById("contact-choice-list");
+
+  list.innerHTML = "";
+
+  contacts.forEach(contact => {
+
+    const btn = document.createElement("button");
+
+    btn.className = "contact-choice-btn";
+
+    btn.innerHTML = `
+      <strong>${contact.name}</strong><br>
+      <small>${contact.email}</small>
+    `;
+
+    btn.onclick = () => {
+      closeContactChoiceModal();
+      chooseContact(contact.id, instruction, requestId);
+    };
+
+    list.appendChild(btn);
+
+  });
+
+  modal.style.display = "block";
+}
+
+  function chooseContact(contactId, instruction, requestId) {
+  callMailAgent(
+    instruction,
+    null,
+    requestId,
+    contactId
+  );
 }
 
 function closeContactChoiceModal() {
@@ -8510,7 +8544,8 @@ console.log("MESSAGE =", message);
   async function callMailAgent(
   instruction,
   box = null,
-  requestId = window.currentRequestId
+  requestId = window.currentRequestId,
+  contactId = null
 ) {
   try {
     if (!box) {
@@ -8542,7 +8577,8 @@ setAgentProgress(
       body: JSON.stringify({
   user_id: currentUser.id,
   instruction,
-  request_id: requestId
+  request_id: requestId,
+  contact_id: contactId
 })
     });
 
@@ -11658,6 +11694,31 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <span class="bottom-tab-label">Réglages</span>
   </button>
 </nav>
+
+  <div id="contact-choice-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeContactChoiceModal()"></div>
+
+  <div class="mail-choice-box">
+
+    <div class="mail-choice-title">
+      Choisissez le bon contact
+    </div>
+
+    <div class="mail-choice-subtitle">
+      Plusieurs contacts correspondent à votre demande.
+    </div>
+
+    <div id="contact-choice-list"></div>
+
+    <button class="sheet-btn"
+            type="button"
+            onclick="closeContactChoiceModal()"
+            style="width:100%;margin-top:15px;">
+      Annuler
+    </button>
+
+  </div>
+</div>
 
 </body>
 </html>
