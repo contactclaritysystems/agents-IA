@@ -8523,6 +8523,8 @@ setAgentProgress(
 );
     }
 
+    startAgentProgressPolling(requestId, box);
+
     const response = await fetch(AGENT_MAIL_WEBHOOK_URL, {
       method: "POST",
       headers: {
@@ -8535,10 +8537,10 @@ setAgentProgress(
 })
     });
 
-    startAgentProgressPolling(window.currentRequestId);
-
     const text = await response.text();
     const data = JSON.parse(text);
+
+    stopAgentProgressPolling();
 
     console.log("Réponse Agent Mail :", data);
 
@@ -8590,6 +8592,8 @@ if (box) {
     autoHideDictationBox(box);
 
   } catch (error) {
+stopAgentProgressPolling();
+    
     console.error("Erreur Agent Mail :", error);
 
     if (box) {
@@ -8602,17 +8606,114 @@ if (box) {
 }
 
   let agentProgressInterval = null;
+let agentProgressBox = null;
+let lastAgentProgressStatus = null;
 
-function startAgentProgressPolling(requestId) {
-
+function stopAgentProgressPolling() {
   if (agentProgressInterval) {
     clearInterval(agentProgressInterval);
+    agentProgressInterval = null;
   }
+
+  agentProgressBox = null;
+  lastAgentProgressStatus = null;
+}
+
+function startAgentProgressPolling(requestId, box) {
+  stopAgentProgressPolling();
+
+  if (!requestId || !box) return;
+
+  agentProgressBox = box;
+
+  // Vérification immédiate
+  loadAgentProgress(requestId);
 
   agentProgressInterval = setInterval(() => {
     loadAgentProgress(requestId);
   }, 500);
+}
 
+async function loadAgentProgress(requestId) {
+  if (!requestId || !agentProgressBox) return;
+
+  const { data, error } = await supabaseClient
+    .from("agent_progress")
+    .select("status,message")
+    .eq("request_id", requestId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    console.error("Erreur progression agent :", error);
+    return;
+  }
+
+  if (!data?.length) return;
+
+  const progress = data[0];
+
+  // Évite de réafficher la même étape toutes les 500 ms
+  if (progress.status === lastAgentProgressStatus) return;
+
+  lastAgentProgressStatus = progress.status;
+
+  switch (progress.status) {
+    case "contact_found":
+      setAgentProgress(
+        agentProgressBox,
+        "Agent Mail",
+        "🤖",
+        [
+          { text: "Demande comprise", status: "done" },
+          {
+            text: progress.message
+              ? `Contact trouvé : ${progress.message}`
+              : "Contact trouvé",
+            status: "done"
+          },
+          { text: "Préparation du mail...", status: "loading" }
+        ]
+      );
+      break;
+
+    case "generating_mail":
+      setAgentProgress(
+        agentProgressBox,
+        "Agent Mail",
+        "🤖",
+        [
+          { text: "Demande comprise", status: "done" },
+          { text: "Contact trouvé", status: "done" },
+          { text: "Rédaction du mail...", status: "loading" }
+        ]
+      );
+      break;
+
+    case "ready":
+      setAgentProgress(
+        agentProgressBox,
+        "Agent Mail",
+        "🤖",
+        [
+          { text: "Demande comprise", status: "done" },
+          { text: "Contact trouvé", status: "done" },
+          { text: "Mail rédigé", status: "done" }
+        ],
+        "Prêt à valider"
+      );
+
+      stopAgentProgressPolling();
+      break;
+
+    case "error":
+      setDictationBoxState(agentProgressBox, "error");
+      agentProgressBox.innerHTML =
+        "✕ Une erreur est survenue pendant la préparation du mail.";
+
+      stopAgentProgressPolling();
+      break;
+  }
 }
 
   async function loadAgentProgress(requestId) {
