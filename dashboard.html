@@ -8660,22 +8660,22 @@ async function loadAgentProgress(requestId) {
 
   switch (progress.status) {
     case "contact_found":
-      setAgentProgress(
-        agentProgressBox,
-        "Agent Mail",
-        "🤖",
-        [
-          { text: "Demande comprise", status: "done" },
-          {
-            text: progress.message
-              ? `Contact trouvé : ${progress.message}`
-              : "Contact trouvé",
-            status: "done"
-          },
-          { text: "Préparation du mail...", status: "loading" }
-        ]
-      );
-      break;
+  setAgentProgress(
+    agentProgressBox,
+    "Agent Mail",
+    "🤖",
+    [
+      { text: "Demande comprise", status: "done" },
+      {
+        text: progress.message
+          ? `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`
+          : (contactJustCreated ? "Contact enregistré" : "Contact trouvé"),
+        status: "done"
+      },
+      { text: "Préparation du mail...", status: "loading" }
+    ]
+  );
+  break;
 
     case "generating_mail":
       setAgentProgress(
@@ -8684,7 +8684,10 @@ async function loadAgentProgress(requestId) {
         "🤖",
         [
           { text: "Demande comprise", status: "done" },
-          { text: "Contact trouvé", status: "done" },
+          {
+  text: contactJustCreated ? "Contact enregistré" : "Contact trouvé",
+  status: "done"
+},
           { text: "Rédaction du mail...", status: "loading" }
         ]
       );
@@ -8697,12 +8700,17 @@ async function loadAgentProgress(requestId) {
         "🤖",
         [
           { text: "Demande comprise", status: "done" },
-          { text: "Contact trouvé", status: "done" },
+          {
+  text: contactJustCreated ? "Contact enregistré" : "Contact trouvé",
+  status: "done"
+},
           { text: "Mail rédigé", status: "done" }
         ],
         "Prêt à valider"
       );
 
+      contactJustCreated = false;
+      
       stopAgentProgressPolling();
       break;
 
