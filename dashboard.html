@@ -4400,7 +4400,7 @@ function closeMailChoiceModal() {
   if (modal) modal.style.display = "none";
 }
 
-  function openContactChoiceModal() {
+  function openContactChoiceModal(contacts, instruction, requestId) {
   const modal = document.getElementById("contact-choice-modal");
   if (modal) modal.style.display = "block";
 }
@@ -8552,6 +8552,24 @@ setAgentProgress(
     stopAgentProgressPolling();
 
     console.log("Réponse Agent Mail :", data);
+
+    if (data.action === "choose_contact") {
+
+  stopAgentProgressPolling();
+
+  if (box) {
+    setDictationBoxState(box, "info");
+    box.innerHTML = "👤 Choisissez le bon contact";
+  }
+
+  openContactChoiceModal(
+    data.contacts,
+    instruction,
+    requestId
+  );
+
+  return;
+}
 
     if (!data.success && data.reason === "contact_not_found") {
       if (box) {
