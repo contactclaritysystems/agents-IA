@@ -8221,8 +8221,8 @@ async function startAssistantDictation() {
   if (!box) return;
 
   const {
-  title: "Clarity",
-icon: "✨",
+  title= "Clarity",
+icon= "✨",
     steps = [],
     finalText = "",
     finalStatus = "success"
@@ -8342,7 +8342,7 @@ icon: "✨",
     webhookUrl: ORCHESTRATOR_WEBHOOK_URL,
     loadingText: "",
 progressTitle: "Clarity",
-progressIcon: "🧠",
+progressIcon: "✨",
     successText: "✅ Réponse prête",
     modalTitle: "Clarity",
     modalSubtitle: "Je m'occupe de votre demande."
@@ -8477,7 +8477,7 @@ progressIcon: "🧠",
 if (config.agent === "orchestrator") {
   updateAgentProgress(box, {
     title: config.progressTitle || "Clarity",
-    icon: config.progressIcon || "🧠",
+    icon: config.progressIcon || "✨",
     steps: [
       {
         text: "Compréhension de votre demande...",
