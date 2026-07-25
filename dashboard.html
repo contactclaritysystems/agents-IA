@@ -4512,7 +4512,12 @@ function closeContactChoiceModal() {
 
   unlockAgentButtons();
 
-  addAgentMessage("❌ Préparation du mail annulée.");
+  const box = document.getElementById("orchestrator-dictation-box");
+
+if (box) {
+  setDictationBoxState(box, "info");
+  box.innerHTML = "❌ Préparation du mail annulée.";
+}
 }
 
   function sendContactMessage(subject, body) {
