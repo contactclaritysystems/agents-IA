@@ -4503,18 +4503,16 @@ function closeContactChoiceModal() {
 }
 
   function cancelContactChoice() {
-    
-  window.mailCancelled = true;
-    
+  stopAgentProgressPolling();
+
   window.pendingAction = null;
   window.currentRequestId = null;
 
   closeContactChoiceModal();
 
-  addAgentMessage(
-    "❌ Préparation du mail annulée. Aucun contact n'a été sélectionné."
-  );
+  unlockAgentButtons();
 
+  addAgentMessage("❌ Préparation du mail annulée.");
 }
 
   function sendContactMessage(subject, body) {
