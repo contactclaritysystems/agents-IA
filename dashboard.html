@@ -4503,7 +4503,9 @@ function closeContactChoiceModal() {
 }
 
   function cancelContactChoice() {
-
+    
+  window.mailCancelled = true;
+    
   window.pendingAction = null;
   window.currentRequestId = null;
 
@@ -11806,13 +11808,6 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <button class="contact-choice-cancel" onclick="cancelContactChoice()">
   Annuler
 </button>
-
-    <button class="sheet-btn"
-            type="button"
-            onclick="closeContactChoiceModal()"
-            style="width:100%;margin-top:15px;">
-      Annuler
-    </button>
 
   </div>
 </div>
