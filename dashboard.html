@@ -8824,8 +8824,8 @@ async function loadAgentProgress(requestId) {
       { text: "Demande comprise", status: "done" },
       {
         text: progress.message
-          ? `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`
-          : (contactJustCreated ? "Contact enregistré" : "Contact trouvé"),
+          ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
+          : (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
         status: "done"
       },
       { text: "Préparation du mail...", status: "loading" }
@@ -8841,7 +8841,7 @@ async function loadAgentProgress(requestId) {
         [
           { text: "Demande comprise", status: "done" },
           {
-  text: contactJustCreated ? "Contact enregistré" : "Contact trouvé",
+  text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
 },
           { text: "Rédaction du mail...", status: "loading" }
@@ -8857,7 +8857,7 @@ async function loadAgentProgress(requestId) {
         [
           { text: "Demande comprise", status: "done" },
           {
-  text: contactJustCreated ? "Contact enregistré" : "Contact trouvé",
+  text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
 },
           { text: "Mail rédigé", status: "done" }
