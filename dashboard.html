@@ -2809,6 +2809,24 @@ select.field-input {
 }
 }
 
+  .contact-choice-cancel{
+    width:100%;
+    margin-top:16px;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    background:#f3f4f6;
+    color:#374151;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+}
+
+.contact-choice-cancel:hover{
+    background:#e5e7eb;
+}
+
 </style>
 </head>
 <body>
@@ -4409,21 +4427,21 @@ function closeMailChoiceModal() {
 
   contacts.forEach(contact => {
 
-    const btn = document.createElement("button");
+    const card = document.createElement("div");
+card.className = "contact-choice-card";
 
-    btn.className = "contact-choice-btn";
+card.innerHTML = `
+  <div class="contact-choice-name">${contact.full_name}</div>
+  <div class="contact-choice-email">📧 ${contact.email}</div>
+  ${contact.company ? `<div class="contact-choice-company">🏢 ${contact.company}</div>` : ""}
+`;
 
-    btn.innerHTML = `
-      <strong>${contact.full_name}</strong><br>
-      <small>${contact.email}</small>
-    `;
+card.onclick = () => {
+  closeContactChoiceModal();
+  chooseContact(contact.id, instruction, requestId);
+};
 
-    btn.onclick = () => {
-      closeContactChoiceModal();
-      chooseContact(contact.id, instruction, requestId);
-    };
-
-    list.appendChild(btn);
+list.appendChild(card);
 
   });
 
@@ -4442,6 +4460,19 @@ function closeMailChoiceModal() {
 function closeContactChoiceModal() {
   const modal = document.getElementById("contact-choice-modal");
   if (modal) modal.style.display = "none";
+}
+
+  function cancelContactChoice() {
+
+  window.pendingAction = null;
+  window.currentRequestId = null;
+
+  closeContactChoiceModal();
+
+  addAgentMessage(
+    "❌ Préparation du mail annulée. Aucun contact n'a été sélectionné."
+  );
+
 }
 
   function sendContactMessage(subject, body) {
@@ -11731,6 +11762,10 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     </div>
 
     <div id="contact-choice-list"></div>
+
+    <button class="contact-choice-cancel" onclick="cancelContactChoice()">
+  Annuler
+</button>
 
     <button class="sheet-btn"
             type="button"
