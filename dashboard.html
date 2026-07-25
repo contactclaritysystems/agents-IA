@@ -4517,6 +4517,7 @@ function closeContactChoiceModal() {
 if (box) {
   setDictationBoxState(box, "info");
   box.innerHTML = "❌ Préparation du mail annulée.";
+  autoHideDictationBox(box);
 }
 }
 
