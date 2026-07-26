@@ -5855,7 +5855,10 @@ async function loadProfile() {
 
     if (!Array.isArray(data) || data.length === 0 || !data[0].config) {
 
-  const firstname = currentUser.user_metadata?.prenom || "";
+  const firstname =
+    currentUser.user_metadata?.firstname ||
+    currentUser.user_metadata?.prenom ||
+    "";
 
   await supabaseClient
     .from("agent_configs")
@@ -5872,7 +5875,6 @@ async function loadProfile() {
       }
     });
 
-  // Recharge le profil maintenant qu'il existe
   return loadProfile();
 }
 
