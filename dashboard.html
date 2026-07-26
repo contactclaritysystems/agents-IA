@@ -3062,6 +3062,12 @@ select.field-input {
         position:relative;
     }
 }
+  
+  @media (min-width: 901px) {
+    .contact-detail-back-btn {
+        display: none;
+    }
+}
 
 </style>
 </head>
@@ -3629,7 +3635,9 @@ select.field-input {
 
   <div id="contact-detail-page">
     <div class="mobile-subpage-header">
-      <button class="sheet-btn" type="button" onclick="closeContactDetail()">← Retour</button>
+      <button class="sheet-btn contact-detail-back-btn"
+        type="button"
+        onclick="closeContactDetail()">← Retour</button>
     </div>
 
     <div class="gmail-section" style="display:block;">
