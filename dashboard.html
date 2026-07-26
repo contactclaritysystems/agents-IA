@@ -3190,18 +3190,25 @@ select.field-input {
       <div class="agent-name">Clarity</div>
 
       <div class="agent-desc">
-        Exemple : « Envoie un mail à Lucas, planifie un rendez-vous demain à 14h et rappelle-moi de le relancer vendredi. »
-      </div>
+  ● En ligne
+</div>
     </div>
   </div>
 
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn"
-            id="orchestrator-dictation-btn"
-            onclick="startOrchestratorDictation()">
-      🎙️ Parler à Clarity
-    </button>
-  </div>
+  <div class="agent-body" style="display:flex; flex-direction:column; gap:16px;">
+
+  <div class="clarity-message">
+  Bonjour <span id="clarity-user-firstname">👋</span><br>
+  Que puis-je faire pour vous aujourd'hui ?
+</div>
+
+  <button class="save-btn"
+          id="orchestrator-dictation-btn"
+          onclick="startOrchestratorDictation()">
+    🎙️ Parler ou écrire
+  </button>
+
+</div>
 
 </div>
 
