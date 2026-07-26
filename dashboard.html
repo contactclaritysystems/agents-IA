@@ -2987,6 +2987,42 @@ select.field-input {
   }
 }
 
+  /* FICHE CONTACT — POPUP PC */
+
+@media (min-width: 901px) {
+
+  #contact-detail-page {
+    display: none;
+  }
+
+  #contact-detail-page.open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  #contact-detail-page.open .mobile-subpage-header {
+    display: none;
+  }
+
+  #contact-detail-page.open .gmail-section {
+    display: block;
+    width: min(520px, 100%);
+    margin: 0;
+    padding: 30px;
+    border-radius: 28px;
+    background: #ffffff;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.18);
+  }
+}
+
 </style>
 </head>
 <body>
