@@ -3022,6 +3022,50 @@ select.field-input {
   }
 }
 
+  /* Avatar carnet contacts */
+
+#main-contacts .contact-avatar{
+    width:44px;
+    height:44px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    flex-shrink:0;
+
+    margin-right:16px;
+
+    border-radius:50%;
+
+    background:#F5F5F7;
+
+    border:1px solid rgba(29,29,31,.08);
+
+    color:#5A5A5F;
+
+    font-size:14px;
+    font-weight:700;
+
+    transition:
+        transform .18s ease,
+        background .18s ease;
+}
+
+#main-contacts .contact-row{
+    display:flex;
+    align-items:center;
+}
+
+#main-contacts .contact-row-main{
+    flex:1;
+}
+
+#main-contacts .contact-row:hover .contact-avatar{
+    background:#ECECEF;
+    transform:scale(1.05);
+}
+
  /* FICHE CONTACT — POPUP PC */
 
 @media (min-width: 901px) {
@@ -6507,24 +6551,37 @@ function renderContacts() {
 
         ${groups[letter].map(contact => `
           <button
-            class="contact-row"
-            onclick="openContactDetail('${contact.id}')"
-            type="button"
-          >
-            <div class="contact-row-main">
-              <div class="contact-name">
-                ${contact.full_name || "Sans nom"}
-              </div>
+    class="contact-row"
+    onclick="openContactDetail('${contact.id}')"
+    type="button"
+>
 
-              ${
-                contact.company
-                  ? `<div class="contact-company">${contact.company}</div>`
-                  : ""
-              }
-            </div>
+    <div class="contact-avatar">
+        ${(contact.full_name || "?")
+            .split(" ")
+            .map(word => word.charAt(0))
+            .slice(0,2)
+            .join("")
+            .toUpperCase()}
+    </div>
 
-            <span class="contact-chevron">›</span>
-          </button>
+    <div class="contact-row-main">
+
+        <div class="contact-name">
+            ${contact.full_name || "Sans nom"}
+        </div>
+
+        ${
+            contact.company
+                ? `<div class="contact-company">${contact.company}</div>`
+                : ""
+        }
+
+    </div>
+
+    <span class="contact-chevron">›</span>
+
+</button>
         `).join("")}
       </section>
     `)
