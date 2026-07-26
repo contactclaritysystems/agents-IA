@@ -6571,11 +6571,13 @@ function renderContacts() {
             ${contact.full_name || "Sans nom"}
         </div>
 
-        ${
-            contact.company
-                ? `<div class="contact-company">${contact.company}</div>`
-                : ""
-        }
+       ${
+    contact.company
+        ? `<div class="contact-company">${contact.company}</div>`
+        : contact.email
+            ? `<div class="contact-company">${contact.email}</div>`
+            : ""
+}
 
     </div>
 
