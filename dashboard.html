@@ -5881,6 +5881,14 @@ async function loadProfile() {
     const profile = data[0].config;
     currentProfile = profile;
 
+    const firstnameSpan = document.getElementById("clarity-user-firstname");
+
+if (firstnameSpan) {
+  firstnameSpan.textContent = profile.firstname
+    ? `${profile.firstname} 👋`
+    : "👋";
+}
+
    if (
   profile.contacts_created === true ||
   profile.contacts_created === "true"
