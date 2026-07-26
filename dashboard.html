@@ -6441,7 +6441,7 @@ if (contactFormPage) {
     contact.company || "";
 
   document.getElementById("contact-detail-phone").textContent =
-    contact.phone || "Non renseigné";
+    formatPhone(contact.phone);
 
   document.getElementById("contact-detail-email").textContent =
     contact.email || "Non renseigné";
@@ -6450,6 +6450,18 @@ if (contactFormPage) {
 
 console.log("Classes :", document.getElementById("contact-detail-page").className);
 console.log("Élément :", document.getElementById("contact-detail-page"));
+}
+
+  function formatPhone(phone) {
+  if (!phone) return "Non renseigné";
+
+  const digits = phone.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return digits.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
+  }
+
+  return phone;
 }
 
   function closeContactDetail() {
