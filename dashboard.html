@@ -2960,21 +2960,56 @@ select.field-input {
   pointer-events: none;
 }
 
+  @media (min-width: 901px) {
+  #main-contacts .contact-row {
+    min-height: 72px;
+    padding: 14px 20px;
+    border-radius: 22px;
+    transition:
+      transform .18s ease,
+      box-shadow .18s ease,
+      border-color .18s ease,
+      background .18s ease;
+  }
+
+  #main-contacts .contact-row:hover {
+    transform: translateY(-2px);
+    border-color: rgba(29,29,31,.12);
+    box-shadow:
+      0 18px 40px rgba(0,0,0,.08),
+      0 2px 8px rgba(0,0,0,.04);
+    background: #fff;
+  }
+
+  #main-contacts .contact-name {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+  }
+
+  #main-contacts .contact-company {
+    margin-top: 3px;
+    font-size: 13px;
+  }
+
+  #main-contacts .contact-chevron {
+    font-size: 20px;
+    opacity: .45;
+    transition:
+      transform .18s ease,
+      opacity .18s ease;
+  }
+
+  #main-contacts .contact-row:hover .contact-chevron {
+    transform: translateX(4px);
+    opacity: .9;
+  }
+}
+
 @media (min-width: 901px) {
   #main-contacts #contacts-list {
     width: min(820px, calc(100% - 60px));
     margin: 0 auto;
-  }
-
-  #main-contacts .contact-row {
-    min-height: 56px;
-    padding: 10px 16px;
-    border-radius: 20px;
-  }
-
-  #main-contacts .contact-row:hover {
-    border-color: rgba(29,29,31,.16);
-    box-shadow: 0 10px 32px rgba(0,0,0,.07);
   }
 
   #contacts-alphabet {
