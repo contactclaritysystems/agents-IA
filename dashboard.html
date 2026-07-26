@@ -5853,7 +5853,28 @@ async function loadProfile() {
     const data = await response.json();
     console.log("LOAD PROFILE:", data);
 
-    if (!Array.isArray(data) || data.length === 0 || !data[0].config) return;
+    if (!Array.isArray(data) || data.length === 0 || !data[0].config) {
+
+  const firstname = currentUser.user_metadata?.prenom || "";
+
+  await supabaseClient
+    .from("agent_configs")
+    .insert({
+      user_id: currentUser.id,
+      agent_name: "profile",
+      config: {
+        firstname,
+        lastname: "",
+        phone: "",
+        city: "",
+        job: "",
+        company: ""
+      }
+    });
+
+  // Recharge le profil maintenant qu'il existe
+  return loadProfile();
+}
 
     const profile = data[0].config;
     currentProfile = profile;
