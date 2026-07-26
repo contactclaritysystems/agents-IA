@@ -2867,6 +2867,230 @@ select.field-input {
     margin-top:18px;
 }
 
+  /* ─────────────────────────────────────────────
+   CARNET CONTACTS — VERSION PC UNIQUEMENT
+───────────────────────────────────────────── */
+@media (min-width: 901px) {
+
+  /* Liste principale */
+  #main-contacts #contacts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(820px, calc(100% - 70px));
+    margin: 0 auto;
+  }
+
+  /* Groupe d'une lettre */
+  #main-contacts .desktop-contact-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-margin-top: 28px;
+  }
+
+  #main-contacts .desktop-contact-letter {
+    margin: 14px 0 2px;
+    padding-left: 8px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+
+  /* Une vraie carte par ligne */
+  #main-contacts .contact-row {
+    width: 100%;
+    min-height: 76px;
+    padding: 14px 18px;
+    border: 1px solid rgba(29,29,31,.07);
+    border-radius: 20px;
+    background: rgba(255,255,255,.86);
+    box-shadow: 0 8px 28px rgba(0,0,0,.045);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    transition:
+      transform .18s ease,
+      box-shadow .18s ease,
+      border-color .18s ease;
+  }
+
+  #main-contacts .contact-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(29,29,31,.16);
+    box-shadow: 0 12px 34px rgba(0,0,0,.075);
+  }
+
+  #main-contacts .desktop-contact-avatar {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 50%;
+    background: var(--dark);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -.03em;
+  }
+
+  #main-contacts .contact-row-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  #main-contacts .contact-name {
+    font-size: 15px;
+    font-weight: 750;
+    color: var(--text);
+  }
+
+  #main-contacts .contact-company {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  #main-contacts .contact-chevron {
+    font-size: 25px;
+    color: #b5b5ba;
+    line-height: 1;
+  }
+
+  /* Alphabet à droite */
+  #contacts-alphabet {
+    position: fixed;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 8px 6px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(29,29,31,.06);
+    box-shadow: 0 8px 30px rgba(0,0,0,.06);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  #contacts-alphabet button {
+    width: 21px;
+    height: 18px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+
+  #contacts-alphabet button:hover {
+    background: var(--dark);
+    color: white;
+  }
+
+  #contacts-alphabet button.disabled {
+    opacity: .22;
+    pointer-events: none;
+  }
+
+  /* La fiche est toujours cachée sur la page */
+  #contact-detail-page {
+    display: none;
+  }
+
+  /* Popup détail contact sur PC */
+  #contact-detail-page.open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background: rgba(15,15,17,.38);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  #contact-detail-page.open .mobile-subpage-header {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  #contact-detail-page.open .mobile-subpage-header .sheet-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    left: auto;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+    pointer-events: auto;
+    background: white;
+    box-shadow: 0 8px 25px rgba(0,0,0,.12);
+  }
+
+  #contact-detail-page.open .mobile-subpage-header .sheet-btn::after {
+    content: "×";
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  #contact-detail-page.open .mobile-subpage-header .section-title {
+    display: none;
+  }
+
+  #contact-detail-page.open > .gmail-section {
+    width: min(520px, 100%);
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    margin: 0;
+    padding: 30px;
+    border-radius: 28px;
+    background: white;
+    box-shadow: 0 28px 90px rgba(0,0,0,.20);
+  }
+
+  #contact-detail-page .detail-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+
+  #contact-detail-page .detail-line span {
+    color: var(--muted);
+  }
+
+  #contact-detail-page .detail-line strong {
+    color: var(--text);
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -3374,6 +3598,8 @@ select.field-input {
 
   <div id="contacts-list" class="agents-grid"></div>
 
+<div id="contacts-alphabet" aria-label="Navigation alphabétique"></div>
+  
   <div id="contact-mobile-section">
     <div class="mobile-subpage-header">
 
@@ -6074,33 +6300,177 @@ updateAgentsCount();
 
 function renderContacts() {
   const list = document.getElementById("contacts-list");
+  const alphabet = document.getElementById("contacts-alphabet");
+
   if (!list) return;
 
-  const search = (document.getElementById("contact-search")?.value || "").toLowerCase();
+  const search =
+    (document.getElementById("contact-search")?.value || "")
+      .trim()
+      .toLowerCase();
 
- const contacts = contactsCache
+  const contacts = contactsCache
     .filter(c => c.email !== "contact@clarity-systems.fr")
     .filter(c =>
       (c.full_name || "").toLowerCase().includes(search) ||
-    (c.company || "").toLowerCase().includes(search) ||
-    (c.email || "").toLowerCase().includes(search) ||
-    (c.phone || "").toLowerCase().includes(search)
-  );
+      (c.company || "").toLowerCase().includes(search) ||
+      (c.email || "").toLowerCase().includes(search) ||
+      (c.phone || "").toLowerCase().includes(search)
+    )
+    .sort((a, b) =>
+      (a.full_name || "").localeCompare(
+        b.full_name || "",
+        "fr",
+        { sensitivity: "base" }
+      )
+    );
 
   if (contacts.length === 0) {
-    list.innerHTML = `<div class="info-box">Aucun contact pour le moment.</div>`;
+    list.innerHTML =
+      `<div class="info-box">Aucun contact pour le moment.</div>`;
+
+    if (alphabet) alphabet.innerHTML = "";
     return;
   }
 
-  list.innerHTML = contacts.map(c => `
-    <button class="contact-row" onclick="openContactDetail('${c.id}')" type="button">
-      <div class="contact-row-main">
-        <div class="contact-name">${c.full_name || "Sans nom"}</div>
-        ${c.company ? `<div class="contact-company">${c.company}</div>` : ""}
-      </div>
-      <span class="contact-chevron">›</span>
-    </button>
-  `).join("");
+  const isDesktop = window.innerWidth >= 901;
+
+  /* MOBILE : on conserve exactement ton rendu actuel */
+  if (!isDesktop) {
+    if (alphabet) alphabet.innerHTML = "";
+
+    list.innerHTML = contacts.map(c => `
+      <button
+        class="contact-row"
+        onclick="openContactDetail('${c.id}')"
+        type="button"
+      >
+        <div class="contact-row-main">
+          <div class="contact-name">
+            ${c.full_name || "Sans nom"}
+          </div>
+
+          ${c.company
+            ? `<div class="contact-company">${c.company}</div>`
+            : ""
+          }
+        </div>
+
+        <span class="contact-chevron">›</span>
+      </button>
+    `).join("");
+
+    return;
+  }
+
+  /* PC : classement par première lettre */
+  const groups = {};
+
+  contacts.forEach(contact => {
+    const name = (contact.full_name || "").trim();
+
+    const firstLetter = name
+      ? name.charAt(0).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+      : "#";
+
+    const letter = /^[A-Z]$/.test(firstLetter)
+      ? firstLetter
+      : "#";
+
+    if (!groups[letter]) {
+      groups[letter] = [];
+    }
+
+    groups[letter].push(contact);
+  });
+
+  const orderedLetters = [
+    ...Array.from({ length: 26 }, (_, index) =>
+      String.fromCharCode(65 + index)
+    ),
+    "#"
+  ];
+
+  list.innerHTML = orderedLetters
+    .filter(letter => groups[letter]?.length)
+    .map(letter => `
+      <section
+        class="desktop-contact-group"
+        id="contacts-letter-${letter === "#" ? "other" : letter}"
+      >
+        <div class="desktop-contact-letter">${letter}</div>
+
+        ${groups[letter].map(contact => {
+          const fullName = contact.full_name || "Sans nom";
+
+          const initials = fullName
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(word => word.charAt(0).toUpperCase())
+            .join("") || "?";
+
+          return `
+            <button
+              class="contact-row"
+              onclick="openContactDetail('${contact.id}')"
+              type="button"
+            >
+              <div class="desktop-contact-avatar">
+                ${initials}
+              </div>
+
+              <div class="contact-row-main">
+                <div class="contact-name">${fullName}</div>
+
+                ${contact.company
+                  ? `<div class="contact-company">${contact.company}</div>`
+                  : ""
+                }
+              </div>
+
+              <span class="contact-chevron">›</span>
+            </button>
+          `;
+        }).join("")}
+      </section>
+    `)
+    .join("");
+
+  /* Alphabet PC */
+  if (alphabet) {
+    alphabet.innerHTML = orderedLetters
+      .filter(letter => letter !== "#")
+      .map(letter => {
+        const exists = Boolean(groups[letter]?.length);
+
+        return `
+          <button
+            type="button"
+            class="${exists ? "" : "disabled"}"
+            onclick="scrollToContactsLetter('${letter}')"
+            aria-label="Aller aux contacts commençant par ${letter}"
+          >
+            ${letter}
+          </button>
+        `;
+      })
+      .join("");
+  }
+}
+
+  function scrollToContactsLetter(letter) {
+  if (window.innerWidth < 901) return;
+
+  const section =
+    document.getElementById("contacts-letter-" + letter);
+
+  if (!section) return;
+
+  section.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
 }
 
   function openContactDetail(contactId) {
