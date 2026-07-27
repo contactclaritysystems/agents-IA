@@ -4206,6 +4206,114 @@ body,
     border-color var(--clarity-duration, 180ms) var(--clarity-ease, ease);
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 4
+   SÉLECTEUR DE THÈME (réglages)
+   ========================================================= */
+
+.theme-swatch-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.theme-swatch-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-radius: var(--clarity-radius-md);
+  border: 1.5px solid var(--clarity-border);
+  background: var(--clarity-surface);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--clarity-text-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--clarity-duration) var(--clarity-ease),
+    background var(--clarity-duration) var(--clarity-ease),
+    color var(--clarity-duration) var(--clarity-ease);
+}
+
+.theme-swatch-btn:hover {
+  border-color: var(--clarity-border-hover);
+}
+
+.theme-swatch-btn.active {
+  border-color: var(--clarity-accent);
+  color: var(--clarity-text);
+  box-shadow: 0 0 0 3px var(--clarity-accent-dim);
+}
+
+.theme-swatch-preview {
+  display: block;
+  width: 100%;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-swatch-preview::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--sw-accent, #0091c7);
+}
+
+.theme-swatch-light { background: #f7f7f8; }
+.theme-swatch-light::before {
+  content: "";
+  position: absolute;
+  inset: 6px 8px auto 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: #ffffff;
+}
+
+.theme-swatch-dark { background: #0b0d12; }
+.theme-swatch-dark::before {
+  content: "";
+  position: absolute;
+  inset: 6px 8px auto 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: #15171e;
+}
+
+.theme-swatch-slate { background: #c9ced6; }
+.theme-swatch-slate::before {
+  content: "";
+  position: absolute;
+  inset: 6px 8px auto 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: #f6f7f8;
+}
+
+.theme-swatch-corail { background: #f6dfe3; }
+.theme-swatch-corail::before {
+  content: "";
+  position: absolute;
+  inset: 6px 8px auto 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: #ffffff;
+}
+
+@media (max-width: 420px) {
+  .theme-swatch-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -4414,6 +4522,34 @@ body,
   </button>
 </div>
 </div>
+
+      <!-- APPARENCE -->
+  <div class="gmail-section" id="theme-settings-block" style="margin-top:8px;">
+    <div class="gmail-title">
+      <span>🎨</span> Apparence
+    </div>
+    <div class="gmail-desc" style="margin-bottom:16px;">
+      Choisissez le thème de votre espace. Le changement est instantané.
+    </div>
+    <div class="theme-swatch-row">
+      <button type="button" class="theme-swatch-btn" data-theme-option="light" onclick="setTheme('light')">
+        <span class="theme-swatch-preview theme-swatch-light"></span>
+        Clair
+      </button>
+      <button type="button" class="theme-swatch-btn" data-theme-option="dark" onclick="setTheme('dark')">
+        <span class="theme-swatch-preview theme-swatch-dark"></span>
+        Sombre
+      </button>
+      <button type="button" class="theme-swatch-btn" data-theme-option="slate" onclick="setTheme('slate')">
+        <span class="theme-swatch-preview theme-swatch-slate"></span>
+        Ardoise
+      </button>
+      <button type="button" class="theme-swatch-btn" data-theme-option="corail" onclick="setTheme('corail')">
+        <span class="theme-swatch-preview theme-swatch-corail"></span>
+        Corail
+      </button>
+    </div>
+  </div>
 
       <!-- BLOC SUR MESURE -->
   <div class="gmail-section" id="custom-agent-block" style="display:block; margin-top:8px; grid-column: 1 / -1;">
@@ -5179,8 +5315,13 @@ function setTheme(theme) {
   try {
     localStorage.setItem("clarity-theme", theme);
   } catch (e) {}
+  syncThemeButtons();
+}
+
+function syncThemeButtons() {
+  var current = getCurrentTheme();
   document.querySelectorAll("[data-theme-option]").forEach(function (btn) {
-    btn.classList.toggle("active", btn.getAttribute("data-theme-option") === theme);
+    btn.classList.toggle("active", btn.getAttribute("data-theme-option") === current);
   });
 }
 
@@ -5190,6 +5331,8 @@ function getCurrentTheme() {
 
 window.setTheme = setTheme;
 window.getCurrentTheme = getCurrentTheme;
+
+document.addEventListener("DOMContentLoaded", syncThemeButtons);
 
 supabaseClient
   .channel("agent-progress")
