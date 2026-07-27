@@ -7039,22 +7039,6 @@ async function startOnboardingIfNeeded() {
   startOnboardingTips();
 }
 
-async function endOnboarding() {
-  onboardingActive = false;
-  onboardingStep = null;
-  stopOnboardingPositionLoop();
-
-  const overlay = document.getElementById("onboarding-overlay");
-  const ring = document.getElementById("onboarding-ring");
-  const bubble = document.getElementById("onboarding-bubble");
-
-  if (overlay) overlay.classList.remove("active");
-  if (ring) ring.style.display = "none";
-  if (bubble) bubble.style.display = "none";
-
-  await markOnboardingComplete();
-}
-
 window.addEventListener("resize", () => {
   if (onboardingActive && onboardingStep && onboardingStep !== "done") {
     const target = getOnboardingSpotlightTarget(onboardingStep);
@@ -7258,14 +7242,6 @@ async function loadAppointments() {
     const x = new Date(d);
     x.setHours(0, 0, 0, 0);
     return x;
-  }
-
-  function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString("fr-FR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long"
-    });
   }
 
 function renderAppointment(a) {
@@ -7772,29 +7748,6 @@ function closeProfileMobilePage() {
 
   profileHasUnsavedChanges = false;
   section.classList.remove("open");
-}
-
-  function handleContactsMobileCard() {
-  const lbl = document.getElementById("carnet-status-label");
-  const isCreated = lbl && lbl.textContent.includes("Créé");
-
-  if (isCreated) {
-    showSection('contacts', document.querySelector('.bottom-tab[data-section="contacts"]'));
-    return;
-  }
-
-  const btn = document.getElementById("create-contacts-btn");
-  if (btn) {
-    createContactsSheet(btn);
-  } else {
-    showToast("Carnet déjà activé");
-  }
-}
-
-// ─── AGENTS ──────────────────────────────────────────────
-
-function toggleCard(id) {
-  document.getElementById("card-" + id).classList.toggle("open");
 }
 
  async function saveProfile() {
@@ -8554,73 +8507,6 @@ function deleteSelectedContact() {
 
   const lbl = document.getElementById("carnet-status-label");
   if (lbl) lbl.textContent = "Créé ✓";
-}
-
-async function createContactsSheet(btn) {
-  console.log("CLICK CREATE CONTACTS");
-
-  if (!currentUser) {
-    showToast("Utilisateur non connecté");
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = "⏳ Activation...";
-
-  try {
-    // Sauvegarder contacts_created: true dans Supabase
-    const profile = currentProfile || {};
-    profile.contacts_created = true;
-
-    const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-    const rawSession = localStorage.getItem(storageKey);
-    const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
-
-    if (!accessToken) {
-      showToast("Session expirée");
-      btn.disabled = false;
-      btn.innerHTML = "📒 Créer mon carnet contacts";
-      return;
-    }
-
-    const response = await fetch(
-      SUPABASE_URL + "/rest/v1/agent_configs?on_conflict=user_id,agent_name",
-      {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": "Bearer " + accessToken,
-          "Content-Type": "application/json",
-          "Prefer": "resolution=merge-duplicates,return=representation"
-        },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          agent_name: "profile",
-          config: profile,
-          updated_at: new Date().toISOString()
-        })
-      }
-    );
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("Erreur save contacts_created:", err);
-      showToast("Erreur activation carnet");
-      btn.disabled = false;
-      btn.innerHTML = "📒 Créer mon carnet contacts";
-      return;
-    }
-
-    currentProfile = profile;
-    renderContactsSheetCreated();
-    showToast("Carnet contacts activé");
-
-  } catch (err) {
-    console.error("CRASH createContactsSheet:", err);
-    showToast("Erreur activation carnet");
-    btn.disabled = false;
-    btn.innerHTML = "📒 Créer mon carnet contacts";
-  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────
