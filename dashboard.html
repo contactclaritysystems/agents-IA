@@ -5061,6 +5061,41 @@ a:hover {
   background: linear-gradient(160deg, var(--clarity-surface-soft), var(--clarity-surface)) !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 18
+   ========================================================= */
+
+/* Réglages : le bouton déconnexion repart à droite, le titre à gauche */
+.settings-topbar {
+  justify-content: space-between !important;
+}
+
+.settings-topbar > div:first-child {
+  text-align: left !important;
+}
+
+/* Accueil : titre + sous-titre bien centrés */
+#main-agents .page-title,
+#main-agents .page-subtitle {
+  text-align: center;
+}
+
+/* Planning : Rendez-vous/Relances doivent s'ouvrir en vraie page plein écran, pas seulement sur mobile */
+#planning-detail.open {
+  display: block !important;
+  position: fixed !important;
+  inset: 0;
+  z-index: 500;
+  background: var(--clarity-page);
+  overflow-y: auto;
+  padding: 18px 18px 110px;
+}
+
+/* Carnet de contacts : nom garanti visible quel que soit le thème */
+.contact-name {
+  color: var(--clarity-text) !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5299,12 +5334,12 @@ a:hover {
       <!-- BLOC SUR MESURE -->
   <div class="gmail-section" id="custom-agent-block" style="display:block; margin-top:8px; grid-column: 1 / -1;">
     <div class="gmail-title">
-      <span>✨</span> Besoin d'un agent sur mesure ?
+      <span>✨</span> Une idée, un besoin ?
     </div>
     <div class="gmail-desc" style="display:block;">
-      Nous ajoutons régulièrement de nouveaux agents. Si vous avez un besoin particulier, dites-le-nous : nous étudions chaque demande.
+      Une fonctionnalité qui vous manque ? Un besoin lié à votre métier ? Ou carrément envie d'un agent pensé pour vous ?
       <br><br>
-      Une idée d'agent qui vous simplifierait le quotidien ? <a href="#" onclick="openContactChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on l'étudie avec vous.
+      <a href="#" onclick="openContactChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on regarde ça ensemble.
     </div>
   </div>
 
@@ -7658,7 +7693,7 @@ buttons.forEach(btn => {
 
   function handleGmailMobileCard() {
   const lbl = document.getElementById("gmail-status-label");
-  const isConnected = lbl && lbl.textContent.includes("Connecté");
+  const isConnected = lbl && lbl.textContent.includes("✓");
 
   if (isConnected) {
     if (confirm("Déconnecter votre compte mail ?")) {
