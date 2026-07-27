@@ -4926,14 +4926,8 @@ body,
     </button>
 
     <div class="clarity-quick-row">
-      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-planning-run').scrollIntoView({behavior:'smooth',block:'center'}); startPlanningDictation();">
-        📅 Planifier
-      </button>
-      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-relance-run').scrollIntoView({behavior:'smooth',block:'center'}); startRelanceDictation();">
-        🔁 Relancer
-      </button>
-      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-redaction-run').scrollIntoView({behavior:'smooth',block:'center'}); startRedactionDictation();">
-        ✍️ Rédiger
+      <button type="button" class="quick-action-btn" onclick="showToast('🎙️ Dites à qui écrire et ce que vous voulez dire…'); startOrchestratorDictation();">
+        ✉️ Envoyer un mail
       </button>
     </div>
 
@@ -4941,105 +4935,6 @@ body,
 
 </div>
 
-    <div class="agent-card configured" id="card-mails-run">
-      <div class="agent-head">
-        <div class="agent-emoji">✉️</div>
-        <div class="agent-title-wrap">
-          <div class="agent-name">Agent Mails</div>
-          <div class="agent-desc">Exemple : “Envoie un mail à Lucas Martin pour lui dire qu’on se voit demain à 10h.”</div>
-        </div>
-      </div>
-
-      <div class="agent-body" style="display:flex;">
-       <button class="save-btn" id="mail-dictation-btn" onclick="startMailDictation()">🎙️ Dicter un mail</button>
-      </div>
-    </div>
-
-    <div class="agent-card configured" id="card-planning-run">
-  <div class="agent-head">
-    <div class="agent-emoji">📅</div>
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Planning</div>
-      <div class="agent-desc">Exemple : “Planifie un rendez-vous demain à 14h avec Lucas Martin pour un devis.”</div>
-    </div>
-  </div>
-
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn" id="planning-dictation-btn" onclick="startPlanningDictation()">🎙️ Planifier un rendez-vous</button>
-  </div>
-</div>
-
-<div class="agent-card configured" id="card-relance-run" style="display:none;">
-  <div class="agent-head">
-    <div class="agent-emoji">🔁</div>
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Relance Clients</div>
-      <div class="agent-desc">Exemple : “Rappelle-moi de relancer Lucas vendredi pour le devis.”</div>
-    </div>
-  </div>
-
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn" id="relance-dictation-btn" onclick="startRelanceDictation()">
-      🎙️ Programmer une relance
-    </button>
-  </div>
-</div>
-    
-<div class="agent-card configured" id="card-notes-run">
-  <div class="agent-head">
-    <div class="agent-emoji">📝</div>
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Compte Rendu</div>
-      <div class="agent-desc">
-        Exemple : “Résume cette discussion client et note les actions importantes.”
-      </div>
-    </div>
-  </div>
-
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn" id="notes-dictation-btn" onclick="startNotesDictation()">
-      🎙️ Dicter un compte rendu
-    </button>
-  </div>
-  
-</div>
-
-  <div class="agent-card configured" id="card-redaction-run">
-  <div class="agent-head">
-    <div class="agent-emoji">✍️</div>
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Rédaction</div>
-      <div class="agent-desc">
-        Exemple : “Transforme vos idées en textes clairs, professionnels et prêts à être utilisés.”
-      </div>
-    </div>
-  </div>
-
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn" id="redaction-dictation-btn" onclick="startRedactionDictation()">
-      🎙️ Dicter un texte
-    </button>
-  </div>
-</div>
-
-<div class="agent-card configured" id="card-assistant-run">
-  <div class="agent-head">
-    <div class="agent-emoji">🤖</div>
-    <div class="agent-title-wrap">
-      <div class="agent-name">Agent Assistant</div>
-      <div class="agent-desc">
-        Exemple : “Posez des questions, demandez un conseil ou préparez une décision importante.”
-      </div>
-    </div>
-  </div>
-
-  <div class="agent-body" style="display:flex;">
-    <button class="save-btn" id="assistant-dictation-btn" onclick="startAssistantDictation()">
-      🎙️ Poser une question
-    </button>
-  </div>
-</div>
-    
   </div>
 </main>
 
