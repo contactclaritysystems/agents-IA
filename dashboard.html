@@ -9876,6 +9876,7 @@ console.log("MESSAGE =", message);
 }
 
   let quickMailSelectedContact = null;
+let quickMailFlowActive = false;
 
 async function openQuickMailCompose() {
   if (!contactsCache || !contactsCache.length) {
@@ -9995,7 +9996,7 @@ async function submitQuickMail() {
   if (box) {
     box.style.display = "block";
     setDictationBoxState(box, "info");
-    box.innerHTML = "🔎 Recherche du contact...";
+    box.innerHTML = "✨ Préparation du mail...";
   }
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -10004,7 +10005,9 @@ async function submitQuickMail() {
   if (backBtn) backBtn.style.display = "none";
   if (textarea) textarea.style.display = "none";
 
+  quickMailFlowActive = true;
   await callMailAgent(fullInstruction, box, requestId, contactId);
+  quickMailFlowActive = false;
 
   const hadError = box && box.innerHTML.includes("✕");
 
@@ -10023,6 +10026,7 @@ async function submitQuickMail() {
 function closeQuickMailModal() {
   const modal = document.getElementById("quick-mail-modal");
   const box = document.getElementById("quick-mail-status-box");
+  quickMailFlowActive = false;
   if (modal) modal.style.display = "none";
   if (box) {
     box.style.display = "none";
@@ -10055,10 +10059,15 @@ setAgentProgress(
     box,
     "Clarity",
     "✨",
-  [
-    { text: "Demande comprise", status: "done" },
-    { text: "Recherche du contact...", status: "loading" }
-  ]
+  quickMailFlowActive
+    ? [
+        { text: "Contact sélectionné", status: "done" },
+        { text: "Préparation du mail...", status: "loading" }
+      ]
+    : [
+        { text: "Demande comprise", status: "done" },
+        { text: "Recherche du contact...", status: "loading" }
+      ]
 );
     }
 
@@ -10245,7 +10254,7 @@ async function loadAgentProgress(requestId) {
     "Clarity",
     "✨",
     [
-      { text: "Demande comprise", status: "done" },
+      ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
       {
         text: progress.message
           ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
@@ -10263,7 +10272,7 @@ async function loadAgentProgress(requestId) {
         "Clarity",
     "✨",
         [
-          { text: "Demande comprise", status: "done" },
+          ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
           {
   text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
@@ -10279,7 +10288,7 @@ async function loadAgentProgress(requestId) {
         "Clarity",
     "✨",
         [
-          { text: "Demande comprise", status: "done" },
+          ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
           {
   text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
