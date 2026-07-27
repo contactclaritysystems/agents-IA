@@ -4730,6 +4730,54 @@ body,
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 11
+   LOGO DE MARQUE VISIBLE PARTOUT (plaque neutre quel que soit le thème)
+   ========================================================= */
+
+.brand-logo-plate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 10px 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+
+.brand-logo-plate img {
+  height: 90px;
+  display: block;
+  object-fit: contain;
+}
+
+/* Le logo n'est visible que sur la page d'accueil, mobile ET desktop */
+#main-agents .mobile-agent-top {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  #main-agents .mobile-agent-top {
+    display: flex;
+  }
+}
+
+@media (min-width: 901px) {
+  #main-agents .mobile-agent-top {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+
+  #main-agents .mobile-agent-top .mobile-account-badge {
+    display: none !important;
+  }
+
+  .brand-logo-plate img {
+    height: 110px;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -4988,7 +5036,9 @@ body,
 <main class="main page-view active" id="main-agents">
   
   <div class="mobile-agent-top">
-  <img src="https://i.imgur.com/1ZFTLIo.png" alt="Clarity Systems" style="height:125px; object-fit:contain;">
+  <div class="brand-logo-plate">
+    <img src="https://i.imgur.com/1ZFTLIo.png" alt="Clarity Systems">
+  </div>
   <div class="mobile-account-badge" style="display:none;">
     <span>🎁</span>
     <strong>-</strong>
