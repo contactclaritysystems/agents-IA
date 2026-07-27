@@ -4317,6 +4317,72 @@ body,
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 5
+   UNIFORMISATION DES BOUTONS ET CARTES
+   Regroupe les variantes existantes en familles cohérentes,
+   sans changer leur rôle (CTA / secondaire / icône / carte / ligne).
+   ========================================================= */
+
+/* ---------- BOUTONS PRIMAIRES (action principale) ---------- */
+
+.save-btn,
+.gmail-connect-btn,
+.warning-plan-btn {
+  height: 50px;
+  min-height: 50px;
+  padding: 0 24px;
+  border-radius: var(--clarity-radius-pill);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- BOUTONS SECONDAIRES (action secondaire / annuler) ---------- */
+
+.sheet-btn,
+.contact-choice-cancel {
+  min-height: 44px;
+  height: auto;
+  padding: 0 18px;
+  border-radius: var(--clarity-radius-pill);
+  font-size: 13px;
+  font-weight: 650;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- BOUTONS ICÔNE (rond, action unique) ---------- */
+
+.power-logout-btn,
+#contact-popup-close {
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  padding: 0;
+}
+
+/* ---------- CARTES DE CONTENU (agents, stats, dossiers) ---------- */
+
+.agent-card,
+.stat-card,
+.history-folder-card {
+  border-radius: var(--clarity-radius-lg);
+}
+
+/* ---------- LIGNES / ÉLÉMENTS DE LISTE SÉLECTIONNABLES ---------- */
+
+.mail-choice-btn,
+.contact-choice-card {
+  border-radius: var(--clarity-radius-md);
+}
+
 </style>
 </head>
 <body data-theme="light">
