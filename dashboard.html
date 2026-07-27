@@ -3272,6 +3272,779 @@ select.field-input {
     max-width:520px;
 }
 
+  /* =========================================================
+   CLARITY SYSTEMS — BLOC 1
+   DESIGN SYSTEM GLOBAL
+   Ne contient aucune logique métier
+   ========================================================= */
+
+/* ---------- TOKENS ---------- */
+
+:root {
+  /* Couleurs */
+  --clarity-page: #f7f7f8;
+  --clarity-surface: #ffffff;
+  --clarity-surface-soft: #f3f3f5;
+  --clarity-surface-hover: #fafafa;
+
+  --clarity-text: #18181b;
+  --clarity-text-secondary: #63636a;
+  --clarity-text-tertiary: #929298;
+
+  --clarity-border: rgba(24, 24, 27, 0.08);
+  --clarity-border-hover: rgba(24, 24, 27, 0.16);
+  --clarity-border-focus: rgba(24, 24, 27, 0.35);
+
+  --clarity-primary: #18181b;
+  --clarity-primary-hover: #000000;
+  --clarity-primary-text: #ffffff;
+
+  --clarity-success: #16803c;
+  --clarity-success-bg: rgba(22, 128, 60, 0.09);
+  --clarity-success-border: rgba(22, 128, 60, 0.18);
+
+  --clarity-warning: #9a6415;
+  --clarity-warning-bg: rgba(183, 121, 31, 0.09);
+  --clarity-warning-border: rgba(183, 121, 31, 0.20);
+
+  --clarity-danger: #c63f3f;
+  --clarity-danger-bg: rgba(198, 63, 63, 0.08);
+  --clarity-danger-border: rgba(198, 63, 63, 0.18);
+
+  --clarity-info: #315fa8;
+  --clarity-info-bg: rgba(49, 95, 168, 0.08);
+  --clarity-info-border: rgba(49, 95, 168, 0.16);
+
+  /* Rayons */
+  --clarity-radius-xs: 10px;
+  --clarity-radius-sm: 14px;
+  --clarity-radius-md: 18px;
+  --clarity-radius-lg: 22px;
+  --clarity-radius-xl: 28px;
+  --clarity-radius-pill: 999px;
+
+  /* Ombres */
+  --clarity-shadow-xs:
+    0 1px 2px rgba(0, 0, 0, 0.025);
+
+  --clarity-shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.025),
+    0 5px 18px rgba(0, 0, 0, 0.035);
+
+  --clarity-shadow-md:
+    0 2px 4px rgba(0, 0, 0, 0.03),
+    0 14px 38px rgba(0, 0, 0, 0.07);
+
+  --clarity-shadow-modal:
+    0 24px 80px rgba(0, 0, 0, 0.18);
+
+  /* Espacements */
+  --clarity-space-1: 4px;
+  --clarity-space-2: 8px;
+  --clarity-space-3: 12px;
+  --clarity-space-4: 16px;
+  --clarity-space-5: 20px;
+  --clarity-space-6: 24px;
+  --clarity-space-7: 32px;
+  --clarity-space-8: 40px;
+
+  /* Animation */
+  --clarity-duration: 180ms;
+  --clarity-ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Compatibilité avec les anciennes variables */
+  --page: var(--clarity-page);
+  --surface: var(--clarity-surface);
+  --surface-card: var(--clarity-surface);
+  --surface-soft: var(--clarity-surface-soft);
+  --text: var(--clarity-text);
+  --muted: var(--clarity-text-secondary);
+  --muted-2: var(--clarity-text-tertiary);
+  --line: var(--clarity-border);
+  --line-strong: var(--clarity-border-hover);
+  --dark: var(--clarity-primary);
+  --accent: var(--clarity-primary);
+  --success: var(--clarity-success);
+  --success-bg: var(--clarity-success-bg);
+  --warning: var(--clarity-warning);
+  --warning-bg: var(--clarity-warning-bg);
+  --danger: var(--clarity-danger);
+  --danger-bg: var(--clarity-danger-bg);
+  --shadow-soft: var(--clarity-shadow-md);
+  --shadow-card: var(--clarity-shadow-sm);
+  --r: var(--clarity-radius-lg);
+  --r-sm: var(--clarity-radius-sm);
+}
+
+/* ---------- BASE ---------- */
+
+html {
+  background: var(--clarity-page);
+}
+
+body {
+  background:
+    radial-gradient(
+      circle at 50% -15%,
+      rgba(24, 24, 27, 0.035),
+      transparent 34%
+    ),
+    var(--clarity-page);
+  color: var(--clarity-text);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(24, 24, 27, 0.12);
+  outline-offset: 2px;
+}
+
+/* ---------- TYPOGRAPHIE ---------- */
+
+.page-title {
+  color: var(--clarity-text);
+  font-weight: 780;
+  letter-spacing: -0.045em;
+}
+
+.page-subtitle {
+  color: var(--clarity-text-secondary);
+  line-height: 1.55;
+}
+
+.section-title {
+  color: var(--clarity-text);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.section-hint,
+.field-hint,
+.gmail-desc,
+.agent-desc {
+  color: var(--clarity-text-secondary);
+}
+
+.field-label {
+  color: var(--clarity-text);
+  font-weight: 700;
+}
+
+/* ---------- CARTES GLOBALES ---------- */
+
+.agent-card,
+.gmail-section,
+.stat-card,
+.user-card,
+.pricing-plan,
+.contact-row,
+.history-item,
+.planning-item {
+  border-color: var(--clarity-border);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+.agent-card,
+.gmail-section,
+.stat-card,
+.pricing-plan {
+  background: var(--clarity-surface);
+}
+
+.agent-card {
+  border-radius: var(--clarity-radius-lg);
+  transition:
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    background var(--clarity-duration) var(--clarity-ease);
+}
+
+.agent-card:hover {
+  transform: none;
+  background: var(--clarity-surface);
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-md);
+}
+
+.agent-card.open {
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-md);
+}
+
+.agent-card.configured {
+  border-color: rgba(49, 95, 168, 0.20);
+}
+
+.agent-head {
+  border-bottom-color: var(--clarity-border);
+}
+
+.agent-emoji,
+.stat-icon-wrap,
+.history-folder-icon {
+  background: var(--clarity-surface-soft);
+  border: 1px solid rgba(24, 24, 27, 0.035);
+}
+
+.gmail-section {
+  border-radius: var(--clarity-radius-lg);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+.stat-card {
+  background: var(--clarity-surface);
+  border-radius: var(--clarity-radius-lg);
+  box-shadow: var(--clarity-shadow-sm);
+  transition:
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease);
+}
+
+.stat-card:hover {
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-md);
+}
+
+.trial-banner,
+.mobile-account-badge {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: var(--clarity-border);
+  box-shadow: var(--clarity-shadow-xs);
+}
+
+/* ---------- TITRES ET CONTENU DES CARTES ---------- */
+
+.agent-name,
+.gmail-title,
+.stat-value {
+  color: var(--clarity-text);
+}
+
+.agent-name,
+.gmail-title {
+  font-weight: 750;
+}
+
+.agent-desc {
+  line-height: 1.55;
+}
+
+.agent-body {
+  background: var(--clarity-surface);
+}
+
+/* ---------- INPUTS ---------- */
+
+.field-input,
+input.field-input,
+textarea.field-input,
+select.field-input {
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid var(--clarity-border);
+  border-radius: var(--clarity-radius-sm);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  box-shadow: var(--clarity-shadow-xs);
+  transition:
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    background var(--clarity-duration) var(--clarity-ease);
+}
+
+textarea.field-input {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.field-input:hover {
+  border-color: var(--clarity-border-hover);
+}
+
+.field-input:focus {
+  border-color: var(--clarity-border-focus);
+  background: var(--clarity-surface);
+  box-shadow:
+    0 0 0 4px rgba(24, 24, 27, 0.06),
+    var(--clarity-shadow-xs);
+}
+
+.field-input::placeholder {
+  color: var(--clarity-text-tertiary);
+  opacity: 1;
+}
+
+.field-input:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  background: var(--clarity-surface-soft);
+}
+
+/* ---------- BOUTON PRINCIPAL ---------- */
+
+.save-btn,
+.gmail-connect-btn {
+  min-height: 48px;
+  border: 1px solid var(--clarity-primary);
+  border-radius: var(--clarity-radius-pill);
+  background: var(--clarity-primary);
+  color: var(--clarity-primary-text);
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease),
+    opacity var(--clarity-duration) var(--clarity-ease);
+}
+
+.save-btn:hover,
+.gmail-connect-btn:hover {
+  background: var(--clarity-primary-hover);
+  border-color: var(--clarity-primary-hover);
+  color: var(--clarity-primary-text);
+  box-shadow: 0 11px 28px rgba(0, 0, 0, 0.16);
+}
+
+.save-btn:active,
+.gmail-connect-btn:active {
+  transform: scale(0.985);
+}
+
+.save-btn:disabled,
+.gmail-connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.save-btn.saved {
+  background: var(--clarity-success);
+  border-color: var(--clarity-success);
+  color: #ffffff;
+}
+
+/* ---------- BOUTON SECONDAIRE ---------- */
+
+.sheet-btn {
+  min-height: 42px;
+  padding: 9px 15px;
+  border: 1px solid var(--clarity-border);
+  border-radius: var(--clarity-radius-pill);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  font-weight: 650;
+  box-shadow: var(--clarity-shadow-xs);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.sheet-btn:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+.sheet-btn:active {
+  transform: scale(0.985);
+}
+
+.sheet-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---------- BOUTONS SPÉCIAUX ---------- */
+
+.power-logout-btn {
+  border-color: var(--clarity-border);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  box-shadow: var(--clarity-shadow-sm);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    color var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.power-logout-btn:hover {
+  background: var(--clarity-danger-bg);
+  border-color: var(--clarity-danger-border);
+  color: var(--clarity-danger);
+}
+
+.power-logout-btn:active {
+  transform: scale(0.96);
+}
+
+.warning-plan-btn {
+  border-color: var(--clarity-warning-border);
+  background: var(--clarity-warning-bg);
+  color: var(--clarity-warning);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.warning-plan-btn:hover {
+  background: rgba(183, 121, 31, 0.14);
+  border-color: rgba(183, 121, 31, 0.28);
+}
+
+.warning-plan-btn:active {
+  transform: scale(0.985);
+}
+
+/* ---------- BADGES ---------- */
+
+.tag,
+.agent-status,
+.gmail-connected-badge {
+  border-radius: var(--clarity-radius-pill);
+  font-weight: 750;
+}
+
+.tag.green,
+.agent-status.ok,
+.gmail-connected-badge {
+  background: var(--clarity-success-bg);
+  color: var(--clarity-success);
+  border-color: var(--clarity-success-border);
+}
+
+.tag.orange,
+.agent-status.pending {
+  background: var(--clarity-warning-bg);
+  color: var(--clarity-warning);
+  border-color: var(--clarity-warning-border);
+}
+
+.agent-status.empty {
+  background: var(--clarity-danger-bg);
+  color: var(--clarity-danger);
+  border-color: var(--clarity-danger-border);
+}
+
+/* ---------- BOÎTES D'INFORMATION ---------- */
+
+.info-box,
+.warning-box {
+  border-radius: var(--clarity-radius-md);
+}
+
+.info-box {
+  background: var(--clarity-info-bg);
+  border-color: var(--clarity-info-border);
+  color: var(--clarity-text-secondary);
+}
+
+.warning-box {
+  background: var(--clarity-warning-bg);
+  border-color: var(--clarity-warning-border);
+  color: var(--clarity-warning);
+}
+
+/* ---------- POPUPS ---------- */
+
+.mail-choice-backdrop {
+  background: rgba(15, 15, 18, 0.38);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.mail-choice-box {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: var(--clarity-border);
+  border-radius: var(--clarity-radius-xl);
+  box-shadow: var(--clarity-shadow-modal);
+}
+
+.mail-choice-title {
+  color: var(--clarity-text);
+  font-weight: 780;
+}
+
+.mail-choice-subtitle {
+  color: var(--clarity-text-secondary);
+}
+
+.mail-choice-btn {
+  border-color: var(--clarity-border);
+  border-radius: var(--clarity-radius-md);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.mail-choice-btn:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+.mail-choice-btn:active {
+  transform: scale(0.99);
+}
+
+.mail-choice-close,
+.pricing-cancel-link {
+  color: var(--clarity-text-secondary);
+  cursor: pointer;
+  transition:
+    color var(--clarity-duration) var(--clarity-ease),
+    background var(--clarity-duration) var(--clarity-ease);
+}
+
+.mail-choice-close:hover,
+.pricing-cancel-link:hover {
+  color: var(--clarity-text);
+}
+
+/* ---------- TARIFS ---------- */
+
+.pricing-plan {
+  background: var(--clarity-surface-soft);
+  border-color: var(--clarity-border);
+  border-radius: var(--clarity-radius-lg);
+  box-shadow: none;
+}
+
+.pricing-plan button {
+  border-color: var(--clarity-border);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  cursor: pointer;
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.pricing-plan button:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+}
+
+.pricing-plan.featured {
+  background: var(--clarity-text);
+  border-color: var(--clarity-text);
+  color: #ffffff;
+  box-shadow: var(--clarity-shadow-md);
+}
+
+.pricing-plan.featured strong {
+  color: #ffffff;
+}
+
+.pricing-plan.featured span {
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.pricing-plan.featured button {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--clarity-text);
+}
+
+/* ---------- LISTES ET CONTACTS ---------- */
+
+.contact-row {
+  background: var(--clarity-surface);
+  border: 1px solid var(--clarity-border);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.contact-row:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+#contacts-alphabet {
+  border-color: var(--clarity-border);
+  background: rgba(255, 255, 255, 0.90);
+  box-shadow: var(--clarity-shadow-sm);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+#contacts-alphabet button {
+  color: var(--clarity-text-secondary);
+  transition:
+    color var(--clarity-duration) var(--clarity-ease),
+    background var(--clarity-duration) var(--clarity-ease);
+}
+
+#contacts-alphabet button:hover {
+  color: var(--clarity-text);
+  background: var(--clarity-surface-soft);
+}
+
+/* ---------- FICHE CONTACT ---------- */
+
+@media (min-width: 901px) {
+  #contact-detail-page.open {
+    background: rgba(15, 15, 18, 0.38);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  #contact-detail-page.open .gmail-section {
+    background: var(--clarity-surface);
+    border-color: var(--clarity-border);
+    border-radius: var(--clarity-radius-xl);
+    box-shadow: var(--clarity-shadow-modal);
+  }
+
+  #contact-popup-close {
+    background: var(--clarity-surface-soft);
+    color: var(--clarity-text-secondary);
+    transition:
+      background var(--clarity-duration) var(--clarity-ease),
+      color var(--clarity-duration) var(--clarity-ease),
+      transform var(--clarity-duration) var(--clarity-ease);
+  }
+
+  #contact-popup-close:hover {
+    background: #e9e9ec;
+    color: var(--clarity-text);
+  }
+
+  #contact-popup-close:active {
+    transform: scale(0.94);
+  }
+}
+
+/* ---------- TOAST ---------- */
+
+.toast {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--clarity-success-border);
+  color: var(--clarity-success);
+  border-radius: var(--clarity-radius-pill);
+  box-shadow: var(--clarity-shadow-md);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition:
+    opacity 220ms var(--clarity-ease),
+    transform 220ms var(--clarity-ease);
+}
+
+.toast.error {
+  background: var(--clarity-danger);
+  border-color: var(--clarity-danger);
+  color: #ffffff;
+}
+
+/* ---------- DIVISEURS ---------- */
+
+.divider,
+.agent-head {
+  border-color: var(--clarity-border);
+}
+
+.divider {
+  background: var(--clarity-border);
+}
+
+/* ---------- ÉTATS INTERACTIFS ---------- */
+
+button {
+  touch-action: manipulation;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* ---------- MOBILE ---------- */
+
+@media (max-width: 600px) {
+  :root {
+    --clarity-radius-lg: 20px;
+    --clarity-radius-xl: 24px;
+  }
+
+  body {
+    background: var(--clarity-page);
+  }
+
+  .agent-card,
+  .gmail-section,
+  .stat-card {
+    box-shadow: var(--clarity-shadow-xs);
+  }
+
+  .agent-card:hover,
+  .stat-card:hover,
+  .contact-row:hover {
+    box-shadow: var(--clarity-shadow-xs);
+  }
+
+  .save-btn,
+  .gmail-connect-btn {
+    min-height: 50px;
+  }
+
+  .field-input,
+  input.field-input,
+  textarea.field-input,
+  select.field-input {
+    font-size: 16px;
+  }
+
+  .mail-choice-box {
+    border-radius: var(--clarity-radius-xl);
+  }
+}
+
+/* ---------- ACCESSIBILITÉ ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 </style>
 </head>
 <body>
