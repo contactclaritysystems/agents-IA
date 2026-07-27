@@ -4545,6 +4545,110 @@ body,
   overflow-y: auto;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 8
+   POLISH DESKTOP (pleine largeur du hero, relief sidebar)
+   ========================================================= */
+
+/* ---------- Le hero occupe toute la largeur de la grille ---------- */
+
+.clarity-hero {
+  grid-column: 1 / -1;
+}
+
+/* ---------- Layout desktop du hero : chat + panneau d'astuces ---------- */
+
+.clarity-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clarity-hero-aside {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .clarity-hero-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.7fr);
+    gap: 28px;
+    align-items: start;
+  }
+
+  .clarity-hero-aside {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-left: 28px;
+    border-left: 1px solid var(--clarity-border);
+  }
+}
+
+.clarity-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.clarity-tip-icon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 10px;
+  background: var(--clarity-surface);
+  border: 1px solid var(--clarity-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.clarity-tip-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--clarity-text);
+  margin-bottom: 2px;
+}
+
+.clarity-tip-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--clarity-text-tertiary);
+}
+
+/* ---------- Relief de la sidebar ---------- */
+
+.sidebar {
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
+}
+
+.nav-item.active {
+  background: var(--clarity-accent-dim);
+  color: var(--clarity-accent);
+  box-shadow: none;
+  position: relative;
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--clarity-accent);
+}
+
+.nav-item.active .icon svg {
+  stroke: var(--clarity-accent);
+}
+
+.user-card {
+  box-shadow: var(--clarity-shadow-sm), 0 1px 0 rgba(var(--clarity-glass-rgb),.8) inset;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -4915,28 +5019,54 @@ body,
 
   <div class="agent-body clarity-hero-body">
 
-    <div class="clarity-bubble">
-      <div class="clarity-title">
-        Bonjour <span id="clarity-user-firstname">👋</span>
+    <div class="clarity-hero-main">
+      <div class="clarity-bubble">
+        <div class="clarity-title">
+          Bonjour <span id="clarity-user-firstname">👋</span>
+        </div>
+        <div class="clarity-subtitle">
+          Que puis-je faire pour vous aujourd'hui ?
+        </div>
       </div>
-      <div class="clarity-subtitle">
-        Que puis-je faire pour vous aujourd'hui ?
-      </div>
-    </div>
 
-    <button class="clarity-input-bar"
-            id="orchestrator-dictation-btn"
-            onclick="startOrchestratorDictation()"
-            type="button">
-      <span class="clarity-input-placeholder">Parler ou écrire un message…</span>
-      <span class="clarity-input-mic">🎙️</span>
-    </button>
-
-    <div class="clarity-quick-row">
-      <button type="button" class="quick-action-btn" onclick="openQuickMailCompose()">
-        ✉️ Envoyer un mail
+      <button class="clarity-input-bar"
+              id="orchestrator-dictation-btn"
+              onclick="startOrchestratorDictation()"
+              type="button">
+        <span class="clarity-input-placeholder">Parler ou écrire un message…</span>
+        <span class="clarity-input-mic">🎙️</span>
       </button>
+
+      <div class="clarity-quick-row">
+        <button type="button" class="quick-action-btn" onclick="openQuickMailCompose()">
+          ✉️ Envoyer un mail
+        </button>
+      </div>
     </div>
+
+    <aside class="clarity-hero-aside">
+      <div class="clarity-tip">
+        <span class="clarity-tip-icon">🎙️</span>
+        <div>
+          <div class="clarity-tip-title">Parlez naturellement</div>
+          <div class="clarity-tip-text">Pas besoin de formuler comme un robot, Clarity comprend une phrase normale.</div>
+        </div>
+      </div>
+      <div class="clarity-tip">
+        <span class="clarity-tip-icon">👤</span>
+        <div>
+          <div class="clarity-tip-title">Ajoutez vos contacts</div>
+          <div class="clarity-tip-text">Plus votre carnet est complet, plus les mails partent vite, sans étape en trop.</div>
+        </div>
+      </div>
+      <div class="clarity-tip">
+        <span class="clarity-tip-icon">📋</span>
+        <div>
+          <div class="clarity-tip-title">Tout est tracé</div>
+          <div class="clarity-tip-text">Chaque action de Clarity est enregistrée dans votre historique.</div>
+        </div>
+      </div>
+    </aside>
 
   </div>
 
