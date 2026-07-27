@@ -996,6 +996,8 @@ select.field-input {
   transform: translate(-50%, -50%);
   width: calc(100% - 32px);
   max-width: 420px;
+  max-height: 82vh;
+  overflow-y: auto;
   background: rgba(var(--clarity-glass-rgb),.96);
   border: 1px solid var(--line);
   border-radius: 26px;
@@ -4536,6 +4538,11 @@ body,
   background: var(--clarity-surface);
   border-color: var(--clarity-accent);
   color: var(--clarity-text);
+}
+
+#quick-mail-contact-list {
+  max-height: 50vh;
+  overflow-y: auto;
 }
 
 </style>
@@ -9959,9 +9966,9 @@ function quickMailBackToContacts() {
 }
 
 async function submitQuickMail() {
-  const instruction = document.getElementById("quick-mail-instruction")?.value.trim();
+  const rawInstruction = document.getElementById("quick-mail-instruction")?.value.trim();
 
-  if (!instruction) {
+  if (!rawInstruction) {
     showToast("Écrivez ce que vous voulez dire", "error");
     return;
   }
@@ -9975,10 +9982,36 @@ async function submitQuickMail() {
   window.currentRequestId = requestId;
   const contactId = quickMailSelectedContact.id;
 
-  closeQuickMailModal();
-  showToast("✨ Clarity prépare votre mail…");
+  // On garde une phrase naturelle (avec le nom du contact) : l'agent Mail
+  // attend ce format, même quand le contact est déjà choisi à l'avance.
+  const fullInstruction =
+    "Écris un mail à " + quickMailSelectedContact.full_name + " : " + rawInstruction;
 
-  await callMailAgent(instruction, null, requestId, contactId);
+  const box = document.getElementById("quick-mail-status-box");
+  const submitBtn = document.getElementById("quick-mail-submit-btn");
+  const backBtn = document.getElementById("quick-mail-back-btn");
+  const textarea = document.getElementById("quick-mail-instruction");
+
+  if (box) {
+    box.style.display = "block";
+    setDictationBoxState(box, "info");
+    box.innerHTML = "🔎 Recherche du contact...";
+  }
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = ".55";
+  }
+  if (backBtn) backBtn.style.display = "none";
+  if (textarea) textarea.style.display = "none";
+
+  await callMailAgent(fullInstruction, box, requestId, contactId);
+
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = "1";
+  }
+  if (backBtn) backBtn.style.display = "";
+  if (textarea) textarea.style.display = "";
 }
 
 function closeQuickMailModal() {
@@ -13210,10 +13243,11 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <div id="quick-mail-step-message" style="display:none;">
       <div id="quick-mail-selected-contact" style="margin-bottom:12px; font-weight:650; color:var(--clarity-text); font-size:13.5px;"></div>
       <textarea class="field-input" id="quick-mail-instruction" rows="4" placeholder="Qu'est-ce que vous voulez dire ? (en gros, Clarity reformule)" style="width:100%; resize:vertical; min-height:90px;"></textarea>
-      <button class="save-btn" type="button" style="width:100%; margin-top:12px;" onclick="submitQuickMail()">
+      <div id="quick-mail-status-box" style="display:none;"></div>
+      <button class="save-btn" type="button" id="quick-mail-submit-btn" style="width:100%; margin-top:12px;" onclick="submitQuickMail()">
         ✉️ Envoyer à l'agent
       </button>
-      <button class="sheet-btn" type="button" style="width:100%; justify-content:center; margin-top:8px;" onclick="quickMailBackToContacts()">
+      <button class="sheet-btn" type="button" id="quick-mail-back-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="quickMailBackToContacts()">
         ← Changer de contact
       </button>
     </div>
