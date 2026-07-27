@@ -4926,7 +4926,7 @@ body,
     </button>
 
     <div class="clarity-quick-row">
-      <button type="button" class="quick-action-btn" onclick="showToast('🎙️ Dites à qui écrire et ce que vous voulez dire…'); startOrchestratorDictation();">
+      <button type="button" class="quick-action-btn" onclick="openQuickMailCompose()">
         ✉️ Envoyer un mail
       </button>
     </div>
@@ -9868,7 +9868,131 @@ console.log("MESSAGE =", message);
   };
 }
 
-  async function callMailAgent(
+  let quickMailSelectedContact = null;
+
+async function openQuickMailCompose() {
+  if (!contactsCache || !contactsCache.length) {
+    await loadContacts();
+  }
+
+  quickMailSelectedContact = null;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const search = document.getElementById("quick-mail-search");
+  const title = document.getElementById("quick-mail-title");
+  const subtitle = document.getElementById("quick-mail-subtitle");
+  const modal = document.getElementById("quick-mail-modal");
+
+  if (stepContact) stepContact.style.display = "block";
+  if (stepMessage) stepMessage.style.display = "none";
+  if (title) title.textContent = "Envoyer un mail";
+  if (subtitle) subtitle.textContent = "Choisissez le contact.";
+  if (search) search.value = "";
+
+  renderQuickMailContacts();
+
+  if (modal) modal.style.display = "block";
+}
+
+function renderQuickMailContacts() {
+  const query = (document.getElementById("quick-mail-search")?.value || "").toLowerCase();
+  const list = document.getElementById("quick-mail-contact-list");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  const filtered = (contactsCache || []).filter(c =>
+    (c.full_name || "").toLowerCase().includes(query) ||
+    (c.email || "").toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:14px; color:var(--clarity-text-tertiary); font-size:13px;">Aucun contact trouvé.</div>';
+    return;
+  }
+
+  filtered.forEach(contact => {
+    const card = document.createElement("div");
+    card.className = "contact-choice-card";
+
+    card.innerHTML = `
+      <div class="contact-choice-name">${contact.full_name}</div>
+      <div class="contact-choice-email">📧 ${contact.email}</div>
+      ${contact.company ? `<div class="contact-choice-company">🏢 ${contact.company}</div>` : ""}
+    `;
+
+    card.onclick = () => selectQuickMailContact(contact);
+    list.appendChild(card);
+  });
+}
+
+function selectQuickMailContact(contact) {
+  quickMailSelectedContact = contact;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const subtitle = document.getElementById("quick-mail-subtitle");
+  const selected = document.getElementById("quick-mail-selected-contact");
+  const instruction = document.getElementById("quick-mail-instruction");
+
+  if (stepContact) stepContact.style.display = "none";
+  if (stepMessage) stepMessage.style.display = "block";
+  if (subtitle) subtitle.textContent = "Écrivez votre message.";
+  if (selected) selected.textContent = "À : " + contact.full_name + " (" + contact.email + ")";
+  if (instruction) {
+    instruction.value = "";
+    instruction.focus();
+  }
+}
+
+function quickMailBackToContacts() {
+  quickMailSelectedContact = null;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const subtitle = document.getElementById("quick-mail-subtitle");
+
+  if (stepMessage) stepMessage.style.display = "none";
+  if (stepContact) stepContact.style.display = "block";
+  if (subtitle) subtitle.textContent = "Choisissez le contact.";
+}
+
+async function submitQuickMail() {
+  const instruction = document.getElementById("quick-mail-instruction")?.value.trim();
+
+  if (!instruction) {
+    showToast("Écrivez ce que vous voulez dire", "error");
+    return;
+  }
+
+  if (!quickMailSelectedContact) {
+    showToast("Choisissez un contact", "error");
+    return;
+  }
+
+  const requestId = crypto.randomUUID();
+  window.currentRequestId = requestId;
+  const contactId = quickMailSelectedContact.id;
+
+  closeQuickMailModal();
+  showToast("✨ Clarity prépare votre mail…");
+
+  await callMailAgent(instruction, null, requestId, contactId);
+}
+
+function closeQuickMailModal() {
+  const modal = document.getElementById("quick-mail-modal");
+  if (modal) modal.style.display = "none";
+}
+
+window.openQuickMailCompose = openQuickMailCompose;
+window.renderQuickMailContacts = renderQuickMailContacts;
+window.submitQuickMail = submitQuickMail;
+window.closeQuickMailModal = closeQuickMailModal;
+window.quickMailBackToContacts = quickMailBackToContacts;
+
+async function callMailAgent(
   instruction,
   box = null,
   requestId = window.currentRequestId,
@@ -13062,6 +13186,41 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <button class="contact-choice-cancel" onclick="cancelContactChoice()">
   Annuler
 </button>
+
+  </div>
+</div>
+
+<!-- QUICK MAIL COMPOSE (bouton rapide "Envoyer un mail") -->
+<div id="quick-mail-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeQuickMailModal()"></div>
+
+  <div class="mail-choice-box">
+
+    <div class="mail-choice-title" id="quick-mail-title">Envoyer un mail</div>
+    <div class="mail-choice-subtitle" id="quick-mail-subtitle">Choisissez le contact.</div>
+
+    <div id="quick-mail-step-contact">
+      <input class="field-input" id="quick-mail-search" placeholder="Rechercher un contact" oninput="renderQuickMailContacts()" style="margin-bottom:12px; width:100%;">
+      <div id="quick-mail-contact-list"></div>
+      <button class="sheet-btn" type="button" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeQuickMailModal(); openContactPage();">
+        + Nouveau contact
+      </button>
+    </div>
+
+    <div id="quick-mail-step-message" style="display:none;">
+      <div id="quick-mail-selected-contact" style="margin-bottom:12px; font-weight:650; color:var(--clarity-text); font-size:13.5px;"></div>
+      <textarea class="field-input" id="quick-mail-instruction" rows="4" placeholder="Qu'est-ce que vous voulez dire ? (en gros, Clarity reformule)" style="width:100%; resize:vertical; min-height:90px;"></textarea>
+      <button class="save-btn" type="button" style="width:100%; margin-top:12px;" onclick="submitQuickMail()">
+        ✉️ Envoyer à l'agent
+      </button>
+      <button class="sheet-btn" type="button" style="width:100%; justify-content:center; margin-top:8px;" onclick="quickMailBackToContacts()">
+        ← Changer de contact
+      </button>
+    </div>
+
+    <button class="contact-choice-cancel" onclick="closeQuickMailModal()">
+      Annuler
+    </button>
 
   </div>
 </div>
