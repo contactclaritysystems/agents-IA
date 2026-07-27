@@ -4383,6 +4383,161 @@ body,
   border-radius: var(--clarity-radius-md);
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 6
+   HERO ACCUEIL (carte orchestrateur)
+   ========================================================= */
+
+.clarity-hero {
+  background: linear-gradient(160deg, var(--clarity-surface-soft), var(--clarity-surface)) !important;
+  border-color: var(--clarity-accent-dim) !important;
+}
+
+.clarity-hero-head {
+  align-items: center;
+}
+
+.clarity-hero-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--clarity-radius-sm);
+  overflow: hidden;
+  background: var(--clarity-surface);
+  border: 1px solid var(--clarity-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 4px var(--clarity-accent-dim);
+}
+
+.clarity-hero-avatar img {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+.clarity-hero-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--clarity-accent);
+  font-weight: 650;
+}
+
+.clarity-hero-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clarity-accent);
+  box-shadow: 0 0 0 3px var(--clarity-accent-dim);
+  animation: clarityPulse 2s ease-in-out infinite;
+}
+
+@keyframes clarityPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.clarity-hero-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clarity-bubble {
+  background: var(--clarity-surface);
+  border: 1px solid var(--clarity-border);
+  border-radius: var(--clarity-radius-md) var(--clarity-radius-md) var(--clarity-radius-md) 4px;
+  padding: 16px 18px;
+  max-width: 92%;
+}
+
+.clarity-bubble .clarity-title {
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--clarity-text);
+  margin-bottom: 4px;
+}
+
+.clarity-bubble .clarity-subtitle {
+  font-size: 13.5px;
+  color: var(--clarity-text-secondary);
+  font-weight: 500;
+}
+
+.clarity-input-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: var(--clarity-surface);
+  border: 1px solid var(--clarity-border);
+  border-radius: var(--clarity-radius-pill);
+  padding: 8px 8px 8px 18px;
+  cursor: pointer;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition:
+    border-color var(--clarity-duration) var(--clarity-ease),
+    box-shadow var(--clarity-duration) var(--clarity-ease);
+}
+
+.clarity-input-bar:hover {
+  border-color: var(--clarity-accent);
+  box-shadow: 0 0 0 4px var(--clarity-accent-dim);
+}
+
+.clarity-input-placeholder {
+  font-size: 13.5px;
+  color: var(--clarity-text-secondary);
+  font-weight: 500;
+}
+
+.clarity-input-mic {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--clarity-accent), var(--clarity-accent-hover));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.clarity-quick-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-action-btn {
+  flex: 1;
+  min-width: 100px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--clarity-border);
+  border-radius: var(--clarity-radius-pill);
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text-secondary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    color var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease);
+}
+
+.quick-action-btn:hover {
+  background: var(--clarity-surface);
+  border-color: var(--clarity-accent);
+  color: var(--clarity-text);
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -4736,43 +4891,53 @@ body,
   
   <div class="agents-grid">
 
-    <div class="agent-card configured" id="card-orchestrator-run">
+    <div class="agent-card configured clarity-hero" id="card-orchestrator-run">
 
-  <div class="agent-head">
-    <div class="agent-emoji">🧠</div>
+  <div class="agent-head clarity-hero-head">
+    <div class="clarity-hero-avatar">
+      <img src="https://i.imgur.com/1ZFTLIo.png" alt="Clarity Systems">
+    </div>
 
     <div class="agent-title-wrap">
       <div class="agent-name">Clarity</div>
-
-      <div class="agent-desc">
-  ● En ligne
-</div>
+      <div class="agent-desc clarity-hero-status">
+        <span class="clarity-hero-dot"></span> En ligne
+      </div>
     </div>
   </div>
 
-  <div class="agent-body" style="display:flex; flex-direction:column; gap:16px;">
+  <div class="agent-body clarity-hero-body">
 
-  <div class="clarity-message">
-  <div class="clarity-title">
-    Bonjour <span id="clarity-user-firstname">👋</span>
+    <div class="clarity-bubble">
+      <div class="clarity-title">
+        Bonjour <span id="clarity-user-firstname">👋</span>
+      </div>
+      <div class="clarity-subtitle">
+        Que puis-je faire pour vous aujourd'hui ?
+      </div>
+    </div>
+
+    <button class="clarity-input-bar"
+            id="orchestrator-dictation-btn"
+            onclick="startOrchestratorDictation()"
+            type="button">
+      <span class="clarity-input-placeholder">Parler ou écrire un message…</span>
+      <span class="clarity-input-mic">🎙️</span>
+    </button>
+
+    <div class="clarity-quick-row">
+      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-planning-run').scrollIntoView({behavior:'smooth',block:'center'}); startPlanningDictation();">
+        📅 Planifier
+      </button>
+      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-relance-run').scrollIntoView({behavior:'smooth',block:'center'}); startRelanceDictation();">
+        🔁 Relancer
+      </button>
+      <button type="button" class="quick-action-btn" onclick="document.getElementById('card-redaction-run').scrollIntoView({behavior:'smooth',block:'center'}); startRedactionDictation();">
+        ✍️ Rédiger
+      </button>
+    </div>
+
   </div>
-
-  <div class="clarity-subtitle">
-    Comment puis-je vous aider aujourd'hui ?
-  </div>
-
-  <div class="clarity-description">
-    Je peux envoyer vos e-mails, gérer votre planning, organiser vos tâches… et bien plus encore.
-  </div>
-</div>
-
-<button class="save-btn"
-        id="orchestrator-dictation-btn"
-        onclick="startOrchestratorDictation()">
-  🎙️ Parler ou écrire
-</button>
-
-</div>
 
 </div>
 
