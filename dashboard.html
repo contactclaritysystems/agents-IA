@@ -564,6 +564,11 @@ body.loading-subscription #agents-count {
   color: var(--clarity-success);
 }
 
+.tag.blue {
+  background: var(--clarity-accent-dim);
+  color: var(--clarity-accent);
+}
+
 .tag.orange {
   background: var(--warning-bg);
   color: var(--warning);
@@ -5096,6 +5101,43 @@ a:hover {
   color: var(--clarity-text) !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 19
+   ========================================================= */
+
+/* Icône "Starter"/"Abonnement" : fond violet garanti (plus de rond blanc) */
+.stat-icon-wrap.purple {
+  background: rgba(139, 92, 246, 0.14) !important;
+}
+
+/* "Contactez-nous" garanti lisible (couleur accent, pas la couleur de texte par défaut) */
+#custom-agent-block a,
+#custom-agent-block a strong {
+  color: var(--clarity-accent) !important;
+}
+
+/* Popups (abonnement, détail contact...) : titres/valeurs garantis lisibles */
+.mail-choice-title,
+.pricing-plan strong,
+.pricing-plan span,
+#contact-detail-name,
+#contact-detail-page .detail-line strong {
+  color: var(--clarity-text) !important;
+}
+
+.mail-choice-subtitle,
+#contact-detail-company,
+#contact-detail-page .detail-line span {
+  color: var(--clarity-text-secondary) !important;
+}
+
+/* Pages plein écran (Profil, Rendez-vous, Relances) : contenu limité comme le reste du site */
+#profil-mobile-section.open,
+#planning-detail.open {
+  padding-left: max(18px, calc((100% - 900px) / 2)) !important;
+  padding-right: max(18px, calc((100% - 900px) / 2)) !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5197,7 +5239,7 @@ a:hover {
     
     <div class="gmail-title">
       <span>👤</span> Informations de base
-      <span class="tag green">✓ Utilisées par vos agents</span>
+      <span class="tag blue">✓ Utilisé par Clarity</span>
     </div>
 
     <div class="gmail-desc" style="margin-bottom:20px;">
