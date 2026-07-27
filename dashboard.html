@@ -84,7 +84,7 @@ body.loading-subscription #agents-count {
 .sidebar {
   width: 270px;
   min-height: 100vh;
-  background: rgba(255,255,255,.72);
+  background: rgba(var(--clarity-glass-rgb),.72);
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -189,7 +189,7 @@ body.loading-subscription #agents-count {
   font-size: 10px;
   padding: 2px 7px;
   border-radius: 20px;
-  background: rgba(255,255,255,.18);
+  background: rgba(var(--clarity-glass-rgb),.18);
   color: currentColor;
   font-weight: 750;
 }
@@ -206,9 +206,9 @@ body.loading-subscription #agents-count {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 16px;
-  background: rgba(255,255,255,.74);
+  background: rgba(var(--clarity-glass-rgb),.74);
   border: 1px solid var(--line);
-  box-shadow: 0 1px 0 rgba(255,255,255,.8) inset;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb),.8) inset;
 }
 
 .user-avatar {
@@ -290,12 +290,12 @@ body.loading-subscription #agents-count {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255,255,255,.72);
+  background: rgba(var(--clarity-glass-rgb),.72);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 13px 18px;
   font-size: 13px;
-  box-shadow: 0 1px 0 rgba(255,255,255,.75) inset;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb),.75) inset;
   white-space: nowrap;
 }
 
@@ -331,7 +331,7 @@ body.loading-subscription #agents-count {
   display: flex;
   align-items: center;
   gap: 15px;
-  box-shadow: 0 1px 0 rgba(255,255,255,.75) inset;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb),.75) inset;
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
 
@@ -473,7 +473,7 @@ body.loading-subscription #agents-count {
 
 /* GMAIL SECTION */
 .gmail-section {
-  background: rgba(255,255,255,.78);
+  background: rgba(var(--clarity-glass-rgb),.78);
   border: 1px solid var(--line);
   border-radius: 26px;
   padding: 26px 28px;
@@ -599,18 +599,18 @@ body.loading-subscription #agents-count {
 }
 
 .agent-card {
-  background: rgba(255,255,255,.72);
+  background: rgba(var(--clarity-glass-rgb),.72);
   border: 1px solid var(--line);
   border-radius: 24px;
   overflow: hidden;
   transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
-  box-shadow: 0 1px 0 rgba(255,255,255,.75) inset;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb),.75) inset;
 }
 
 .agent-card:hover {
   border-color: var(--line-strong);
   transform: none;
-  background: rgba(255,255,255,.86);
+  background: rgba(var(--clarity-glass-rgb),.86);
 }
 
 .agent-card.configured {
@@ -746,7 +746,7 @@ body.loading-subscription #agents-count {
 }
   
 .field-input {
-  background: rgba(255,255,255,.82);
+  background: rgba(var(--clarity-glass-rgb),.82);
   border: 1px solid var(--line);
   min-height: 48px;
   padding: 10px 14px;
@@ -791,7 +791,7 @@ select.field-input {
   padding: 10px 14px;
   border-radius: 100px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,.66);
+  background: rgba(var(--clarity-glass-rgb),.66);
   color: var(--text);
   font-size: 13px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -936,7 +936,7 @@ select.field-input {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom) + 110px);
   right: 24px;
-  background: rgba(255,255,255,.92);
+  background: rgba(var(--clarity-glass-rgb),.92);
   border: 1px solid rgba(34,197,94,.28);
   color: var(--clarity-success);
   padding: 13px 20px;
@@ -996,7 +996,7 @@ select.field-input {
   transform: translate(-50%, -50%);
   width: calc(100% - 32px);
   max-width: 420px;
-  background: rgba(255,255,255,.96);
+  background: rgba(var(--clarity-glass-rgb),.96);
   border: 1px solid var(--line);
   border-radius: 26px;
   padding: 18px;
@@ -1059,7 +1059,7 @@ select.field-input {
   margin-bottom: 9px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,.75);
+  background: rgba(var(--clarity-glass-rgb),.75);
   text-align: left;
   font-family: inherit;
   cursor: pointer;
@@ -1112,7 +1112,7 @@ select.field-input {
   height: 46px;
   border-radius: 50%;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,.78);
+  background: rgba(var(--clarity-glass-rgb),.78);
   color: var(--text);
   font-size: 22px;
   font-weight: 800;
@@ -1378,7 +1378,7 @@ select.field-input {
   gap: 7px;
   padding: 9px 12px;
   border-radius: 999px;
-  background: rgba(255,255,255,.78);
+  background: rgba(var(--clarity-glass-rgb),.78);
   border: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--muted);
@@ -1597,7 +1597,7 @@ select.field-input {
 }
 
   .contact-row {
-  background: rgba(255,255,255,.72);
+  background: rgba(var(--clarity-glass-rgb),.72);
   border-radius: 18px;
   margin-bottom: 10px;
   border: 1px solid var(--line);
@@ -1684,7 +1684,7 @@ select.field-input {
   right: 0;
   height: 72px;
 
-  background: rgba(255,255,255,.78);
+  background: rgba(var(--clarity-glass-rgb),.78);
 
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
@@ -2524,7 +2524,7 @@ select.field-input {
   @media (max-width: 600px) {
   #main-agents .agent-card.configured {
   border: 1px solid rgba(0,0,0,.06) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04), 0 1px 0 rgba(255,255,255,.9) inset !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04), 0 1px 0 rgba(var(--clarity-glass-rgb),.9) inset !important;
   background: linear-gradient(160deg, var(--clarity-surface) 0%, var(--clarity-info-tint) 100%) !important;
 }
 
@@ -3017,7 +3017,7 @@ select.field-input {
     padding: 8px 5px;
     border: 1px solid rgba(29,29,31,.06);
     border-radius: 16px;
-    background: rgba(255,255,255,.85);
+    background: rgba(var(--clarity-glass-rgb),.85);
     box-shadow: 0 8px 28px rgba(0,0,0,.06);
   }
 }
@@ -3100,7 +3100,7 @@ select.field-input {
     padding: 34px;
     border: 1px solid rgba(29, 29, 31, 0.08);
     border-radius: 30px;
-    background: rgba(255, 255, 255, 0.98);
+    background: rgba(var(--clarity-glass-rgb), 0.98);
     box-shadow:
       0 35px 90px rgba(0, 0, 0, 0.22),
       0 2px 8px rgba(0, 0, 0, 0.06);
@@ -4068,6 +4068,7 @@ button:not(:disabled) {
   --clarity-heading-via: #4d4d52;
   --clarity-heading-to: #9a9a9d;
   --clarity-info-tint: #f4f9ff;
+  --clarity-glass-rgb: 255, 255, 255;
 }
 
 /* ---------- THÈME "Clair" (= valeurs par défaut du bloc 1, référence) ---------- */
@@ -4128,6 +4129,7 @@ body[data-theme="dark"] {
   --clarity-heading-via: #c7c9ce;
   --clarity-heading-to: #7d818a;
   --clarity-info-tint: #131c2b;
+  --clarity-glass-rgb: 21, 23, 30;
 }
 
 /* ---------- THÈME "Ardoise" ---------- */
@@ -4147,6 +4149,7 @@ body[data-theme="slate"] {
   --clarity-primary-hover: #000000;
   --clarity-primary-text: #ffffff;
   --clarity-overlay: rgba(246, 247, 248, 0.85);
+  --clarity-glass-rgb: 246, 247, 248;
 }
 
 /* ---------- THÈME "Corail" ---------- */
