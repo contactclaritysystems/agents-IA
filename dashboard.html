@@ -12429,11 +12429,49 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
     return;
   }
     
-const connectedEmail =
+let connectedEmail =
   localStorage.getItem("gmail_" + currentUser.email) || "";
 
 let connectedProvider =
-  localStorage.getItem("mail_provider_" + currentUser.email);
+  localStorage.getItem("mail_provider_" + currentUser.email) || "";
+
+// Source de vérité : on revérifie auprès de Supabase avant l'envoi,
+// pour éviter d'utiliser un ancien provider resté en cache local
+// (ex: reconnexion Gmail après une ancienne connexion SMTP).
+try {
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (accessToken) {
+    const integrationResponse = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/user_integrations?account_email=eq." +
+        encodeURIComponent(currentUser.email) +
+        "&connected=eq.true&order=created_at.desc&limit=1",
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken
+        }
+      }
+    );
+
+    if (integrationResponse.ok) {
+      const integrationData = await integrationResponse.json();
+
+      if (integrationData && integrationData.length > 0) {
+        connectedProvider = integrationData[0].provider;
+        connectedEmail = integrationData[0].email || connectedEmail;
+
+        localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
+        localStorage.setItem("gmail_" + currentUser.email, connectedEmail);
+      }
+    }
+  }
+} catch (e) {
+  console.error("Vérification provider Supabase impossible, fallback local :", e);
+}
 
 if (!connectedProvider) {
   const emailLower = (connectedEmail || "").toLowerCase();
