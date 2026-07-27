@@ -3858,24 +3858,25 @@ textarea.field-input {
 }
 
 .pricing-plan.featured {
-  background: var(--clarity-text);
-  border-color: var(--clarity-text);
-  color: #ffffff;
+  background: var(--clarity-primary);
+  border-color: var(--clarity-primary);
+  color: var(--clarity-primary-text);
   box-shadow: var(--clarity-shadow-md);
 }
 
 .pricing-plan.featured strong {
-  color: #ffffff;
+  color: var(--clarity-primary-text);
 }
 
 .pricing-plan.featured span {
-  color: rgba(255, 255, 255, 0.68);
+  color: var(--clarity-primary-text);
+  opacity: 0.7;
 }
 
 .pricing-plan.featured button {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: var(--clarity-text);
+  background: var(--clarity-primary-text);
+  border-color: var(--clarity-primary-text);
+  color: var(--clarity-primary);
 }
 
 /* ---------- LISTES ET CONTACTS ---------- */
@@ -5039,6 +5040,27 @@ body,
   height: 38px !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 17
+   Liens lisibles quel que soit le thème + cartes stats moins carrées
+   ========================================================= */
+
+a {
+  color: var(--clarity-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--clarity-accent-hover);
+  text-decoration: underline;
+}
+
+.status-row .stat-card {
+  border: none !important;
+  border-radius: 28px !important;
+  background: linear-gradient(160deg, var(--clarity-surface-soft), var(--clarity-surface)) !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5196,7 +5218,7 @@ body,
   
  <div class="mobile-integrations">
  <div class="stat-card" id="gmail-mobile-card" onclick="handleGmailMobileCard()" style="cursor:pointer;">
-    <div class="stat-icon-wrap blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+    <div class="stat-icon-wrap blue">📧</div>
     <div>
       <div class="stat-value">Messagerie</div>
       <div class="stat-label" id="gmail-status-label">Non connecté</div>
@@ -5204,7 +5226,7 @@ body,
   </div>
 
   <div class="stat-card needs-attention" id="profil-stat-card" onclick="handleProfilMobileCard()" style="cursor:pointer;">
-    <div class="stat-icon-wrap yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="stat-icon-wrap yellow">👤</div>
     <div>
       <div class="stat-value">Profil</div>
       <div class="stat-label" id="profil-status-label">À compléter</div>
@@ -5212,7 +5234,7 @@ body,
   </div>
 
     <div class="stat-card" onclick="openPricingPage()" style="cursor:pointer;">
-  <div class="stat-icon-wrap purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+  <div class="stat-icon-wrap purple">💳</div>
   <div>
     <div class="stat-value">Abonnement</div>
     <div class="stat-label" id="subscription-status-label">Voir</div>
@@ -5305,6 +5327,7 @@ body,
 <div class="topbar">
   <div>
     <div class="page-title">Clarity s'occupe de tout</div>
+    <div class="page-subtitle">Elle ne dort jamais — vous, si.</div>
   </div>
 
   <div class="trial-banner desktop-trial-banner" style="display:none;">
@@ -5344,7 +5367,7 @@ body,
 
     <div class="stat-card" id="subscription-stat-card" onclick="openSubscriptionInfo()" style="cursor:pointer;">
     <div class="stat-icon-wrap purple" id="subscription-mini-icon">
-      <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      ⭐
     </div>
     <div>
       <div class="stat-value" id="subscription-mini-value">--</div>
@@ -12323,7 +12346,7 @@ if (reactivateHomeCard) {
   }
 
   if (sub.plan === "decouverte") {
-  icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  icon.textContent = "⭐";
   icon.className = "stat-icon-wrap purple";
   value.textContent = "Starter";
   label.textContent = "Abonnement";
