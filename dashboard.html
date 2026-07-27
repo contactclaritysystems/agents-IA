@@ -4045,9 +4045,163 @@ button:not(:disabled) {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 2
+   THÈMES (data-theme sur <body>)
+   Ne contient aucune logique métier
+   ========================================================= */
+
+/* ---------- ACCENT DE MARQUE (fixe, ne change jamais) ---------- */
+
+:root {
+  --clarity-accent: #0091c7;
+  --clarity-accent-hover: #006e9c;
+  --clarity-accent-dim: rgba(0, 145, 199, 0.14);
+  --clarity-on-accent: #ffffff;
+  --clarity-overlay: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- THÈME "Clair" (= valeurs par défaut du bloc 1, référence) ---------- */
+
+body[data-theme="light"] {
+  --clarity-page: #f7f7f8;
+  --clarity-surface: #ffffff;
+  --clarity-surface-soft: #f3f3f5;
+  --clarity-surface-hover: #fafafa;
+  --clarity-text: #18181b;
+  --clarity-text-secondary: #63636a;
+  --clarity-text-tertiary: #929298;
+  --clarity-border: rgba(24, 24, 27, 0.08);
+  --clarity-border-hover: rgba(24, 24, 27, 0.16);
+  --clarity-border-focus: rgba(24, 24, 27, 0.35);
+  --clarity-primary: #18181b;
+  --clarity-primary-hover: #000000;
+  --clarity-primary-text: #ffffff;
+  --clarity-overlay: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- THÈME "Sombre" (par défaut au lancement) ---------- */
+
+body[data-theme="dark"] {
+  --clarity-page: #0b0d12;
+  --clarity-surface: #15171e;
+  --clarity-surface-soft: #1b1e26;
+  --clarity-surface-hover: #20232c;
+  --clarity-text: #f2f3f5;
+  --clarity-text-secondary: #9a9ea8;
+  --clarity-text-tertiary: #6a6e78;
+  --clarity-border: rgba(255, 255, 255, 0.08);
+  --clarity-border-hover: rgba(255, 255, 255, 0.16);
+  --clarity-border-focus: rgba(255, 255, 255, 0.3);
+  --clarity-primary: #f2f3f5;
+  --clarity-primary-hover: #ffffff;
+  --clarity-primary-text: #0b0d12;
+  --clarity-success: #34d17c;
+  --clarity-success-bg: rgba(52, 209, 124, 0.12);
+  --clarity-success-border: rgba(52, 209, 124, 0.22);
+  --clarity-warning: #e0a94b;
+  --clarity-warning-bg: rgba(224, 169, 75, 0.12);
+  --clarity-warning-border: rgba(224, 169, 75, 0.22);
+  --clarity-danger: #e2685f;
+  --clarity-danger-bg: rgba(226, 104, 95, 0.12);
+  --clarity-danger-border: rgba(226, 104, 95, 0.22);
+  --clarity-info: #5c9ce0;
+  --clarity-info-bg: rgba(92, 156, 224, 0.12);
+  --clarity-info-border: rgba(92, 156, 224, 0.2);
+  --clarity-on-accent: #ffffff;
+  --clarity-overlay: rgba(21, 23, 30, 0.85);
+}
+
+/* ---------- THÈME "Ardoise" ---------- */
+
+body[data-theme="slate"] {
+  --clarity-page: #c9ced6;
+  --clarity-surface: #f6f7f8;
+  --clarity-surface-soft: #ffffff;
+  --clarity-surface-hover: #eef0f2;
+  --clarity-text: #1b2028;
+  --clarity-text-secondary: #4d5560;
+  --clarity-text-tertiary: #7d8490;
+  --clarity-border: rgba(20, 25, 35, 0.1);
+  --clarity-border-hover: rgba(20, 25, 35, 0.18);
+  --clarity-border-focus: rgba(20, 25, 35, 0.35);
+  --clarity-primary: #1b2028;
+  --clarity-primary-hover: #000000;
+  --clarity-primary-text: #ffffff;
+  --clarity-overlay: rgba(246, 247, 248, 0.85);
+}
+
+/* ---------- THÈME "Corail" ---------- */
+
+body[data-theme="corail"] {
+  --clarity-page: #f6dfe3;
+  --clarity-surface: #ffffff;
+  --clarity-surface-soft: #fbeef0;
+  --clarity-surface-hover: #fdf5f6;
+  --clarity-text: #3a1420;
+  --clarity-text-secondary: #8a5866;
+  --clarity-text-tertiary: #bd8e97;
+  --clarity-border: rgba(140, 40, 65, 0.12);
+  --clarity-border-hover: rgba(140, 40, 65, 0.22);
+  --clarity-border-focus: rgba(140, 40, 65, 0.4);
+  --clarity-primary: #3a1420;
+  --clarity-primary-hover: #23000a;
+  --clarity-primary-text: #ffffff;
+  --clarity-overlay: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------- Application de l'accent de marque sur les composants clés ---------- */
+
+.plan-dot {
+  background: var(--clarity-accent) !important;
+  box-shadow: 0 0 0 4px var(--clarity-accent-dim) !important;
+}
+
+.save-btn.saved {
+  color: var(--clarity-on-accent);
+}
+
+.trial-banner,
+.mobile-account-badge {
+  background: var(--clarity-overlay) !important;
+}
+
+.toast {
+  background: var(--clarity-overlay) !important;
+  color: var(--clarity-success);
+}
+
+/* ---------- Transition douce lors du changement de thème ---------- */
+
+body,
+.agent-card,
+.gmail-section,
+.stat-card,
+.user-card,
+.sidebar,
+.toast,
+.trial-banner,
+.mobile-account-badge {
+  transition:
+    background var(--clarity-duration, 180ms) var(--clarity-ease, ease),
+    color var(--clarity-duration, 180ms) var(--clarity-ease, ease),
+    border-color var(--clarity-duration, 180ms) var(--clarity-ease, ease);
+}
+
 </style>
 </head>
-<body>
+<body data-theme="light">
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem("clarity-theme");
+      var allowed = ["light", "dark", "slate", "corail"];
+      if (saved && allowed.indexOf(saved) !== -1) {
+        document.body.setAttribute("data-theme", saved);
+      }
+    } catch (e) {}
+  })();
+</script>
 
   <div id="app-loader">
   <div class="loader-card">
@@ -4997,6 +5151,27 @@ button:not(:disabled) {
 const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ===== CLARITY SYSTEMS — BLOC 2 : gestion du thème ===== */
+const CLARITY_THEMES = ["light", "dark", "slate", "corail"];
+
+function setTheme(theme) {
+  if (CLARITY_THEMES.indexOf(theme) === -1) return;
+  document.body.setAttribute("data-theme", theme);
+  try {
+    localStorage.setItem("clarity-theme", theme);
+  } catch (e) {}
+  document.querySelectorAll("[data-theme-option]").forEach(function (btn) {
+    btn.classList.toggle("active", btn.getAttribute("data-theme-option") === theme);
+  });
+}
+
+function getCurrentTheme() {
+  return document.body.getAttribute("data-theme") || "light";
+}
+
+window.setTheme = setTheme;
+window.getCurrentTheme = getCurrentTheme;
 
 supabaseClient
   .channel("agent-progress")
