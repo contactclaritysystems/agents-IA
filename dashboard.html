@@ -4546,75 +4546,115 @@ body,
 }
 
 /* =========================================================
-   CLARITY SYSTEMS — BLOC 8
-   POLISH DESKTOP (pleine largeur du hero, relief sidebar)
+   CLARITY SYSTEMS — BLOC 9
+   PASSAGE QUALITÉ PREMIUM
    ========================================================= */
 
-/* ---------- Le hero occupe toute la largeur de la grille ---------- */
+/* ---------- Profondeur réelle des cartes (au lieu du simple liseré) ---------- */
+
+.agent-card,
+.stat-card {
+  box-shadow: var(--clarity-shadow-sm);
+  transition:
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease),
+    transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.agent-card:hover,
+.stat-card:hover {
+  box-shadow: var(--clarity-shadow-md);
+  border-color: var(--clarity-border-hover);
+}
+
+/* ---------- Titre de page : relief typographique ---------- */
+
+.page-title {
+  background: linear-gradient(135deg, var(--clarity-heading-from) 0%, var(--clarity-heading-via) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+}
+
+/* ---------- Icônes de stat : plus fines, mieux dosées ---------- */
+
+#main-agents .stat-icon-wrap svg {
+  stroke-width: 2;
+}
+
+/* ---------- Barres de progression : de vrais éléments dessinés ---------- */
+
+.stat-progress {
+  height: 5px;
+  border-radius: var(--clarity-radius-pill);
+  background: var(--clarity-surface-soft);
+  overflow: hidden;
+}
+
+.stat-progress span {
+  display: block;
+  height: 100%;
+  border-radius: var(--clarity-radius-pill);
+  transition: width .5s var(--clarity-ease);
+}
+
+.stat-progress.yellow span { background: linear-gradient(90deg, var(--clarity-tag-amber), var(--clarity-tag-amber)); }
+.stat-progress.blue span { background: linear-gradient(90deg, var(--clarity-tag-blue), var(--clarity-accent)); }
+.stat-progress.purple span { background: linear-gradient(90deg, var(--clarity-tag-purple), var(--clarity-tag-purple)); }
+.stat-progress.green span { background: linear-gradient(90deg, var(--clarity-tag-green), var(--clarity-tag-green)); }
+
+/* ---------- Hero : une seule colonne, généreuse et posée ---------- */
 
 .clarity-hero {
   grid-column: 1 / -1;
 }
 
-/* ---------- Layout desktop du hero : chat + panneau d'astuces ---------- */
-
 .clarity-hero-main {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-}
-
-.clarity-hero-aside {
-  display: none;
+  gap: 16px;
+  max-width: 640px;
 }
 
 @media (min-width: 1000px) {
-  .clarity-hero-body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.7fr);
-    gap: 28px;
-    align-items: start;
+  .clarity-hero-head {
+    padding-bottom: 20px;
   }
 
-  .clarity-hero-aside {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding-left: 28px;
-    border-left: 1px solid var(--clarity-border);
+  .clarity-hero-avatar {
+    width: 52px;
+    height: 52px;
   }
-}
 
-.clarity-tip {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
+  .clarity-hero .agent-name {
+    font-size: 16px;
+  }
 
-.clarity-tip-icon {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 10px;
-  background: var(--clarity-surface);
-  border: 1px solid var(--clarity-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
+  .clarity-bubble {
+    padding: 20px 24px;
+  }
 
-.clarity-tip-title {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--clarity-text);
-  margin-bottom: 2px;
-}
+  .clarity-bubble .clarity-title {
+    font-size: 17px;
+  }
 
-.clarity-tip-text {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--clarity-text-tertiary);
+  .clarity-bubble .clarity-subtitle {
+    font-size: 14.5px;
+  }
+
+  .clarity-input-bar {
+    padding: 10px 10px 10px 22px;
+  }
+
+  .clarity-input-placeholder {
+    font-size: 14.5px;
+  }
+
+  .clarity-input-mic {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 /* ---------- Relief de la sidebar ---------- */
@@ -5043,30 +5083,6 @@ body,
         </button>
       </div>
     </div>
-
-    <aside class="clarity-hero-aside">
-      <div class="clarity-tip">
-        <span class="clarity-tip-icon">🎙️</span>
-        <div>
-          <div class="clarity-tip-title">Parlez naturellement</div>
-          <div class="clarity-tip-text">Pas besoin de formuler comme un robot, Clarity comprend une phrase normale.</div>
-        </div>
-      </div>
-      <div class="clarity-tip">
-        <span class="clarity-tip-icon">👤</span>
-        <div>
-          <div class="clarity-tip-title">Ajoutez vos contacts</div>
-          <div class="clarity-tip-text">Plus votre carnet est complet, plus les mails partent vite, sans étape en trop.</div>
-        </div>
-      </div>
-      <div class="clarity-tip">
-        <span class="clarity-tip-icon">📋</span>
-        <div>
-          <div class="clarity-tip-title">Tout est tracé</div>
-          <div class="clarity-tip-text">Chaque action de Clarity est enregistrée dans votre historique.</div>
-        </div>
-      </div>
-    </aside>
 
   </div>
 
