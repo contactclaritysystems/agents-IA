@@ -1572,10 +1572,6 @@ select.field-input {
   display: none;
 }
 
-#contacts-sheet-ui {
-  display: none;
-}
-
 #main-settings .mobile-integrations {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -2156,10 +2152,6 @@ select.field-input {
   color: var(--text);
   text-align: right;
 }
-  /* Cache la ligne Carnet contacts */
-  #main-settings > .gmail-section:has(#contacts-sheet-ui) {
-    display: none !important;
-  }
 }
 
 @media (min-width: 601px) {
@@ -8084,13 +8076,7 @@ if (firstnameSpan) {
     : "👋";
 }
 
-   if (
-  profile.contacts_created === true ||
-  profile.contacts_created === "true"
-) {
-  renderContactsSheetCreated();
-}
-    
+   
 const profilLbl = document.getElementById("profil-status-label");
 const profilCard = document.getElementById("profil-stat-card");
 if (profilLbl) {
@@ -8107,28 +8093,6 @@ if (profilLbl) {
     document.getElementById("profile-company").value = profile.company || "";
 
     lockProfileFields();
-
-  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-const rawSession = localStorage.getItem(storageKey);
-const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
-
-if (accessToken) {
-  const scResp = await fetch(
-    SUPABASE_URL + "/rest/v1/contacts?user_id=eq." + currentUser.id + "&email=eq." + encodeURIComponent(currentUser.email) + "&limit=1",
-    {
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + accessToken
-      }
-    }
-  );
-  if (scResp.ok) {
-    const selfContact = await scResp.json();
-    if (selfContact && selfContact.length > 0) {
-      renderContactsSheetCreated();
-    }
-  }
-}
 
   } catch(err) {
     console.error("Erreur loadProfile:", err);
@@ -8493,20 +8457,6 @@ function deleteSelectedContact() {
     document.getElementById("contact-phone").value = "";
     document.getElementById("contact-company").value = "";
 
-}
-  
-  function renderContactsSheetCreated() {
-  const ui = document.getElementById("contacts-sheet-ui");
-  if (!ui) return;
-
-  ui.innerHTML = `
-    <button class="sheet-btn" onclick="showSection('contacts', document.querySelector('.bottom-tab[data-section=&quot;contacts&quot;]'))" type="button" style="width:100%;">
-      ✅ Carnet contacts créé
-    </button>
-  `;
-
-  const lbl = document.getElementById("carnet-status-label");
-  if (lbl) lbl.textContent = "Créé ✓";
 }
 
 // ─── UTILS ───────────────────────────────────────────────
@@ -10817,50 +10767,6 @@ if (section === "settings") {
 let contactsCache = [];
 
   let historyLimit = 10;
-
-  function openPlanningHistoryFolders() {
-
-  window.currentHistorySubPage = "planning-folders";
-    
-  const detail = document.getElementById("history-detail");
-  const title = document.getElementById("history-detail-title");
-  const folders = document.getElementById("history-folders");
-  const list = document.getElementById("history-list");
-
-  if (folders) folders.style.display = "none";
-
-  if (title) title.textContent = "Agent Planning";
-
-  if (detail) {
-    detail.style.display = "block";
-    detail.classList.add("open");
-  }
-
-  if (list) {
-
-    list.classList.add("planning-folder-grid");
-    
-    list.innerHTML = `
-      <div class="agent-card history-folder-card" onclick="loadHistory('planning')">
-        <div class="history-folder-icon">🎙️</div>
-        <div>
-          <div class="agent-name">Toutes les dictées</div>
-          <div class="agent-desc">Demandes vocales réussies ou échouées</div>
-        </div>
-        <div class="agent-status ok">Voir</div>
-      </div>
-
-      <div class="agent-card history-folder-card" onclick="loadPastAppointments()">
-        <div class="history-folder-icon">📅</div>
-        <div>
-          <div class="agent-name">Rendez-vous passés</div>
-          <div class="agent-desc">Tous les anciens rendez-vous</div>
-        </div>
-        <div class="agent-status ok">Voir</div>
-      </div>
-    `;
-  }
-}
 
   async function loadPastAppointments() {
 
