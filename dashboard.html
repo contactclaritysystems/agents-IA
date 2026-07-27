@@ -10006,17 +10006,28 @@ async function submitQuickMail() {
 
   await callMailAgent(fullInstruction, box, requestId, contactId);
 
+  const hadError = box && box.innerHTML.includes("✕");
+
   if (submitBtn) {
     submitBtn.disabled = false;
     submitBtn.style.opacity = "1";
   }
   if (backBtn) backBtn.style.display = "";
   if (textarea) textarea.style.display = "";
+
+  if (!hadError) {
+    closeQuickMailModal();
+  }
 }
 
 function closeQuickMailModal() {
   const modal = document.getElementById("quick-mail-modal");
+  const box = document.getElementById("quick-mail-status-box");
   if (modal) modal.style.display = "none";
+  if (box) {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
 }
 
 window.openQuickMailCompose = openQuickMailCompose;
