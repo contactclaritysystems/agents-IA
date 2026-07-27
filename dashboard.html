@@ -6914,8 +6914,8 @@ function renderAppointment(a) {
         </div>
       </div>
 
-      <div style="background:#f7f7f8;border-radius:16px;padding:14px;margin-bottom:18px;">
-        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">Motif</div>
+      <div style="background:var(--clarity-surface-soft);border-radius:16px;padding:14px;margin-bottom:18px;">
+        <div style="font-size:12px;color:var(--clarity-text-tertiary);font-weight:700;margin-bottom:4px;">Motif</div>
         <input class="field-input" id="appointment-title-input" value="${a.title || ""}" placeholder="Motif du rendez-vous" style="font-weight:700;" oninput="toggleAppointmentSave()">
       </div>
 
@@ -6936,7 +6936,7 @@ function renderAppointment(a) {
   ❌ Marquer comme annulé
 </button>
 
-      <button class="sheet-btn" onclick="deleteAppointment('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;color:#dc2626;">
+      <button class="sheet-btn" onclick="deleteAppointment('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:10px;color:var(--clarity-danger);">
         Supprimer le rendez-vous
       </button>
 
@@ -8588,10 +8588,10 @@ lockAgentButtons(mailBtn, "⏳ Agent en cours...");
     box.style.marginTop = "12px";
     box.style.padding = "12px 14px";
     box.style.borderRadius = "14px";
-    box.style.background = "rgba(34,197,94,.09)";
-    box.style.border = "1px solid rgba(34,197,94,.20)";
+    box.style.background = "var(--clarity-success-bg)";
+    box.style.border = "1px solid var(--clarity-success-border)";
     box.style.fontSize = "13px";
-    box.style.color = "#15803d";
+    box.style.color = "var(--clarity-success)";
     box.style.fontWeight = "600";
 
     const activePage = document.querySelector(".page-view.active");
@@ -9595,21 +9595,21 @@ icon= "✨",
 
   const stepsHtml = steps.map(step => {
     let symbol = "⏳";
-    let color = "#6e6e73";
+    let color = "var(--clarity-text-secondary)";
 
     if (step.status === "done") {
       symbol = "✓";
-      color = "#15803d";
+      color = "var(--clarity-success)";
     }
 
     if (step.status === "warning") {
       symbol = "⚠️";
-      color = "#b7791f";
+      color = "var(--clarity-warning)";
     }
 
     if (step.status === "error") {
       symbol = "✕";
-      color = "#d64545";
+      color = "var(--clarity-danger)";
     }
 
     return `
@@ -9639,10 +9639,10 @@ icon= "✨",
   if (finalText) {
     const finalColor =
       finalStatus === "error"
-        ? "#d64545"
+        ? "var(--clarity-danger)"
         : finalStatus === "warning"
-        ? "#b7791f"
-        : "#15803d";
+        ? "var(--clarity-warning)"
+        : "var(--clarity-success)";
 
     const finalIcon =
       finalStatus === "error"
@@ -9672,7 +9672,7 @@ icon= "✨",
       gap:8px;
       font-size:14px;
       font-weight:800;
-      color:#1d1d1f;
+      color:var(--clarity-text);
       margin-bottom:4px;
     ">
       <span>${icon}</span>
@@ -10524,16 +10524,16 @@ if (detail) {
   list.innerHTML = relances.map((r, index) => {
 
   let statusIcon = '🔄';
-  let statusColor = '#999';
+  let statusColor = 'var(--clarity-text-tertiary)';
 
   if (r.status === 'done') {
     statusIcon = '✅';
-    statusColor = '#22c55e';
+    statusColor = 'var(--clarity-success)';
   }
 
   if (r.status === 'cancelled') {
     statusIcon = '❌';
-    statusColor = '#ef4444';
+    statusColor = 'var(--clarity-danger)';
   }
 
   return `
@@ -10586,7 +10586,7 @@ if (detail) {
         ${r.contact_name || "Relance"}
       </div>
 
-      <div style="font-size:14px;color:#8a8a8e;margin-bottom:14px;">
+      <div style="font-size:14px;color:var(--clarity-text-tertiary);margin-bottom:14px;">
         ${formatDateShort(r.reminder_date)}
       </div>
 
@@ -10594,8 +10594,8 @@ if (detail) {
         ${statusIcon} ${statusLabel}
       </div>
 
-      <div style="background:#f7f7f8;border-radius:16px;padding:14px;margin-bottom:18px;">
-        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
+      <div style="background:var(--clarity-surface-soft);border-radius:16px;padding:14px;margin-bottom:18px;">
+        <div style="font-size:12px;color:var(--clarity-text-tertiary);font-weight:700;margin-bottom:4px;">
           Motif
         </div>
         <div style="font-size:16px;font-weight:800;line-height:1.35;">
@@ -10997,7 +10997,7 @@ const body = text
         Mail envoyé
       </div>
 
-      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+      <div style="font-size:14px;color:var(--clarity-text-tertiary);margin-bottom:18px;">
         ${new Date(log.created_at).toLocaleString("fr-FR")}
       </div>
 
@@ -11998,8 +11998,8 @@ document.body.style.overflow = "hidden";
       min-height:58px;
       border:none;
       border-radius:22px;
-      background:linear-gradient(135deg,#dcfce7,#bbf7d0);
-      color:#166534;
+      background:var(--clarity-success-bg);
+      color:var(--clarity-success);
       font-weight:900;
       font-size:17px;
       cursor:pointer;
@@ -12283,9 +12283,9 @@ function isValidEmailList(value) {
   }
 
   box.innerHTML = matches.map(c => `
-    <button type="button" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:#fff;padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
+    <button type="button" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
       <strong>${c.full_name || "Contact"}</strong><br>
-      <span style="font-size:12px;color:#8a8a8e;">${c.email || ""}</span>
+      <span style="font-size:12px;color:var(--clarity-text-tertiary);">${c.email || ""}</span>
     </button>
   `).join("");
 
@@ -12821,7 +12821,7 @@ list.innerHTML = relances.map((r, index) => {
       >
     </div>
 
-      <div style="font-size:14px;color:#8a8a8e;margin-bottom:18px;">
+      <div style="font-size:14px;color:var(--clarity-text-tertiary);margin-bottom:18px;">
         ${formatDateShort(r.reminder_date)}
       </div>
 
@@ -12837,12 +12837,12 @@ list.innerHTML = relances.map((r, index) => {
 </div>
 
       <div style="
-        background:#f7f7f8;
+        background:var(--clarity-surface-soft);
         border-radius:16px;
         padding:14px;
         margin-bottom:18px;
       ">
-        <div style="font-size:12px;color:#8a8a8e;font-weight:700;margin-bottom:4px;">
+        <div style="font-size:12px;color:var(--clarity-text-tertiary);font-weight:700;margin-bottom:4px;">
           Motif
         </div>
         <input
@@ -12876,7 +12876,7 @@ list.innerHTML = relances.map((r, index) => {
   class="sheet-btn"
   onclick="deleteFollowUp('${r.id}')"
   type="button"
-  style="width:100%;justify-content:center;margin-top:10px;color:#dc2626;"
+  style="width:100%;justify-content:center;margin-top:10px;color:var(--clarity-danger);"
 >
   Supprimer la relance
 </button>
@@ -13078,21 +13078,21 @@ async function updateFollowUpStatus(id, status, message) {
 
   if (type === "error") {
 
-    box.style.background = "rgba(239,68,68,.08)";
-    box.style.border = "1px solid rgba(239,68,68,.18)";
-    box.style.color = "#dc2626";
+    box.style.background = "var(--clarity-danger-bg)";
+    box.style.border = "1px solid var(--clarity-danger-border)";
+    box.style.color = "var(--clarity-danger)";
 
   } else if (type === "info") {
 
-    box.style.background = "rgba(59,130,246,.08)";
-    box.style.border = "1px solid rgba(59,130,246,.18)";
-    box.style.color = "#2563eb";
+    box.style.background = "var(--clarity-info-bg)";
+    box.style.border = "1px solid var(--clarity-info-border)";
+    box.style.color = "var(--clarity-info)";
 
   } else {
 
-    box.style.background = "rgba(34,197,94,.09)";
-    box.style.border = "1px solid rgba(34,197,94,.20)";
-    box.style.color = "#15803d";
+    box.style.background = "var(--clarity-success-bg)";
+    box.style.border = "1px solid var(--clarity-success-border)";
+    box.style.color = "var(--clarity-success)";
   }
 }
 
