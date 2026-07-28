@@ -7227,6 +7227,7 @@ window.addEventListener("resize", () => {
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
   }
+  alignContactsAlphabet();
 });
   
 // ─── USER ────────────────────────────────────────────────
@@ -8390,6 +8391,31 @@ function renderContacts() {
       `;
     })
     .join("");
+
+  alignContactsAlphabet();
+}
+
+// La barre alphabétique est en position:fixed pour rester visible pendant
+// le scroll de la liste ; sur desktop, on veut que son point de départ
+// (la lettre A) soit exactement au niveau de la 1ère carte de contact,
+// pas centrée sur la fenêtre (qui bougeait selon la hauteur de l'écran).
+// On mesure donc la position réelle de la liste au lieu de deviner une
+// valeur en % de la fenêtre.
+function alignContactsAlphabet() {
+  const alphabet = document.getElementById("contacts-alphabet");
+  const list = document.getElementById("contacts-list");
+  if (!alphabet || !list) return;
+
+  if (window.innerWidth < 901) {
+    // Mobile : on laisse le CSS gérer (barre centrée verticalement)
+    alphabet.style.top = "";
+    alphabet.style.transform = "";
+    return;
+  }
+
+  const rect = list.getBoundingClientRect();
+  alphabet.style.top = Math.max(rect.top, 0) + "px";
+  alphabet.style.transform = "none";
 }
 
  function scrollToContactsLetter(letter) {
