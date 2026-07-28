@@ -5073,10 +5073,12 @@ a:hover {
    CLARITY SYSTEMS — BLOC 24
    Desktop uniquement : cartes dossiers Planning / Historique
    plus compactes (elles restaient trop grosses sur grand
-   écran). N'affecte pas le mobile.
+   écran). N'affecte pas le mobile. Le seuil est à 601px (juste
+   au-dessus du seuil mobile 600px) pour éviter un trou entre
+   les deux règles où aucune ne s'appliquait.
    ========================================================= */
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   #main-planning #planning-folders,
   #main-historique #history-folders {
     display: flex;
