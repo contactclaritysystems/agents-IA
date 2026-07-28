@@ -1431,19 +1431,6 @@ select.field-input {
   width: fit-content;
 }
 
-  .history-folder-card {
-  cursor: pointer;
-  min-height: 190px;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.history-folder-card .agent-status {
-  width: fit-content;
-}
-
   /* ── BOTTOM TAB BAR ── */
 .bottom-nav {
   display: none;
@@ -1822,14 +1809,6 @@ select.field-input {
 
   .bottom-tab.active {
     background: rgba(0,0,0,.045) !important;
-  }
-
-  #profil-mobile-section {
-    display: none;
-  }
-
-  #profil-mobile-section.open {
-    display: block;
   }
 
   #profil-mobile-section {
@@ -4492,11 +4471,6 @@ body,
     letter-spacing: 0.01em;
   }
 }
-
-/* =========================================================
-   CLARITY SYSTEMS — BLOC 11
-   LOGO DE MARQUE VISIBLE PARTOUT (plaque neutre quel que soit le thème)
-   ========================================================= */
 
 /* =========================================================
    CLARITY SYSTEMS — BLOC 11
@@ -9882,34 +9856,6 @@ async function startNotesDictation() {
     box.innerHTML = "✕ Autorisez le micro pour utiliser la dictée";
     autoHideDictationBox(box);
   };
-}
-
-  async function startRedactionDictation() {
-  await startSimpleAgentDictation({
-    agent: "redaction",
-    buttonId: "redaction-dictation-btn",
-    cardId: "card-redaction-run",
-    boxId: "redaction-dictation-box",
-    webhookUrl: REDACTION_WEBHOOK_URL,
-    loadingText: "✍️ Rédaction du texte...",
-    successText: "✅ Texte prêt",
-    modalTitle: "Texte rédigé",
-    modalSubtitle: "Vous pouvez modifier le texte avant de le copier."
-  });
-}
-
-async function startAssistantDictation() {
-  await startSimpleAgentDictation({
-    agent: "assistant",
-    buttonId: "assistant-dictation-btn",
-    cardId: "card-assistant-run",
-    boxId: "assistant-dictation-box",
-    webhookUrl: ASSISTANT_WEBHOOK_URL,
-    loadingText: "🤖 Réflexion de l’assistant...",
-    successText: "✅ Réponse prête",
-    modalTitle: "Réponse de l’assistant",
-    modalSubtitle: "Voici la réponse générée par votre assistant."
-  });
 }
 
   function updateAgentProgress(box, config = {}) {
