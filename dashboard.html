@@ -10835,6 +10835,19 @@ if (section === "settings") {
   if (section === "contacts") {
   document.getElementById("main-contacts").classList.add("active");
   if (btn) btn.classList.add("active");
+
+  // Sécurité : s'assurer que la liste n'est jamais bloquée en "cachée"
+  // (ex: si le formulaire contact a été fermé via un autre chemin)
+  const cSearchBox = document.querySelector("#main-contacts .contacts-search-box");
+  const cList = document.getElementById("contacts-list");
+  const cAlphabet = document.getElementById("contacts-alphabet");
+  if (cSearchBox) cSearchBox.classList.remove("is-hidden");
+  if (cList) cList.classList.remove("is-hidden");
+  if (cAlphabet) cAlphabet.classList.remove("is-hidden");
+
+  const cDetailPage = document.getElementById("contact-mobile-section");
+  if (cDetailPage) cDetailPage.classList.remove("open");
+
   loadContacts();
   return;
 }
@@ -11960,6 +11973,14 @@ async function saveContactFromPage() {
     if (section) {
       section.classList.remove("open");
     }
+
+    // Réaffiche la liste des contacts (sinon écran vide/noir)
+    const searchBoxEl = document.querySelector("#main-contacts .contacts-search-box");
+    const listEl = document.getElementById("contacts-list");
+    const alphabetEl = document.getElementById("contacts-alphabet");
+    if (searchBoxEl) searchBoxEl.classList.remove("is-hidden");
+    if (listEl) listEl.classList.remove("is-hidden");
+    if (alphabetEl) alphabetEl.classList.remove("is-hidden");
 
   } catch (error) {
     console.error(
