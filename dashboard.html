@@ -5220,6 +5220,24 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 27
+   Desktop uniquement : cartes de la liste (Historique/Planning)
+   moins larges, toujours une par ligne.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  #history-list.agents-grid,
+  #planning-list.agents-grid {
+    max-width: 620px;
+  }
+
+  #history-list.agents-grid .agent-card,
+  #planning-list.agents-grid .agent-card {
+    max-width: 620px;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5603,7 +5621,7 @@ a:hover {
         ← Retour
       </button>
 
-      <div class="section-title" id="planning-detail-title">Planning · Rendez-vous</div>
+      <div class="section-title" id="planning-detail-title">Rendez-vous</div>
     </div>
 
     <div id="planning-list" class="agents-grid" style="display:flex; flex-direction:column; gap:14px;"></div>
@@ -5799,7 +5817,7 @@ a:hover {
     ← Retour
   </button>
 
-  <div class="section-title" id="history-detail-title">Historique · Mails</div>
+  <div class="section-title" id="history-detail-title">Mails</div>
 </div>
 
     <div id="history-list" class="agents-grid"></div>
@@ -10764,7 +10782,7 @@ const title = document.getElementById("history-detail-title");
 const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
-if (title) title.textContent = "Historique · Rendez-vous passés";
+if (title) title.textContent = "Rendez-vous passés";
 if (folders) folders.style.display = "none";
 if (detail) {
   detail.style.display = "block";
@@ -10898,7 +10916,7 @@ const title = document.getElementById("history-detail-title");
 const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
-if (title) title.textContent = "Historique · Relances passées";
+if (title) title.textContent = "Relances passées";
 if (folders) folders.style.display = "none";
 if (detail) {
   detail.style.display = "block";
@@ -11065,13 +11083,13 @@ function openHistoryAgent(agentName) {
   if (title) {
   title.textContent =
     agentName === "notes"
-      ? "Historique · Comptes rendus"
+      ? "Comptes rendus"
       : agentName === "mails"
-      ? "Historique · Mails"
+      ? "Mails"
       : agentName === "redaction"
-      ? "Historique · Rédaction"
+      ? "Rédaction"
       : agentName === "assistant"
-      ? "Historique · Assistant"
+      ? "Assistant"
       : "Historique";
 }
 
@@ -13003,7 +13021,7 @@ window.logout = logout;
     detail.classList.add("open");
   }
 
-  if (title) title.textContent = "Planning · Rendez-vous";
+  if (title) title.textContent = "Rendez-vous";
 
   loadAppointments();
 }
@@ -13021,7 +13039,7 @@ function openPlanningFollowUps() {
     detail.classList.add("open");
   }
 
-  if (title) title.textContent = "Planning · Relances";
+  if (title) title.textContent = "Relances";
 
   loadFollowUps();
 }
