@@ -3237,7 +3237,7 @@ select:focus-visible {
 }
 
 .trial-banner {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(var(--clarity-glass-rgb), 0.82);
   border-color: var(--clarity-border);
   box-shadow: var(--clarity-shadow-xs);
 }
@@ -3481,7 +3481,7 @@ textarea.field-input {
 }
 
 .mail-choice-box {
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(var(--clarity-glass-rgb), 0.98);
   border-color: var(--clarity-border);
   border-radius: var(--clarity-radius-xl);
   box-shadow: var(--clarity-shadow-modal);
@@ -3599,7 +3599,7 @@ textarea.field-input {
 
 #contacts-alphabet {
   border-color: var(--clarity-border);
-  background: rgba(255, 255, 255, 0.90);
+  background: rgba(var(--clarity-glass-rgb), 0.90);
   box-shadow: var(--clarity-shadow-sm);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -3655,7 +3655,7 @@ textarea.field-input {
 /* ---------- TOAST ---------- */
 
 .toast {
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(var(--clarity-glass-rgb), 0.96);
   border-color: var(--clarity-success-border);
   color: var(--clarity-success);
   border-radius: var(--clarity-radius-pill);
@@ -4170,7 +4170,8 @@ body,
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   transition:
     border-color var(--clarity-duration) var(--clarity-ease),
-    box-shadow var(--clarity-duration) var(--clarity-ease);
+    box-shadow var(--clarity-duration) var(--clarity-ease),
+    border-radius var(--clarity-duration) var(--clarity-ease);
 }
 
 .clarity-input-bar:hover {
@@ -4186,11 +4187,16 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color .15s ease;
+  width: 100%;
 }
 
 .clarity-input-placeholder.is-listening {
   color: var(--clarity-text);
   font-weight: 600;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  word-break: break-word;
 }
 
 .clarity-input-placeholder.is-error {
@@ -4199,7 +4205,9 @@ body,
 }
 
 .clarity-input-bar.is-recording {
+  align-items: flex-start;
   border-color: var(--clarity-danger);
+  border-radius: var(--clarity-radius-md);
   box-shadow: 0 0 0 4px var(--clarity-danger-bg);
 }
 
@@ -9518,10 +9526,10 @@ icon= "✨",
   } = config;
 
   box.style.opacity = "1";
-  box.style.padding = "16px";
-  box.style.borderRadius = "16px";
+  box.style.padding = "10px 14px";
+  box.style.borderRadius = "var(--clarity-radius-sm)";
 
-  const stepsHtml = steps.map(step => {
+  const stepsHtml = steps.map((step, index) => {
     let symbol = "⏳";
     let color = "var(--clarity-text-secondary)";
 
@@ -9544,14 +9552,14 @@ icon= "✨",
       <div style="
         display:flex;
         align-items:flex-start;
-        gap:9px;
-        margin-top:9px;
+        gap:7px;
+        margin-top:${index === 0 ? 0 : 5}px;
         color:${color};
-        font-size:13px;
-        line-height:1.45;
+        font-size:12.5px;
+        line-height:1.4;
       ">
         <span style="
-          width:18px;
+          width:15px;
           flex-shrink:0;
           font-weight:800;
           text-align:center;
@@ -9581,11 +9589,11 @@ icon= "✨",
 
     finalHtml = `
       <div style="
-        margin-top:14px;
-        padding-top:12px;
-        border-top:1px solid rgba(0,0,0,.07);
+        margin-top:8px;
+        padding-top:8px;
+        border-top:1px solid var(--clarity-border);
         color:${finalColor};
-        font-size:13.5px;
+        font-size:12.5px;
         font-weight:800;
       ">
         ${finalIcon} ${finalText}
@@ -9594,19 +9602,6 @@ icon= "✨",
   }
 
   box.innerHTML = `
-    <div style="
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-size:14px;
-      font-weight:800;
-      color:var(--clarity-text);
-      margin-bottom:4px;
-    ">
-      <span>${icon}</span>
-      <span>${title}</span>
-    </div>
-
     ${stepsHtml}
     ${finalHtml}
   `;
