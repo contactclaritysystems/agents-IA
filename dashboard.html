@@ -5014,12 +5014,16 @@ a:hover {
 
 @media (min-width: 901px) {
   #main-agents .status-row {
+    grid-template-columns: repeat(3, 1fr);
     max-width: 640px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
   }
 
   #main-agents .stat-card {
+    min-width: 0;
+    width: 100%;
     aspect-ratio: 1 / 1;
     flex-direction: column;
     justify-content: center;
@@ -5029,6 +5033,7 @@ a:hover {
 
   #main-agents .clarity-hero {
     max-width: 640px;
+    width: 100%;
     margin-left: auto;
     margin-right: auto;
   }
