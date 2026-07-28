@@ -5188,6 +5188,38 @@ a:hover {
   margin-top: 2px !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 26
+   Titre de la vue détail (Historique / Planning) visible :
+   au lieu d'un petit texte perdu à droite du bouton Retour,
+   un vrai titre de page, à côté du bouton, sur mobile et desktop.
+   ========================================================= */
+
+#history-detail .section-header,
+#planning-detail .section-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 14px !important;
+}
+
+#history-detail .section-title,
+#planning-detail .section-title {
+  font-size: 21px !important;
+  font-weight: 780 !important;
+  letter-spacing: -0.02em !important;
+  color: var(--clarity-text) !important;
+  margin: 0 !important;
+}
+
+@media (min-width: 901px) {
+  #history-detail .section-title,
+  #planning-detail .section-title {
+    font-size: 26px !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5571,7 +5603,7 @@ a:hover {
         ← Retour
       </button>
 
-      <div class="section-title" id="planning-detail-title">Planning</div>
+      <div class="section-title" id="planning-detail-title">Planning · Rendez-vous</div>
     </div>
 
     <div id="planning-list" class="agents-grid" style="display:flex; flex-direction:column; gap:14px;"></div>
@@ -5767,7 +5799,7 @@ a:hover {
     ← Retour
   </button>
 
-  <div class="section-title" id="history-detail-title">Agent Mails</div>
+  <div class="section-title" id="history-detail-title">Historique · Mails</div>
 </div>
 
     <div id="history-list" class="agents-grid"></div>
@@ -10732,7 +10764,7 @@ const title = document.getElementById("history-detail-title");
 const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
-if (title) title.textContent = "Rendez-vous passés";
+if (title) title.textContent = "Historique · Rendez-vous passés";
 if (folders) folders.style.display = "none";
 if (detail) {
   detail.style.display = "block";
@@ -10866,7 +10898,7 @@ const title = document.getElementById("history-detail-title");
 const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
-if (title) title.textContent = "Relances passées";
+if (title) title.textContent = "Historique · Relances passées";
 if (folders) folders.style.display = "none";
 if (detail) {
   detail.style.display = "block";
@@ -11033,9 +11065,13 @@ function openHistoryAgent(agentName) {
   if (title) {
   title.textContent =
     agentName === "notes"
-      ? "Comptes rendus"
+      ? "Historique · Comptes rendus"
       : agentName === "mails"
-      ? "Mails"
+      ? "Historique · Mails"
+      : agentName === "redaction"
+      ? "Historique · Rédaction"
+      : agentName === "assistant"
+      ? "Historique · Assistant"
       : "Historique";
 }
 
@@ -12967,7 +13003,7 @@ window.logout = logout;
     detail.classList.add("open");
   }
 
-  if (title) title.textContent = "Rendez-vous";
+  if (title) title.textContent = "Planning · Rendez-vous";
 
   loadAppointments();
 }
@@ -12985,7 +13021,7 @@ function openPlanningFollowUps() {
     detail.classList.add("open");
   }
 
-  if (title) title.textContent = "Relances";
+  if (title) title.textContent = "Planning · Relances";
 
   loadFollowUps();
 }
