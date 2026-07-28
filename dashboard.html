@@ -5234,10 +5234,11 @@ a:hover {
 /* =========================================================
    CLARITY SYSTEMS — BLOC 27
    Desktop uniquement : cartes de la liste (Historique/Planning)
-   moins larges, toujours une par ligne.
+   moins larges, toujours une par ligne. Seuil à 601px (voir
+   BLOC 24 : évite le trou entre mobile et desktop).
    ========================================================= */
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   #history-list.agents-grid,
   #planning-list.agents-grid {
     max-width: 620px;
@@ -5256,6 +5257,42 @@ a:hover {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 28
+   Desktop uniquement : page Réglages moins large et centrée
+   (mini-cartes, carte Apparence, carte contact) + titre/sous-
+   titre centrés. Le bouton logout reste ancré en haut à droite.
+   ========================================================= */
+
+@media (min-width: 601px) {
+  #main-settings .mobile-integrations {
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #main-settings .gmail-section {
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #main-settings .settings-topbar {
+    position: relative;
+  }
+
+  #main-settings .settings-topbar > div:first-child {
+    width: 100%;
+    text-align: center;
+  }
+
+  #main-settings .power-logout-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
   }
 }
 
