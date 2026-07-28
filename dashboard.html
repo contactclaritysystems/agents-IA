@@ -62,14 +62,12 @@ body {
 }
 
 body.loading-subscription .trial-banner,
-body.loading-subscription #actions-count,
-body.loading-subscription #agents-count {
+body.loading-subscription #actions-count {
   opacity: 0;
 }
 
 .trial-banner,
-#actions-count,
-#agents-count {
+#actions-count {
   transition: opacity .18s ease;
 }
   
@@ -5691,17 +5689,6 @@ let currentUser = null;
   document.body.classList.add("loading-subscription");
 let currentProfile = null;
 let agentIsWorking = false;
-const mailsEnabled = true;
-const planningEnabled = true;
-
-let enabledAgents = {
-  mails: true,
-  planning: true,
-  relance: false,
-  notes: true,
-  redaction: true,
-  assistant: true
-};
 
 // ─── GMAIL UI ────────────────────────────────────────────
 
@@ -6694,86 +6681,11 @@ async function handleUser(user) {
   await loadProfile();
   await ensureAssistanceContact();
   await ensureSelfContact();
-  await loadEnabledAgents();
   await loadActionCounter();
   await loadSubscription();
   await startOnboardingIfNeeded();
   
   console.log("handleUser terminé");
-}
-
-function syncMailsStatus() {
-  const active = enabledAgents.mails === true;
-
-  const settingsStatus = document.querySelector("#card-mails .agent-status");
-  if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = active ? "Actif" : "Désactivé";
-  }
-
-  const agentsStatus = document.querySelector("#card-mails-run .agent-status");
-  if (agentsStatus) {
-    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
-  }
-}
-
-function syncPlanningStatus() {
-  const active = enabledAgents.planning === true;
-
-  const settingsStatus = document.querySelector("#card-planning .agent-status");
-  if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = active ? "Actif" : "Désactivé";
-  }
-
-  const agentsStatus = document.querySelector("#card-planning-run .agent-status");
-  if (agentsStatus) {
-    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
-  }
-}
-
-  function syncRelanceStatus() {
-  const active = enabledAgents.relance === true;
-
-  const settingsStatus = document.querySelector("#card-relance .agent-status");
-  if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = active ? "Actif" : "Désactivé";
-  }
-
-  const agentsStatus = document.querySelector("#card-relance-run .agent-status");
-  if (agentsStatus) {
-    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
-  }
-}
-
-  function syncNotesStatus() {
-  const active = enabledAgents.notes === true;
-
-  const settingsStatus = document.querySelector("#card-notes .agent-status");
-  if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = active ? "Actif" : "Désactivé";
-  }
-
-  const agentsStatus = document.querySelector("#card-notes-run .agent-status");
-  if (agentsStatus) {
-    agentsStatus.className = active ? "agent-status ok" : "agent-status pending";
-    agentsStatus.textContent = active ? "Prêt" : "Désactivé";
-  }
-}
-
-  function syncSimpleAgentStatus(agentName) {
-  const active = enabledAgents[agentName] === true;
-
-  const settingsStatus = document.querySelector("#card-" + agentName + " .agent-status");
-  if (settingsStatus) {
-    settingsStatus.className = active ? "agent-status ok" : "agent-status empty";
-    settingsStatus.textContent = active ? "Actif" : "Désactivé";
-  }
 }
 
   function formatDateShort(dateStr) {
@@ -7736,82 +7648,10 @@ if (profilLbl) {
   
 let selectedContactId = null;
 
-async function loadEnabledAgents() {
-  if (!currentUser) return;
-
-  const { data, error } = await supabaseClient
-    .from("agent_configs")
-    .select("config")
-    .eq("user_id", currentUser.id)
-    .eq("agent_name", "enabled_agents")
-    .limit(1);
-
-  if (error) {
-    console.error("Erreur loadEnabledAgents:", error);
-    return;
-  }
-
-  if (data && data.length > 0 && data[0].config) {
-    const savedConfig = data[0].config || {};
-
-enabledAgents = {
-  mails: savedConfig.mails ?? true,
-  planning: savedConfig.planning ?? true,
-  relance: savedConfig.relance ?? false,
-  notes: savedConfig.notes ?? true,
-  redaction: savedConfig.redaction ?? true,
-  assistant: savedConfig.assistant ?? true
-};
-  }
-
-  syncAgentsVisibility();
-}
-
-function syncAgentsVisibility() {
-  const runCards = {
-  mails: document.getElementById("card-mails-run"),
-  planning: document.getElementById("card-planning-run"),
-  relance: document.getElementById("card-relance-run"),
-  notes: document.getElementById("card-notes-run"),
-  redaction: document.getElementById("card-redaction-run"),
-  assistant: document.getElementById("card-assistant-run")
-};
-
-  Object.keys(runCards).forEach(agent => {
-    if (!runCards[agent]) return;
-    runCards[agent].style.display = enabledAgents[agent] ? "block" : "none";
-  });
-
-  syncMailsStatus();
-syncPlanningStatus();
-syncRelanceStatus();
-syncNotesStatus();
-syncSimpleAgentStatus("redaction");
-syncSimpleAgentStatus("assistant");
-
-updateAgentsCount();
-}
-
-  function updateAgentsCount() {
-  const totalAgents = Object.keys(enabledAgents).length;
-  const activeAgents = Object.values(enabledAgents).filter(value => value === true).length;
-
-  const el = document.getElementById("agents-count");
-  if (el) {
-    el.textContent = `${activeAgents} / ${totalAgents}`;
-  }
-    updateStatProgresses();
-}
-
   function updateStatProgresses() {
-  const agentsBar = document.getElementById("agents-progress");
   const actionsBar = document.getElementById("actions-progress");
   const timeBar = document.getElementById("time-progress");
   const subBar = document.getElementById("subscription-progress");
-
-  const totalAgents = Object.keys(enabledAgents).length || 1;
-  const activeAgents = Object.values(enabledAgents).filter(v => v === true).length;
-  if (agentsBar) agentsBar.style.width = `${Math.min((activeAgents / totalAgents) * 100, 100)}%`;
 
   const sub = window.currentSubscription;
   if (sub && actionsBar) {
