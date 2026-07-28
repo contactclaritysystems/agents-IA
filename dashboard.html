@@ -11536,12 +11536,6 @@ async function updateContact(id) {
   document.getElementById("contact-email").value = "";
   document.getElementById("contact-phone").value = "";
 
-  const btn = document.getElementById("contact-submit-btn");
-  if (btn) {
-    btn.innerHTML = "+ Ajouter un contact";
-    btn.setAttribute("onclick", "addContact()");
-  }
-
   showToast("Contact modifié");
   await loadContacts();
   return true;
