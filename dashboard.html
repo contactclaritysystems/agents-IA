@@ -10330,7 +10330,14 @@ console.log("MESSAGE =", message);
 
       await incrementActions();
       await loadSubscription();
-      await saveActionLog(config.agent, instruction, "success");
+
+      // On garde la demande ET la réponse générée dans l'historique
+      // (avant, seule la demande dictée était enregistrée)
+      const logText =
+        "DEMANDE:\n" + instruction +
+        "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+
+      await saveActionLog(config.agent, logText, "success");
       await loadActionCounter();
 
       autoHideDictationBox(box);
@@ -11405,8 +11412,11 @@ if (objetMatch && objetMatch[1]) {
   if (agentName === "redaction" || agentName === "assistant") {
     const text = log.action || "";
 
+    const demandeMatch = text.match(/DEMANDE:\s*([\s\S]*?)(?:\n\s*REPONSE:|$)/i);
+    const demandeText = demandeMatch ? demandeMatch[1].trim() : text;
+
     const title =
-      text
+      demandeText
         .split("\n")
         .find(line => line.trim().length > 4) ||
       (agentName === "redaction" ? "Texte rédigé" : "Question posée");
@@ -11536,12 +11546,19 @@ if (objetMatch && objetMatch[1]) {
   list.style.flexDirection = "column";
   list.style.gap = "14px";
 
-  const heading = agentName === "redaction" ? "Texte rédigé" : "Question posée";
+  const text = log.action || "";
+  const demandeMatch = text.match(/DEMANDE:\s*([\s\S]*?)(?:\n\s*REPONSE:|$)/i);
+  const reponseMatch = text.match(/REPONSE:\s*([\s\S]*)$/i);
+
+  const demande = demandeMatch ? demandeMatch[1].trim() : text.trim();
+  const reponse = reponseMatch ? reponseMatch[1].trim() : "";
+
+  const reponseHeading = agentName === "redaction" ? "Texte rédigé" : "Réponse de l’assistant";
 
   list.innerHTML = `
     <div class="gmail-section" style="display:block;">
 
-      <div class="section-title">${heading}</div>
+      <div class="section-title">Votre demande</div>
 
       <div class="gmail-desc" style="margin-top:8px;">
         ${new Date(log.created_at).toLocaleString("fr-FR")}
@@ -11554,7 +11571,19 @@ if (objetMatch && objetMatch[1]) {
         font-size:14px;
         word-break:break-word;
       ">
-        ${(log.action || "").trim() || "Aucun détail disponible"}
+        ${demande || "Aucun détail disponible"}
+      </div>
+
+      <div class="section-title" style="margin-top:26px;">${reponseHeading}</div>
+
+      <div style="
+        margin-top:16px;
+        white-space:pre-wrap;
+        line-height:1.6;
+        font-size:14px;
+        word-break:break-word;
+      ">
+        ${reponse || "Réponse non disponible pour cette ancienne action"}
       </div>
 
     </div>
