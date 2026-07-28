@@ -5323,6 +5323,21 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 31
+   Carnet contacts (mobile) : la barre alphabétique est centrée
+   verticalement sur tout le viewport (top:50%), ce qui la fait
+   mordre sur la barre de recherche / le bouton "Ajouter un contact"
+   en haut de page. On la redescend un peu, uniquement en mobile
+   (le PC ne bouge pas).
+   ========================================================= */
+
+@media (max-width: 900px) {
+  #contacts-alphabet {
+    top: 60%;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
