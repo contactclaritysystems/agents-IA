@@ -5181,6 +5181,15 @@ a:hover {
   }
 }
 
+/* Masquage de la grille de dossiers quand un dossier est ouvert
+   (Historique/Planning) : doit fonctionner à TOUTES les largeurs,
+   pas seulement en mobile, sinon le display:flex forcé ci-dessus
+   empêche le JS de cacher la grille. */
+#main-planning #planning-folders.is-hidden,
+#main-historique #history-folders.is-hidden {
+  display: none !important;
+}
+
 /* =========================================================
    CLARITY SYSTEMS — BLOC 26
    Titre de la vue détail (Historique / Planning) visible :
@@ -10829,7 +10838,7 @@ const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
 if (title) title.textContent = "Rendez-vous passés";
-if (folders) folders.style.display = "none";
+if (folders) folders.classList.add("is-hidden");
 if (detail) {
   detail.style.display = "block";
   detail.classList.add("open");
@@ -10963,7 +10972,7 @@ const detail = document.getElementById("history-detail");
 const folders = document.getElementById("history-folders");
 
 if (title) title.textContent = "Relances passées";
-if (folders) folders.style.display = "none";
+if (folders) folders.classList.add("is-hidden");
 if (detail) {
   detail.style.display = "block";
   detail.classList.add("open");
@@ -11123,7 +11132,7 @@ function openHistoryAgent(agentName) {
   const folders = document.getElementById("history-folders");
 
   if (folders) {
-    folders.style.display = "none";
+    folders.classList.add("is-hidden");
   }
 
   if (title) {
@@ -11163,7 +11172,7 @@ function closeHistoryDetail() {
   }
 
   if (folders) {
-    folders.style.display = "grid";
+    folders.classList.remove("is-hidden");
   }
 
   historyLimit = 10;
