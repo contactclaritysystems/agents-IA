@@ -4183,16 +4183,29 @@ body,
 }
 
 .clarity-input-mic {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--clarity-accent), var(--clarity-accent-hover));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 18px;
   flex-shrink: 0;
+  box-shadow: 0 0 0 0 var(--clarity-accent-dim), 0 6px 20px rgba(0,0,0,.25);
+  animation: micBreathe 2.6s ease-in-out infinite;
+}
+
+@keyframes micBreathe {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--clarity-accent-dim), 0 6px 20px rgba(0,0,0,.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px transparent, 0 6px 24px rgba(0,0,0,.3);
+    transform: scale(1.05);
+  }
 }
 
 .clarity-quick-row {
@@ -4788,6 +4801,50 @@ a:hover {
 #planning-detail.open {
   padding-left: max(18px, calc((100% - 900px) / 2)) !important;
   padding-right: max(18px, calc((100% - 900px) / 2)) !important;
+}
+
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 20
+   Halo animé derrière le hero de l'accueil : la page respire
+   ========================================================= */
+
+#main-agents {
+  position: relative;
+}
+
+#main-agents::before {
+  content: "";
+  position: absolute;
+  top: -140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 640px;
+  height: 640px;
+  max-width: 140vw;
+  background: radial-gradient(circle, var(--clarity-accent-dim) 0%, transparent 68%);
+  filter: blur(30px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+  animation: heroGlowPulse 7s ease-in-out infinite;
+}
+
+@keyframes heroGlowPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.68;
+    transform: translateX(-50%) scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #main-agents::before,
+  .clarity-input-mic {
+    animation: none;
+  }
 }
 
 </style>
