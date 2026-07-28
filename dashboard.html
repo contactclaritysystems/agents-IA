@@ -4982,7 +4982,7 @@ a:hover {
     <div class="gmail-desc" style="display:block;">
       Une fonctionnalité qui vous manque ? Un besoin lié à votre métier ? Ou carrément envie d'un agent pensé pour vous ?
       <br><br>
-      <a href="#" onclick="openContactChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on regarde ça ensemble.
+      <a href="#" onclick="openSupportChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on regarde ça ensemble.
     </div>
   </div>
 
@@ -5576,7 +5576,7 @@ a:hover {
 </div>
 
   <div id="support-choice-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeContactChoiceModal()"></div>
+  <div class="mail-choice-backdrop" onclick="closeSupportChoiceModal()"></div>
 
   <div class="mail-choice-box">
     <div class="mail-choice-title">Nous contacter</div>
@@ -5614,7 +5614,7 @@ a:hover {
       </div>
     </button>
 
-   <button class="mail-choice-close" onclick="closeContactChoiceModal()">Annuler</button>
+   <button class="mail-choice-close" onclick="closeSupportChoiceModal()">Annuler</button>
   </div>
 </div>
 
@@ -5792,8 +5792,18 @@ if (box) {
 }
 }
 
+function openSupportChoiceModal() {
+  const modal = document.getElementById("support-choice-modal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeSupportChoiceModal() {
+  const modal = document.getElementById("support-choice-modal");
+  if (modal) modal.style.display = "none";
+}
+
   function sendContactMessage(subject, body) {
-  closeContactChoiceModal();
+  closeSupportChoiceModal();
 
   const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
 
@@ -11011,7 +11021,7 @@ async function updateContact(id) {
 
   if (!rawName) {
     showToast("Ajoutez au moins un nom");
-    return;
+    return false;
   }
 
   // Normalisation : majuscule à chaque mot, sans tirets
@@ -11025,7 +11035,7 @@ async function updateContact(id) {
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
-  if (!accessToken) { showToast("Session expirée"); return; }
+  if (!accessToken) { showToast("Session expirée"); return false; }
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/contacts?id=eq." + id,
@@ -11049,7 +11059,7 @@ async function updateContact(id) {
 
   if (!response.ok) {
     showToast("Erreur modification contact");
-    return;
+    return false;
   }
 
   document.getElementById("contact-name").value = "";
@@ -11064,7 +11074,8 @@ async function updateContact(id) {
   }
 
   showToast("Contact modifié");
-  loadContacts();
+  await loadContacts();
+  return true;
 }
 
 async function deleteContact(id) {
