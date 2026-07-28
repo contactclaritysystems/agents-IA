@@ -5006,6 +5006,34 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 23
+   Desktop uniquement : accueil resserré (cartes stats carrées,
+   carte Clarity moins étirée). N'affecte pas le mobile.
+   ========================================================= */
+
+@media (min-width: 901px) {
+  #main-agents .status-row {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  #main-agents .stat-card {
+    aspect-ratio: 1 / 1;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 16px 12px;
+  }
+
+  #main-agents .clarity-hero {
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
