@@ -5175,6 +5175,15 @@ a:hover {
   display: none !important;
 }
 
+/* Carnet contacts : même principe, la liste doit disparaître
+   pendant que le formulaire "Nouveau/Modifier contact" est
+   ouvert, sinon il s'affiche en dessous au lieu de la remplacer. */
+#main-contacts .contacts-search-box.is-hidden,
+#main-contacts #contacts-list.is-hidden,
+#main-contacts #contacts-alphabet.is-hidden {
+  display: none !important;
+}
+
 /* =========================================================
    CLARITY SYSTEMS — BLOC 26
    Titre de la vue détail (Historique / Planning) visible :
@@ -11804,6 +11813,14 @@ selectedContactId = null;
     agentMessage.style.display = fromAgent ? "block" : "none";
 }
 
+  // Cache la liste des contacts pendant que le formulaire est ouvert
+  const searchBox = document.querySelector("#main-contacts .contacts-search-box");
+  const list = document.getElementById("contacts-list");
+  const alphabet = document.getElementById("contacts-alphabet");
+  if (searchBox) searchBox.classList.add("is-hidden");
+  if (list) list.classList.add("is-hidden");
+  if (alphabet) alphabet.classList.add("is-hidden");
+
   // Ouvre ensuite le formulaire
   section.classList.add("open");
 }
@@ -11843,8 +11860,16 @@ if (window.pendingAction?.type === "mail") {
     );
     window.contactOpenedFromAgent = false;
 }
-  
+
   section.classList.remove("open");
+
+  // Réaffiche la liste des contacts
+  const searchBox = document.querySelector("#main-contacts .contacts-search-box");
+  const list = document.getElementById("contacts-list");
+  const alphabet = document.getElementById("contacts-alphabet");
+  if (searchBox) searchBox.classList.remove("is-hidden");
+  if (list) list.classList.remove("is-hidden");
+  if (alphabet) alphabet.classList.remove("is-hidden");
 }
 
 async function saveContactFromPage() {
