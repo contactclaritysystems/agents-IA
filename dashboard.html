@@ -2740,12 +2740,23 @@ body[data-theme="dark"] #app-loader {
   }
 
   #contacts-alphabet {
-    right: 20px;
+    /* .main fait max-width:900px centré, et la liste des contacts fait
+       min(620px, calc(100% - 60px)) centrée dedans (padding .main de 24px
+       de chaque côté) : on recalcule où tombe le bord droit des cartes
+       pour coller la barre juste à côté, au lieu de la laisser plaquée
+       sur le bord de la fenêtre. */
+    right: auto;
+    left: calc(50vw + 324px);
+    top: 56%;
     padding: 8px 5px;
     border: 1px solid rgba(29,29,31,.06);
     border-radius: 16px;
     background: rgba(var(--clarity-glass-rgb),.85);
     box-shadow: 0 8px 28px rgba(0,0,0,.06);
+  }
+
+  #contacts-alphabet button {
+    height: 21px;
   }
 }
 
