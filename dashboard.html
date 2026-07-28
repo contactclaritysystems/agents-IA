@@ -9552,6 +9552,7 @@ icon= "✨",
       <div style="
         display:flex;
         align-items:flex-start;
+        justify-content:center;
         gap:7px;
         margin-top:${index === 0 ? 0 : 5}px;
         color:${color};
@@ -9677,12 +9678,16 @@ progressIcon: "✨",
       box = document.createElement("div");
       box.id = config.boxId;
       box.style.marginBottom = "12px";
+      box.style.marginLeft = "auto";
+      box.style.marginRight = "auto";
       box.style.padding = "12px 14px";
       box.style.borderRadius = "14px";
       box.style.fontSize = "13px";
       box.style.fontWeight = "600";
-      box.style.width = "100%";
+      box.style.width = "fit-content";
+      box.style.maxWidth = "85%";
       box.style.boxSizing = "border-box";
+      box.style.textAlign = "center";
 
       const main = card ? card.querySelector(".clarity-hero-main") : null;
       const body = card ? card.querySelector(".agent-body") : null;
