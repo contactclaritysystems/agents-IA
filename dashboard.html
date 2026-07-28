@@ -5079,12 +5079,16 @@ a:hover {
 @media (min-width: 901px) {
   #main-planning #planning-folders,
   #main-historique #history-folders {
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 14px;
   }
 
   #main-planning .history-folder-card,
   #main-historique .history-folder-card {
+    flex: 0 0 calc((100% - 2 * 14px) / 3);
+    max-width: calc((100% - 2 * 14px) / 3);
     min-height: unset;
     aspect-ratio: 1 / 1;
     padding: 16px;
