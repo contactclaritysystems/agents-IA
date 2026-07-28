@@ -11783,6 +11783,14 @@ selectedContactId = null;
     return;
   }
 
+  // Réinitialise le bouton "Enregistrer" à chaque ouverture du formulaire :
+  // sans ça, s'il est resté désactivé après un enregistrement précédent
+  // (curseur "interdit"), il ne redevient jamais cliquable.
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+  }
+
   if (contactId) {
     const contact = contactsCache.find(c => c.id === contactId);
 
@@ -11972,6 +11980,13 @@ async function saveContactFromPage() {
 
     if (section) {
       section.classList.remove("open");
+    }
+
+    // Remet le bouton dans un état normal (sinon il reste désactivé
+    // pour la prochaine ouverture du formulaire)
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
     }
 
     // Réaffiche la liste des contacts (sinon écran vide/noir)
