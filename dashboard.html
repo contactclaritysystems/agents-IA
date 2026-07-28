@@ -9676,14 +9676,23 @@ progressIcon: "✨",
     if (!box) {
       box = document.createElement("div");
       box.id = config.boxId;
-      box.style.marginTop = "12px";
+      box.style.marginBottom = "12px";
       box.style.padding = "12px 14px";
       box.style.borderRadius = "14px";
       box.style.fontSize = "13px";
       box.style.fontWeight = "600";
+      box.style.width = "100%";
+      box.style.boxSizing = "border-box";
 
+      const main = card ? card.querySelector(".clarity-hero-main") : null;
+      const body = card ? card.querySelector(".agent-body") : null;
       const head = card ? card.querySelector(".agent-head") : null;
-      if (head) {
+
+      if (main) {
+        main.prepend(box);
+      } else if (body) {
+        body.prepend(box);
+      } else if (head) {
         head.after(box);
       } else {
         document.body.appendChild(box);
