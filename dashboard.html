@@ -5123,7 +5123,7 @@ a:hover {
       </button>
 
       <div class="clarity-quick-row">
-        <button type="button" class="quick-action-btn" onclick="openQuickMailCompose()">
+        <button type="button" class="quick-action-btn" id="quick-mail-btn" onclick="openQuickMailCompose()">
           ✉️ Envoyer un mail
         </button>
       </div>
@@ -5233,8 +5233,8 @@ a:hover {
       </div>
 
       <div class="field-group" style="margin-top:14px;">
-        <div class="field-label">Email</div>
-        <input class="field-input" id="contact-email" placeholder="lucas@email.com" />
+        <div class="field-label">Email <span style="color:var(--clarity-danger);">*</span></div>
+        <input class="field-input" id="contact-email" placeholder="lucas@email.com" required />
       </div>
 
       <div class="field-group" style="margin-top:14px;">
@@ -8276,6 +8276,12 @@ function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours..."
       btn.style.pointerEvents = "none";
     }
   });
+
+  document.querySelectorAll("#main-agents .quick-action-btn").forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = ".55";
+    btn.style.pointerEvents = "none";
+  });
 }
 
 function lockActiveAgentButton(btn, message = "⏳ Traitement en cours...") {
@@ -8302,6 +8308,12 @@ function unlockAgentButtons() {
       delete btn.dataset.originalText;
     }
 
+    btn.style.opacity = "1";
+    btn.style.pointerEvents = "";
+  });
+
+  document.querySelectorAll("#main-agents .quick-action-btn").forEach(btn => {
+    btn.disabled = false;
     btn.style.opacity = "1";
     btn.style.pointerEvents = "";
   });
@@ -11024,6 +11036,11 @@ async function updateContact(id) {
     return false;
   }
 
+  if (!email) {
+    showToast("L'adresse email est obligatoire");
+    return false;
+  }
+
   // Normalisation : majuscule à chaque mot, sans tirets
   const fullName = rawName
     .toLowerCase()
@@ -11359,6 +11376,11 @@ async function addContact() {
 
   if (!rawName) {
   showToast("Ajoutez au moins un nom", "error");
+  return false;
+}
+
+  if (!email) {
+  showToast("L'adresse email est obligatoire", "error");
   return false;
 }
 
