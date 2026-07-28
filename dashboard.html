@@ -5109,6 +5109,83 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 25
+   Les cartes dossiers de Planning / Historique reprennent
+   exactement le style des mini-cartes de Réglages (stat-card /
+   stat-icon-wrap) : icône ronde colorée, mise en page centrée,
+   sans pastille de statut. Mobile et desktop.
+   ========================================================= */
+
+#main-planning .history-folder-card,
+#main-historique .history-folder-card {
+  min-height: 0 !important;
+  aspect-ratio: unset !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  gap: 8px !important;
+  padding: 16px 8px !important;
+  background: var(--clarity-surface-soft) !important;
+  border: 1px solid var(--clarity-border) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb), .75) inset !important;
+}
+
+#main-planning .history-folder-card .agent-status,
+#main-historique .history-folder-card .agent-status {
+  display: none !important;
+}
+
+#main-planning .history-folder-icon,
+#main-historique .history-folder-icon {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  border-radius: 13px !important;
+  background: var(--clarity-surface-soft);
+}
+
+#main-planning .history-folder-icon.blue,
+#main-historique .history-folder-icon.blue {
+  background: rgba(59, 130, 246, .10) !important;
+  color: var(--clarity-tag-blue, #3b82f6);
+}
+
+#main-planning .history-folder-icon.yellow,
+#main-historique .history-folder-icon.yellow {
+  background: rgba(245, 158, 11, .12) !important;
+  color: var(--clarity-tag-amber, #f59e0b);
+}
+
+#main-planning .history-folder-icon.purple,
+#main-historique .history-folder-icon.purple {
+  background: rgba(139, 92, 246, .10) !important;
+  color: var(--clarity-tag-purple, #8b5cf6);
+}
+
+#main-planning .history-folder-icon.green,
+#main-historique .history-folder-icon.green {
+  background: rgba(34, 197, 94, .10) !important;
+  color: var(--clarity-tag-green, #22c55e);
+}
+
+#main-planning .history-folder-card .agent-name,
+#main-historique .history-folder-card .agent-name {
+  font-size: 13px !important;
+  font-weight: 780 !important;
+}
+
+#main-planning .history-folder-card .agent-desc,
+#main-historique .history-folder-card .agent-desc {
+  font-size: 10.5px !important;
+  line-height: 1.3 !important;
+  margin-top: 2px !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -5468,7 +5545,7 @@ a:hover {
 
   <div class="agents-grid" id="planning-folders">
     <div class="agent-card history-folder-card" onclick="openPlanningAppointments()">
-      <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div>
+      <div class="history-folder-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div>
       <div>
         <div class="agent-name">Rendez-vous</div>
         <div class="agent-desc">Voir les rendez-vous à venir</div>
@@ -5477,7 +5554,7 @@ a:hover {
     </div>
 
     <div class="agent-card history-folder-card" onclick="openPlanningFollowUps()">
-      <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+      <div class="history-folder-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
       <div>
         <div class="agent-name">Relances</div>
         <div class="agent-desc">Voir les relances prévues</div>
@@ -5629,7 +5706,7 @@ a:hover {
 
   <div class="agents-grid" id="history-folders">
     <div class="agent-card history-folder-card" onclick="openHistoryAgent('mails')">
-      <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+      <div class="history-folder-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
       <div>
         <div class="agent-name">Mails</div>
         <div class="agent-desc">Mails envoyés ou échoués</div>
@@ -5638,7 +5715,7 @@ a:hover {
     </div>
 
     <div class="agent-card history-folder-card" onclick="openHistoryAgent('notes')">
-  <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></div>
+  <div class="history-folder-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg></div>
   <div>
     <div class="agent-name">Compte Rendu</div>
     <div class="agent-desc">Comptes rendus créés</div>
@@ -5646,7 +5723,7 @@ a:hover {
   <div class="agent-status ok">Historique</div>
 </div>
 <div class="agent-card history-folder-card" onclick="loadPastAppointments()">
-  <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div>
+  <div class="history-folder-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></div>
   <div>
     <div class="agent-name">Rendez-vous</div>
     <div class="agent-desc">Anciens rendez-vous</div>
@@ -5655,7 +5732,7 @@ a:hover {
 </div>
 
 <div class="agent-card history-folder-card" onclick="loadPastFollowUps()">
-  <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
+  <div class="history-folder-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></div>
   <div>
     <div class="agent-name">Relances</div>
     <div class="agent-desc">Relances passées</div>
@@ -5664,7 +5741,7 @@ a:hover {
 </div>
 
     <div class="agent-card history-folder-card" onclick="openHistoryAgent('redaction')">
-  <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+  <div class="history-folder-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
   <div>
     <div class="agent-name">Rédaction</div>
     <div class="agent-desc">Textes générés</div>
@@ -5673,7 +5750,7 @@ a:hover {
 </div>
 
 <div class="agent-card history-folder-card" onclick="openHistoryAgent('assistant')">
-  <div class="history-folder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M9 12v2M15 12v2"/></svg></div>
+  <div class="history-folder-icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M2 14h2M20 14h2M9 12v2M15 12v2"/></svg></div>
   <div>
     <div class="agent-name">Assistant</div>
     <div class="agent-desc">Questions et réponses</div>
