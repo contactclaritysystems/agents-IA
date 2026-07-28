@@ -5281,6 +5281,27 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 29
+   Réglages > Profil : le bouton "← Retour" hérite d'une règle
+   générale display:block qui l'empile mal (trop à gauche, seul
+   sur sa ligne). On l'aligne comme les headers Historique/
+   Planning : bouton + titre en ligne, centré dans la colonne
+   de 620px, sur desktop uniquement.
+   ========================================================= */
+
+@media (min-width: 601px) {
+  #profil-mobile-section .mobile-subpage-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+    max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
