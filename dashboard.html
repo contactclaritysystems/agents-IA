@@ -2158,13 +2158,35 @@ body[data-theme="dark"] #app-loader {
 }
 
 .loader-card {
+  position: relative;
+  z-index: 0;
   text-align: center;
   animation: loaderFadeIn .35s ease;
 }
 
+/* Même halo lumineux que le logo de la page d'accueil (BLOC 20),
+   repositionné derrière le logo (plus petit) de l'écran de chargement. */
+.loader-card::before {
+  content: "";
+  position: absolute;
+  top: -55px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  max-width: 85vw;
+  background: radial-gradient(circle, rgba(0, 145, 199, 0.28) 0%, rgba(0, 145, 199, 0.08) 45%, transparent 70%);
+  filter: blur(30px);
+  opacity: 1;
+  pointer-events: none;
+  z-index: -1;
+  animation: heroGlowPulse 7s ease-in-out infinite;
+}
+
 .loader-card img {
-  width: 400px;
-  max-width: 70vw;
+  position: relative;
+  width: 260px;
+  max-width: 60vw;
   height: auto;
   margin-bottom: 22px;
 }
@@ -4913,6 +4935,7 @@ a:hover {
 
 @media (prefers-reduced-motion: reduce) {
   #main-agents::before,
+  .loader-card::before,
   .clarity-input-mic {
     animation: none;
   }
@@ -10884,7 +10907,11 @@ function loadMoreHistory(agentName) {
 
 // Suppression d'une ligne d'historique (mails, notes, rédaction, assistant...)
 async function deleteHistoryLog(id, agentName) {
-  if (!id) return;
+  if (!id || id === "undefined" || id === "null") {
+    console.error("deleteHistoryLog: id manquant sur cette ligne", id);
+    showToast("Suppression impossible (identifiant manquant)", "error");
+    return;
+  }
   if (!confirm("Supprimer cette action de l'historique ?")) return;
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
@@ -10903,13 +10930,27 @@ async function deleteHistoryLog(id, agentName) {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        // return=representation : indispensable pour vérifier que la
+        // ligne a VRAIMENT été supprimée. Sans ça, Supabase répond 204
+        // (succès) même si aucune ligne n'a été touchée (ex: policy RLS
+        // manquante pour le DELETE), ce qui affichait un faux toast de
+        // succès sans rien supprimer réellement.
+        "Prefer": "return=representation"
       }
     }
   );
 
   if (!response.ok) {
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  const deletedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    console.error("deleteHistoryLog: 0 ligne supprimée pour id=", id, "— vérifier la policy RLS DELETE sur action_event_logs");
+    showToast("Suppression bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -10938,13 +10979,22 @@ async function deletePastAppointment(id) {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
       }
     }
   );
 
   if (!response.ok) {
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  const deletedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    console.error("deletePastAppointment: 0 ligne supprimée pour id=", id);
+    showToast("Suppression bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -10973,13 +11023,22 @@ async function deletePastFollowUp(id) {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
       }
     }
   );
 
   if (!response.ok) {
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  const deletedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    console.error("deletePastFollowUp: 0 ligne supprimée pour id=", id);
+    showToast("Suppression bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -11011,18 +11070,26 @@ async function deleteAllHistory() {
 
   showToast("Suppression en cours...");
 
+  let logsDeletedCount = null;
+
   try {
-    await fetch(
+    const logsResponse = await fetch(
       SUPABASE_URL + "/rest/v1/action_event_logs?user_id=eq." + currentUser.id,
       {
         method: "DELETE",
         headers: {
           "apikey": SUPABASE_ANON_KEY,
           "Authorization": "Bearer " + accessToken,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
         }
       }
     );
+
+    if (logsResponse.ok) {
+      const deletedLogs = await logsResponse.json().catch(() => null);
+      if (Array.isArray(deletedLogs)) logsDeletedCount = deletedLogs.length;
+    }
 
     await fetch(
       SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + currentUser.id + "&status=in.(done,cancelled,missed)",
@@ -11049,6 +11116,17 @@ async function deleteAllHistory() {
     );
   } catch (e) {
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  // Si la suppression des logs (mails/notes/rédaction/assistant) n'a
+  // supprimé aucune ligne alors qu'il devrait y en avoir, c'est très
+  // probablement une policy RLS DELETE manquante côté Supabase sur
+  // action_event_logs (voir deleteHistoryLog). On prévient honnêtement.
+  if (logsDeletedCount === 0) {
+    console.error("deleteAllHistory: 0 log supprimé — vérifier la policy RLS DELETE sur action_event_logs");
+    showToast("Rendez-vous/relances supprimés, mais les logs n'ont pas pu être supprimés (droits Supabase)", "error");
+    closeHistoryDetail();
     return;
   }
 
