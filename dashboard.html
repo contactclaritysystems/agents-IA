@@ -2515,10 +2515,10 @@ body[data-theme="dark"] #app-loader {
     .contact-agent-message{
     display:none;
     background:var(--clarity-surface);
-    border-radius:24px;
-    padding:28px;
-    margin:24px 20px 34px;
-    box-shadow:0 12px 35px rgba(15,23,42,.06);
+    border-radius:16px;
+    padding:14px 18px;
+    margin:14px 20px 20px;
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
     text-align:center;
     animation:fadeCard .25s ease;
 }
@@ -2549,15 +2549,18 @@ body[data-theme="dark"] #app-loader {
 
     .contact-intro{
     max-width:520px;
-    margin:0 auto 30px;
+    margin:0 auto;
 }
 
 .contact-intro h2{
-    margin-bottom:12px;
+    font-size:15px;
+    margin:0 0 4px;
 }
 
 .contact-intro p{
-    margin:0 0 8px;
+    font-size:13px;
+    margin:0 0 2px;
+    color:var(--clarity-text-soft, var(--clarity-text-secondary,inherit));
 }
 }
 
@@ -9925,8 +9928,7 @@ if (typeof data === "string") {
 
     if (!data.success && data.reason === "contact_not_found") {
       if (box) {
-        setDictationBoxState(box, "error");
-        box.innerHTML = "⚠️ Contact introuvable.";
+        box.remove();
       }
 
       openAddContactPopup({
