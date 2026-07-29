@@ -6004,7 +6004,7 @@ body[data-theme="dark"] .home-logo-dark {
   <div class="topbar">
     <div>
       <div class="page-title">Carnet <span>contacts</span></div>
-      <div class="page-subtitle">Ajoutez vos contacts. Clarity s'occupe du reste.</div>
+      <div class="page-subtitle">Retrouvez et ajoutez tous vos contacts.</div>
     </div>
   </div>
 
@@ -8698,16 +8698,13 @@ function alignContactsAlphabet() {
   const list = document.getElementById("contacts-list");
   if (!alphabet || !list) return;
 
-  if (window.innerWidth < 901) {
-    // Mobile : on laisse le CSS gérer (barre centrée verticalement)
-    alphabet.style.top = "";
-    alphabet.style.transform = "";
-    return;
-  }
-
-  // Le haut de #contacts-list correspond au petit label "A" au-dessus
-  // de la 1ère carte, pas à la carte elle-même : on cible directement
-  // la 1ère carte (.contact-row) pour que la barre démarre à son niveau.
+  // Même logique en mobile qu'en desktop désormais : la barre doit
+  // démarrer exactement au niveau de la 1ère carte, pas être centrée
+  // verticalement sur tout le viewport (ce qui la faisait déborder trop
+  // haut/trop grande sur mobile). Le haut de #contacts-list correspond au
+  // petit label "A" au-dessus de la 1ère carte, pas à la carte elle-même :
+  // on cible directement la 1ère carte (.contact-row) pour que la barre
+  // démarre à son niveau.
   const firstCard = list.querySelector(".contact-row") || list;
   const rect = firstCard.getBoundingClientRect();
   alphabet.style.top = Math.max(rect.top, 0) + "px";
