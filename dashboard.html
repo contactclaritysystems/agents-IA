@@ -11639,6 +11639,14 @@ async function saveContactFromPage() {
         section.classList.remove("open");
       }
 
+      // Le toast "Contact ajouté" ne doit pas rester affiché par-dessus
+      // la popup de progression du mail qui va réapparaître.
+      const contactToast = document.getElementById("toast");
+      if (contactToast) {
+        contactToast.classList.remove("show");
+        contactToast.classList.remove("error");
+      }
+
       showSection(
         "agents",
         document.querySelector(
