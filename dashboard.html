@@ -9691,8 +9691,49 @@ async function openQuickMailCompose() {
   if (subtitle) subtitle.textContent = "Choisissez un contact, ou ajoutez-en un nouveau.";
   if (search) search.value = "";
 
+  const backBtnReset = document.getElementById("quick-mail-back-btn");
+  if (backBtnReset) backBtnReset.style.display = "";
+  window.quickMailIsAgentHandoff = false;
+
   renderQuickMailContacts();
 
+  if (modal) modal.style.display = "block";
+}
+
+// Ouvre directement l'étape "message" du popup Quick Mail, avec le contact
+// déjà résolu par l'agent (cas : l'instruction dictée ne précisait pas le
+// contenu du mail — on redemande juste le contenu, sans repasser par le
+// choix du contact).
+function openMissingContentQuickMail(contactId, contactName, requestId) {
+  let contact = (contactsCache || []).find(c => c.id === contactId);
+  if (!contact) {
+    contact = { id: contactId, full_name: contactName || "ce contact", email: "" };
+  }
+
+  quickMailSelectedContact = contact;
+  window.currentRequestId = requestId;
+  window.quickMailIsAgentHandoff = true;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const title = document.getElementById("quick-mail-title");
+  const subtitle = document.getElementById("quick-mail-subtitle");
+  const selected = document.getElementById("quick-mail-selected-contact");
+  const instruction = document.getElementById("quick-mail-instruction");
+  const backBtn = document.getElementById("quick-mail-back-btn");
+  const modal = document.getElementById("quick-mail-modal");
+
+  if (stepContact) stepContact.style.display = "none";
+  if (stepMessage) stepMessage.style.display = "block";
+  if (title) title.textContent = "Que voulez-vous dire ?";
+  if (subtitle) subtitle.textContent = "Vous n'avez pas précisé le contenu du mail.";
+  if (selected) {
+    selected.textContent = "À : " + contact.full_name +
+      (contact.email ? " (" + contact.email + ")" : "");
+  }
+  if (instruction) instruction.value = "";
+  // Le contact vient d'être résolu par l'agent : pas de retour en arrière possible ici.
+  if (backBtn) backBtn.style.display = "none";
   if (modal) modal.style.display = "block";
 }
 
@@ -9820,10 +9861,84 @@ function closeQuickMailModal() {
   const modal = document.getElementById("quick-mail-modal");
   const box = document.getElementById("quick-mail-status-box");
   quickMailFlowActive = false;
+
+  if (quickMailDictationRecognition) {
+    try { quickMailDictationRecognition.stop(); } catch(e) {}
+    quickMailDictationRecognition = null;
+  }
+
   if (modal) modal.style.display = "none";
   if (box) {
     box.style.display = "none";
     box.innerHTML = "";
+  }
+
+  // Si ce popup a pris le relais du micro de l'orchestrateur (cas
+  // "missing_content"), une fermeture ici (Annuler) doit redébloquer
+  // le micro, sinon il reste verrouillé indéfiniment.
+  if (window.quickMailIsAgentHandoff) {
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
+  }
+  window.quickMailIsAgentHandoff = false;
+}
+
+let quickMailDictationRecognition = null;
+
+function toggleQuickMailDictation() {
+  const micBtn = document.getElementById("quick-mail-mic-btn");
+  const textarea = document.getElementById("quick-mail-instruction");
+
+  if (quickMailDictationRecognition) {
+    try { quickMailDictationRecognition.stop(); } catch(e) {}
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "fr-FR";
+  recognition.interimResults = true;
+  recognition.continuous = true;
+  recognition.maxAlternatives = 1;
+
+  let finalText = textarea ? textarea.value : "";
+  if (finalText) finalText += " ";
+
+  quickMailDictationRecognition = recognition;
+  if (micBtn) micBtn.innerHTML = "⏹️ Arrêter la dictée";
+
+  recognition.onresult = function(event) {
+    let interimText = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const text = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalText += text + " ";
+      } else {
+        interimText += text;
+      }
+    }
+    if (textarea) textarea.value = (finalText + interimText).trim();
+  };
+
+  recognition.onerror = function() {
+    showToast("Autorisez le micro pour dicter", "error");
+  };
+
+  recognition.onend = function() {
+    quickMailDictationRecognition = null;
+    if (micBtn) micBtn.innerHTML = "🎙️ Dicter le message";
+  };
+
+  try {
+    recognition.start();
+  } catch(e) {
+    quickMailDictationRecognition = null;
+    if (micBtn) micBtn.innerHTML = "🎙️ Dicter le message";
   }
 }
 
@@ -9832,6 +9947,7 @@ window.renderQuickMailContacts = renderQuickMailContacts;
 window.submitQuickMail = submitQuickMail;
 window.closeQuickMailModal = closeQuickMailModal;
 window.quickMailBackToContacts = quickMailBackToContacts;
+window.toggleQuickMailDictation = toggleQuickMailDictation;
 
 async function callMailAgent(
   instruction,
@@ -9948,6 +10064,22 @@ if (typeof data === "string") {
   fromAgent: true,
   newContact: true
 });
+
+      // Le micro reste verrouillé, même ici : il ne se débloque qu'au
+      // succès ou à l'échec réel de l'envoi du mail.
+      return;
+    }
+
+    if (!data.success && data.reason === "missing_content") {
+      if (box) {
+        box.remove();
+      }
+
+      openMissingContentQuickMail(
+        data.contact_id || contactId,
+        data.contact_name || data.name || "",
+        requestId
+      );
 
       // Le micro reste verrouillé, même ici : il ne se débloque qu'au
       // succès ou à l'échec réel de l'envoi du mail.
@@ -13493,6 +13625,9 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <div id="quick-mail-step-message" style="display:none;">
       <div id="quick-mail-selected-contact" style="margin-bottom:12px; font-weight:650; color:var(--clarity-text); font-size:13.5px;"></div>
       <textarea class="field-input" id="quick-mail-instruction" rows="4" placeholder="Qu'est-ce que vous voulez dire ? (en gros, Clarity reformule)" style="width:100%; resize:vertical; min-height:90px;"></textarea>
+      <button class="sheet-btn" type="button" id="quick-mail-mic-btn" style="width:100%; justify-content:center; margin-top:10px;" onclick="toggleQuickMailDictation()">
+        🎙️ Dicter le message
+      </button>
       <div id="quick-mail-status-box" style="display:none;"></div>
       <button class="save-btn" type="button" id="quick-mail-submit-btn" style="width:100%; margin-top:12px;" onclick="submitQuickMail()">
         ✉️ Envoyer à l'agent
