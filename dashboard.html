@@ -5748,6 +5748,28 @@ body[data-theme="dark"] .stat-card:hover {
   border-color: rgba(255, 255, 255, 0.24);
 }
 
+/* VRAIE CAUSE trouvée : les 3 stat-cards de l'accueil sont dans
+   .status-row, et ".status-row .stat-card" (BLOC 17, plus loin
+   dans ce fichier... en fait plus haut, mais avec !important) fixe
+   déjà background/border en dur avec !important. Un !important
+   annule TOUJOURS une règle normale, quelle que soit sa spécificité
+   — c'est pour ça que rien ne changeait. On la neutralise ici avec
+   une règle elle aussi !important, mais plus spécifique (scopée au
+   thème sombre). */
+body[data-theme="dark"] .status-row .stat-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.02) 100%),
+    #1c1f2a !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+body[data-theme="dark"] .status-row .stat-card:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.27) 0%, rgba(255, 255, 255, 0.11) 45%, rgba(255, 255, 255, 0.03) 100%),
+    #1c1f2a !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
