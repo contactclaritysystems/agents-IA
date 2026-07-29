@@ -10005,11 +10005,17 @@ async function submitQuickMail() {
   setDictationBoxState(box, "info");
   box.style.opacity = "1";
   // Même contenu que celui que callMailAgent() affichera juste après (avec
-  // le vrai nom du contact déjà choisi) : évite un flash avec un texte
-  // générique "Contact sélectionné" sans nom avant que ce soit remplacé.
+  // le vrai nom du contact déjà choisi, et le bon label "enregistré" si ce
+  // contact vient d'être créé) : évite un flash avec un texte générique ou
+  // incohérent avant que ce soit remplacé.
   setAgentProgress(box, "Clarity", "✨", [
     { text: "Demande comprise", status: "done" },
-    { text: "Contact sélectionné : " + quickMailSelectedContact.full_name, status: "done" },
+    {
+      text:
+        (contactJustCreated ? "Contact enregistré : " : "Contact sélectionné : ") +
+        quickMailSelectedContact.full_name,
+      status: "done"
+    },
     { text: "Préparation du mail...", status: "loading" }
   ]);
 
@@ -10166,11 +10172,18 @@ box.style.opacity = "1";
 // (choix du contact, ou ajout d'un nouveau contact) : on ne veut pas
 // réafficher "Contact sélectionné" sans nom comme si on recommençait de
 // zéro, ni faire disparaître l'étape "Demande comprise" déjà validée.
-let quickMailContactLabel = "Contact sélectionné";
+// Si ce contact vient d'être créé (contactJustCreated), le label doit être
+// "Contact enregistré" dès ce premier rendu — même texte que celui que le
+// polling (loadAgentProgress) affichera juste après — sinon on voit
+// "Contact sélectionné" un instant puis ça bascule sur "Contact
+// enregistré", ce qui donne l'impression d'un changement de contact.
+let quickMailContactLabel = contactJustCreated ? "Contact enregistré" : "Contact sélectionné";
 if (quickMailFlowActive && contactId) {
   const resolvedContact = (contactsCache || []).find(c => c.id === contactId);
   if (resolvedContact) {
-    quickMailContactLabel = "Contact sélectionné : " + resolvedContact.full_name;
+    quickMailContactLabel =
+      (contactJustCreated ? "Contact enregistré : " : "Contact sélectionné : ") +
+      resolvedContact.full_name;
   }
 }
 
