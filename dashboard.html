@@ -2165,7 +2165,10 @@ body[data-theme="dark"] #app-loader {
 }
 
 /* Même halo lumineux que le logo de la page d'accueil (BLOC 20),
-   repositionné derrière le logo (plus petit) de l'écran de chargement. */
+   repositionné derrière le logo (plus petit) de l'écran de chargement.
+   z-index:-1 posait problème dans certains cas de stacking context
+   avec l'animation de .loader-card : on passe donc le halo et le
+   contenu au-dessus en z-index positifs (0 puis 1), plus robuste. */
 .loader-card::before {
   content: "";
   position: absolute;
@@ -2175,16 +2178,22 @@ body[data-theme="dark"] #app-loader {
   width: 300px;
   height: 300px;
   max-width: 85vw;
-  background: radial-gradient(circle, rgba(0, 145, 199, 0.28) 0%, rgba(0, 145, 199, 0.08) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 145, 199, 0.45) 0%, rgba(0, 145, 199, 0.16) 45%, transparent 70%);
   filter: blur(30px);
-  opacity: 1;
+  z-index: 0;
   pointer-events: none;
-  z-index: -1;
   animation: heroGlowPulse 7s ease-in-out infinite;
 }
 
-.loader-card img {
+.loader-card img,
+.loader-card .loader-title,
+.loader-card .loader-subtitle,
+.loader-card .loader-spinner {
   position: relative;
+  z-index: 1;
+}
+
+.loader-card img {
   width: 260px;
   max-width: 60vw;
   height: auto;
@@ -4912,9 +4921,11 @@ a:hover {
   left: 50%;
   transform: translateX(-50%);
   width: 420px;
-  height: 420px;
+  /* Un peu plus haute que large : le halo s'étend davantage vers le bas
+     sans bouger son point de départ en haut. */
+  height: 500px;
   max-width: 100vw;
-  background: radial-gradient(circle, rgba(0, 145, 199, 0.28) 0%, rgba(0, 145, 199, 0.08) 45%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(0, 145, 199, 0.28) 0%, rgba(0, 145, 199, 0.08) 45%, transparent 70%);
   filter: blur(30px);
   opacity: 1;
   pointer-events: none;
