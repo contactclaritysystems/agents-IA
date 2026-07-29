@@ -9000,6 +9000,10 @@ function openMailPreview(data, instruction) {
 function closeMailPreview(showCancel = true) {
   document.getElementById("mail-preview-modal").style.display = "none";
   unlockAgentButtons();
+  // Que ce soit une annulation (showCancel=true) ou une fermeture après
+  // envoi réussi (showCancel=false, déjà géré aussi dans sendPreparedMail),
+  // le micro peut redevenir utilisable ici.
+  resetOrchestratorMicButton();
 
  if (showCancel) {
   showToast("Envoi annulé", "error");
@@ -9074,6 +9078,24 @@ function unlockAgentButtons() {
     btn.style.opacity = "1";
     btn.style.pointerEvents = "";
   });
+}
+
+// Équivalent "global" du resetMicButton() interne à startSimpleAgentDictation
+// (une closure inaccessible depuis callMailAgent()/sendPreparedMail(), qui
+// sont des fonctions top-level séparées). À appeler uniquement quand le
+// micro doit VRAIMENT redevenir utilisable : succès ou échec final de
+// l'envoi du mail — jamais avant, sinon on peut recliquer pendant que
+// l'agent travaille encore.
+function resetOrchestratorMicButton() {
+  const btn = document.getElementById("orchestrator-dictation-btn");
+  if (!btn) return;
+  btn.disabled = false;
+  btn.style.opacity = "1";
+  btn.style.pointerEvents = "";
+  if (btn.dataset.originalText) {
+    btn.innerHTML = btn.dataset.originalText;
+    delete btn.dataset.originalText;
+  }
 }
 
   function updateAgentProgress(box, config = {}) {
@@ -9430,14 +9452,13 @@ if (data.agent === "mail") {
   setDictationBoxState(box, "info");
   box.innerHTML = "🔎 Recherche du contact...";
 
-  // La suite (recherche du contact, aperçu, envoi) est gérée par
-  // callMailAgent(), qui n'a pas accès à resetMicButton()/agentIsWorking
-  // (fermés dans cette fonction-ci). Sans ça, le micro reste bloqué sur
-  // "⏳ Traitement..." et un 2e mail dicté juste après est refusé
-  // ("Un agent est déjà en cours") tant que la page n'est pas rechargée.
-  unlockAgentButtons();
-  resetMicButton();
-
+  // Le micro doit rester verrouillé pendant toute la suite (recherche du
+  // contact, aperçu, envoi réel) : il ne doit redevenir cliquable qu'au
+  // tout dernier moment, quand le mail est vraiment envoyé (ou a vraiment
+  // échoué). callMailAgent()/sendPreparedMail() sont des fonctions
+  // top-level séparées qui n'ont pas accès à resetMicButton() (fermé
+  // dans cette fonction-ci) : elles appellent resetOrchestratorMicButton()
+  // à leurs propres points de sortie finaux.
   return callMailAgent(
   data.instruction,
   box,
@@ -9798,6 +9819,10 @@ if (typeof data === "string") {
     requestId
   );
 
+  // Le flux automatique s'arrête ici : c'est à l'utilisateur de choisir
+  // un contact dans la modale. Le micro peut redevenir utilisable.
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
   return;
 }
 
@@ -9813,6 +9838,11 @@ if (typeof data === "string") {
   fromAgent: true,
   newContact: true
 });
+
+      // Idem : il faut que l'utilisateur ajoute le contact manuellement,
+      // le flux automatique s'arrête ici.
+      unlockAgentButtons();
+      resetOrchestratorMicButton();
       return;
     }
 
@@ -9859,6 +9889,7 @@ stopAgentProgressPolling();
     }
 
     unlockAgentButtons();
+    resetOrchestratorMicButton();
   }
 }
 
@@ -12548,6 +12579,9 @@ const payload = {
 
     if (!response.ok || data.success === false) {
       showToast(data.message || "Erreur envoi mail", "error");
+      // Envoi vraiment échoué : le micro peut redevenir utilisable.
+      unlockAgentButtons();
+      resetOrchestratorMicButton();
       return;
     }
 
@@ -12571,6 +12605,11 @@ setTimeout(async () => {
 }
 
   showToast("Mail envoyé");
+
+  // Mail vraiment envoyé avec succès : c'est SEULEMENT maintenant que
+  // le micro doit redevenir cliquable.
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
 
   await incrementActions();
   await loadSubscription();
@@ -12619,6 +12658,10 @@ ${body}`,
     }
 
     showToast("Erreur envoi mail", "error");
+    // Envoi vraiment échoué (exception réseau) : le micro peut
+    // redevenir utilisable.
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
   }
 }
 
