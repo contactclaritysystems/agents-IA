@@ -5835,10 +5835,15 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
 
 .clarity-help-btn {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 30px;
-  height: 30px;
+  /* .agent-card a overflow:hidden + border-radius : à top:0/right:0,
+     le bouton se fait rogner par le coin arrondi (et disparaît
+     carrément sur mobile où le radius est plus grand). On le
+     rentre dans la carte. */
+  top: 18px;
+  right: 20px;
+  width: 28px;
+  height: 28px;
+  z-index: 3;
   border-radius: 50%;
   border: 1px solid var(--clarity-border);
   background: var(--clarity-surface-soft);
@@ -5868,13 +5873,19 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
 }
 
 .help-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* flex-wrap plutôt qu'une grille à colonnes fixes : avec 1 seule
+     action aujourd'hui ça reste centré et propre, et ça absorbera
+     naturellement les prochaines actions au fur et à mesure sans
+     laisser de cases vides. */
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 18px;
   margin: 18px 0 6px;
 }
 
 .help-actions-tile {
+  width: 84px;
   background: none;
   border: none;
   padding: 6px 4px;
@@ -6999,6 +7010,9 @@ if (box) {
    marqués "Bientôt disponible". Liste à étoffer au fur et à mesure
    que les vraies actions seront développées.
    ========================================================= */
+// Uniquement les actions réellement disponibles aujourd'hui. Compléter
+// cette liste au fur et à mesure que de nouvelles actions sont
+// développées côté Make (chacune avec ready:true une fois branchée).
 const HELP_ACTIONS = [
   {
     id: "mail",
@@ -7007,30 +7021,6 @@ const HELP_ACTIONS = [
     color: "blue",
     example: 'Envoie un mail à "nom du contact" et dis-lui que "ce que vous voulez lui dire".',
     ready: true
-  },
-  {
-    id: "relance",
-    label: "Relance",
-    icon: "⏰",
-    color: "yellow",
-    example: 'Relance "nom du contact" au sujet de "le sujet", sur un ton amical.',
-    ready: false
-  },
-  {
-    id: "rdv",
-    label: "RDV",
-    icon: "📅",
-    color: "purple",
-    example: 'Prends rendez-vous avec "nom du contact" "jour" à "heure".',
-    ready: false
-  },
-  {
-    id: "note",
-    label: "Note",
-    icon: "📝",
-    color: "green",
-    example: 'Note que "ce qu\'il faut retenir" à propos de "nom du contact".',
-    ready: false
   }
 ];
 
