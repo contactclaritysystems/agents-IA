@@ -6024,6 +6024,10 @@ body[data-theme="dark"] .home-logo-dark {
 
     <p>Le mail sera préparé automatiquement après l'enregistrement.</p>
 
+    <button type="button" class="sheet-btn" style="width:100%; justify-content:center; margin-top:6px;" onclick="searchExistingContactForAgent()">
+      🔍 Chercher dans mes contacts
+    </button>
+
 </div>
      </div>
 
@@ -9737,6 +9741,105 @@ function openMissingContentQuickMail(contactId, contactName, requestId) {
   if (modal) modal.style.display = "block";
 }
 
+// Ouvre l'étape "choix du contact" du popup Quick Mail, réutilisée pour deux
+// cas venant de l'agent : (1) aucun destinataire n'a été dicté du tout,
+// (2) le contact "introuvable" veut en fait chercher dans son carnet (mal
+// prononcé / mal compris) plutôt que d'en créer un nouveau.
+async function openContactPickerForAgent(title, subtitle, instruction, requestId) {
+  if (!contactsCache || !contactsCache.length) {
+    await loadContacts();
+  }
+
+  window.quickMailIsAgentHandoff = true;
+  window.pendingAgentMailInstruction = instruction || "";
+  window.pendingAgentMailRequestId = requestId;
+  window.currentRequestId = requestId;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const search = document.getElementById("quick-mail-search");
+  const titleEl = document.getElementById("quick-mail-title");
+  const subtitleEl = document.getElementById("quick-mail-subtitle");
+  const modal = document.getElementById("quick-mail-modal");
+
+  if (stepContact) stepContact.style.display = "block";
+  if (stepMessage) stepMessage.style.display = "none";
+  if (titleEl) titleEl.textContent = title;
+  if (subtitleEl) subtitleEl.textContent = subtitle;
+  if (search) search.value = "";
+
+  renderQuickMailContacts();
+
+  if (modal) modal.style.display = "block";
+}
+
+// Contact choisi dans ce sélecteur alors qu'on est en relais de l'agent
+// (pas le flux manuel "Envoyer un mail") : on reprend directement la
+// préparation du mail avec l'instruction déjà dictée, pas besoin de la
+// redemander.
+function selectContactForAgentHandoff(contact) {
+  const modal = document.getElementById("quick-mail-modal");
+  if (modal) modal.style.display = "none";
+
+  if (quickMailDictationRecognition) {
+    try { quickMailDictationRecognition.stop(); } catch(e) {}
+    quickMailDictationRecognition = null;
+  }
+
+  const instruction = window.pendingAgentMailInstruction || "";
+  const requestId = window.pendingAgentMailRequestId || window.currentRequestId || crypto.randomUUID();
+  window.pendingAgentMailInstruction = null;
+
+  // Le micro reste verrouillé : l'action continue, elle n'est pas annulée.
+  callMailAgent(instruction, null, requestId, contact.id);
+}
+
+// Le bouton "+ Nouveau contact" du sélecteur doit se comporter différemment
+// selon qu'on l'ouvre depuis le flux manuel (bouton "Envoyer un mail") ou
+// depuis un relais de l'agent (contact introuvable / non précisé) : dans ce
+// second cas, on veut repasser par openAddContactPopup() pour que le mail
+// se prépare automatiquement une fois le contact enregistré.
+function quickMailAddNewContact() {
+  if (window.quickMailIsAgentHandoff) {
+    const instruction = window.pendingAgentMailInstruction || "";
+    window.pendingAgentMailInstruction = null;
+
+    const modal = document.getElementById("quick-mail-modal");
+    if (modal) modal.style.display = "none";
+
+    openAddContactPopup({
+      name: "",
+      pendingInstruction: instruction,
+      fromAgent: true,
+      newContact: true
+    });
+  } else {
+    closeQuickMailModal();
+    openContactPage();
+  }
+}
+
+// Bouton "🔍 Chercher dans mes contacts" affiché sur la carte "Contact
+// introuvable" du formulaire d'ajout : permet de chercher le contact dans
+// le carnet (cas où l'agent l'a mal compris/mal prononcé) plutôt que d'en
+// créer un doublon.
+function searchExistingContactForAgent() {
+  const instruction = window.pendingAction?.instruction || "";
+  const requestId = window.currentRequestId || crypto.randomUUID();
+
+  window.pendingAction = null;
+
+  const section = document.getElementById("contact-mobile-section");
+  if (section) section.classList.remove("open");
+
+  openContactPickerForAgent(
+    "Choisissez le bon contact",
+    "Recherchez le contact dans votre carnet.",
+    instruction,
+    requestId
+  );
+}
+
 function renderQuickMailContacts() {
   const query = (document.getElementById("quick-mail-search")?.value || "").toLowerCase();
   const list = document.getElementById("quick-mail-contact-list");
@@ -9764,7 +9867,13 @@ function renderQuickMailContacts() {
       ${contact.company ? `<div class="contact-choice-company">🏢 ${contact.company}</div>` : ""}
     `;
 
-    card.onclick = () => selectQuickMailContact(contact);
+    card.onclick = () => {
+      if (window.quickMailIsAgentHandoff) {
+        selectContactForAgentHandoff(contact);
+      } else {
+        selectQuickMailContact(contact);
+      }
+    };
     list.appendChild(card);
   });
 }
@@ -10054,6 +10163,23 @@ if (typeof data === "string") {
   // que le mail n'est pas vraiment envoyé (ou en échec).
   return;
 }
+
+    if (!data.success && data.reason === "no_recipient") {
+      if (box) {
+        box.remove();
+      }
+
+      openContactPickerForAgent(
+        "À qui voulez-vous envoyer ce mail ?",
+        "Choisissez un contact, ou ajoutez-en un nouveau.",
+        instruction,
+        requestId
+      );
+
+      // Le micro reste verrouillé, même ici : il ne se débloque qu'au
+      // succès ou à l'échec réel de l'envoi du mail.
+      return;
+    }
 
     if (!data.success && data.reason === "contact_not_found") {
       if (box) {
@@ -13619,7 +13745,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <div id="quick-mail-step-contact">
       <input class="field-input" id="quick-mail-search" placeholder="Rechercher un contact" oninput="renderQuickMailContacts()" style="margin-bottom:12px; width:100%;">
       <div id="quick-mail-contact-list"></div>
-      <button class="sheet-btn" type="button" style="width:100%; justify-content:center; margin-top:10px;" onclick="closeQuickMailModal(); openContactPage();">
+      <button class="sheet-btn" type="button" style="width:100%; justify-content:center; margin-top:10px;" onclick="quickMailAddNewContact()">
         + Nouveau contact
       </button>
     </div>
