@@ -5818,6 +5818,160 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 40
+   Aide "Comment ça marche ?" (prototype visuel) : bouton d'entrée
+   discret dans l'en-tête de la carte Clarity, grille de tuiles
+   icône + halo (mêmes couleurs que les stats), et vue "exemple"
+   avec la phrase à dire. Couleurs indépendantes de .stat-icon-wrap
+   (nouvelle classe .help-icon) pour ne dépendre d'aucune règle déjà
+   scopée ailleurs (#main-agents, .status-row...) et rester fiable
+   quel que soit l'endroit du DOM où la modale est ouverte.
+   ========================================================= */
+
+.clarity-hero-head {
+  position: relative;
+}
+
+.clarity-help-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--clarity-border);
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    color var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease);
+}
+
+.clarity-help-btn:hover {
+  background: var(--clarity-surface-hover);
+  color: var(--clarity-text);
+  border-color: var(--clarity-border-hover);
+}
+
+.help-actions-box {
+  text-align: left;
+}
+
+.help-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin: 18px 0 6px;
+}
+
+.help-actions-tile {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.help-actions-tile-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--clarity-text);
+  text-align: center;
+}
+
+.help-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  transition: transform var(--clarity-duration) var(--clarity-ease);
+}
+
+.help-actions-tile:hover .help-icon {
+  transform: scale(1.06);
+}
+
+.help-icon.blue { background: rgba(59, 130, 246, .16); }
+.help-icon.yellow { background: rgba(245, 158, 11, .18); }
+.help-icon.purple { background: rgba(139, 92, 246, .16); }
+.help-icon.green { background: rgba(34, 197, 94, .16); }
+
+body[data-theme="dark"] .help-icon.blue { box-shadow: 0 0 22px 5px rgba(92, 156, 224, 0.32); }
+body[data-theme="dark"] .help-icon.yellow { box-shadow: 0 0 22px 5px rgba(245, 185, 77, 0.32); }
+body[data-theme="dark"] .help-icon.purple { box-shadow: 0 0 22px 5px rgba(167, 139, 250, 0.32); }
+body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209, 124, 0.32); }
+
+.help-actions-back {
+  background: none;
+  border: none;
+  color: var(--clarity-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.help-actions-back:hover {
+  color: var(--clarity-text);
+}
+
+.help-actions-example-icon {
+  width: 58px;
+  height: 58px;
+  font-size: 26px;
+  border-radius: 18px;
+  margin: 0 auto 16px;
+}
+
+.help-actions-example-title {
+  text-align: center;
+}
+
+.help-actions-example-phrase {
+  background: var(--clarity-surface-soft);
+  border: 1px solid var(--clarity-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--clarity-text);
+  font-style: italic;
+  margin: 14px 0 20px;
+  text-align: center;
+}
+
+.help-actions-soon-badge {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--clarity-text-secondary);
+  background: var(--clarity-surface-soft);
+  border-radius: 999px;
+  padding: 8px 14px;
+  margin-top: 4px;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -6130,6 +6284,7 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
         <span class="clarity-hero-dot"></span> En ligne
       </div>
     </div>
+    <button type="button" class="clarity-help-btn" onclick="event.stopPropagation(); openHelpActionsModal();" aria-label="Comment ça marche ?">?</button>
   </div>
 
   <div class="agent-body clarity-hero-body">
@@ -6834,6 +6989,114 @@ function closeContactChoiceModal() {
 if (box) {
   box.remove();
 }
+}
+
+/* =========================================================
+   CLARITY SYSTEMS — Aide "Comment ça marche ?" (prototype visuel)
+   Grille d'actions (icône + halo) -> exemple de phrase à dire.
+   Seul "Email" est réellement branché (agent orchestrateur existant) ;
+   les autres sont des aperçus visuels des futures actions rapides,
+   marqués "Bientôt disponible". Liste à étoffer au fur et à mesure
+   que les vraies actions seront développées.
+   ========================================================= */
+const HELP_ACTIONS = [
+  {
+    id: "mail",
+    label: "Email",
+    icon: "✉️",
+    color: "blue",
+    example: 'Envoie un mail à "nom du contact" et dis-lui que "ce que vous voulez lui dire".',
+    ready: true
+  },
+  {
+    id: "relance",
+    label: "Relance",
+    icon: "⏰",
+    color: "yellow",
+    example: 'Relance "nom du contact" au sujet de "le sujet", sur un ton amical.',
+    ready: false
+  },
+  {
+    id: "rdv",
+    label: "RDV",
+    icon: "📅",
+    color: "purple",
+    example: 'Prends rendez-vous avec "nom du contact" "jour" à "heure".',
+    ready: false
+  },
+  {
+    id: "note",
+    label: "Note",
+    icon: "📝",
+    color: "green",
+    example: 'Note que "ce qu\'il faut retenir" à propos de "nom du contact".',
+    ready: false
+  }
+];
+
+let helpActionsCurrentIndex = null;
+
+function openHelpActionsModal() {
+  showHelpActionsGrid();
+  const modal = document.getElementById("help-actions-modal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeHelpActionsModal() {
+  const modal = document.getElementById("help-actions-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function renderHelpActionsGrid() {
+  const grid = document.getElementById("help-actions-grid");
+  if (!grid) return;
+  grid.innerHTML = HELP_ACTIONS.map((a, i) =>
+    '<button type="button" class="help-actions-tile" onclick="showHelpActionExample(' + i + ')">' +
+      '<div class="help-icon ' + a.color + '">' + a.icon + '</div>' +
+      '<div class="help-actions-tile-label">' + a.label + '</div>' +
+    '</button>'
+  ).join("");
+}
+
+function showHelpActionsGrid() {
+  renderHelpActionsGrid();
+  const gridView = document.getElementById("help-actions-grid-view");
+  const exampleView = document.getElementById("help-actions-example-view");
+  if (gridView) gridView.style.display = "block";
+  if (exampleView) exampleView.style.display = "none";
+}
+
+function showHelpActionExample(index) {
+  const action = HELP_ACTIONS[index];
+  if (!action) return;
+  helpActionsCurrentIndex = index;
+
+  const gridView = document.getElementById("help-actions-grid-view");
+  const exampleView = document.getElementById("help-actions-example-view");
+  if (gridView) gridView.style.display = "none";
+  if (exampleView) exampleView.style.display = "block";
+
+  const iconEl = document.getElementById("help-actions-example-icon");
+  if (iconEl) {
+    iconEl.className = "help-icon help-actions-example-icon " + action.color;
+    iconEl.textContent = action.icon;
+  }
+
+  const titleEl = document.getElementById("help-actions-example-title");
+  if (titleEl) titleEl.textContent = action.label;
+
+  const phraseEl = document.getElementById("help-actions-example-phrase");
+  if (phraseEl) phraseEl.textContent = action.example;
+
+  const tryBtn = document.getElementById("help-actions-try-btn");
+  const soonBadge = document.getElementById("help-actions-soon-badge");
+  if (tryBtn) tryBtn.style.display = action.ready ? "flex" : "none";
+  if (soonBadge) soonBadge.style.display = action.ready ? "none" : "inline-block";
+}
+
+function tryHelpActionsExample() {
+  closeHelpActionsModal();
+  startOrchestratorDictation();
 }
 
 function openSupportChoiceModal() {
@@ -14126,6 +14389,38 @@ window.updateAppointmentStatus = updateAppointmentStatus;
     <span class="bottom-tab-label">Réglages</span>
   </button>
 </nav>
+
+  <div id="help-actions-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeHelpActionsModal()"></div>
+
+  <div class="mail-choice-box help-actions-box">
+
+    <div id="help-actions-grid-view">
+      <div class="mail-choice-title">Que voulez-vous faire ?</div>
+      <div class="mail-choice-subtitle">Cliquez sur une action pour voir comment le demander.</div>
+
+      <div class="help-actions-grid" id="help-actions-grid"></div>
+
+      <button class="sheet-btn" onclick="closeHelpActionsModal()" type="button" style="width:100%;justify-content:center;margin-top:16px;">
+        Fermer
+      </button>
+    </div>
+
+    <div id="help-actions-example-view" style="display:none;">
+      <button class="help-actions-back" onclick="showHelpActionsGrid()" type="button">← Retour</button>
+
+      <div class="help-icon help-actions-example-icon" id="help-actions-example-icon"></div>
+      <div class="mail-choice-title help-actions-example-title" id="help-actions-example-title"></div>
+      <div class="help-actions-example-phrase" id="help-actions-example-phrase"></div>
+
+      <button class="save-btn" id="help-actions-try-btn" type="button" onclick="tryHelpActionsExample()">
+        🎙️ Essayer maintenant
+      </button>
+      <div class="help-actions-soon-badge" id="help-actions-soon-badge" style="display:none;">Bientôt disponible</div>
+    </div>
+
+  </div>
+</div>
 
   <div id="contact-choice-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="cancelContactChoice()"></div>
