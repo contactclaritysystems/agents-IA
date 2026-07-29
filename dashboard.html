@@ -873,6 +873,12 @@ select.field-input {
   overflow-y: auto;
 }
 
+  #quick-mail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
   #contact-choice-modal {
   position: fixed;
   inset: 0;
@@ -9719,6 +9725,14 @@ async function openQuickMailCompose() {
 // contenu du mail — on redemande juste le contenu, sans repasser par le
 // choix du contact).
 function openMissingContentQuickMail(contactId, contactName, requestId) {
+  // Le popup flottant de l'orchestrateur (".agent-progress-popup", id
+  // "orchestrator-dictation-box") a pu être recréé entre-temps (ex : choix
+  // du contact ou ajout d'un nouveau contact avant d'arriver ici) et rester
+  // affiché par-dessus ce popup Quick Mail. On s'assure qu'il n'existe plus
+  // avant d'ouvrir l'étape "message".
+  const strayBox = document.getElementById("orchestrator-dictation-box");
+  if (strayBox) strayBox.remove();
+
   let contact = (contactsCache || []).find(c => c.id === contactId);
   if (!contact) {
     contact = { id: contactId, full_name: contactName || "ce contact", email: "" };
@@ -9756,6 +9770,12 @@ function openMissingContentQuickMail(contactId, contactName, requestId) {
 // (2) le contact "introuvable" veut en fait chercher dans son carnet (mal
 // prononcé / mal compris) plutôt que d'en créer un nouveau.
 async function openContactPickerForAgent(title, subtitle, instruction, requestId) {
+  // Même précaution que dans openMissingContentQuickMail() : on ne veut
+  // jamais que le popup flottant de l'orchestrateur reste visible par-dessus
+  // ce sélecteur de contact.
+  const strayBox = document.getElementById("orchestrator-dictation-box");
+  if (strayBox) strayBox.remove();
+
   if (!contactsCache || !contactsCache.length) {
     await loadContacts();
   }
@@ -9939,6 +9959,12 @@ function quickMailBackToContacts() {
 }
 
 async function submitQuickMail() {
+  // Sécurité supplémentaire : si un popup flottant de l'orchestrateur
+  // traîne encore (recréé plus tôt dans ce même échange), il ne doit pas
+  // réapparaître par-dessus ce popup au moment de l'envoi.
+  const strayBox = document.getElementById("orchestrator-dictation-box");
+  if (strayBox) strayBox.remove();
+
   const rawInstruction = document.getElementById("quick-mail-instruction")?.value.trim();
 
   if (!rawInstruction) {
@@ -10174,18 +10200,35 @@ setAgentProgress(
 
     startAgentProgressPolling(requestId, box);
 
-    const response = await fetch(AGENT_MAIL_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
+    // Sans timeout, si Make ne répond jamais sur ce chemin (scénario qui
+    // boucle, filtre sans branche de sortie, module Webhook Response jamais
+    // atteint...), cette requête reste en attente indéfiniment : le popup
+    // affiche "Préparation du mail..." pour toujours, le bouton "Envoyer à
+    // l'agent" reste désactivé, et rien ne permet à l'utilisateur de s'en
+    // sortir. On borne donc l'attente à 25 secondes et on traite l'absence
+    // de réponse comme un échec réel (mêmes conséquences qu'une erreur
+    // réseau : message clair, déblocage du micro/bouton).
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 25000);
+
+    let response;
+    try {
+      response = await fetch(AGENT_MAIL_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
   user_id: currentUser.id,
   instruction,
   request_id: requestId,
   contact_id: contactId
-})
-    });
+}),
+        signal: timeoutController.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     const text = await response.text();
 
@@ -10326,12 +10369,15 @@ if (box) {
 
   } catch (error) {
 stopAgentProgressPolling();
-    
+
     console.error("Erreur Agent Mail :", error);
 
     if (box) {
       setDictationBoxState(box, "error");
-      box.innerHTML = "✕ Impossible de préparer le mail.";
+      box.innerHTML =
+        error && error.name === "AbortError"
+          ? "✕ Le serveur ne répond pas. Réessayez dans un instant."
+          : "✕ Impossible de préparer le mail.";
     }
 
     unlockAgentButtons();
