@@ -11965,7 +11965,10 @@ async function saveContactFromPage() {
         )
       );
 
-      await callMailAgent(instruction);
+      const newContactId = window.lastAddedContactId || null;
+      window.lastAddedContactId = null;
+
+      await callMailAgent(instruction, null, window.currentRequestId, newContactId);
 
       return;
     }
@@ -12086,6 +12089,17 @@ async function addContact() {
   showToast("Contact ajouté");
 
 await loadContacts();
+
+  // Retrouve l'id du contact qu'on vient de créer (la requête d'ajout ne le
+  // renvoie pas elle-même — Prefer: return=minimal), pour pouvoir le
+  // transmettre directement à l'agent Mail. Sans ça, l'agent devait
+  // rechercher le contact par son nom depuis zéro, ce qui échoue à nouveau
+  // quand aucun nom n'a été dicté au départ (ré-ouverture en boucle de la
+  // page "contact introuvable").
+  const justCreated = (contactsCache || []).find(
+    c => (c.email || "").toLowerCase() === email.toLowerCase()
+  );
+  window.lastAddedContactId = justCreated ? justCreated.id : null;
 
 return true;
 }
