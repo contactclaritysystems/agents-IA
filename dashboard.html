@@ -6520,6 +6520,8 @@ function closeContactChoiceModal() {
   closeContactChoiceModal();
 
   unlockAgentButtons();
+  // Annulation réelle du flux : le micro doit redevenir utilisable.
+  resetOrchestratorMicButton();
 
   const box = document.getElementById("orchestrator-dictation-box");
 
@@ -11476,6 +11478,11 @@ if (window.pendingAction?.type === "mail") {
   }
 
   window.pendingAction = null;
+
+  // Même bug que cancelContactChoice() : annulation réelle du flux mail,
+  // le micro doit redevenir utilisable.
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
 }
 
   if (window.contactOpenedFromAgent) {
@@ -13371,7 +13378,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 </nav>
 
   <div id="contact-choice-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeContactChoiceModal()"></div>
+  <div class="mail-choice-backdrop" onclick="cancelContactChoice()"></div>
 
   <div class="mail-choice-box">
 
