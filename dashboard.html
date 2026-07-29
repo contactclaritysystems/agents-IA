@@ -5521,6 +5521,53 @@ body[data-theme="dark"] .home-logo-dark {
   display: inline-block;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 37
+   Popup de progression de l'agent ("Demande comprise", "Recherche
+   du contact"...) : en position:fixed plutôt qu'insérée dans le flux
+   de la page, pour qu'elle ne pousse plus tout le contenu vers le bas
+   à mesure que les étapes s'ajoutent.
+   ========================================================= */
+.agent-progress-popup {
+  position: fixed;
+  top: max(90px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  width: fit-content;
+  max-width: min(380px, calc(100vw - 32px));
+  max-height: 60vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 14px 18px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  background: rgba(var(--clarity-glass-rgb), .96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .22);
+  animation: agentProgressPopIn .22s ease;
+}
+
+@keyframes agentProgressPopIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-progress-popup {
+    animation: none;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -9156,8 +9203,6 @@ icon= "✨",
   } = config;
 
   box.style.opacity = "1";
-  box.style.padding = "10px 14px";
-  box.style.borderRadius = "var(--clarity-radius-sm)";
 
   const stepsHtml = steps.map((step, index) => {
     let symbol = "⏳";
@@ -9303,35 +9348,19 @@ progressIcon: "✨",
 
   function ensureBox() {
     if (box) return box;
-    box = document.querySelector(".page-view.active #" + config.boxId);
+    // Plus scopé à ".page-view.active" : la popup est maintenant
+    // ajoutée directement à <body> (position:fixed), plus dans le
+    // flux d'une page en particulier.
+    box = document.getElementById(config.boxId);
     if (!box) {
+      // Popup flottante (position:fixed) plutôt qu'insérée dans le flux
+      // de la page : sinon, à mesure que les étapes ("Demande comprise",
+      // "Recherche du contact"...) s'ajoutent, la boîte grandit et pousse
+      // toute la page vers le bas.
       box = document.createElement("div");
       box.id = config.boxId;
-      box.style.marginBottom = "12px";
-      box.style.marginLeft = "auto";
-      box.style.marginRight = "auto";
-      box.style.padding = "12px 14px";
-      box.style.borderRadius = "14px";
-      box.style.fontSize = "13px";
-      box.style.fontWeight = "600";
-      box.style.width = "fit-content";
-      box.style.maxWidth = "85%";
-      box.style.boxSizing = "border-box";
-      box.style.textAlign = "center";
-
-      const main = card ? card.querySelector(".clarity-hero-main") : null;
-      const body = card ? card.querySelector(".agent-body") : null;
-      const head = card ? card.querySelector(".agent-head") : null;
-
-      if (main) {
-        main.prepend(box);
-      } else if (body) {
-        body.prepend(box);
-      } else if (head) {
-        head.after(box);
-      } else {
-        document.body.appendChild(box);
-      }
+      box.classList.add("agent-progress-popup");
+      document.body.appendChild(box);
     }
     return box;
   }
