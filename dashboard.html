@@ -5048,16 +5048,21 @@ a:hover {
   line-height: 1.35;
 }
 
-/* Centré partout (avant : uniquement en mobile, plaqué à droite sur PC) */
+/* Centré partout (avant : uniquement en mobile, plaqué à droite sur PC),
+   et maintenant au même endroit que les popups (progression, choix du
+   contact, aperçu du mail) : au milieu de l'écran, au-dessus de tout. */
 .toast {
+  top: 50% !important;
+  bottom: auto !important;
   left: 50% !important;
   right: auto !important;
-  transform: translate(-50%, 8px) !important;
+  transform: translate(-50%, calc(-50% + 8px)) !important;
   justify-content: center !important;
+  z-index: 10000 !important;
 }
 
 .toast.show {
-  transform: translate(-50%, 0) !important;
+  transform: translate(-50%, -50%) !important;
 }
 
 /* =========================================================
