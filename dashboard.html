@@ -5798,6 +5798,26 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
   box-shadow: 0 0 26px 6px rgba(167, 139, 250, 0.35);
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 39
+   "Actions utilisées" repasse sur 2 lignes sur PC depuis
+   l'agrandissement de police (BLOC 13 bis, .status-row .stat-label
+   13px) : la carte est trop étroite pour ce texte à cette taille.
+   Desktop uniquement : on empêche le retour à la ligne et on
+   resserre légèrement pour que ça tienne sur une seule ligne.
+   ========================================================= */
+@media (min-width: 901px) {
+  .status-row .stat-label {
+    white-space: nowrap;
+    font-size: 12px !important;
+    letter-spacing: -0.01em;
+  }
+
+  .status-row .stat-card {
+    padding: 12px 8px !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
