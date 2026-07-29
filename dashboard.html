@@ -5957,6 +5957,11 @@ body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209
   text-align: center;
 }
 
+.help-actions-example-hint {
+  text-align: center;
+  margin-top: 4px;
+}
+
 .help-actions-example-phrase {
   background: var(--clarity-surface-soft);
   border: 1px solid var(--clarity-border);
@@ -14387,7 +14392,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 
     <div id="help-actions-grid-view">
       <div class="mail-choice-title">Que voulez-vous faire ?</div>
-      <div class="mail-choice-subtitle">Cliquez sur une action pour voir comment le demander.</div>
+      <div class="mail-choice-subtitle">C'est très simple : choisissez une action ci-dessous, puis dites-le comme dans l'exemple.</div>
 
       <div class="help-actions-grid" id="help-actions-grid"></div>
 
@@ -14401,6 +14406,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 
       <div class="help-icon help-actions-example-icon" id="help-actions-example-icon"></div>
       <div class="mail-choice-title help-actions-example-title" id="help-actions-example-title"></div>
+      <div class="mail-choice-subtitle help-actions-example-hint">Dites-le simplement, par exemple :</div>
       <div class="help-actions-example-phrase" id="help-actions-example-phrase"></div>
 
       <button class="save-btn" id="help-actions-try-btn" type="button" onclick="tryHelpActionsExample()">
