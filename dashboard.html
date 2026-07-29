@@ -5349,6 +5349,32 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 32
+   Titres de page pas tous centrés : Accueil et Réglages le sont
+   (règles dédiées existantes), mais Contacts/Planning/Historique
+   retombaient sur la règle générique ".page-title { text-align:left }"
+   faute de règle spécifique. On les centre pareil, à toutes les
+   largeurs (le conteneur du titre doit passer en pleine largeur
+   pour que le centrage soit visible, sinon il ne fait que centrer
+   le texte dans une boîte déjà ajustée à son contenu).
+   ========================================================= */
+
+#main-contacts .topbar > div,
+#main-planning .topbar > div,
+#main-historique .topbar > div {
+  width: 100%;
+}
+
+#main-contacts .page-title,
+#main-contacts .page-subtitle,
+#main-planning .page-title,
+#main-planning .page-subtitle,
+#main-historique .page-title,
+#main-historique .page-subtitle {
+  text-align: center;
+}
+
 </style>
 </head>
 <body data-theme="light">
