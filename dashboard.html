@@ -2202,28 +2202,26 @@ body[data-theme="dark"] #app-loader {
    pseudo-élément, plus robuste. */
 .loader-halo {
   position: absolute;
-  top: -55px;
+  top: -45px;
   left: 50%;
   transform: translateX(-50%);
-  width: 380px;
-  height: 380px;
-  max-width: 90vw;
-  /* Dégradé "pré-flouté" via plusieurs paliers de couleur, sans
-     filter:blur() — évite un souci de rendu Safari possible avec
-     filter + animation + position:fixed combinés.
-     Beaucoup plus de paliers, resserrés vers la fin (65%→100% au lieu de
-     65%→80%) : la chute d'opacité précédente était trop rapide sur les
-     20 derniers % du rayon, ce qui créait un anneau/bord visible plutôt
-     qu'un vrai fondu progressif vers le noir. */
+  width: 320px;
+  height: 320px;
+  max-width: 82vw;
+  /* Un dégradé à paliers, même avec beaucoup d'étapes, reste perceptible
+     à l'oeil comme un anneau quand il finit sur du noir pur (le système
+     visuel humain est très sensible aux transitions de contraste près du
+     noir). Le filtre blur() diffuse réellement les pixels d'un bord à
+     l'autre, ce qu'aucun réglage de dégradé ne peut vraiment imiter.
+     Le souci Safari évité auparavant concernait des éléments position:fixed
+     + animation + blur combinés : ici .loader-halo est position:absolute
+     (seul son ancêtre #app-loader est fixed), donc ce cas ne s'applique pas. */
   background: radial-gradient(circle,
-    rgba(0, 145, 199, 0.85) 0%,
-    rgba(0, 145, 199, 0.65) 15%,
-    rgba(0, 145, 199, 0.45) 30%,
-    rgba(0, 145, 199, 0.28) 45%,
-    rgba(0, 145, 199, 0.15) 60%,
-    rgba(0, 145, 199, 0.07) 75%,
-    rgba(0, 145, 199, 0.02) 88%,
+    rgba(0, 145, 199, 0.9) 0%,
+    rgba(0, 145, 199, 0.55) 35%,
+    rgba(0, 145, 199, 0.2) 65%,
     transparent 100%);
+  filter: blur(28px);
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
