@@ -5736,16 +5736,14 @@ body[data-theme="dark"] .stat-card:hover {
    malgré leur petite taille. */
 body[data-theme="dark"] .stat-card {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.02) 100%),
-    #1c1f2a;
-  border-color: rgba(255, 255, 255, 0.16);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 50%, rgba(255, 255, 255, 0.008) 100%);
+  border-color: rgba(255, 255, 255, 0.10);
 }
 
 body[data-theme="dark"] .stat-card:hover {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.27) 0%, rgba(255, 255, 255, 0.11) 45%, rgba(255, 255, 255, 0.03) 100%),
-    #1c1f2a;
-  border-color: rgba(255, 255, 255, 0.24);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(255, 255, 255, 0.012) 100%);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 /* VRAIE CAUSE trouvée : les 3 stat-cards de l'accueil sont dans
@@ -5755,19 +5753,20 @@ body[data-theme="dark"] .stat-card:hover {
    annule TOUJOURS une règle normale, quelle que soit sa spécificité
    — c'est pour ça que rien ne changeait. On la neutralise ici avec
    une règle elle aussi !important, mais plus spécifique (scopée au
-   thème sombre). */
+   thème sombre).
+   Pas de couleur opaque en dessous du dégradé : seulement du blanc
+   très transparent, pour laisser le noir de la page transparaître
+   (vrai effet verre, pas un carton gris/blanc plaqué dessus). */
 body[data-theme="dark"] .status-row .stat-card {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.09) 45%, rgba(255, 255, 255, 0.02) 100%),
-    #1c1f2a !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.025) 50%, rgba(255, 255, 255, 0.008) 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
 }
 
 body[data-theme="dark"] .status-row .stat-card:hover {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.27) 0%, rgba(255, 255, 255, 0.11) 45%, rgba(255, 255, 255, 0.03) 100%),
-    #1c1f2a !important;
-  border-color: rgba(255, 255, 255, 0.24) !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.035) 50%, rgba(255, 255, 255, 0.012) 100%) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 </style>
