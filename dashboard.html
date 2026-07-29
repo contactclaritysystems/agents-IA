@@ -2729,7 +2729,11 @@ body[data-theme="dark"] #app-loader {
 
 #contacts-alphabet button {
   width: 22px;
-  height: 18px;
+  /* Hauteur ajustée dynamiquement en JS (alignContactsAlphabet) sur mobile,
+     pour que la dernière lettre (# compris) s'arrête toujours juste avant
+     la barre d'onglets du bas, quelle que soit la hauteur d'écran — sinon
+     Z (et #) restent cachés derrière la barre du bas sur les petits écrans. */
+  height: var(--contacts-alphabet-btn-h, 18px);
   padding: 0;
   border: none;
   border-radius: 6px;
@@ -8666,8 +8670,11 @@ function renderContacts() {
 
   if (!alphabet) return;
 
+  // "#" (comme dans Apple Contacts) regroupe les noms qui ne commencent pas
+  // par une lettre A-Z (chiffres, symboles...) : la section existe déjà
+  // dans la liste (id "contacts-letter-other"), mais le bouton de raccourci
+  // était filtré ici, donc impossible d'y accéder depuis la barre.
   alphabet.innerHTML = letters
-    .filter(letter => letter !== "#")
     .map(letter => {
       const exists = Boolean(groups[letter]?.length);
 
@@ -8707,13 +8714,38 @@ function alignContactsAlphabet() {
   // démarre à son niveau.
   const firstCard = list.querySelector(".contact-row") || list;
   const rect = firstCard.getBoundingClientRect();
-  alphabet.style.top = Math.max(rect.top, 0) + "px";
+  const topPos = Math.max(rect.top, 0);
+  alphabet.style.top = topPos + "px";
   alphabet.style.transform = "none";
+
+  // Sur mobile, la barre du bas (#bottomNav, position:fixed) peut cacher
+  // les dernières lettres (Z, #) si chaque bouton garde sa hauteur fixe :
+  // on calcule l'espace réellement disponible entre la 1ère carte et la
+  // barre du bas, puis on réduit la hauteur de chaque bouton en
+  // conséquence (variable CSS --contacts-alphabet-btn-h) pour que la
+  // dernière lettre s'arrête toujours juste au-dessus, quelle que soit la
+  // hauteur de l'écran.
+  const bottomNav = document.querySelector(".bottom-nav");
+  if (window.innerWidth < 901 && bottomNav) {
+    const bottomLimit = bottomNav.getBoundingClientRect().top - 10;
+    const buttonCount = alphabet.querySelectorAll("button").length;
+    const available = bottomLimit - topPos - 10; // 10px de marge (padding vertical du conteneur)
+
+    if (buttonCount > 0 && available > 0) {
+      const perButton = Math.max(11, Math.min(18, Math.floor(available / buttonCount)));
+      alphabet.style.setProperty("--contacts-alphabet-btn-h", perButton + "px");
+    }
+  } else {
+    alphabet.style.removeProperty("--contacts-alphabet-btn-h");
+  }
 }
 
  function scrollToContactsLetter(letter) {
+  // "#" regroupe les noms hors A-Z dans la liste (id "contacts-letter-other"),
+  // pas "contacts-letter-#" : sans ce mapping, cliquer sur "#" ne faisait rien.
+  const sectionId = letter === "#" ? "other" : letter;
   const section =
-    document.getElementById("contacts-letter-" + letter);
+    document.getElementById("contacts-letter-" + sectionId);
 
   if (!section) return;
 
