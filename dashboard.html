@@ -10437,7 +10437,12 @@ async function loadAgentProgress(requestId) {
     "Clarity",
     "✨",
     [
-      ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
+      // "Demande comprise" doit toujours rester affiché ici, même quand le
+      // contact était déjà choisi avant l'appel (quickMailFlowActive) :
+      // sinon cette étape apparaît un instant (rendu initial), puis
+      // disparaît dès que ce polling reçoit sa première mise à jour depuis
+      // Make, ce qui donnait l'impression que l'étape "saute".
+      { text: "Demande comprise", status: "done" },
       {
         text: progress.message
           ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
@@ -10455,7 +10460,7 @@ async function loadAgentProgress(requestId) {
         "Clarity",
     "✨",
         [
-          ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
+          { text: "Demande comprise", status: "done" },
           {
   text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
@@ -10471,7 +10476,7 @@ async function loadAgentProgress(requestId) {
         "Clarity",
     "✨",
         [
-          ...(quickMailFlowActive ? [] : [{ text: "Demande comprise", status: "done" }]),
+          { text: "Demande comprise", status: "done" },
           {
   text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
   status: "done"
