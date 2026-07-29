@@ -9842,6 +9842,25 @@ function searchExistingContactForAgent() {
   const section = document.getElementById("contact-mobile-section");
   if (section) section.classList.remove("open");
 
+  // Referme complètement la page contact (même nettoyage que
+  // closeContactPage()) avant d'ouvrir le sélecteur : sinon la
+  // recherche/liste/alphabet restent cachées et, si on annule ensuite le
+  // sélecteur, l'écran en dessous paraît tout noir (rien n'a été réaffiché).
+  if (window.contactOpenedFromAgent) {
+    showSection(
+      "agents",
+      document.querySelector('.bottom-tab[data-section="home"]')
+    );
+  }
+  window.contactOpenedFromAgent = false;
+
+  const searchBox = document.querySelector("#main-contacts .contacts-search-box");
+  const list = document.getElementById("contacts-list");
+  const alphabet = document.getElementById("contacts-alphabet");
+  if (searchBox) searchBox.classList.remove("is-hidden");
+  if (list) list.classList.remove("is-hidden");
+  if (alphabet) alphabet.classList.remove("is-hidden");
+
   openContactPickerForAgent(
     "Choisissez le bon contact",
     "Recherchez le contact dans votre carnet.",
