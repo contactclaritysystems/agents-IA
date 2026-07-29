@@ -6596,12 +6596,12 @@ function closeContactChoiceModal() {
   // Annulation réelle du flux : le micro doit redevenir utilisable.
   resetOrchestratorMicButton();
 
+  showToast("Préparation du mail annulée", "error");
+
   const box = document.getElementById("orchestrator-dictation-box");
 
 if (box) {
-  setDictationBoxState(box, "info");
-  box.innerHTML = "❌ Préparation du mail annulée.";
-  autoHideDictationBox(box);
+  box.remove();
 }
 }
 
@@ -9962,11 +9962,16 @@ async function submitQuickMail() {
   if (textarea) textarea.style.display = "";
 
   if (!hadError) {
-    closeQuickMailModal();
+    closeQuickMailModal(false);
   }
 }
 
-function closeQuickMailModal() {
+// isCancel=true (défaut) : vraie annulation par l'utilisateur (bouton
+// "Annuler" ou clic sur le fond). isCancel=false : fermeture après un envoi
+// réussi (le mail est en cours, pas annulé) — dans ce cas on ne doit ni
+// afficher de toast d'annulation, ni débloquer le micro prématurément
+// (il ne se débloque qu'au vrai envoi/échec, plus loin dans le flux).
+function closeQuickMailModal(isCancel = true) {
   const modal = document.getElementById("quick-mail-modal");
   const box = document.getElementById("quick-mail-status-box");
   quickMailFlowActive = false;
@@ -9984,12 +9989,15 @@ function closeQuickMailModal() {
     box.innerHTML = "";
   }
 
+  const wasAgentHandoff = window.quickMailIsAgentHandoff;
+
   // Si ce popup a pris le relais du micro de l'orchestrateur (cas
-  // "missing_content"), une fermeture ici (Annuler) doit redébloquer
-  // le micro, sinon il reste verrouillé indéfiniment.
-  if (window.quickMailIsAgentHandoff) {
+  // "missing_content"/"no_recipient"), une VRAIE annulation ici doit
+  // redébloquer le micro et le confirmer par un toast.
+  if (isCancel && wasAgentHandoff) {
     unlockAgentButtons();
     resetOrchestratorMicButton();
+    showToast("Envoi du mail annulé", "error");
   }
   window.quickMailIsAgentHandoff = false;
 }
@@ -10169,6 +10177,8 @@ if (typeof data === "string") {
         box.remove();
       }
 
+      showToast("Choisissez un destinataire", "error");
+
       openContactPickerForAgent(
         "À qui voulez-vous envoyer ce mail ?",
         "Choisissez un contact, ou ajoutez-en un nouveau.",
@@ -10186,6 +10196,8 @@ if (typeof data === "string") {
         box.remove();
       }
 
+      showToast("Contact introuvable — ajoutez-le", "error");
+
       openAddContactPopup({
   name: data.contact_name || data.name || "",
   pendingInstruction: instruction,
@@ -10202,6 +10214,8 @@ if (typeof data === "string") {
       if (box) {
         box.remove();
       }
+
+      showToast("Précisez le contenu du mail", "error");
 
       openMissingContentQuickMail(
         data.contact_id || contactId,
@@ -11798,10 +11812,10 @@ if (window.pendingAction?.type === "mail") {
   const box = document.getElementById("orchestrator-dictation-box");
 
   if (box) {
-    setDictationBoxState(box, "error");
-    box.innerHTML = "❌ Envoi du mail annulé. Aucun contact n'a été ajouté.";
-    autoHideDictationBox(box);
+    box.remove();
   }
+
+  showToast("Envoi du mail annulé. Aucun contact n'a été ajouté.", "error");
 
   window.pendingAction = null;
 
