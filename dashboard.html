@@ -10010,10 +10010,8 @@ async function submitQuickMail() {
   if (inputRow) inputRow.style.display = "none";
 
   quickMailFlowActive = true;
-  await callMailAgent(fullInstruction, box, requestId, contactId);
+  const result = await callMailAgent(fullInstruction, box, requestId, contactId);
   quickMailFlowActive = false;
-
-  const hadError = box && box.innerHTML.includes("✕");
 
   if (submitBtn) {
     submitBtn.disabled = false;
@@ -10022,13 +10020,18 @@ async function submitQuickMail() {
   if (backBtn) backBtn.style.display = "";
   if (inputRow) inputRow.style.display = "";
 
-  // Si callMailAgent() a rouvert ce même popup pour redemander quelque
-  // chose (contenu encore manquant, destinataire toujours pas clair), il
-  // ne faut surtout pas le refermer juste après.
-  const keepOpen = window.quickMailKeepOpen;
-  window.quickMailKeepOpen = false;
-
-  if (!hadError && !keepOpen) {
+  // On se base directement sur ce que callMailAgent() vient de renvoyer,
+  // pas sur un drapeau global mis à jour par un appel précédent (ex : choix
+  // du contact, résolu sans jamais passer par submitQuickMail()) : sinon un
+  // "true" périmé d'un tour précédent pouvait empêcher la fermeture du
+  // popup même quand CE tour-ci s'est terminé avec un succès complet.
+  // result === "reopened" : callMailAgent a rouvert ce même popup pour
+  // redemander quelque chose (contenu encore manquant, destinataire
+  // toujours pas clair) — il ne faut surtout pas le refermer.
+  // result === "error" : message d'erreur affiché dans le popup, on laisse
+  // l'utilisateur voir l'erreur et réessayer depuis ce même popup.
+  // result === "success" : c'est le seul cas où on ferme.
+  if (result === "success") {
     closeQuickMailModal(false);
   }
 }
@@ -10269,19 +10272,19 @@ if (typeof data === "string") {
   );
 
   // Le micro doit rester verrouillé : l'action n'est pas terminée tant
-  // que le mail n'est pas vraiment envoyé (ou en échec).
-  return;
+  // que le mail n'est pas vraiment envoyé (ou en échec). On renvoie un
+  // statut explicite ("reopened") plutôt que de compter sur un drapeau
+  // global : un appel ultérieur (ex : choix du contact, puis contenu
+  // manquant) ne doit jamais pouvoir laisser un drapeau "true" périmé
+  // qui empêcherait la fermeture du popup Quick Mail à la toute fin,
+  // même en cas de succès complet.
+  return "reopened";
 }
 
     if (!data.success && data.reason === "no_recipient") {
       hideOrRemoveBox(box);
 
       showToast("Choisissez un destinataire", "error");
-
-      // Si cet appel venait de submitQuickMail() (ex : contenu redonné
-      // mais toujours aucun destinataire clair), il ne doit pas refermer
-      // ce popup juste après qu'on vient de le rouvrir ici.
-      window.quickMailKeepOpen = true;
 
       openContactPickerForAgent(
         "À qui voulez-vous envoyer ce mail ?",
@@ -10292,7 +10295,7 @@ if (typeof data === "string") {
 
       // Le micro reste verrouillé, même ici : il ne se débloque qu'au
       // succès ou à l'échec réel de l'envoi du mail.
-      return;
+      return "reopened";
     }
 
     if (!data.success && data.reason === "contact_not_found") {
@@ -10307,16 +10310,11 @@ if (typeof data === "string") {
 
       // Le micro reste verrouillé, même ici : il ne se débloque qu'au
       // succès ou à l'échec réel de l'envoi du mail.
-      return;
+      return "reopened";
     }
 
     if (!data.success && data.reason === "missing_content") {
       hideOrRemoveBox(box);
-
-      // Même chose : si on redemande le contenu depuis submitQuickMail()
-      // (ex : contenu encore jugé insuffisant), ne pas laisser son nettoyage
-      // de fin refermer ce popup juste après qu'on vient de le rouvrir.
-      window.quickMailKeepOpen = true;
 
       openMissingContentQuickMail(
         data.contact_id || contactId,
@@ -10326,7 +10324,7 @@ if (typeof data === "string") {
 
       // Le micro reste verrouillé, même ici : il ne se débloque qu'au
       // succès ou à l'échec réel de l'envoi du mail.
-      return;
+      return "reopened";
     }
 
     if (box) {
@@ -10361,6 +10359,8 @@ if (box) {
     unlockAgentButtons();
     autoHideDictationBox(box);
 
+    return "success";
+
   } catch (error) {
 stopAgentProgressPolling();
 
@@ -10376,6 +10376,8 @@ stopAgentProgressPolling();
 
     unlockAgentButtons();
     resetOrchestratorMicButton();
+
+    return "error";
   }
 }
 
