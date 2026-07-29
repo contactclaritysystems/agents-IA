@@ -5683,6 +5683,51 @@ body[data-theme="dark"] .home-logo-dark {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 38
+   Effet "verre" sur les cartes en thème sombre uniquement.
+   Le gris plat (--clarity-surface) faisait bloc sur le fond noir
+   pur — pas assez premium. On ne touche pas à --clarity-surface
+   (utilisée aussi par inputs/modales dans les 4 thèmes) : on
+   surcharge juste le fond des cartes, ici, en thème sombre :
+   - fond quasi noir avec un très léger dégradé (lumière du haut)
+     au lieu d'un aplat gris ;
+   - bordure existante (--clarity-border) conservée telle quelle ;
+   - ombre douce et large pour la profondeur, à la place du
+     box-shadow standard plus sec.
+   Pour ajuster : tout est ici, dans ce seul bloc.
+   ========================================================= */
+
+body[data-theme="dark"] .agent-card,
+body[data-theme="dark"] .stat-card,
+body[data-theme="dark"] .gmail-section,
+body[data-theme="dark"] .pricing-plan,
+body[data-theme="dark"] .contact-row,
+body[data-theme="dark"] .agent-body {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 35%, rgba(255, 255, 255, 0) 100%),
+    #0a0b0f;
+}
+
+body[data-theme="dark"] .agent-card,
+body[data-theme="dark"] .stat-card,
+body[data-theme="dark"] .gmail-section,
+body[data-theme="dark"] .pricing-plan {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 28px rgba(0, 0, 0, 0.38);
+}
+
+body[data-theme="dark"] .agent-card:hover,
+body[data-theme="dark"] .stat-card:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 35%, rgba(255, 255, 255, 0) 100%),
+    #0a0b0f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.42);
+}
+
 </style>
 </head>
 <body data-theme="light">
