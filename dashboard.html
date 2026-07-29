@@ -2205,17 +2205,20 @@ body[data-theme="dark"] #app-loader {
   top: -55px;
   left: 50%;
   transform: translateX(-50%);
-  width: 340px;
-  height: 340px;
-  max-width: 85vw;
+  width: 380px;
+  height: 380px;
+  max-width: 90vw;
   /* Dégradé "pré-flouté" via plusieurs paliers de couleur, sans
      filter:blur() — évite un souci de rendu Safari possible avec
-     filter + animation + position:fixed combinés. */
+     filter + animation + position:fixed combinés.
+     Opacités relevées (0.5→0.85 au centre, etc.) : sur le fond noir pur
+     du thème sombre (#000), le réglage précédent était trop proche du
+     noir pour vraiment se voir comme un halo lumineux. */
   background: radial-gradient(circle,
-    rgba(0, 145, 199, 0.5) 0%,
-    rgba(0, 145, 199, 0.32) 22%,
-    rgba(0, 145, 199, 0.14) 45%,
-    rgba(0, 145, 199, 0.04) 65%,
+    rgba(0, 145, 199, 0.85) 0%,
+    rgba(0, 145, 199, 0.55) 22%,
+    rgba(0, 145, 199, 0.28) 45%,
+    rgba(0, 145, 199, 0.1) 65%,
     transparent 80%);
   border-radius: 50%;
   z-index: 0;
