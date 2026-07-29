@@ -10004,8 +10004,12 @@ async function submitQuickMail() {
   }
   setDictationBoxState(box, "info");
   box.style.opacity = "1";
+  // Même contenu que celui que callMailAgent() affichera juste après (avec
+  // le vrai nom du contact déjà choisi) : évite un flash avec un texte
+  // générique "Contact sélectionné" sans nom avant que ce soit remplacé.
   setAgentProgress(box, "Clarity", "✨", [
-    { text: "Contact sélectionné", status: "done" },
+    { text: "Demande comprise", status: "done" },
+    { text: "Contact sélectionné : " + quickMailSelectedContact.full_name, status: "done" },
     { text: "Préparation du mail...", status: "loading" }
   ]);
 
@@ -10157,13 +10161,27 @@ async function callMailAgent(
       setDictationBoxState(box, "info");
 box.style.opacity = "1";
 
+// Quand on arrive ici depuis le popup "Que voulez-vous dire ?" (contenu
+// redemandé), le contact a déjà été résolu plus tôt dans le même échange
+// (choix du contact, ou ajout d'un nouveau contact) : on ne veut pas
+// réafficher "Contact sélectionné" sans nom comme si on recommençait de
+// zéro, ni faire disparaître l'étape "Demande comprise" déjà validée.
+let quickMailContactLabel = "Contact sélectionné";
+if (quickMailFlowActive && contactId) {
+  const resolvedContact = (contactsCache || []).find(c => c.id === contactId);
+  if (resolvedContact) {
+    quickMailContactLabel = "Contact sélectionné : " + resolvedContact.full_name;
+  }
+}
+
 setAgentProgress(
     box,
     "Clarity",
     "✨",
   quickMailFlowActive
     ? [
-        { text: "Contact sélectionné", status: "done" },
+        { text: "Demande comprise", status: "done" },
+        { text: quickMailContactLabel, status: "done" },
         { text: "Préparation du mail...", status: "loading" }
       ]
     : [
