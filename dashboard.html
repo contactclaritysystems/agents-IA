@@ -3889,7 +3889,9 @@ body[data-theme="light"] {
 
 body[data-theme="dark"] {
   color-scheme: dark;
-  --clarity-page: #0b0d12;
+  /* Test : noir pur sur toutes les pages (au lieu du gris #0b0d12
+     d'origine) — à annuler facilement (remettre #0b0d12) si ça ne va pas. */
+  --clarity-page: #000000;
   --clarity-surface: #15171e;
   --clarity-surface-soft: #1b1e26;
   --clarity-surface-hover: #20232c;
