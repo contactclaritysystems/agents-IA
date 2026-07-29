@@ -10002,7 +10002,13 @@ async function submitQuickMail() {
   if (backBtn) backBtn.style.display = "";
   if (inputRow) inputRow.style.display = "";
 
-  if (!hadError) {
+  // Si callMailAgent() a rouvert ce même popup pour redemander quelque
+  // chose (contenu encore manquant, destinataire toujours pas clair), il
+  // ne faut surtout pas le refermer juste après.
+  const keepOpen = window.quickMailKeepOpen;
+  window.quickMailKeepOpen = false;
+
+  if (!hadError && !keepOpen) {
     closeQuickMailModal(false);
   }
 }
@@ -10109,6 +10115,23 @@ window.closeQuickMailModal = closeQuickMailModal;
 window.quickMailBackToContacts = quickMailBackToContacts;
 window.toggleQuickMailDictation = toggleQuickMailDictation;
 
+// Ne retire du DOM que les popups flottantes éphémères (classe
+// agent-progress-popup, créées à la volée). Les boîtes de statut
+// permanentes d'un template (ex : #quick-mail-status-box) doivent
+// seulement être masquées/vidées, sinon elles disparaissent
+// définitivement dès qu'on repasse deux fois par la même branche
+// (contact_not_found / missing_content / no_recipient), cassant tous
+// les usages suivants du popup Quick Mail.
+function hideOrRemoveBox(box) {
+  if (!box) return;
+  if (box.classList.contains("agent-progress-popup")) {
+    box.remove();
+  } else {
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+}
+
 async function callMailAgent(
   instruction,
   box = null,
@@ -10214,11 +10237,14 @@ if (typeof data === "string") {
 }
 
     if (!data.success && data.reason === "no_recipient") {
-      if (box) {
-        box.remove();
-      }
+      hideOrRemoveBox(box);
 
       showToast("Choisissez un destinataire", "error");
+
+      // Si cet appel venait de submitQuickMail() (ex : contenu redonné
+      // mais toujours aucun destinataire clair), il ne doit pas refermer
+      // ce popup juste après qu'on vient de le rouvrir ici.
+      window.quickMailKeepOpen = true;
 
       openContactPickerForAgent(
         "À qui voulez-vous envoyer ce mail ?",
@@ -10233,9 +10259,7 @@ if (typeof data === "string") {
     }
 
     if (!data.success && data.reason === "contact_not_found") {
-      if (box) {
-        box.remove();
-      }
+      hideOrRemoveBox(box);
 
       openAddContactPopup({
   name: data.contact_name || data.name || "",
@@ -10250,9 +10274,12 @@ if (typeof data === "string") {
     }
 
     if (!data.success && data.reason === "missing_content") {
-      if (box) {
-        box.remove();
-      }
+      hideOrRemoveBox(box);
+
+      // Même chose : si on redemande le contenu depuis submitQuickMail()
+      // (ex : contenu encore jugé insuffisant), ne pas laisser son nettoyage
+      // de fin refermer ce popup juste après qu'on vient de le rouvrir.
+      window.quickMailKeepOpen = true;
 
       openMissingContentQuickMail(
         data.contact_id || contactId,
