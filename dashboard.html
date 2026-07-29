@@ -2202,12 +2202,15 @@ body[data-theme="dark"] #app-loader {
    pseudo-élément, plus robuste. */
 .loader-halo {
   position: absolute;
-  top: -45px;
+  /* Diamètre agrandi (320px → 440px) : décalage top recalculé pour garder
+     le halo centré au même endroit qu'avant (même centre vertical), pas
+     juste agrandi vers le bas. */
+  top: -105px;
   left: 50%;
   transform: translateX(-50%);
-  width: 320px;
-  height: 320px;
-  max-width: 82vw;
+  width: 440px;
+  height: 440px;
+  max-width: 92vw;
   /* Les tentatives précédentes (paliers de dégradé, puis filter:blur() en
      plus) n'ont pas donné un fondu propre vers le noir : soit un anneau
      restait visible, soit blur() sur cet élément animé ne s'est pas bien
