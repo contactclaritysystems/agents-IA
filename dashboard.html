@@ -8413,7 +8413,11 @@ function alignContactsAlphabet() {
     return;
   }
 
-  const rect = list.getBoundingClientRect();
+  // Le haut de #contacts-list correspond au petit label "A" au-dessus
+  // de la 1ère carte, pas à la carte elle-même : on cible directement
+  // la 1ère carte (.contact-row) pour que la barre démarre à son niveau.
+  const firstCard = list.querySelector(".contact-row") || list;
+  const rect = firstCard.getBoundingClientRect();
   alphabet.style.top = Math.max(rect.top, 0) + "px";
   alphabet.style.transform = "none";
 }
