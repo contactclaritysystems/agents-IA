@@ -5988,6 +5988,29 @@ body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209
   margin-top: 4px;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 41
+   Carte principale (Clarity / hero) en thème sombre : elle était
+   restée un bloc plein (dégradé gris + bordure bleue dure), ce qui
+   fait "composant générique" à côté du reste, maintenant tout en
+   halos/verre. On applique le même principe ici, avec une touche de
+   bleu Clarity (c'est la carte de marque, elle mérite un peu plus
+   de présence que les stats neutres) : fond quasi transparent teinté
+   bleu très léger, bordure fine bleutée, et un halo ambiant tout
+   autour de la carte — écho du halo du logo/des icônes. Scopé au
+   thème sombre uniquement, sans toucher .clarity-hero de base
+   (utilisée par les autres thèmes).
+   ========================================================= */
+body[data-theme="dark"] .clarity-hero {
+  background:
+    linear-gradient(160deg, rgba(0, 145, 199, 0.06) 0%, rgba(255, 255, 255, 0.03) 40%, rgba(255, 255, 255, 0.008) 100%) !important;
+  border: 1px solid rgba(0, 145, 199, 0.16) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 46px 6px rgba(0, 145, 199, 0.10),
+    0 22px 50px rgba(0, 0, 0, 0.45) !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
