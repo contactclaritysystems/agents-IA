@@ -4751,7 +4751,7 @@ body,
 }
 
 .status-row .stat-label {
-  font-size: 10.5px !important;
+  font-size: 13px !important;
 }
 
 .topbar {
@@ -4915,6 +4915,14 @@ a:hover {
 #main-agents .page-title,
 #main-agents .page-subtitle {
   text-align: center;
+}
+
+/* Sous-titre d'accueil ("Elle ne dort jamais...") : légèrement
+   agrandi par rapport aux autres pages, en !important pour battre
+   la règle mobile .page-subtitle (15px !important) qui s'applique
+   par défaut à toutes les pages. */
+#main-agents .page-subtitle {
+  font-size: 16.5px !important;
 }
 
 /* Carnet de contacts : nom garanti visible quel que soit le thème */
@@ -5091,7 +5099,7 @@ body[data-theme="corail"] .loader-halo {
   }
 
   .status-row .stat-label {
-    font-size: 9px !important;
+    font-size: 11.5px !important;
   }
 
   .status-row .stat-progress {
