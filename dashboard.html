@@ -4999,6 +4999,64 @@ a:hover {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 34
+   Couleur des 2 halos (accueil + écran de chargement) par thème.
+
+   IMPORTANT : ce bloc ne touche jamais aux règles de base de
+   #main-agents::before ni de .loader-halo (utilisées par le thème
+   sombre) — il ne fait qu'AJOUTER des surcharges scopées par thème
+   pour "light", "slate" et "corail". Le thème sombre continue donc
+   d'utiliser exactement les mêmes règles qu'avant, inchangées.
+
+   Pour changer la couleur du halo d'un seul thème plus tard : modifier
+   uniquement le bloc de CE thème ci-dessous, rien d'autre ne bouge.
+
+   - Halo accueil (dégradé CSS) : on peut redéfinir "background"
+     directement avec la couleur du thème.
+   - Halo écran de chargement (image PNG bleue figée) : on ne peut pas
+     changer la couleur d'une image en CSS, donc on la teinte avec un
+     filtre (grayscale/hue-rotate/brightness) au lieu de redessiner une
+     image par thème.
+   ========================================================= */
+
+/* Thème clair : halo sombre et discret (assorti à l'accent noir du
+   thème clair) plutôt que le bleu du thème sombre. */
+body[data-theme="light"] #main-agents::before {
+  background: radial-gradient(ellipse,
+    rgba(24, 24, 27, 0.16) 0%,
+    rgba(24, 24, 27, 0.05) 45%,
+    transparent 70%);
+}
+
+body[data-theme="light"] .loader-halo {
+  filter: grayscale(1) brightness(.35);
+}
+
+/* Thème ardoise : halo graphite/anthracite, assorti à l'accent du thème. */
+body[data-theme="slate"] #main-agents::before {
+  background: radial-gradient(ellipse,
+    rgba(27, 32, 40, 0.18) 0%,
+    rgba(27, 32, 40, 0.06) 45%,
+    transparent 70%);
+}
+
+body[data-theme="slate"] .loader-halo {
+  filter: grayscale(.6) saturate(1.1) brightness(.45);
+}
+
+/* Thème corail : halo teinte vin/corail, assorti à l'accent du thème. */
+body[data-theme="corail"] #main-agents::before {
+  background: radial-gradient(ellipse,
+    rgba(58, 20, 32, 0.16) 0%,
+    rgba(58, 20, 32, 0.05) 45%,
+    transparent 70%);
+}
+
+body[data-theme="corail"] .loader-halo {
+  filter: hue-rotate(150deg) saturate(1.4) brightness(.65);
+}
+
 @media (prefers-reduced-motion: reduce) {
   #main-agents::before,
   .loader-halo,
