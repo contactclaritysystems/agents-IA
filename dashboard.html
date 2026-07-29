@@ -8805,6 +8805,16 @@ function deleteSelectedContact() {
     document.getElementById("contact-phone").value = "";
     document.getElementById("contact-company").value = "";
 
+    // IMPORTANT : recapture l'état "initial" maintenant que le nom est
+    // pré-rempli. openContactPage() l'avait déjà capturé juste avant, mais
+    // à ce moment-là le champ nom était encore vide : sans cette ligne,
+    // closeContactPage() croit à tort qu'il y a des modifications non
+    // enregistrées dès l'ouverture (juste à cause du nom pré-rempli) et
+    // affiche une confirmation "quitter sans enregistrer ?" à chaque
+    // annulation, même si l'utilisateur n'a rien tapé — et si elle est
+    // rejetée, l'écran reste bloqué à mi-chemin (fond noir).
+    contactInitialState = getContactFormState();
+
 }
 
 // ─── UTILS ───────────────────────────────────────────────
@@ -10207,8 +10217,6 @@ if (typeof data === "string") {
       if (box) {
         box.remove();
       }
-
-      showToast("Contact introuvable — ajoutez-le", "error");
 
       openAddContactPopup({
   name: data.contact_name || data.name || "",
