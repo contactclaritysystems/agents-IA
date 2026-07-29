@@ -9844,6 +9844,15 @@ async function callMailAgent(
       box = document.getElementById("orchestrator-dictation-box");
     }
 
+    // La popup a pu être retirée du DOM (ex : après l'ajout d'un contact
+    // manquant). On la recrée pour que la progression reste visible.
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "orchestrator-dictation-box";
+      box.classList.add("agent-progress-popup");
+      document.body.appendChild(box);
+    }
+
     if (box) {
       setDictationBoxState(box, "info");
 box.style.opacity = "1";
