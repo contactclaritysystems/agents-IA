@@ -9980,60 +9980,38 @@ async function submitQuickMail() {
   const fullInstruction =
     "Écris un mail à " + quickMailSelectedContact.full_name + " : " + rawInstruction;
 
-  const box = document.getElementById("quick-mail-status-box");
-  const submitBtn = document.getElementById("quick-mail-submit-btn");
-  const backBtn = document.getElementById("quick-mail-back-btn");
-  const inputRow = document.getElementById("quick-mail-input-row");
-
   // On arrête la dictée en cours s'il y en a une : sinon le micro reste
   // actif pendant toute la préparation du mail.
   if (quickMailDictationRecognition) {
     try { quickMailDictationRecognition.stop(); } catch(e) {}
     quickMailDictationRecognition = null;
   }
-  const micBtnSubmit = document.getElementById("quick-mail-mic-btn");
-  if (micBtnSubmit) micBtnSubmit.classList.remove("is-recording");
 
-  if (box) {
-    box.style.display = "block";
-    setDictationBoxState(box, "info");
-    box.innerHTML = "✨ Préparation du mail...";
+  // Comme pour tous les autres flux de l'agent (dictée depuis l'accueil,
+  // choix d'un contact...) : dès qu'on clique sur "Envoyer à l'agent", ce
+  // popup se ferme immédiatement, sans attendre la réponse. On revient à
+  // l'écran normal, où la même popup flottante de progression ("Demande
+  // comprise", "Recherche du contact"...) prend le relais — au lieu de
+  // garder ce popup ouvert avec un bouton grisé pendant que ça travaille.
+  closeQuickMailModal(false);
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
   }
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.style.opacity = ".55";
-  }
-  if (backBtn) backBtn.style.display = "none";
-  // On masque toute la ligne (zone de texte + bouton micro), pas seulement
-  // le texte : sinon le bouton micro reste affiché seul à côté de la boîte
-  // de statut et ça se chevauche visuellement.
-  if (inputRow) inputRow.style.display = "none";
+  setDictationBoxState(box, "info");
+  box.style.opacity = "1";
+  setAgentProgress(box, "Clarity", "✨", [
+    { text: "Contact sélectionné", status: "done" },
+    { text: "Préparation du mail...", status: "loading" }
+  ]);
 
   quickMailFlowActive = true;
-  const result = await callMailAgent(fullInstruction, box, requestId, contactId);
+  await callMailAgent(fullInstruction, box, requestId, contactId);
   quickMailFlowActive = false;
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.style.opacity = "1";
-  }
-  if (backBtn) backBtn.style.display = "";
-  if (inputRow) inputRow.style.display = "";
-
-  // On se base directement sur ce que callMailAgent() vient de renvoyer,
-  // pas sur un drapeau global mis à jour par un appel précédent (ex : choix
-  // du contact, résolu sans jamais passer par submitQuickMail()) : sinon un
-  // "true" périmé d'un tour précédent pouvait empêcher la fermeture du
-  // popup même quand CE tour-ci s'est terminé avec un succès complet.
-  // result === "reopened" : callMailAgent a rouvert ce même popup pour
-  // redemander quelque chose (contenu encore manquant, destinataire
-  // toujours pas clair) — il ne faut surtout pas le refermer.
-  // result === "error" : message d'erreur affiché dans le popup, on laisse
-  // l'utilisateur voir l'erreur et réessayer depuis ce même popup.
-  // result === "success" : c'est le seul cas où on ferme.
-  if (result === "success") {
-    closeQuickMailModal(false);
-  }
 }
 
 // isCancel=true (défaut) : vraie annulation par l'utilisateur (bouton
