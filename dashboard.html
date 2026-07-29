@@ -5177,6 +5177,12 @@ a:hover {
   display: none !important;
 }
 
+/* Le lien "Supprimer tout l'historique" ne doit être visible que
+   sur la grille des dossiers, pas quand un dossier est ouvert. */
+#main-historique #history-folders.is-hidden ~ #history-delete-all-wrap {
+  display: none !important;
+}
+
 /* Carnet contacts : même principe, la liste doit disparaître
    pendant que le formulaire "Nouveau/Modifier contact" est
    ouvert, sinon il s'affiche en dessous au lieu de la remplacer. */
@@ -5984,6 +5990,12 @@ a:hover {
   </div>
   <div class="agent-status ok">Historique</div>
 </div>
+  </div>
+
+  <div id="history-delete-all-wrap" style="text-align:center;margin-top:22px;">
+    <button class="sheet-btn" onclick="deleteAllHistory()" type="button" style="color:var(--clarity-danger);">
+      🗑️ Supprimer tout l'historique
+    </button>
   </div>
 
   <div id="history-detail" style="display:none;">
@@ -9344,6 +9356,14 @@ if (data.agent === "mail") {
   setDictationBoxState(box, "info");
   box.innerHTML = "🔎 Recherche du contact...";
 
+  // La suite (recherche du contact, aperçu, envoi) est gérée par
+  // callMailAgent(), qui n'a pas accès à resetMicButton()/agentIsWorking
+  // (fermés dans cette fonction-ci). Sans ça, le micro reste bloqué sur
+  // "⏳ Traitement..." et un 2e mail dicté juste après est refusé
+  // ("Un agent est déjà en cours") tant que la page n'est pas rechargée.
+  unlockAgentButtons();
+  resetMicButton();
+
   return callMailAgent(
   data.instruction,
   box,
@@ -10223,6 +10243,10 @@ if (detail) {
           ? `<div style="margin-top:14px;white-space:pre-wrap;line-height:1.6;font-size:14px;word-break:break-word;">${r.message_context}</div>`
           : ""
       }
+
+      <button class="sheet-btn" onclick="deletePastFollowUp('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+        Supprimer
+      </button>
     </div>
   `;
 }
@@ -10272,6 +10296,10 @@ if (detail) {
       `
         : ""
     }
+
+    <button class="sheet-btn" onclick="deletePastAppointment('${a.id}')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+      Supprimer
+    </button>
 
   </div>
 `;
@@ -10612,6 +10640,10 @@ if (objetMatch && objetMatch[1]) {
   ${cleanText || "Compte rendu vide"}
 </div>
 
+      <button class="sheet-btn" onclick="deleteHistoryLog('${log.id}', 'notes')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+        Supprimer
+      </button>
+
     </div>
   `;
 }
@@ -10671,6 +10703,10 @@ if (objetMatch && objetMatch[1]) {
       ">
         ${reponse || "Réponse non disponible pour cette ancienne action"}
       </div>
+
+      <button class="sheet-btn" onclick="deleteHistoryLog('${log.id}', '${agentName}')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+        Supprimer
+      </button>
 
     </div>
   `;
@@ -10733,6 +10769,10 @@ const body = text
 ">
   ${body || text || "Mail vide"}
 </div>
+
+<button class="sheet-btn" onclick="deleteHistoryLog('${log.id}', 'mails')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+  Supprimer
+</button>
     </div>
   `;
 }
@@ -10797,9 +10837,183 @@ Bonne journée,`
 }
 
 function loadMoreHistory(agentName) {
-  
+
   historyLimit += 10;
   loadHistory(agentName);
+}
+
+// Suppression d'une ligne d'historique (mails, notes, rédaction, assistant...)
+async function deleteHistoryLog(id, agentName) {
+  if (!id) return;
+  if (!confirm("Supprimer cette action de l'historique ?")) return;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/action_event_logs?id=eq." + id,
+    {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur suppression", "error");
+    return;
+  }
+
+  showToast("Action supprimée");
+  loadHistory(agentName);
+}
+
+// Suppression d'un rendez-vous passé (historique uniquement)
+async function deletePastAppointment(id) {
+  if (!id) return;
+  if (!confirm("Supprimer ce rendez-vous de l'historique ?")) return;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/appointments?id=eq." + id,
+    {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur suppression", "error");
+    return;
+  }
+
+  showToast("Rendez-vous supprimé");
+  loadPastAppointments();
+}
+
+// Suppression d'une relance passée (historique uniquement)
+async function deletePastFollowUp(id) {
+  if (!id) return;
+  if (!confirm("Supprimer cette relance de l'historique ?")) return;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  const response = await fetch(
+    SUPABASE_URL + "/rest/v1/follow_ups?id=eq." + id,
+    {
+      method: "DELETE",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": "application/json"
+      }
+    }
+  );
+
+  if (!response.ok) {
+    showToast("Erreur suppression", "error");
+    return;
+  }
+
+  showToast("Relance supprimée");
+  loadPastFollowUps();
+}
+
+// Suppression totale de l'historique (verrouillée par une confirmation stricte)
+async function deleteAllHistory() {
+  const input = prompt(
+    "Cette action supprime définitivement tout votre historique : mails, comptes rendus, textes rédigés, questions à l'assistant, ainsi que les rendez-vous et relances passés.\n\nLes rendez-vous et relances à venir ne sont pas concernés.\n\nTapez SUPPRIMER pour confirmer :"
+  );
+
+  if (input === null) return;
+
+  if (input.trim() !== "SUPPRIMER") {
+    showToast("Suppression annulée", "error");
+    return;
+  }
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken || !currentUser) {
+    showToast("Session expirée", "error");
+    return;
+  }
+
+  showToast("Suppression en cours...");
+
+  try {
+    await fetch(
+      SUPABASE_URL + "/rest/v1/action_event_logs?user_id=eq." + currentUser.id,
+      {
+        method: "DELETE",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    await fetch(
+      SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + currentUser.id + "&status=in.(done,cancelled,missed)",
+      {
+        method: "DELETE",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    await fetch(
+      SUPABASE_URL + "/rest/v1/follow_ups?user_id=eq." + currentUser.id + "&status=in.(done,cancelled)",
+      {
+        method: "DELETE",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+  } catch (e) {
+    showToast("Erreur suppression", "error");
+    return;
+  }
+
+  showToast("Historique supprimé");
+  closeHistoryDetail();
 }
   
 async function loadContacts() {
