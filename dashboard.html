@@ -5728,6 +5728,26 @@ body[data-theme="dark"] .stat-card:hover {
     0 12px 32px rgba(0, 0, 0, 0.42);
 }
 
+/* Les stat-cards sont trop petites (~100px) pour que le dégradé
+   ci-dessus se voie : sur une carte courte, la bande de lumière du
+   haut ne représente qu'un mince filet. On leur donne un traitement
+   plus marqué (fond légèrement plus clair + dégradé plus fort +
+   bordure plus visible), pour qu'elles rendent le même effet verre
+   malgré leur petite taille. */
+body[data-theme="dark"] .stat-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.03) 50%, rgba(255, 255, 255, 0) 100%),
+    #12141c;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+body[data-theme="dark"] .stat-card:hover {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0) 100%),
+    #12141c;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
 </style>
 </head>
 <body data-theme="light">
