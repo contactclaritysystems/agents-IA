@@ -9117,6 +9117,13 @@ function resetOrchestratorMicButton() {
     btn.innerHTML = btn.dataset.originalText;
     delete btn.dataset.originalText;
   }
+  // BUG racine du "le micro ne fonctionne qu'une fois" : au clic,
+  // startSimpleAgentDictation() réassigne btn.onclick vers un handler
+  // "arrêter l'enregistrement" (voir plus bas), et rien ne le restaurait
+  // jamais vers startOrchestratorDictation. Résultat : dès la 2e pression,
+  // le clic exécutait l'ancien handler (figé sur la 1ère reconnaissance,
+  // déjà terminée) au lieu de démarrer une nouvelle dictée.
+  btn.onclick = startOrchestratorDictation;
 }
 
   function updateAgentProgress(box, config = {}) {
@@ -9343,6 +9350,9 @@ progressIcon: "✨",
       btn.innerHTML = btn.dataset.originalText;
       delete btn.dataset.originalText;
     }
+    // Sans ça, btn.onclick reste figé sur le handler "arrêter l'enregistrement"
+    // assigné plus bas, et un 2e clic ne relance jamais une nouvelle dictée.
+    btn.onclick = startOrchestratorDictation;
   }
 
   setListeningUI(true);
@@ -9840,10 +9850,8 @@ if (typeof data === "string") {
     requestId
   );
 
-  // Le flux automatique s'arrête ici : c'est à l'utilisateur de choisir
-  // un contact dans la modale. Le micro peut redevenir utilisable.
-  unlockAgentButtons();
-  resetOrchestratorMicButton();
+  // Le micro doit rester verrouillé : l'action n'est pas terminée tant
+  // que le mail n'est pas vraiment envoyé (ou en échec).
   return;
 }
 
@@ -9860,10 +9868,8 @@ if (typeof data === "string") {
   newContact: true
 });
 
-      // Idem : il faut que l'utilisateur ajoute le contact manuellement,
-      // le flux automatique s'arrête ici.
-      unlockAgentButtons();
-      resetOrchestratorMicButton();
+      // Le micro reste verrouillé, même ici : il ne se débloque qu'au
+      // succès ou à l'échec réel de l'envoi du mail.
       return;
     }
 
