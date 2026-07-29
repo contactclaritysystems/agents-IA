@@ -1600,6 +1600,16 @@ select.field-input {
   }
 
   /* Page Agents */
+  /* .main partage un padding-top de 12px avec toutes les pages mobile
+     (Contacts, Planning, Historique, Réglages) : on ne peut pas le réduire
+     globalement sans les affecter aussi. Ici on réduit ce padding-top
+     uniquement pour #main-agents (la page d'accueil), via un sélecteur
+     plus spécifique (#main-agents.main) qui l'emporte sur la règle
+     partagée sans y toucher pour les autres pages. */
+  #main-agents.main {
+    padding-top: 4px !important;
+  }
+
   #main-agents .mobile-agent-top {
     padding: 0 0 0 !important;
     margin-bottom: 18px !important;
