@@ -9051,6 +9051,13 @@ Bonne journée,`
 }
 
 function openMailPreview(data, instruction) {
+  // La popup de progression ("Demande comprise"...) devait sinon rester
+  // visible jusqu'à 3.5s (son délai normal de disparition), pendant que
+  // l'aperçu du mail s'ouvre par-dessus : les deux se superposaient de
+  // façon disgracieuse. On la retire immédiatement ici.
+  const progressBox = document.getElementById("orchestrator-dictation-box");
+  if (progressBox) progressBox.remove();
+
   pendingMailInstruction = instruction || "";
 
   currentPreparedMail = {
