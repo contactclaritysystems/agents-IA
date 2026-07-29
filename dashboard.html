@@ -1291,10 +1291,6 @@ select.field-input {
   grid-template-columns: 1fr;
 }
 
-  #main-contacts .page-subtitle {
-  display: none;
-}
-
 #main-settings .topbar {
   padding: 28px 18px 0;
   margin-bottom: 20px;
@@ -2002,6 +1998,7 @@ select.field-input {
   align-items: flex-start !important;
   justify-content: space-between !important;
   gap: 14px !important;
+  position: relative !important;
 }
 
 #main-settings .power-logout-btn {
@@ -2010,6 +2007,29 @@ select.field-input {
   height: 44px;
   font-size: 20px;
   margin-top: 4px;
+}
+
+/* Le titre "Réglages" n'était centré que sur desktop (règle du BLOC 28,
+   limitée à @media min-width:601px) : sur mobile, il retombait sur le
+   layout flex "space-between" ci-dessus, qui le pousse à gauche à cause du
+   bouton de déconnexion à droite. Même technique qu'en desktop : le bouton
+   sort du flux (position absolute) et le bloc titre/sous-titre prend toute
+   la largeur restante pour pouvoir se centrer. */
+#main-settings .settings-topbar > div:first-child {
+  width: 100% !important;
+  text-align: center !important;
+}
+
+#main-settings .settings-topbar .page-title,
+#main-settings .settings-topbar .page-subtitle {
+  text-align: center !important;
+}
+
+#main-settings .settings-topbar .power-logout-btn {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  margin-top: 0 !important;
 }
 
     /* Alignement uniforme des titres de pages mobile */
