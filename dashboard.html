@@ -6054,9 +6054,14 @@ body[data-theme="dark"] .clarity-hero {
        "outline" à la place : il se dessine TOUJOURS à l'extérieur
        de la boîte et n'est jamais rogné par l'overflow de l'élément
        — solution simple, fiable, et un vrai "trait fin". */
-    border-color: rgba(64, 224, 208, 0.9) !important;
+    /* Mesure des pixels réellement affichés : (64,224,208) rendait du
+       (50,190,180) — vert (190) > bleu (180), donc vraiment vert.
+       Les pixels de la photo du logo (mesurés plus haut) sont
+       toujours bleu ≥ vert. On inverse l'écart : bleu nettement
+       devant le vert cette fois. */
+    border-color: rgba(45, 180, 230, 0.9) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-    outline: 1.5px solid rgba(64, 224, 208, 0.85) !important;
+    outline: 1.5px solid rgba(45, 180, 230, 0.85) !important;
     outline-offset: 2px !important;
   }
 
