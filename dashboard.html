@@ -5218,6 +5218,14 @@ body[data-theme="corail"] .loader-halo {
   #main-agents .clarity-hero-body {
     padding-top: 22px !important;
   }
+
+  /* Même cause que sur mobile : le micro (76px) est plus haut que la
+     barre de dictée (~47px), centrée dedans → espace invisible en
+     plus du gap de 22px, qui rend le bas plus grand que le haut.
+     Même compensation ici (PC), barre toujours centrée sur le micro. */
+  .clarity-bubble {
+    margin-bottom: -14px !important;
+  }
 }
 
 /* =========================================================
