@@ -6061,15 +6061,16 @@ body[data-theme="dark"] .clarity-hero {
 
   /* Vraie contrainte cachée trouvée : le bouton micro fait 76px de
      haut, contre ~47px pour la barre de dictée. Avec align-items:
-     center (valeur par défaut de .clarity-input-row), la barre est
-     centrée DANS ces 76px → environ 14px d'espace invisible
-     apparaissent au-dessus de la barre, en plus du gap de 22px.
-     C'est ce qui rendait l'espace sous "Que puis-je faire..." plus
-     grand que celui au-dessus de "Bonjour Anthony", sans qu'aucun
-     padding/gap ne bouge. On aligne la barre en haut du bouton
-     micro (mobile uniquement) pour supprimer cet espace invisible. */
-  #main-agents .clarity-input-row {
-    align-items: flex-start !important;
+     center (qu'on garde, la barre reste centrée sur le micro comme
+     avant), la barre est centrée DANS ces 76px → environ 14px
+     d'espace invisible apparaissent au-dessus de la barre, en plus
+     du gap de 22px. C'est ce qui rendait l'espace sous "Que puis-je
+     faire..." plus grand que celui au-dessus de "Bonjour Anthony".
+     On compense avec une marge négative (mobile uniquement, la
+     barre reste visuellement centrée sur le micro, seul l'espace
+     au-dessus change) pour retomber sur 22px, comme en haut. */
+  .clarity-bubble {
+    margin-bottom: -14px !important;
   }
 }
 
