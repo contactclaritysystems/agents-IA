@@ -6047,23 +6047,22 @@ body[data-theme="dark"] .clarity-hero {
    ========================================================= */
 @media (max-width: 600px) {
   body[data-theme="dark"] .clarity-hero {
-    /* Plus de filter ici : seulement le liseré interne, qui ne pose
-       aucun problème de rendu puisqu'il ne déborde pas de la boîte. */
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    /* Le halo diffus (drop-shadow flouté) est abandonné : un grand
+       flou dilue et désature n'importe quelle couleur, ce qui
+       tirait systématiquement vers un rendu délavé/pas assez franc.
+       À la place : un vrai liseré fin turquoise (bordure nette),
+       + une lueur très légèrement floutée juste autour, pour rester
+       un "trait fin" et non un gros halo. */
+    border-color: rgba(64, 224, 208, 0.9) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(64, 224, 208, 0.55),
+      0 0 8px 1px rgba(64, 224, 208, 0.45) !important;
+    overflow: visible !important;
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
-    /* J'ai vérifié en mesurant les pixels réellement affichés : la
-       couleur précédente (95,210,230) s'affichait bien telle quelle,
-       mais une fois diffusée en halo flou et sombre sur fond noir,
-       vert et bleu presque égaux se lisent comme du turquoise, pas
-       du bleu — l'œil perçoit les lumières faibles/diffuses plus
-       vertes qu'elles ne le sont (effet Purkinje). Il faut donc que
-       le bleu domine beaucoup plus nettement le vert pour que le
-       halo, une fois flouté et assombri, se lise comme "bleu". */
-    filter:
-      drop-shadow(0 0 18px rgba(60, 150, 240, 0.62))
-      drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
   }
 
   #main-agents .status-row {
