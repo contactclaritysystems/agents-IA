@@ -6015,6 +6015,30 @@ body[data-theme="dark"] .clarity-hero {
     0 22px 50px rgba(0, 0, 0, 0.45) !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 42 (mobile uniquement, PC gelé)
+   Deux bugs mobile seulement :
+   1) Le halo de la carte Clarity ne se voyait jamais : .agent-card
+      (partagée avec .clarity-hero) a overflow:hidden, qui rogne tout
+      box-shadow débordant de la boîte — donc invisible sur PC aussi
+      en réalité, mais on ne touche que le mobile pour l'instant comme
+      demandé.
+   2) Le bouton d'aide "?" était trop peu contrasté pour se voir sur
+      l'écran de téléphone (fond/bordure trop proches de la carte).
+   ========================================================= */
+@media (max-width: 600px) {
+  body[data-theme="dark"] .clarity-hero {
+    overflow: visible !important;
+  }
+
+  .clarity-help-btn {
+    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: var(--clarity-text) !important;
+    font-weight: 800 !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
