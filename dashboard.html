@@ -6064,35 +6064,27 @@ body[data-theme="dark"] .clarity-hero {
   /* Carte légèrement moins large, pour laisser de la place à la
      lueur de tous les côtés (pas seulement en haut/bas). */
   #main-agents .clarity-hero {
-    max-width: calc(100% - 24px) !important;
+    max-width: calc(100% - 16px) !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
 
-  /* Le trait net faisait "cadre plat" (retour utilisateur : il
-     voulait une lumière derrière la carte, pas un contour dessiné).
-     On revient donc au principe du halo du loader (un vrai div,
-     pas un filter/box-shadow qui posent des soucis de rendu) : un
-     dégradé radial, plus grand que la carte, posé DERRIÈRE elle
-     (z-index 0 contre 1 pour la carte) — le centre est caché par
-     le fond opaque de la carte, seuls les bords dépassent en
-     lueur douce, comme une lumière diffuse derrière.
-     Bug de la 1ère version : la carte occupe presque toute la
-     largeur du halo (elle n'est agrandie que de 22px de chaque
-     côté), donc la zone réellement visible (hors de la carte) est
-     tout au bord du dégradé — or mes paliers de couleur tombaient
-     déjà à 0 avant d'y arriver. Résultat : rien à voir. Cette fois
-     l'opacité reste forte jusqu'à 85%, et ne s'éteint qu'à 100%. */
+  /* v2 : la précédente tenait une opacité quasi constante (0.65-0.7)
+     jusqu'à 85% du dégradé, ce qui donnait un pavé de couleur plein
+     plutôt qu'une lueur — repéré par l'utilisateur ("la lumière
+     n'est pas bonne"). Cette fois le fondu est continu et progressif
+     du centre vers l'extérieur, avec une opacité de pointe modérée,
+     pour un vrai halo doux et non un bloc plat. */
   body[data-theme="dark"] .clarity-hero-halo {
     display: block;
     position: absolute;
-    inset: -30px;
-    border-radius: 40px;
+    inset: -20px;
+    border-radius: 38px;
     background: radial-gradient(
       ellipse at center,
-      rgba(45, 180, 230, 0.7) 0%,
-      rgba(45, 180, 230, 0.65) 85%,
-      rgba(45, 180, 230, 0.2) 94%,
+      rgba(45, 180, 230, 0.45) 0%,
+      rgba(45, 180, 230, 0.3) 55%,
+      rgba(45, 180, 230, 0.1) 80%,
       rgba(45, 180, 230, 0) 100%
     );
     z-index: 0;
