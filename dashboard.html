@@ -6105,6 +6105,18 @@ body[data-theme="dark"] .clarity-hero {
   gap: 22px !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 44 (PC + mobile)
+   Réduire l'espace entre "Actions rapides" et les boutons d'action
+   rapide. Ce gap vient du gap uniforme de .clarity-hero-main (22px)
+   + la marge propre de .clarity-quick-label (8px) = 30px au total.
+   On ne touche pas au gap (qui sert aussi bulle→champ, champ→
+   label), on réduit juste la marge du label pour cette seule paire.
+   ========================================================= */
+.clarity-quick-label {
+  margin-bottom: -8px !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
