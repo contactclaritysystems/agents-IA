@@ -6053,11 +6053,12 @@ body[data-theme="dark"] .clarity-hero {
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
-    /* Bleu ciel vif du logo (ex: #29ABE2) : assez saturé pour rester
-       lisiblement bleu une fois flouté, sans virer au blanc ni au
-       vert/turquoise. */
+    /* Couleur mesurée directement sur la photo du logo envoyée par
+       l'utilisateur (pixels du halo, hors reflets blancs) : un bleu
+       ciel lumineux où vert et bleu sont proches et élevés (~90,205,
+       225), pas un bleu-vert foncé/saturé qui lisait comme du vert. */
     filter:
-      drop-shadow(0 0 18px rgba(41, 171, 226, 0.6))
+      drop-shadow(0 0 18px rgba(95, 210, 230, 0.62))
       drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
   }
 
