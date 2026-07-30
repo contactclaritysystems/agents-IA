@@ -6053,12 +6053,16 @@ body[data-theme="dark"] .clarity-hero {
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
-    /* Couleur mesurée directement sur la photo du logo envoyée par
-       l'utilisateur (pixels du halo, hors reflets blancs) : un bleu
-       ciel lumineux où vert et bleu sont proches et élevés (~90,205,
-       225), pas un bleu-vert foncé/saturé qui lisait comme du vert. */
+    /* J'ai vérifié en mesurant les pixels réellement affichés : la
+       couleur précédente (95,210,230) s'affichait bien telle quelle,
+       mais une fois diffusée en halo flou et sombre sur fond noir,
+       vert et bleu presque égaux se lisent comme du turquoise, pas
+       du bleu — l'œil perçoit les lumières faibles/diffuses plus
+       vertes qu'elles ne le sont (effet Purkinje). Il faut donc que
+       le bleu domine beaucoup plus nettement le vert pour que le
+       halo, une fois flouté et assombri, se lise comme "bleu". */
     filter:
-      drop-shadow(0 0 18px rgba(95, 210, 230, 0.62))
+      drop-shadow(0 0 18px rgba(60, 150, 240, 0.62))
       drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
   }
 
