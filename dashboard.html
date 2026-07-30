@@ -6297,35 +6297,35 @@ body[data-theme="dark"] .clarity-hero {
     <div class="field-row">
       <div class="field-group">
         <div class="field-label">Prénom</div>
-        <input class="field-input auto-capitalize" type="text" id="profile-firstname" placeholder="Jean" />
+        <input class="field-input auto-capitalize" type="text" id="profile-firstname" placeholder="Jean" oninput="toggleProfileSave()" />
       </div>
 
       <div class="field-group">
         <div class="field-label">Nom</div>
-        <input class="field-input auto-capitalize" type="text" id="profile-lastname" placeholder="Dupont" />
+        <input class="field-input auto-capitalize" type="text" id="profile-lastname" placeholder="Dupont" oninput="toggleProfileSave()" />
       </div>
     </div>
 
     <div class="field-row" style="margin-top:14px;">
       <div class="field-group">
         <div class="field-label">Téléphone</div>
-        <input class="field-input" type="tel" id="profile-phone" placeholder="06 12 34 56 78" />
+        <input class="field-input" type="tel" id="profile-phone" placeholder="06 12 34 56 78" oninput="toggleProfileSave()" />
       </div>
 
       <div class="field-group">
         <div class="field-label">Ville</div>
-        <input class="field-input auto-capitalize" type="text" id="profile-city" placeholder="Marseille" />
+        <input class="field-input auto-capitalize" type="text" id="profile-city" placeholder="Marseille" oninput="toggleProfileSave()" />
       </div>
     </div>
 
     <div class="field-group" style="margin-top:14px;">
       <div class="field-label">Métier / activité</div>
-      <input class="field-input auto-capitalize" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." />
+      <input class="field-input auto-capitalize" type="text" id="profile-job" placeholder="Plombier, consultant, agence immobilière..." oninput="toggleProfileSave()" />
     </div>
 
     <div class="field-group" style="margin-top:14px;">
   <div class="field-label">Société</div>
-  <input class="field-input auto-capitalize" type="text" id="profile-company" placeholder="Clarity Systems" />
+  <input class="field-input auto-capitalize" type="text" id="profile-company" placeholder="Clarity Systems" oninput="toggleProfileSave()" />
 </div>
 
    <button class="sheet-btn" id="profile-edit-btn" onclick="unlockProfileFields()" type="button" style="width:100%; display:none;">
@@ -6682,22 +6682,22 @@ body[data-theme="dark"] .clarity-hero {
     <div class="gmail-section" style="display:block;">
       <div class="field-group">
         <div class="field-label">Nom complet</div>
-        <input class="field-input auto-capitalize" type="text" id="contact-name" placeholder="Lucas Martin" />
+        <input class="field-input auto-capitalize" type="text" id="contact-name" placeholder="Lucas Martin" oninput="toggleContactSave()" />
       </div>
 
       <div class="field-group" style="margin-top:14px;">
         <div class="field-label">Email <span style="color:var(--clarity-danger);">*</span></div>
-        <input class="field-input" id="contact-email" placeholder="lucas@email.com" required />
+        <input class="field-input" id="contact-email" placeholder="lucas@email.com" required oninput="toggleContactSave()" />
       </div>
 
       <div class="field-group" style="margin-top:14px;">
         <div class="field-label">Société</div>
-        <input class="field-input auto-capitalize" type="text" id="contact-company" placeholder="Entreprise" />
+        <input class="field-input auto-capitalize" type="text" id="contact-company" placeholder="Entreprise" oninput="toggleContactSave()" />
       </div>
 
       <div class="field-group" style="margin-top:14px;">
         <div class="field-label">Téléphone</div>
-        <input class="field-input" id="contact-phone" placeholder="Ex : 06 12 34 56 78" />
+        <input class="field-input" id="contact-phone" placeholder="Ex : 06 12 34 56 78" oninput="toggleContactSave()" />
       </div>
 
       <button class="save-btn" id="contact-save-page-btn" onclick="saveContactFromPage()" type="button">
@@ -8832,6 +8832,16 @@ function setProfileFormState(profile) {
   document.getElementById("profile-company").value = profile.company || "";
 }
 
+// Même correctif que pour les contacts : le bouton Enregistrer du
+// profil doit rester grisé tant qu'aucun champ n'a réellement changé.
+function toggleProfileSave() {
+  const btn = document.getElementById("profile-save-btn");
+  if (!btn) return;
+  const changed = JSON.stringify(getProfileFormState()) !== JSON.stringify(profileInitialState);
+  btn.disabled = !changed;
+  profileHasUnsavedChanges = changed;
+}
+
 function handleProfilMobileCard() {
   const section = document.getElementById("profil-mobile-section");
   if (!section) return;
@@ -9068,7 +9078,9 @@ function unlockProfileFields() {
   if (editBtn) editBtn.style.display = "none";
 
   profileInitialState = getProfileFormState();
-profileHasUnsavedChanges = true;
+  profileHasUnsavedChanges = false;
+  // Grisé au départ : rien n'a encore été modifié à cet instant.
+  if (saveBtn) saveBtn.disabled = true;
 }
 
   async function ensureAssistanceContact() {
@@ -9588,6 +9600,7 @@ function deleteSelectedContact() {
     // annulation, même si l'utilisateur n'a rien tapé — et si elle est
     // rejetée, l'écran reste bloqué à mi-chemin (fond noir).
     contactInitialState = getContactFormState();
+    toggleContactSave();
 
 }
 
@@ -12598,6 +12611,18 @@ function setContactFormState(contact) {
   document.getElementById("contact-email").value = contact.email || "";
   document.getElementById("contact-phone").value = contact.phone || "";
 }
+
+// Le bouton Enregistrer (ajout ET modification de contact) doit rester
+// grisé tant qu'aucun champ n'a changé par rapport à l'état initial
+// (formulaire vide pour un ajout, valeurs du contact pour une
+// modification) — il n'y avait jusqu'ici aucune vérification, on
+// pouvait "enregistrer" sans avoir rien modifié.
+function toggleContactSave() {
+  const btn = document.getElementById("contact-save-page-btn");
+  if (!btn) return;
+  const changed = JSON.stringify(getContactFormState()) !== JSON.stringify(contactInitialState);
+  btn.disabled = !changed;
+}
   
 function openContactPage(contactId = null, fromAgent = false) {
 
@@ -12663,6 +12688,7 @@ selectedContactId = null;
 }
 
   contactInitialState = getContactFormState();
+  toggleContactSave();
 
   // Rend obligatoirement visible le parent main-contacts
   showSection(
