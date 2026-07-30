@@ -6059,6 +6059,23 @@ body[data-theme="dark"] .clarity-hero {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 43 (PC + mobile, à la demande explicite)
+   L'espace au-dessus de "Bonjour Anthony" (padding-top, 22px, PC et
+   mobile) doit être identique à l'espace en dessous de "Que puis-je
+   faire pour vous aujourd'hui ?" avant le champ de dictée. Ce 2e
+   espace vient du "gap" uniforme de .clarity-hero-body (10px) entre
+   TOUS ses enfants — impossible à isoler sans casser les autres
+   espacements (input → Actions rapides, etc.). On ajoute donc un
+   margin-bottom sur .clarity-bubble : 10px (gap déjà existant) +
+   12px (ici) = 22px, exactement comme le padding-top. Résultat
+   identique sur PC et mobile puisque le gap de 10px est déjà commun
+   aux deux.
+   ========================================================= */
+.clarity-bubble {
+  margin-bottom: 12px;
+}
+
 </style>
 </head>
 <body data-theme="light">
