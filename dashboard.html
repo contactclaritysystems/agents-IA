@@ -6069,24 +6069,23 @@ body[data-theme="dark"] .clarity-hero {
     margin-right: auto !important;
   }
 
-  /* v2 : la précédente tenait une opacité quasi constante (0.65-0.7)
-     jusqu'à 85% du dégradé, ce qui donnait un pavé de couleur plein
-     plutôt qu'une lueur — repéré par l'utilisateur ("la lumière
-     n'est pas bonne"). Cette fois le fondu est continu et progressif
-     du centre vers l'extérieur, avec une opacité de pointe modérée,
-     pour un vrai halo doux et non un bloc plat. */
+  /* v3 : le dégradé radial "ellipse" épouse le ratio du conteneur —
+     or la carte est bien plus haute que large, donc l'ellipse
+     s'étirait verticalement et donnait un halo qui débordait en bas
+     et presque rien sur les côtés (repéré : "pas beau du tout").
+     Nouvelle approche, plus fiable : un simple rectangle plein (même
+     forme arrondie que la carte), flouté avec filter:blur(). Comme
+     cet élément est vide (pas d'enfants, pas de overflow à gérer),
+     le blur s'applique sans aucun des soucis de rendu rencontrés
+     plus tôt sur .clarity-hero. Résultat : un halo qui suit la forme
+     rectangulaire de la carte et déborde de façon égale tout autour. */
   body[data-theme="dark"] .clarity-hero-halo {
     display: block;
     position: absolute;
-    inset: -20px;
-    border-radius: 38px;
-    background: radial-gradient(
-      ellipse at center,
-      rgba(45, 180, 230, 0.45) 0%,
-      rgba(45, 180, 230, 0.3) 55%,
-      rgba(45, 180, 230, 0.1) 80%,
-      rgba(45, 180, 230, 0) 100%
-    );
+    inset: 6px;
+    border-radius: 24px;
+    background: rgba(45, 180, 230, 0.55);
+    filter: blur(18px);
     z-index: 0;
     pointer-events: none;
   }
