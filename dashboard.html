@@ -6047,18 +6047,17 @@ body[data-theme="dark"] .clarity-hero {
    ========================================================= */
 @media (max-width: 600px) {
   body[data-theme="dark"] .clarity-hero {
-    /* Le halo diffus (drop-shadow flouté) est abandonné : un grand
-       flou dilue et désature n'importe quelle couleur, ce qui
-       tirait systématiquement vers un rendu délavé/pas assez franc.
-       À la place : un vrai liseré fin turquoise (bordure nette),
-       + une lueur très légèrement floutée juste autour, pour rester
-       un "trait fin" et non un gros halo. */
+    /* Le box-shadow était invisible : .agent-card garde overflow:
+       hidden (nécessaire pour les coins arrondis, cf. bug déjà vécu
+       plus haut), donc tout box-shadow qui dépasse la boîte est
+       coupé, avec ou sans overflow:visible mal maîtrisé. On utilise
+       "outline" à la place : il se dessine TOUJOURS à l'extérieur
+       de la boîte et n'est jamais rogné par l'overflow de l'élément
+       — solution simple, fiable, et un vrai "trait fin". */
     border-color: rgba(64, 224, 208, 0.9) !important;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      0 0 0 1px rgba(64, 224, 208, 0.55),
-      0 0 8px 1px rgba(64, 224, 208, 0.45) !important;
-    overflow: visible !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    outline: 1.5px solid rgba(64, 224, 208, 0.85) !important;
+    outline-offset: 2px !important;
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
