@@ -6045,34 +6045,43 @@ body[data-theme="dark"] .clarity-hero {
    Marge carte/stats agrandie (au lieu d'agrandir seulement le
    padding interne, ce qui décale "Bonjour Anthony" comme demandé).
    ========================================================= */
+.clarity-hero-halo {
+  display: none;
+}
+
 @media (max-width: 600px) {
   body[data-theme="dark"] .clarity-hero {
-    /* Le box-shadow était invisible : .agent-card garde overflow:
-       hidden (nécessaire pour les coins arrondis, cf. bug déjà vécu
-       plus haut), donc tout box-shadow qui dépasse la boîte est
-       coupé, avec ou sans overflow:visible mal maîtrisé. On utilise
-       "outline" à la place : il se dessine TOUJOURS à l'extérieur
-       de la boîte et n'est jamais rogné par l'overflow de l'élément
-       — solution simple, fiable, et un vrai "trait fin". */
-    /* Mesure des pixels réellement affichés : (64,224,208) rendait du
-       (50,190,180) — vert (190) > bleu (180), donc vraiment vert.
-       Les pixels de la photo du logo (mesurés plus haut) sont
-       toujours bleu ≥ vert. On inverse l'écart : bleu nettement
-       devant le vert cette fois. */
-    border-color: rgba(45, 180, 230, 0.9) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
-    outline: 1.5px solid rgba(45, 180, 230, 0.85) !important;
-    outline-offset: 2px !important;
+    position: relative;
+    z-index: 1;
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
-    /* Le trait fin seul faisait "cadre plat" (retour utilisateur).
-       On ajoute une toute petite lueur bleue autour, en plus du
-       trait net (pas à la place), pour casser cet effet plat sans
-       revenir au gros halo flou/délavé d'avant. */
-    filter:
-      drop-shadow(0 0 7px rgba(45, 180, 230, 0.3))
-      drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
+    filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
+    position: relative;
+  }
+
+  /* Le trait net faisait "cadre plat" (retour utilisateur : il
+     voulait une lumière derrière la carte, pas un contour dessiné).
+     On revient donc au principe du halo du loader (un vrai div,
+     pas un filter/box-shadow qui posent des soucis de rendu) : un
+     dégradé radial, plus grand que la carte, posé DERRIÈRE elle
+     (z-index 0 contre 1 pour la carte) — le centre est caché par
+     le fond opaque de la carte, seuls les bords dépassent en
+     lueur douce, comme une lumière diffuse derrière. */
+  body[data-theme="dark"] .clarity-hero-halo {
+    display: block;
+    position: absolute;
+    inset: -22px;
+    border-radius: 36px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(45, 180, 230, 0.55) 0%,
+      rgba(45, 180, 230, 0.22) 45%,
+      rgba(45, 180, 230, 0) 72%
+    );
+    z-index: 0;
+    pointer-events: none;
   }
 
   #main-agents .status-row {
@@ -6442,6 +6451,8 @@ body[data-theme="dark"] .clarity-hero {
 </div>
   
   <div class="agents-grid">
+
+    <div class="clarity-hero-halo"></div>
 
     <div class="agent-card configured clarity-hero" id="card-orchestrator-run">
 
