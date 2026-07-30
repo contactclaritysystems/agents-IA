@@ -5212,40 +5212,11 @@ body[data-theme="corail"] .loader-halo {
     margin-right: auto;
   }
 
-  /* Test PC demandé : supprimer le trait fin (bordure) autour de la
-     carte, ne garder que le halo derrière. Même technique que sur
-     mobile (vrai div flouté derrière la carte), mais la carte est
-     centrée via max-width+margin:auto au lieu d'un inset relatif à
-     la grille (qui est bien plus large que la carte sur PC) — le
-     halo reprend donc la même méthode de centrage (max-width plus
-     grand que la carte + margin:auto) pour rester aligné dessus. */
+  /* Test PC demandé : supprimer seulement le trait fin (bordure)
+     autour de la carte, sans toucher au halo existant (box-shadow
+     de BLOC 41, inchangé). */
   body[data-theme="dark"] #main-agents .clarity-hero {
     border-color: transparent !important;
-  }
-
-  body[data-theme="dark"] #main-agents .clarity-hero-halo {
-    display: block;
-    position: absolute;
-    top: -20px;
-    bottom: -20px;
-    left: 0;
-    right: 0;
-    max-width: 460px;
-    margin: 0 auto;
-    border-radius: 32px;
-    background: rgba(10, 140, 225, 0.36);
-    filter: blur(20px);
-    z-index: 0;
-    pointer-events: none;
-  }
-
-  body[data-theme="dark"] #main-agents .agents-grid {
-    position: relative;
-  }
-
-  body[data-theme="dark"] #main-agents .clarity-hero {
-    position: relative;
-    z-index: 1;
   }
 
   /* Ajustements fins de centrage (desktop uniquement) */
