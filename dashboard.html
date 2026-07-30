@@ -6082,7 +6082,20 @@ body[data-theme="dark"] .clarity-hero {
   body[data-theme="dark"] .clarity-hero-halo {
     display: block;
     position: absolute;
-    inset: 6px;
+    /* Pourquoi le halo débordait plus sur les côtés qu'en haut/bas :
+       le halo est positionné par rapport à .agents-grid, alors que la
+       carte est plus étroite que la grille (max-width -16px, donc
+       8px de marge de chaque côté) mais aussi haute que la grille
+       (0px de marge en haut/bas). Un inset uniforme (6px) donnait
+       donc un débordement horizontal (8+6=14px passé la carte) très
+       différent du débordement vertical (6px, moins que la carte
+       elle-même !). Ici : valeurs différentes en haut/bas et à
+       gauche/droite pour un débordement RÉEL de 16px identique de
+       tous les côtés, une fois la marge de la carte prise en compte. */
+    top: -16px;
+    bottom: -16px;
+    left: -8px;
+    right: -8px;
     border-radius: 24px;
     /* Mesuré : (45,180,230) rendait déjà bleu > vert sur les pixels,
        mais un halo flouté à faible opacité sur fond quasi noir se
