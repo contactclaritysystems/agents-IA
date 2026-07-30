@@ -1835,6 +1835,34 @@ select.field-input {
     margin-bottom: 24px;
 }
 
+  /* CLARITY SYSTEMS — Réglages > Profil (mobile) : le titre
+     "Informations de base" héritait de .section-title générique
+     (14px) empilé sous le bouton "← Retour" : trop petit, sans
+     caractère. On reprend le même patron que Historique/Planning
+     en mobile (bouton + titre en ligne, titre plus grand et marqué). */
+  #profil-mobile-section .mobile-subpage-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+
+  #profil-mobile-section .mobile-subpage-header .sheet-btn {
+    width: auto !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    border-radius: 999px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #profil-mobile-section .mobile-subpage-header .section-title {
+    font-size: 20px !important;
+    font-weight: 780 !important;
+    letter-spacing: -0.02em !important;
+    margin: 0 !important;
+  }
+
   #profil-mobile-section .gmail-section {
     margin: 0 !important;
   }
