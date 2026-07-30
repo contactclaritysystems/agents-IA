@@ -8209,11 +8209,25 @@ async function startOnboardingIfNeeded() {
   startOnboardingTips();
 }
 
+// Cause réelle du bug "la barre alphabétique bouge/mal placée pendant
+// le scroll" : sur mobile, scroller fait apparaître/disparaître la
+// barre d'adresse Safari, ce qui change la hauteur de la fenêtre et
+// déclenche un vrai événement "resize" — sans que la LARGEUR ne
+// change. Le listener ci-dessous appelait alignContactsAlphabet() à
+// chaque fois, qui recalculait le "top" avec la position du 1er
+// contact À CET INSTANT DU SCROLL (donc une valeur fausse/mouvante),
+// d'où la barre qui saute. On ignore désormais les resize qui ne
+// changent pas la largeur (un vrai redimensionnement de fenêtre ou un
+// changement d'orientation change toujours la largeur, un simple
+// scroll mobile non).
+let __lastKnownInnerWidth = window.innerWidth;
 window.addEventListener("resize", () => {
   if (onboardingActive && onboardingStep && onboardingStep !== "done") {
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
   }
+  if (window.innerWidth === __lastKnownInnerWidth) return;
+  __lastKnownInnerWidth = window.innerWidth;
   alignContactsAlphabet();
 });
   
