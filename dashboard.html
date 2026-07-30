@@ -6050,12 +6050,13 @@ body[data-theme="dark"] .clarity-hero {
 
   /* Espace au-dessus de "Bonjour Anthony" à l'intérieur de la carte :
      sur mobile il n'y avait que 4px (règle partagée, non touchée),
-     contre 22px sur PC. On aligne le mobile sur la même valeur, et
-     on égalise le bas (qui n'avait que 16px, via .agent-body) pour
-     un centrage vertical visuel symétrique haut/bas. */
+     contre 22px sur PC. On aligne le mobile sur la même valeur.
+     Le bas est réduit légèrement en dessous du haut (mobile
+     uniquement) car le centrage visuel réel sur petit écran demande
+     un peu moins de padding-bottom que padding-top. PC non touché. */
   #main-agents .clarity-hero-body {
     padding-top: 22px !important;
-    padding-bottom: 22px !important;
+    padding-bottom: 16px !important;
   }
 }
 
