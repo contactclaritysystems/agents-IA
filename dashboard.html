@@ -5219,6 +5219,14 @@ body[data-theme="corail"] .loader-halo {
     border-color: transparent !important;
   }
 
+  /* Même carte que sur mobile : pas d'en-tête "Clarity / En ligne"
+     séparé, directement "Bonjour Anthony". Même règle que le mobile
+     (.clarity-hero-head { display:none !important; } en @media
+     max-width:600px), appliquée ici pour le PC. */
+  #main-agents .clarity-hero-head {
+    display: none !important;
+  }
+
   /* Ajustements fins de centrage (desktop uniquement) */
   #main-agents .page-subtitle {
     margin-top: 14px;
