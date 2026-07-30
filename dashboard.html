@@ -6061,6 +6061,14 @@ body[data-theme="dark"] .clarity-hero {
     position: relative;
   }
 
+  /* Carte légèrement moins large, pour laisser de la place à la
+     lueur de tous les côtés (pas seulement en haut/bas). */
+  #main-agents .clarity-hero {
+    max-width: calc(100% - 24px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   /* Le trait net faisait "cadre plat" (retour utilisateur : il
      voulait une lumière derrière la carte, pas un contour dessiné).
      On revient donc au principe du halo du loader (un vrai div,
@@ -6068,17 +6076,24 @@ body[data-theme="dark"] .clarity-hero {
      dégradé radial, plus grand que la carte, posé DERRIÈRE elle
      (z-index 0 contre 1 pour la carte) — le centre est caché par
      le fond opaque de la carte, seuls les bords dépassent en
-     lueur douce, comme une lumière diffuse derrière. */
+     lueur douce, comme une lumière diffuse derrière.
+     Bug de la 1ère version : la carte occupe presque toute la
+     largeur du halo (elle n'est agrandie que de 22px de chaque
+     côté), donc la zone réellement visible (hors de la carte) est
+     tout au bord du dégradé — or mes paliers de couleur tombaient
+     déjà à 0 avant d'y arriver. Résultat : rien à voir. Cette fois
+     l'opacité reste forte jusqu'à 85%, et ne s'éteint qu'à 100%. */
   body[data-theme="dark"] .clarity-hero-halo {
     display: block;
     position: absolute;
-    inset: -22px;
-    border-radius: 36px;
+    inset: -30px;
+    border-radius: 40px;
     background: radial-gradient(
       ellipse at center,
-      rgba(45, 180, 230, 0.55) 0%,
-      rgba(45, 180, 230, 0.22) 45%,
-      rgba(45, 180, 230, 0) 72%
+      rgba(45, 180, 230, 0.7) 0%,
+      rgba(45, 180, 230, 0.65) 85%,
+      rgba(45, 180, 230, 0.2) 94%,
+      rgba(45, 180, 230, 0) 100%
     );
     z-index: 0;
     pointer-events: none;
