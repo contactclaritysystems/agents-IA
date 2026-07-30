@@ -6016,24 +6016,45 @@ body[data-theme="dark"] .clarity-hero {
 }
 
 /* =========================================================
-   CLARITY SYSTEMS — BLOC 42 (mobile uniquement, PC gelé)
-   Deux bugs mobile seulement :
-   1) Le halo de la carte Clarity ne se voyait jamais : .agent-card
-      (partagée avec .clarity-hero) a overflow:hidden, qui rogne tout
-      box-shadow débordant de la boîte — donc invisible sur PC aussi
-      en réalité, mais on ne touche que le mobile pour l'instant comme
-      demandé.
-   2) Le bouton d'aide "?" était trop peu contrasté pour se voir sur
-      l'écran de téléphone (fond/bordure trop proches de la carte).
+   CLARITY SYSTEMS — BLOC 42 (mobile uniquement, PC gelé) — v2
+   overflow:visible n'a pas suffi (toujours pas de halo). Le vrai
+   contournement fiable pour un halo qui doit déborder d'une boîte
+   overflow:hidden : ne pas utiliser box-shadow pour la partie qui
+   déborde (elle sera de toute façon rognée par le overflow de la
+   boîte elle-même), mais un filter:drop-shadow(), qui s'applique
+   sur le rendu final de l'élément et n'est PAS affecté par son
+   propre overflow.
+   Pour le bouton "?" : passage en position dans le flux normal
+   (margin-left:auto dans le head, qui est déjà en display:flex)
+   au lieu d'un position:absolute placé près du coin arrondi — plus
+   aucun risque de rognage par le corner-radius, quel qu'il soit.
    ========================================================= */
 @media (max-width: 600px) {
   body[data-theme="dark"] .clarity-hero {
     overflow: visible !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+    filter:
+      drop-shadow(0 0 26px rgba(0, 145, 199, 0.55))
+      drop-shadow(0 14px 30px rgba(0, 0, 0, 0.45));
+  }
+
+  .clarity-hero-head {
+    justify-content: flex-start !important;
+  }
+
+  /* Scopé à la carte hero uniquement (#card-orchestrator-run) pour ne
+     pas affecter .agent-title-wrap des autres cartes ailleurs dans
+     l'app, qui partagent ce même nom de classe. */
+  #card-orchestrator-run .agent-title-wrap {
+    flex: 1;
+    min-width: 0;
   }
 
   .clarity-help-btn {
+    position: static !important;
+    margin-left: auto;
     border: 1px solid rgba(255, 255, 255, 0.28) !important;
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(255, 255, 255, 0.10) !important;
     color: var(--clarity-text) !important;
     font-weight: 800 !important;
   }
