@@ -12736,6 +12736,12 @@ if (window.pendingAction?.type === "mail") {
   if (searchBox) searchBox.classList.remove("is-hidden");
   if (list) list.classList.remove("is-hidden");
   if (alphabet) alphabet.classList.remove("is-hidden");
+
+  // Même correctif que saveContactFromPage() : la barre alphabétique
+  // doit être recalculée maintenant qu'elle est de nouveau visible,
+  // sinon elle garde la position (souvent top:0) mesurée pendant
+  // qu'elle était masquée.
+  alignContactsAlphabet();
 }
 
 async function saveContactFromPage() {
@@ -12852,6 +12858,14 @@ async function saveContactFromPage() {
     if (searchBoxEl) searchBoxEl.classList.remove("is-hidden");
     if (listEl) listEl.classList.remove("is-hidden");
     if (alphabetEl) alphabetEl.classList.remove("is-hidden");
+
+    // Vraie cause du bug "la barre alphabétique remonte tout en haut
+    // après avoir modifié/enregistré un contact" : la liste est
+    // repositionnée (alignContactsAlphabet) pendant qu'elle est encore
+    // masquée (is-hidden → display:none), donc mesurée avec une
+    // hauteur/position nulle (top:0). On force un recalcul juste
+    // après l'avoir réaffichée, une fois qu'elle a une vraie position.
+    alignContactsAlphabet();
 
   } catch (error) {
     console.error(
