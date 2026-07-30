@@ -5862,14 +5862,23 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
   position: relative;
 }
 
+/* Depuis que .clarity-hero-head est masqué (PC et mobile, pour avoir
+   la même carte qu'avant, sans "Clarity / En ligne"), le bouton "?"
+   a été déplacé en HTML : il est maintenant un enfant direct de
+   .clarity-hero (plus de .clarity-hero-head), donc positionné par
+   rapport à la carte elle-même. */
+.clarity-hero {
+  position: relative;
+}
+
 .clarity-help-btn {
   position: absolute;
   /* .agent-card a overflow:hidden + border-radius : à top:0/right:0,
      le bouton se fait rogner par le coin arrondi (et disparaît
      carrément sur mobile où le radius est plus grand). On le
-     rentre dans la carte. */
+     rentre dans la carte. Placé en haut à gauche (demande explicite). */
   top: 18px;
-  right: 20px;
+  left: 20px;
   width: 28px;
   height: 28px;
   z-index: 3;
@@ -6495,6 +6504,8 @@ body[data-theme="dark"] .clarity-hero {
 
     <div class="agent-card configured clarity-hero" id="card-orchestrator-run">
 
+  <button type="button" class="clarity-help-btn" onclick="event.stopPropagation(); openHelpActionsModal();" aria-label="Comment ça marche ?">?</button>
+
   <div class="agent-head clarity-hero-head">
     <div class="agent-title-wrap">
       <div class="agent-name">Clarity</div>
@@ -6502,7 +6513,6 @@ body[data-theme="dark"] .clarity-hero {
         <span class="clarity-hero-dot"></span> En ligne
       </div>
     </div>
-    <button type="button" class="clarity-help-btn" onclick="event.stopPropagation(); openHelpActionsModal();" aria-label="Comment ça marche ?">?</button>
   </div>
 
   <div class="agent-body clarity-hero-body">
