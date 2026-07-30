@@ -12650,6 +12650,12 @@ function toggleContactSave() {
   if (!btn) return;
   const changed = JSON.stringify(getContactFormState()) !== JSON.stringify(contactInitialState);
   btn.disabled = !changed;
+  // Efface toute opacité en ligne laissée par openContactPage()/
+  // saveContactFromPage() (ex: opacity:"1" fixé à l'ouverture) : sans
+  // ça, ce style inline prioritaire masque la règle CSS
+  // .save-btn:disabled { opacity:.5 } et le bouton reste visuellement
+  // plein/bleu même lorsqu'il est réellement désactivé.
+  btn.style.opacity = "";
 }
   
 function openContactPage(contactId = null, fromAgent = false) {
