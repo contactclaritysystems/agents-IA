@@ -6053,11 +6053,10 @@ body[data-theme="dark"] .clarity-hero {
   }
 
   body[data-theme="dark"] #main-agents .agents-grid {
-    /* Couleur alignée sur le bleu du logo (--clarity-accent: #0091c7,
-       rgb 0,145,199) au lieu de rgba(56,199,255) dont le vert (199)
-       trop proche du bleu (255) donnait un rendu verdâtre/turquoise. */
+    /* Bleu très clair, presque blanc (comme le halo du logo), pas un
+       bleu saturé qui vire au vert/turquoise une fois flouté. */
     filter:
-      drop-shadow(0 0 16px rgba(0, 160, 220, 0.5))
+      drop-shadow(0 0 18px rgba(216, 240, 255, 0.65))
       drop-shadow(0 12px 26px rgba(0, 0, 0, 0.4));
   }
 
