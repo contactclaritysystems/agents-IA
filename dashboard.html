@@ -6356,8 +6356,19 @@ body[data-theme="dark"] .clarity-hero {
      La barre du bas est revenue à une hauteur fixe (72px, voir plus
      haut) : pas de marge de sécurité supplémentaire nécessaire ici,
      le padding-bottom d'origine (100/110/32px selon la page) suffit
-     déjà. Rien à faire dans cette section pour l'instant — en attente
-     de confirmation sur la vraie cause du menu non collé en bas. */
+     déjà.
+
+     Cause identifiée du "menu pas collé en bas" (app installée
+     uniquement) : sur une page assez courte pour tenir entièrement
+     à l'écran sans défiler (ex: Agents/accueil), WKWebView calcule
+     mal la position de la barre fixed;bottom:0 et laisse un espace
+     noir en dessous — bug qui disparaît sur les pages plus longues
+     qui, elles, défilent (ex: Contacts). On force donc chaque page à
+     être toujours un peu plus haute que l'écran, même quand son
+     contenu est court, pour que le calcul reste correct partout. */
+  body.is-standalone-ios .page-view.active {
+    min-height: calc(100svh + 4px);
+  }
 }
 
 /* =========================================================
