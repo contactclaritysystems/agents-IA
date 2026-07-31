@@ -1447,7 +1447,12 @@ select.field-input {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  /* min-height (pas height) : avec box-sizing:border-box, un height
+     fixe force padding-bottom (zone de sécurité iOS) à grignoter la
+     hauteur utile au lieu de s'ajouter en plus, ce qui écrasait les
+     icônes vers le haut. min-height laisse la barre grandir toute
+     seule pour la zone de sécurité, sans jamais rien écraser. */
+  min-height: 72px;
 
   background: rgba(var(--clarity-glass-rgb),.78);
 
@@ -1811,9 +1816,13 @@ select.field-input {
     gap: 5px !important;
   }
 
-  /* Bottom nav plus propre */
+  /* Bottom nav plus propre. min-height (pas height) : avec !important
+     ceci l'emportait sur toutes les autres règles .bottom-nav et
+     empêchait la barre de grandir pour la zone de sécurité iOS —
+     c'était la vraie cause de l'incohérence de hauteur entre les
+     pages et de l'écrasement des icônes. */
   .bottom-nav {
-    height: 72px !important;
+    min-height: 72px !important;
   }
 
   .bottom-tab {
@@ -4700,7 +4709,10 @@ body,
   bottom: 0;
   left: 0;
   right: 0;
-  height: 72px;
+  /* min-height (voir explication BLOC "BOTTOM TAB BAR" plus haut) :
+     un height fixe + padding-bottom (zone de sécurité iOS) écrasait
+     les icônes au lieu d'ajouter de la place en plus. */
+  min-height: 72px;
   background: rgba(var(--clarity-glass-rgb), 0.78);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
@@ -6313,21 +6325,16 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
-  /* La barre a une hauteur fixe (72px) en box-sizing:border-box : le
-     padding-bottom ajouté précédemment grignotait cette hauteur au lieu
-     de s'ajouter en plus, ce qui écrasait les boutons vers le haut de
-     la barre. On agrandit donc la hauteur totale d'autant, pour que
-     les 72px de contenu (icônes + labels) restent intacts et que la
-     zone de sécurité s'ajoute en plus, en dessous. */
-  body.is-standalone-ios .bottom-nav {
-    height: calc(72px + env(safe-area-inset-bottom) + 10px) !important;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important;
-  }
+  /* La barre du bas utilise maintenant min-height (voir la règle
+     .bottom-nav plus haut dans le fichier) : elle grandit d'elle-même
+     pour la zone de sécurité sans qu'il soit nécessaire de la forcer
+     ici, et reste identique sur toutes les pages. */
 
-  /* La barre étant maintenant plus haute, le bas de chaque page doit
-     laisser autant de place en plus pour ne pas passer derrière. */
+  /* Le bas de chaque page doit laisser assez de place pour ne pas
+     passer derrière la barre, dont la hauteur grandit avec la zone
+     de sécurité. */
   body.is-standalone-ios .main {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom) + 10px) !important;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
   }
 
   /* Contacts / Planning / Historique / Réglages n'utilisent pas le
@@ -6343,7 +6350,7 @@ body[data-theme="dark"] .clarity-hero {
   body.is-standalone-ios #main-historique,
   body.is-standalone-ios #main-settings {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
-    padding-bottom: calc(110px + env(safe-area-inset-bottom) + 10px) !important;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 
   /* Sous-pages plein écran (position:fixed;inset:0, par-dessus la
