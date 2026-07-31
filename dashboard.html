@@ -6647,12 +6647,20 @@ body:not([data-theme="dark"]) .clarity-hero {
    carte héro (contour + halo + ligne d'accent), qui n'a pas été
    contesté.
    ========================================================= */
+/* Retour utilisateur : veut que la carte "sorte" davantage, en relief.
+   Technique classique pour une vraie sensation de carte qui flotte
+   au-dessus de la page : superposer une ombre "de contact" (resserrée,
+   proche, un peu plus sombre) ET une ombre ambiante large et très
+   diffuse (loin, très douce) — c'est la combinaison des deux qui donne
+   l'impression de profondeur, une seule ombre ne suffit jamais. Le
+   halo bleu est aussi élargi pour accompagner ce relief. */
 body[data-theme="light"] .clarity-hero {
   border-color: rgba(0, 145, 199, 0.4) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 0 60px 14px rgba(0, 145, 199, 0.20),
-    0 16px 40px rgba(0, 0, 0, 0.08) !important;
+    0 0 90px 22px rgba(0, 145, 199, 0.22),
+    0 10px 20px rgba(0, 0, 0, 0.10),
+    0 32px 64px rgba(0, 0, 0, 0.16) !important;
 }
 
 body[data-theme="light"] .clarity-hero::before {
