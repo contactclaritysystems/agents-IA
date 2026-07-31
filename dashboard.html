@@ -6665,67 +6665,29 @@ body[data-theme="light"] .clarity-hero::before {
   background: linear-gradient(90deg, transparent, rgba(0, 145, 199, 0.85), transparent);
 }
 
-/* Les 3 icônes de stats : 1er essai (badge plein + ombre portée dure)
-   jugé "bof" — ça fait autocollant/icône d'app plutôt que premium.
-   Retour à un rond pastel (cohérent avec le reste du site) mais avec
-   une vraie lueur diffuse DERRIÈRE (pseudo-élément flouté, même
-   principe que le halo du logo/de la carte héro) au lieu d'une ombre
-   portée dure — c'est le fondu doux qui fait "premium", pas le
-   contraste brutal. Anneau intérieur clair en overlay pour un léger
-   effet verre. Uniquement thème clair. */
+/* Les 3 icônes de stats : les essais précédents (badge plein, puis
+   halo coloré léger, puis halo coloré intense) ont tous été rejetés —
+   verdict final : "trop vif, casse le style de l'app, pas premium".
+   Conclusion : ce n'est pas un problème d'intensité mais d'approche —
+   un halo/glow coloré façon "néon" ne colle pas au ton calme et
+   sobre du reste du site. On abandonne complètement cette piste.
+
+   À la place : on réutilise TEL QUEL le traitement "verre" déjà
+   présent partout ailleurs sur le site pour les autres thèmes clairs
+   (agent-card, stat-card... cf bloc "Parité premium" plus haut) —
+   reflet blanc dégradé en haut + ombre neutre (pas colorée). Le rond
+   garde juste sa teinte pastel d'origine pour l'identification
+   (jaune/bleu/violet), sans aucune lueur colorée autour. Résultat :
+   un peu de relief et de brillance, dans le même langage visuel que
+   le reste de l'app — rien de nouveau inventé, rien de criard. */
 body[data-theme="light"] .status-row .stat-icon-wrap {
   position: relative;
-}
-
-/* Box-shadow répétée par couleur (et non sur la règle générique
-   ci-dessus) : la règle existante ".status-row .stat-icon-wrap.yellow"
-   (etc., plus haut dans la feuille) a la même spécificité qu'une règle
-   scopée par thème + couleur — à spécificité égale, seule la dernière
-   déclarée l'emporte ENTIÈREMENT (box-shadow ne fusionne pas entre
-   deux règles), donc il faut cibler ".yellow/.blue/.purple" ici aussi
-   pour être sûr de gagner, pas juste ".stat-icon-wrap" tout court. */
-/* Retour utilisateur : bonne direction (lueur floutée plutôt qu'ombre
-   dure) mais trop timide. On pousse nettement : fond de l'icône plus
-   saturé (au lieu du pastel très dilué d'origine), une fine bordure
-   colorée pour donner une vraie limite au rond, et la lueur derrière
-   beaucoup plus grande/opaque. */
-body[data-theme="light"] .status-row .stat-icon-wrap.yellow {
-  background: rgba(245, 158, 11, 0.30) !important;
-  border: 1.5px solid rgba(245, 158, 11, 0.45);
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0) 60%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.03);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 3px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
-
-body[data-theme="light"] .status-row .stat-icon-wrap.blue {
-  background: rgba(37, 99, 235, 0.26) !important;
-  border: 1.5px solid rgba(37, 99, 235, 0.42);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.03);
-}
-
-body[data-theme="light"] .status-row .stat-icon-wrap.purple {
-  background: rgba(124, 58, 237, 0.26) !important;
-  border: 1.5px solid rgba(124, 58, 237, 0.42);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.03);
-}
-
-body[data-theme="light"] .status-row .stat-icon-wrap::before {
-  content: "";
-  position: absolute;
-  inset: -18px;
-  border-radius: inherit;
-  filter: blur(20px);
-  z-index: -1;
-  opacity: 0.85;
-}
-
-body[data-theme="light"] .status-row .stat-icon-wrap.yellow::before { background: #f59e0b; }
-body[data-theme="light"] .status-row .stat-icon-wrap.blue::before { background: #2563eb; }
-body[data-theme="light"] .status-row .stat-icon-wrap.purple::before { background: #7c3aed; }
 
 /* =========================================================
    CLARITY SYSTEMS — Thème clair : grain léger
