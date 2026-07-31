@@ -9050,8 +9050,15 @@ function closeProfileMobilePage() {
     if (!confirmLeave) return;
 
     setProfileFormState(profileInitialState);
-    lockProfileFields();
   }
+
+  // Reverrouille toujours les champs en quittant (changements annulés
+  // ci-dessus, OU juste "Modifier" cliqué sans rien changer) : avant,
+  // lockProfileFields() n'était appelé que si hasChanges était vrai,
+  // donc si on cliquait Modifier sans rien changer puis Retour, le
+  // formulaire restait déverrouillé et "Enregistrer" restait affiché
+  // au lieu de "Modifier" au prochain retour.
+  lockProfileFields();
 
   profileHasUnsavedChanges = false;
   section.classList.remove("open");
