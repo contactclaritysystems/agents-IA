@@ -6405,6 +6405,31 @@ body[data-theme="dark"] .clarity-hero {
 }
 
 /* =========================================================
+   CLARITY SYSTEMS — Menu du bas, style "carte PC" pour la version
+   navigateur mobile UNIQUEMENT.
+
+   Reprend l'habillage visuel de la barre flottante PC (coins
+   arrondis, bordure) mais reste collée tout en bas (bottom:0, pas
+   bottom:18px comme sur PC) — demande explicite : ne pas flotter,
+   juste avoir le même style.
+
+   Coins arrondis uniquement en haut : arrondir aussi le bas alors que
+   la barre touche le vrai bord de l'écran laisserait deux petits
+   triangles noirs visibles dans les coins inférieurs, ce qui ferait
+   "mal coupé" plutôt que "flottant".
+
+   Scopé à body:not(.is-standalone-ios) : ne touche ni l'app installée
+   ni la version PC (déjà bonnes, on n'y retouche plus). */
+@media (max-width: 900px) {
+  body:not(.is-standalone-ios) .bottom-nav {
+    border-radius: 22px 22px 0 0;
+    border: 1px solid var(--clarity-border);
+    border-bottom: none;
+    box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.12);
+  }
+}
+
+/* =========================================================
    CLARITY SYSTEMS — Bande blanche dans la zone de sécurité (bas
    d'écran, au-dessus du bouton home) sur l'app installée.
    Avec viewport-fit=cover, iOS peint les zones de sécurité (encoche
