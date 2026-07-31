@@ -5159,12 +5159,14 @@ a:hover {
      image par thème.
    ========================================================= */
 
-/* Thème clair : halo sombre et discret (assorti à l'accent noir du
-   thème clair) plutôt que le bleu du thème sombre. */
+/* Thème clair : même bleu que le thème sombre, mais intensité relevée
+   car un fond blanc dilue beaucoup plus la couleur qu'un fond sombre
+   (même valeurs que la version sombre ne suffisaient pas à être visibles
+   ici). Taille/position/flou inchangés, seule l'intensité change. */
 body[data-theme="light"] #main-agents::before {
   background: radial-gradient(ellipse,
-    rgba(0, 145, 199, 0.16) 0%,
-    rgba(0, 145, 199, 0.05) 45%,
+    rgba(0, 145, 199, 0.55) 0%,
+    rgba(0, 145, 199, 0.20) 45%,
     transparent 70%);
 }
 
