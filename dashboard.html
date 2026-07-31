@@ -6690,7 +6690,18 @@ body[data-theme="light"] .clarity-hero {
    2) Même liseré "LED" turquoise que sur PC pour la carte assistant,
       mais nettement plus fin/discret (glow resserré, moins opaque) —
       demande explicite "tres fin" pour cette taille de carte plus
-      petite. */
+      petite.
+
+   BUG trouvé en corrigeant ce point : une règle mobile bien plus
+   ancienne, "#main-agents .agent-card.configured" (BLOC plus haut,
+   ligne ~2420), a un ID dans son sélecteur — donc une spécificité
+   supérieure à "body[data-theme='light'] .clarity-hero" (qui n'a pas
+   d'ID). Comme les deux utilisent !important, c'est la spécificité qui
+   tranche : cette règle plus ancienne gagnait TOUJOURS sur mobile et
+   écrasait entièrement border-color ET box-shadow — d'où le liseré
+   invisible sur la carte alors qu'il apparaissait bien sur le champ de
+   dictée (non concerné par ce conflit). Fix : ajouter "#main-agents"
+   dans le sélecteur ci-dessous pour égaler/battre cette spécificité. */
 @media (max-width: 600px) {
   body[data-theme="light"]:not(.is-standalone-ios) {
     background:
@@ -6698,7 +6709,7 @@ body[data-theme="light"] .clarity-hero {
       var(--clarity-page);
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) .clarity-hero {
+  body[data-theme="light"]:not(.is-standalone-ios) #main-agents .clarity-hero {
     border-color: rgba(45, 224, 226, 0.4) !important;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.7),
