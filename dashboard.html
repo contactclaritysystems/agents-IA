@@ -6703,13 +6703,13 @@ body[data-theme="light"] .clarity-hero {
    dictée (non concerné par ce conflit). Fix : ajouter "#main-agents"
    dans le sélecteur ci-dessous pour égaler/battre cette spécificité. */
 @media (max-width: 600px) {
-  body[data-theme="light"]:not(.is-standalone-ios) {
+  body[data-theme="light"] {
     background:
       radial-gradient(ellipse 70% 380px at 50% 0%, rgba(0, 145, 199, 0.05), transparent 75%),
       var(--clarity-page);
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) #main-agents .clarity-hero {
+  body[data-theme="light"] #main-agents .clarity-hero {
     border-color: rgba(45, 224, 226, 0.4) !important;
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.7),
@@ -6724,27 +6724,27 @@ body[data-theme="light"] .clarity-hero {
      mais padding vertical réduit d'autant pour que la hauteur totale de
      la carte (et donc la position de tout ce qui est en dessous) ne
      bouge pas. */
-  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-card {
+  body[data-theme="light"] .status-row .stat-card {
     padding: 7px 10px !important;
     gap: 8px !important;
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) #main-agents .stat-icon-wrap,
-  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-icon-wrap {
+  body[data-theme="light"] #main-agents .stat-icon-wrap,
+  body[data-theme="light"] .status-row .stat-icon-wrap {
     width: 30px !important;
     height: 30px !important;
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-icon-wrap svg {
+  body[data-theme="light"] .status-row .stat-icon-wrap svg {
     width: 16px !important;
     height: 16px !important;
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-value {
+  body[data-theme="light"] .status-row .stat-value {
     font-size: 16px !important;
   }
 
-  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-label {
+  body[data-theme="light"] .status-row .stat-label {
     font-size: 12px !important;
   }
 }
