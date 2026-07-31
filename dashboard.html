@@ -6286,6 +6286,15 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
+  /* #main-agents.main (règle "Page Agents" plus haut, padding-top:4px)
+     a une spécificité plus forte (ID + classe) que .main seul : elle
+     l'emportait sur la règle ci-dessus quelle que soit sa position dans
+     le fichier. On la neutralise ici avec le même niveau de spécificité,
+     uniquement en mode standalone. */
+  #main-agents.main {
+    padding-top: calc(18px + env(safe-area-inset-top)) !important;
+  }
+
   .bottom-nav {
     padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important;
   }
