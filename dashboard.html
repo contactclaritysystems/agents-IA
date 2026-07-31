@@ -6719,6 +6719,34 @@ body[data-theme="light"] .clarity-hero {
       0 10px 20px rgba(0, 0, 0, 0.10),
       0 32px 64px rgba(0, 0, 0, 0.16) !important;
   }
+
+  /* Cartes stats légèrement agrandies : icône/texte un peu plus grands,
+     mais padding vertical réduit d'autant pour que la hauteur totale de
+     la carte (et donc la position de tout ce qui est en dessous) ne
+     bouge pas. */
+  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-card {
+    padding: 7px 10px !important;
+    gap: 8px !important;
+  }
+
+  body[data-theme="light"]:not(.is-standalone-ios) #main-agents .stat-icon-wrap,
+  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-icon-wrap {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-icon-wrap svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-value {
+    font-size: 16px !important;
+  }
+
+  body[data-theme="light"]:not(.is-standalone-ios) .status-row .stat-label {
+    font-size: 12px !important;
+  }
 }
 
 /* Les 3 icônes de stats : les essais précédents (badge plein, puis
