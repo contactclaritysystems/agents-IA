@@ -6696,6 +6696,29 @@ body[data-theme="light"] .status-row .stat-icon-wrap {
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+/* IDÉE 2 (test) : UN SEUL halo bleu diffus derrière les 3 cartes prises
+   ensemble (pas 3 halos colorés séparés — c'est justement ça qui avait
+   été jugé criard). Positionné sur .status-row lui-même, centré,
+   large et très flouté, comme celui de la carte assistant. Si rejeté :
+   supprimer tout ce bloc. */
+body[data-theme="light"] .status-row {
+  position: relative;
+}
+
+body[data-theme="light"] .status-row::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  height: 160px;
+  background: radial-gradient(ellipse, rgba(0, 145, 199, 0.16) 0%, transparent 70%);
+  filter: blur(20px);
+  z-index: -1;
+  pointer-events: none;
+}
+
 /* =========================================================
    CLARITY SYSTEMS — Thème clair : carte de l'assistant (accueil)
 
