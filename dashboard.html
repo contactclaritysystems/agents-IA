@@ -6723,7 +6723,14 @@ body[data-theme="light"] .status-row .stat-icon-wrap {
 /* IDÉE 4 (test) : icônes plus grandes / cartes plus aérées — plus
    d'espace autour de l'icône pour respirer plutôt que du relief en
    plus. Si rejeté : remettre 46px/24px (desktop) et le gap d'origine
-   de .status-row .stat-card (12px 14px). */
+   de .status-row .stat-card (12px 14px).
+   Correction : l'icône plus grosse poussait le texte vers le bas et
+   ça chevauchait la barre de progression (qui restait à une position
+   fixe). "#main-agents .stat-card" a plus de poids qu'un simple
+   ".status-row .stat-card" (ID vs classes), donc mon 1er réglage de
+   padding n'avait même pas d'effet — corrigé en ciblant "#main-agents
+   .stat-card" pour de vrai, avec plus de padding en bas pour la place,
+   et la barre elle-même redescendue plus près du bord réel. */
 @media (min-width: 901px) {
   body[data-theme="light"] #main-agents .stat-icon-wrap {
     width: 54px !important;
@@ -6735,10 +6742,39 @@ body[data-theme="light"] .status-row .stat-icon-wrap {
     height: 26px !important;
   }
 
-  body[data-theme="light"] .status-row .stat-card {
-    padding: 20px 18px !important;
-    gap: 16px !important;
+  body[data-theme="light"] #main-agents .stat-card {
+    padding: 20px 18px 30px !important;
+    gap: 14px !important;
   }
+
+  body[data-theme="light"] .status-row .stat-progress {
+    bottom: 8px !important;
+  }
+}
+
+/* IDÉE 5 (test) : un reflet qui balaie l'icône au survol de la carte
+   (pas au survol de l'icône elle-même, la carte entière déclenche,
+   plus naturel). Barre lumineuse diagonale qui traverse une seule
+   fois par survol. Si rejeté : supprimer tout ce bloc. */
+body[data-theme="light"] .status-row .stat-icon-wrap {
+  overflow: hidden;
+}
+
+body[data-theme="light"] .status-row .stat-icon-wrap::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -70%;
+  width: 40%;
+  height: 220%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  transform: translateX(-40%) rotate(20deg);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+body[data-theme="light"] .status-row .stat-card:hover .stat-icon-wrap::after {
+  transform: translateX(340%) rotate(20deg);
 }
 
 /* =========================================================
