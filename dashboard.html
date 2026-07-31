@@ -6720,6 +6720,18 @@ body[data-theme="light"] .status-row .stat-icon-wrap {
 /* Points d'identification (::after) testés et rejetés ("pas beaux") —
    retirés. Le rond neutre + relief teinté bleu ci-dessus sont gardés. */
 
+/* Logo principal (haut de la page d'accueil) : même relief en couches
+   que le mic et la carte assistant (contact + ambiante + halo bleu),
+   en drop-shadow() pour suivre le contour réel du logo (PNG à fond
+   transparent). Remplace le drop-shadow simple d'origine, seulement
+   en thème clair. */
+body[data-theme="light"] .brand-logo-img {
+  filter:
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.14))
+    drop-shadow(0 16px 30px rgba(0, 0, 0, 0.12))
+    drop-shadow(0 0 22px rgba(0, 145, 199, 0.30));
+}
+
 /* IDÉE 4 (test) : icônes plus grandes / cartes plus aérées — plus
    d'espace autour de l'icône pour respirer plutôt que du relief en
    plus. Si rejeté : remettre 46px/24px (desktop) et le gap d'origine
