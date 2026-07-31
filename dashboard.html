@@ -6298,8 +6298,21 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
+  /* La barre a une hauteur fixe (72px) en box-sizing:border-box : le
+     padding-bottom ajouté précédemment grignotait cette hauteur au lieu
+     de s'ajouter en plus, ce qui écrasait les boutons vers le haut de
+     la barre. On agrandit donc la hauteur totale d'autant, pour que
+     les 72px de contenu (icônes + labels) restent intacts et que la
+     zone de sécurité s'ajoute en plus, en dessous. */
   body.is-standalone-ios .bottom-nav {
+    height: calc(72px + env(safe-area-inset-bottom) + 10px) !important;
     padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important;
+  }
+
+  /* La barre étant maintenant plus haute, le bas de chaque page doit
+     laisser autant de place en plus pour ne pas passer derrière. */
+  body.is-standalone-ios .main {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom) + 10px) !important;
   }
 }
 
