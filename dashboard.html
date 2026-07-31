@@ -3949,6 +3949,26 @@ body[data-theme="light"] {
   --clarity-primary-hover: #000000;
   --clarity-primary-text: #ffffff;
   --clarity-overlay: rgba(255, 255, 255, 0.85);
+  /* Manquait ici : utilisée par tous les fonds "verre" (menu du bas,
+     cartes, popups...) via rgba(var(--clarity-glass-rgb), x). Sans
+     cette variable, ces fonds étaient invalides/transparents dans ce
+     thème. Valeur = équivalent RGB de --clarity-surface (#ffffff). */
+  --clarity-glass-rgb: 255, 255, 255;
+  /* Manquait aussi : couleurs succès/attention/danger/info, utilisées
+     partout (boutons Supprimer, badges de statut, toasts, encarts
+     info...) et définies uniquement dans le thème sombre jusqu'ici. */
+  --clarity-success: #16a34a;
+  --clarity-success-bg: rgba(22, 163, 74, 0.10);
+  --clarity-success-border: rgba(22, 163, 74, 0.22);
+  --clarity-warning: #f59e0b;
+  --clarity-warning-bg: rgba(245, 158, 11, 0.10);
+  --clarity-warning-border: rgba(245, 158, 11, 0.22);
+  --clarity-danger: #ef4444;
+  --clarity-danger-bg: rgba(239, 68, 68, 0.10);
+  --clarity-danger-border: rgba(239, 68, 68, 0.22);
+  --clarity-info: #2563eb;
+  --clarity-info-bg: rgba(37, 99, 235, 0.10);
+  --clarity-info-border: rgba(37, 99, 235, 0.20);
 }
 
 /* ---------- THÈME "Sombre" (par défaut au lancement) ---------- */
@@ -4014,6 +4034,21 @@ body[data-theme="slate"] {
   --clarity-primary-text: #ffffff;
   --clarity-overlay: rgba(246, 247, 248, 0.85);
   --clarity-glass-rgb: 246, 247, 248;
+  /* Même correctif que le thème Clair : couleurs succès/attention/
+     danger/info manquantes, définies uniquement dans le thème sombre
+     jusqu'ici. */
+  --clarity-success: #16a34a;
+  --clarity-success-bg: rgba(22, 163, 74, 0.10);
+  --clarity-success-border: rgba(22, 163, 74, 0.22);
+  --clarity-warning: #f59e0b;
+  --clarity-warning-bg: rgba(245, 158, 11, 0.10);
+  --clarity-warning-border: rgba(245, 158, 11, 0.22);
+  --clarity-danger: #ef4444;
+  --clarity-danger-bg: rgba(239, 68, 68, 0.10);
+  --clarity-danger-border: rgba(239, 68, 68, 0.22);
+  --clarity-info: #2563eb;
+  --clarity-info-bg: rgba(37, 99, 235, 0.10);
+  --clarity-info-border: rgba(37, 99, 235, 0.20);
 }
 
 /* ---------- THÈME "Corail" ---------- */
@@ -4033,6 +4068,24 @@ body[data-theme="corail"] {
   --clarity-primary-hover: #23000a;
   --clarity-primary-text: #ffffff;
   --clarity-overlay: rgba(255, 255, 255, 0.85);
+  /* Même correctif que le thème Clair : variable manquante pour les
+     fonds "verre", valeur = équivalent RGB de --clarity-surface. */
+  --clarity-glass-rgb: 255, 255, 255;
+  /* Même correctif que le thème Clair : couleurs succès/attention/
+     danger/info manquantes, définies uniquement dans le thème sombre
+     jusqu'ici. */
+  --clarity-success: #16a34a;
+  --clarity-success-bg: rgba(22, 163, 74, 0.10);
+  --clarity-success-border: rgba(22, 163, 74, 0.22);
+  --clarity-warning: #f59e0b;
+  --clarity-warning-bg: rgba(245, 158, 11, 0.10);
+  --clarity-warning-border: rgba(245, 158, 11, 0.22);
+  --clarity-danger: #ef4444;
+  --clarity-danger-bg: rgba(239, 68, 68, 0.10);
+  --clarity-danger-border: rgba(239, 68, 68, 0.22);
+  --clarity-info: #2563eb;
+  --clarity-info-bg: rgba(37, 99, 235, 0.10);
+  --clarity-info-border: rgba(37, 99, 235, 0.20);
 }
 
 /* ---------- Application de l'accent de marque sur les composants clés ---------- */
