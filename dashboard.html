@@ -6281,21 +6281,24 @@ body[data-theme="dark"] .clarity-hero {
    autres règles .main / .bottom-nav (spécificité égale, priorité
    à l'ordre de déclaration).
    ========================================================= */
-@media (display-mode: standalone) and (max-width: 600px) {
-  .main {
+@media (max-width: 600px) {
+  /* body.is-standalone-ios posée en JS (window.navigator.standalone),
+     @media (display-mode:standalone) seul ne suffisait pas sur cet
+     appareil. */
+  body.is-standalone-ios .main {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
   /* #main-agents.main (règle "Page Agents" plus haut, padding-top:4px)
      a une spécificité plus forte (ID + classe) que .main seul : elle
      l'emportait sur la règle ci-dessus quelle que soit sa position dans
-     le fichier. On la neutralise ici avec le même niveau de spécificité,
-     uniquement en mode standalone. */
-  #main-agents.main {
+     le fichier. On la neutralise ici avec un sélecteur au moins aussi
+     spécifique. */
+  body.is-standalone-ios #main-agents.main {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
-  .bottom-nav {
+  body.is-standalone-ios .bottom-nav {
     padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important;
   }
 }
@@ -6315,6 +6318,21 @@ body[data-theme="dark"] .clarity-hero {
       var allowed = ["light", "dark", "slate", "corail"];
       if (saved && allowed.indexOf(saved) !== -1) {
         document.body.setAttribute("data-theme", saved);
+      }
+    } catch (e) {}
+  })();
+
+  // Détection app installée (écran d'accueil iOS) : la règle CSS
+  // @media (display-mode: standalone) ne suffisait pas (elle ne
+  // s'appliquait pas de façon fiable sur cet appareil malgré
+  // apple-mobile-web-app-capable). window.navigator.standalone est
+  // la propriété propriétaire Apple, dédiée exactement à ce cas et
+  // fiable sur iOS : on s'appuie sur elle à la place, via une classe
+  // posée avant le premier rendu (comme le thème ci-dessus).
+  (function () {
+    try {
+      if (window.navigator.standalone === true) {
+        document.body.classList.add("is-standalone-ios");
       }
     } catch (e) {}
   })();
