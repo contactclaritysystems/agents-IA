@@ -1443,26 +1443,19 @@ select.field-input {
 @media (max-width: 900px) {
   .bottom-nav {
   display: flex;
-  /* Sans ça, les onglets (flex par défaut : align-items:stretch)
-     s'étirent pour remplir toute la hauteur (72px + zone de sécurité),
-     ce qui centre visuellement les icônes plus bas et fait paraître
-     toute la barre énorme/épaisse. flex-start les garde compacts en
-     haut ; la zone de sécurité reste un espace vide en dessous, avec
-     le même fond, donc invisible. */
-  align-items: flex-start;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  /* min-height (pas height) + !important : sur mobile uniquement
-     (cette règle ne s'applique pas au-delà de 900px, donc jamais sur
-     PC). Avec box-sizing:border-box, un height fixe forçait
-     padding-bottom (zone de sécurité iOS) à grignoter la hauteur utile
-     au lieu de s'ajouter en plus, ce qui écrasait les icônes vers le
-     haut. min-height laisse la barre grandir toute seule pour la zone
-     de sécurité, sans jamais rien écraser — combiné à flex-start
-     ci-dessus, les icônes restent fines et compactes en haut. */
-  min-height: 72px !important;
+  /* Retour à l'état d'origine (height fixe, pas de min-height ni
+     d'align-items) : les tentatives d'agrandir la barre pour la zone
+     de sécurité iOS via env(safe-area-inset-bottom) ont créé plus de
+     problèmes qu'elles n'en résolvaient (barre non collée en bas,
+     tailles incohérentes) sans qu'on puisse confirmer la vraie cause
+     avec certitude. On repart d'une base simple et fiable : la barre
+     est collée en bas (bottom:0), hauteur fixe, sans marge de sécurité
+     ajoutée. */
+  height: 72px;
 
   background: rgba(var(--clarity-glass-rgb),.78);
 
@@ -1832,7 +1825,7 @@ select.field-input {
      c'était la vraie cause de l'incohérence de hauteur entre les
      pages et de l'écrasement des icônes. */
   .bottom-nav {
-    min-height: 72px !important;
+    height: 72px !important;
   }
 
   .bottom-tab {
@@ -6359,51 +6352,12 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(32px + env(safe-area-inset-top)) !important;
   }
 
-  /* ---- BAS : navigateur mobile ET app installée ----
-     Ici, pas de gating is-standalone-ios : la barre du bas grandit
-     avec env(safe-area-inset-bottom) (voir .bottom-nav plus haut)
-     aussi bien en navigateur mobile qu'en app installée — testé et
-     confirmé sur les deux. Le contenu doit donc laisser de la place
-     dans les deux cas, pas seulement l'app. */
-  .main {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Contacts / Planning / Historique / Réglages n'utilisent pas le
-     padding-bottom de .main : ces 4 pages ont leur propre règle sur
-     l'ID brut (#main-contacts, etc. — "Alignement uniforme des titres
-     de pages mobile"), qui bat .main via la spécificité (un ID
-     l'emporte toujours sur une classe), quel que soit l'ordre dans le
-     fichier. On neutralise ici avec le même niveau de spécificité. */
-  #main-contacts,
-  #main-planning,
-  #main-historique,
-  #main-settings {
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Sous-pages plein écran (position:fixed;inset:0, par-dessus la
-     barre du bas, donc uniquement concernées par la zone de sécurité
-     elle-même, pas par la hauteur de la barre) : fiche contact,
-     formulaire ajout/modif contact, rendez-vous (Planning), et TOUT
-     l'historique (mails, comptes-rendus, rdv, relances, rédaction,
-     assistant + leurs sous-dossiers partagent tous le même conteneur
-     #history-detail). Chacune avait déjà son propre padding de départ
-     (18px, 24px ou 32px selon la page), on lui ajoute juste la zone
-     de sécurité par-dessus. */
-  #history-detail.open,
-  #contact-mobile-section.open,
-  #planning-detail.open {
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
-  }
-
-  #profil-mobile-section.open {
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
-  }
-
-  #contact-detail-page.open {
-    padding-bottom: calc(32px + env(safe-area-inset-bottom)) !important;
-  }
+  /* ---- BAS ----
+     La barre du bas est revenue à une hauteur fixe (72px, voir plus
+     haut) : pas de marge de sécurité supplémentaire nécessaire ici,
+     le padding-bottom d'origine (100/110/32px selon la page) suffit
+     déjà. Rien à faire dans cette section pour l'instant — en attente
+     de confirmation sur la vraie cause du menu non collé en bas. */
 }
 
 /* =========================================================
