@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Clarity">
+<meta name="theme-color" id="clarity-theme-color-meta" content="#f7f7f8">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
@@ -6464,6 +6465,23 @@ html:has(body[data-theme="corail"]) { background: #f6dfe3; }
         document.body.setAttribute("data-theme", saved);
       }
     } catch (e) {}
+
+    // Teinte la barre d'outils de Safari (meta theme-color) dès le
+    // premier rendu, avant même que le script principal ne soit prêt,
+    // pour éviter un flash de la mauvaise couleur au chargement.
+    try {
+      var themeBg = {
+        dark: "#000000",
+        light: "#f7f7f8",
+        slate: "#c9ced6",
+        corail: "#f6dfe3",
+      };
+      var currentTheme = document.body.getAttribute("data-theme") || "light";
+      var meta = document.getElementById("clarity-theme-color-meta");
+      if (meta && themeBg[currentTheme]) {
+        meta.setAttribute("content", themeBg[currentTheme]);
+      }
+    } catch (e) {}
   })();
 
   // Détection app installée (écran d'accueil iOS) : la règle CSS
@@ -7326,9 +7344,29 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 /* ===== CLARITY SYSTEMS — BLOC 2 : gestion du thème ===== */
 const CLARITY_THEMES = ["light", "dark", "slate", "corail"];
 
+// Couleur de fond réelle de chaque thème (mêmes valeurs que les règles
+// html:has(body[data-theme="..."]) plus haut) : utilisée pour teinter
+// la barre d'outils de Safari (meta theme-color), afin qu'elle se
+// fonde avec le fond de la page plutôt que de laisser une zone d'une
+// autre couleur au-dessus des boutons de Safari.
+const CLARITY_THEME_BG = {
+  dark: "#000000",
+  light: "#f7f7f8",
+  slate: "#c9ced6",
+  corail: "#f6dfe3",
+};
+
+function updateThemeColorMeta(theme) {
+  const meta = document.getElementById("clarity-theme-color-meta");
+  if (meta && CLARITY_THEME_BG[theme]) {
+    meta.setAttribute("content", CLARITY_THEME_BG[theme]);
+  }
+}
+
 function setTheme(theme) {
   if (CLARITY_THEMES.indexOf(theme) === -1) return;
   document.body.setAttribute("data-theme", theme);
+  updateThemeColorMeta(theme);
   try {
     localStorage.setItem("clarity-theme", theme);
   } catch (e) {}
