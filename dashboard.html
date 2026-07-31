@@ -6375,6 +6375,36 @@ body[data-theme="dark"] .clarity-hero {
 }
 
 /* =========================================================
+   CLARITY SYSTEMS — Menu du bas (mobile, app + navigateur) :
+   icônes recentrées + légèrement resserrées.
+
+   La marge de sécurité (env(safe-area-inset-bottom)) était mise
+   entièrement en padding-bottom : comme la hauteur de la barre reste
+   fixe (72px), ce padding rognait tout l'espace disponible pour les
+   icônes PAR LE BAS, les poussant tout en haut de la barre avec du
+   vide en dessous. On répartit maintenant cette marge moitié en haut,
+   moitié en bas : les icônes restent bien centrées dans la barre,
+   quelle que soit la taille de la zone de sécurité.
+
+   On resserre aussi légèrement l'espacement horizontal entre les 5
+   icônes (un peu plus de marge de chaque côté de la barre = colonnes
+   un peu moins larges = icônes plus proches les unes des autres).
+
+   !important nécessaire : la règle non scopée .bottom-nav (PC +
+   mobile, plus bas dans le fichier) applique encore padding:0 8px et
+   gagne normalement sur mobile (même spécificité, déclarée après).
+   Ciblé uniquement max-width:900px, donc la version PC n'est pas
+   concernée par ce bloc. */
+@media (max-width: 900px) {
+  .bottom-nav {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    padding-top: calc(env(safe-area-inset-bottom) / 2) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom) / 2) !important;
+  }
+}
+
+/* =========================================================
    CLARITY SYSTEMS — Bande blanche dans la zone de sécurité (bas
    d'écran, au-dessus du bouton home) sur l'app installée.
    Avec viewport-fit=cover, iOS peint les zones de sécurité (encoche
@@ -8457,43 +8487,6 @@ window.addEventListener("resize", () => {
   window.visualViewport.addEventListener("resize", onViewportChange);
   window.visualViewport.addEventListener("scroll", onViewportChange);
   syncOnce();
-})();
-
-// ─── DEBUG TEMPORAIRE : diagnostic de l'écart sous le menu (app) ──
-// À retirer une fois le bug du menu identifié. Affiche un petit
-// encart avec les mesures réelles (uniquement app installée), pour
-// comprendre pourquoi la page "Agents" laisse un espace sous le menu
-// alors que "Contacts" non.
-(function () {
-  if (!document.body.classList.contains("is-standalone-ios")) return;
-
-  const box = document.createElement("div");
-  box.id = "__navDebug";
-  box.style.cssText = `
-    position: fixed; left: 8px; bottom: 90px; z-index: 999999;
-    background: rgba(255,0,0,.85); color: #fff; font: 11px monospace;
-    padding: 6px 8px; border-radius: 8px; white-space: pre; line-height: 1.4;
-    pointer-events: none;
-  `;
-  document.body.appendChild(box);
-
-  function update() {
-    const nav = document.getElementById("bottomNav");
-    const vv = window.visualViewport;
-    const activePage = document.querySelector(".page-view.active");
-    const rect = nav ? nav.getBoundingClientRect() : null;
-    const pageRect = activePage ? activePage.getBoundingClientRect() : null;
-    box.textContent =
-      "page: " + (activePage ? activePage.id : "?") + "\n" +
-      "innerH: " + window.innerHeight + "  scrollH: " + document.documentElement.scrollHeight + "\n" +
-      "vvH: " + (vv ? Math.round(vv.height) : "n/a") + "  vvOffTop: " + (vv ? Math.round(vv.offsetTop) : "n/a") + "\n" +
-      "nav top/bottom: " + (rect ? Math.round(rect.top) + " / " + Math.round(rect.bottom) : "n/a") + "\n" +
-      "nav height: " + (rect ? Math.round(rect.height) : "n/a") + "\n" +
-      "page bottom: " + (pageRect ? Math.round(pageRect.bottom) : "n/a");
-  }
-
-  update();
-  setInterval(update, 400);
 })();
 
 // ─── USER ────────────────────────────────────────────────
