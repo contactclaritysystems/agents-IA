@@ -1945,6 +1945,15 @@ select.field-input {
     overflow-y: auto;
 }
 
+  /* Sur mobile (app installée + navigateur), le bouton "← Retour" est
+     déjà affiché : la croix "✕" sur la carte fait doublon. Sur PC, la
+     règle inverse existe déjà plus bas (.contact-detail-back-btn
+     masqué en min-width:901, seule la croix reste) — ici on masque la
+     croix côté mobile pour ne garder que le Retour, sans toucher PC. */
+  #contact-popup-close {
+    display: none !important;
+  }
+
 .detail-line {
   display: flex;
   justify-content: space-between;
