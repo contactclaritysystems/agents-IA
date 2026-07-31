@@ -6267,6 +6267,30 @@ body[data-theme="dark"] .clarity-hero {
   margin-bottom: -8px !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — App installée sur l'écran d'accueil (iOS)
+   La barre de statut est "black-translucent" (meta tag) : elle
+   passe par-dessus le contenu, donc sans marge dédiée, le logo/
+   titre en haut se retrouve collé à l'encoche/Dynamic Island. Idem
+   en bas : la barre d'onglets doit respirer au-dessus du bouton
+   home. On utilise env(safe-area-inset-*), qui vaut l'encoche
+   matérielle de l'appareil, et on ne l'applique qu'en mode
+   "standalone" (l'app installée) : en navigation Safari classique,
+   Safari gère déjà cet espace lui-même, pas besoin d'en rajouter.
+   Placé en toute fin de feuille de style pour l'emporter sur les
+   autres règles .main / .bottom-nav (spécificité égale, priorité
+   à l'ordre de déclaration).
+   ========================================================= */
+@media (display-mode: standalone) and (max-width: 600px) {
+  .main {
+    padding-top: calc(18px + env(safe-area-inset-top)) !important;
+  }
+
+  .bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 10px) !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
