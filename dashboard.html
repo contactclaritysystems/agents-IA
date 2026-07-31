@@ -1443,16 +1443,26 @@ select.field-input {
 @media (max-width: 900px) {
   .bottom-nav {
   display: flex;
+  /* Sans ça, les onglets (flex par défaut : align-items:stretch)
+     s'étirent pour remplir toute la hauteur (72px + zone de sécurité),
+     ce qui centre visuellement les icônes plus bas et fait paraître
+     toute la barre énorme/épaisse. flex-start les garde compacts en
+     haut ; la zone de sécurité reste un espace vide en dessous, avec
+     le même fond, donc invisible. */
+  align-items: flex-start;
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  /* min-height (pas height) : avec box-sizing:border-box, un height
-     fixe force padding-bottom (zone de sécurité iOS) à grignoter la
-     hauteur utile au lieu de s'ajouter en plus, ce qui écrasait les
-     icônes vers le haut. min-height laisse la barre grandir toute
-     seule pour la zone de sécurité, sans jamais rien écraser. */
-  min-height: 72px;
+  /* min-height (pas height) + !important : sur mobile uniquement
+     (cette règle ne s'applique pas au-delà de 900px, donc jamais sur
+     PC). Avec box-sizing:border-box, un height fixe forçait
+     padding-bottom (zone de sécurité iOS) à grignoter la hauteur utile
+     au lieu de s'ajouter en plus, ce qui écrasait les icônes vers le
+     haut. min-height laisse la barre grandir toute seule pour la zone
+     de sécurité, sans jamais rien écraser — combiné à flex-start
+     ci-dessus, les icônes restent fines et compactes en haut. */
+  min-height: 72px !important;
 
   background: rgba(var(--clarity-glass-rgb),.78);
 
@@ -4709,10 +4719,11 @@ body,
   bottom: 0;
   left: 0;
   right: 0;
-  /* min-height (voir explication BLOC "BOTTOM TAB BAR" plus haut) :
-     un height fixe + padding-bottom (zone de sécurité iOS) écrasait
-     les icônes au lieu d'ajouter de la place en plus. */
-  min-height: 72px;
+  /* Règle non scopée (PC + mobile). Le vrai fix "zone de sécurité"
+     est géré uniquement dans @media(max-width:900px) plus haut dans
+     le fichier (avec !important, donc prioritaire sur mobile) : ici on
+     garde height fixe, inchangé, pour ne pas affecter la version PC. */
+  height: 72px;
   background: rgba(var(--clarity-glass-rgb), 0.78);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
@@ -6309,9 +6320,11 @@ body[data-theme="dark"] .clarity-hero {
    à l'ordre de déclaration).
    ========================================================= */
 @media (max-width: 600px) {
-  /* body.is-standalone-ios posée en JS (window.navigator.standalone),
+  /* ---- HAUT : uniquement app installée (standalone) ----
+     body.is-standalone-ios posée en JS (window.navigator.standalone),
      @media (display-mode:standalone) seul ne suffisait pas sur cet
-     appareil. */
+     appareil. En navigation Safari classique, Safari gère déjà
+     l'encoche via sa propre barre d'adresse : pas besoin d'y toucher. */
   body.is-standalone-ios .main {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
@@ -6325,59 +6338,70 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
-  /* La barre du bas utilise maintenant min-height (voir la règle
-     .bottom-nav plus haut dans le fichier) : elle grandit d'elle-même
-     pour la zone de sécurité sans qu'il soit nécessaire de la forcer
-     ici, et reste identique sur toutes les pages. */
-
-  /* Le bas de chaque page doit laisser assez de place pour ne pas
-     passer derrière la barre, dont la hauteur grandit avec la zone
-     de sécurité. */
-  body.is-standalone-ios .main {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
-  }
-
-  /* Contacts / Planning / Historique / Réglages n'utilisent pas le
-     padding-top de .main : ces 4 pages ont leur propre règle sur l'ID
-     brut (#main-contacts, etc. — "Alignement uniforme des titres de
-     pages mobile"), qui bat .main via la spécificité (un ID l'emporte
-     toujours sur une classe), quel que soit l'ordre dans le fichier.
-     C'est pour ça que seule la page Agents était corrigée : elle seule
-     dépend réellement de .main. On neutralise ici avec le même niveau
-     de spécificité. */
   body.is-standalone-ios #main-contacts,
   body.is-standalone-ios #main-planning,
   body.is-standalone-ios #main-historique,
   body.is-standalone-ios #main-settings {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 
-  /* Sous-pages plein écran (position:fixed;inset:0, par-dessus la
-     barre du bas donc pas besoin du "+10px" qui lui est dédié) :
-     fiche contact, formulaire ajout/modif contact, rendez-vous
-     (Planning), et TOUT l'historique (mails, comptes-rendus, rdv,
-     relances, rédaction, assistant + leurs sous-dossiers partagent
-     tous le même conteneur #history-detail). Chacune avait déjà son
-     propre padding de départ (18px, 24px ou 32px selon la page), on
-     lui ajoute juste la zone de sécurité par-dessus. */
   body.is-standalone-ios #history-detail.open,
   body.is-standalone-ios #contact-mobile-section.open,
   body.is-standalone-ios #planning-detail.open {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 
-  /* #profil-mobile-section.open a un padding-top de 24px (et non 18px)
-     à cause d'une règle plus tardive dans le fichier qui le redéfinit
-     pour toutes les largeurs d'écran. */
   body.is-standalone-ios #profil-mobile-section.open {
     padding-top: calc(24px + env(safe-area-inset-top)) !important;
-    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
   }
 
   body.is-standalone-ios #contact-detail-page.open {
     padding-top: calc(32px + env(safe-area-inset-top)) !important;
+  }
+
+  /* ---- BAS : navigateur mobile ET app installée ----
+     Ici, pas de gating is-standalone-ios : la barre du bas grandit
+     avec env(safe-area-inset-bottom) (voir .bottom-nav plus haut)
+     aussi bien en navigateur mobile qu'en app installée — testé et
+     confirmé sur les deux. Le contenu doit donc laisser de la place
+     dans les deux cas, pas seulement l'app. */
+  .main {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Contacts / Planning / Historique / Réglages n'utilisent pas le
+     padding-bottom de .main : ces 4 pages ont leur propre règle sur
+     l'ID brut (#main-contacts, etc. — "Alignement uniforme des titres
+     de pages mobile"), qui bat .main via la spécificité (un ID
+     l'emporte toujours sur une classe), quel que soit l'ordre dans le
+     fichier. On neutralise ici avec le même niveau de spécificité. */
+  #main-contacts,
+  #main-planning,
+  #main-historique,
+  #main-settings {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Sous-pages plein écran (position:fixed;inset:0, par-dessus la
+     barre du bas, donc uniquement concernées par la zone de sécurité
+     elle-même, pas par la hauteur de la barre) : fiche contact,
+     formulaire ajout/modif contact, rendez-vous (Planning), et TOUT
+     l'historique (mails, comptes-rendus, rdv, relances, rédaction,
+     assistant + leurs sous-dossiers partagent tous le même conteneur
+     #history-detail). Chacune avait déjà son propre padding de départ
+     (18px, 24px ou 32px selon la page), on lui ajoute juste la zone
+     de sécurité par-dessus. */
+  #history-detail.open,
+  #contact-mobile-section.open,
+  #planning-detail.open {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+  }
+
+  #profil-mobile-section.open {
+    padding-bottom: calc(110px + env(safe-area-inset-bottom)) !important;
+  }
+
+  #contact-detail-page.open {
     padding-bottom: calc(32px + env(safe-area-inset-bottom)) !important;
   }
 }
