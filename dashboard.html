@@ -6654,12 +6654,21 @@ body:not([data-theme="dark"]) .clarity-hero {
    diffuse (loin, très douce) — c'est la combinaison des deux qui donne
    l'impression de profondeur, une seule ombre ne suffit jamais. Le
    halo bleu est aussi élargi pour accompagner ce relief. */
+/* Retour utilisateur : veut une bordure façon "LED" dans le turquoise
+   du logo (plus clair/cyan que le bleu de marque utilisé partout
+   ailleurs — ici seulement, car demande explicite sur CETTE bordure).
+   Trait fin + une lueur resserrée collée dessus (pas un halo large)
+   pour donner l'impression d'un liseré qui s'allume. Si rejeté :
+   remettre border-color: rgba(0,145,199,.22) et retirer la ligne
+   "0 0 0 1px / 0 0 10px 2px" turquoise du box-shadow. */
 body[data-theme="light"] .clarity-hero {
   border-width: 1px !important;
   border-style: solid !important;
-  border-color: rgba(0, 145, 199, 0.22) !important;
+  border-color: rgba(45, 224, 226, 0.55) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 0 1px rgba(45, 224, 226, 0.35),
+    0 0 10px 2px rgba(45, 224, 226, 0.45),
     0 0 90px 22px rgba(0, 145, 199, 0.22),
     0 10px 20px rgba(0, 0, 0, 0.10),
     0 32px 64px rgba(0, 0, 0, 0.16) !important;
