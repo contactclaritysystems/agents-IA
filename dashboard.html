@@ -6696,28 +6696,41 @@ body[data-theme="light"] .status-row .stat-icon-wrap {
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-/* IDÉE 2 (test) : UN SEUL halo bleu diffus derrière les 3 cartes prises
-   ensemble (pas 3 halos colorés séparés — c'est justement ça qui avait
-   été jugé criard). Positionné sur .status-row lui-même, centré,
-   large et très flouté, comme celui de la carte assistant. Si rejeté :
-   supprimer tout ce bloc. */
-body[data-theme="light"] .status-row {
-  position: relative;
+/* IDÉE 3 (test) : la couleur d'identification (jaune/bleu/violet) ne
+   teinte plus tout le rond — elle passe en petite touche (un point en
+   bas à droite). Le rond redevient neutre (blanc/gris très clair) et
+   c'est le bleu de marque qui porte tout le relief (ombre ambiante
+   teintée bleue au lieu de neutre). Si rejeté : remettre le fond
+   pastel par couleur (yellow: rgba(245,158,11,.18) / blue:
+   rgba(59,130,246,.16) / purple: rgba(139,92,246,.14)) et le point
+   n'a plus lieu d'être. */
+body[data-theme="light"] .status-row .stat-icon-wrap.yellow,
+body[data-theme="light"] .status-row .stat-icon-wrap.blue,
+body[data-theme="light"] .status-row .stat-icon-wrap.purple {
+  background-color: var(--clarity-surface) !important;
 }
 
-body[data-theme="light"] .status-row::before {
+body[data-theme="light"] .status-row .stat-icon-wrap {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 3px 6px rgba(0, 0, 0, 0.08),
+    0 10px 20px rgba(0, 145, 199, 0.16);
+}
+
+body[data-theme="light"] .status-row .stat-icon-wrap::after {
   content: "";
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  height: 160px;
-  background: radial-gradient(ellipse, rgba(0, 145, 199, 0.16) 0%, transparent 70%);
-  filter: blur(20px);
-  z-index: -1;
-  pointer-events: none;
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }
+
+body[data-theme="light"] .status-row .stat-icon-wrap.yellow::after { background: #f59e0b; }
+body[data-theme="light"] .status-row .stat-icon-wrap.blue::after { background: #2563eb; }
+body[data-theme="light"] .status-row .stat-icon-wrap.purple::after { background: #7c3aed; }
 
 /* =========================================================
    CLARITY SYSTEMS — Thème clair : carte de l'assistant (accueil)
