@@ -6358,16 +6358,19 @@ body[data-theme="dark"] .clarity-hero {
      le padding-bottom d'origine (100/110/32px selon la page) suffit
      déjà.
 
-     Cause identifiée du "menu pas collé en bas" (app installée
-     uniquement) : sur une page assez courte pour tenir entièrement
-     à l'écran sans défiler (ex: Agents/accueil), WKWebView calcule
-     mal la position de la barre fixed;bottom:0 et laisse un espace
-     noir en dessous — bug qui disparaît sur les pages plus longues
-     qui, elles, défilent (ex: Contacts). On force donc chaque page à
-     être toujours un peu plus haute que l'écran, même quand son
-     contenu est court, pour que le calcul reste correct partout. */
+     Cause réelle confirmée par mesures (encart de debug) : la barre
+     est TOUJOURS collée pile à window.innerHeight (aucun bug de
+     position). Le vrai problème est que window.innerHeight lui-même
+     est plus PETIT (ex: 937) tant que la page n'a jamais été
+     scrollée, et ne "se débloque" à sa vraie valeur (ex: 1002, +65px)
+     qu'après un premier défilement — comportement natif WKWebView,
+     comme la barre d'outils Safari qui se rétracte au scroll. Comme
+     100svh correspond déjà à cette hauteur "rétractée", ça n'avait
+     aucun effet. On utilise 100lvh (hauteur maximale possible,
+     barres rétractées) + une marge, pour forcer un contenu toujours
+     scrollable même sur les pages courtes, quel que soit l'état. */
   body.is-standalone-ios .page-view.active {
-    min-height: calc(100svh + 4px);
+    min-height: calc(100lvh + 40px);
   }
 }
 
