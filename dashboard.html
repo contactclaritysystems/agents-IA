@@ -185,7 +185,9 @@ body.loading-subscription #actions-count {
   font-weight: 780;
   font-size: clamp(2rem, 3vw, 2.7rem);
   letter-spacing: -0.03em;
-  line-height: 1.02;
+  /* 1.02 était trop serré : les descendantes (g, y, j — ex. "Réglages")
+     se retrouvaient rognées en bas sur toutes les versions. */
+  line-height: 1.18;
   color: var(--text);
 }
 
@@ -6503,11 +6505,11 @@ html:has(body[data-theme="corail"]) { background: #f6dfe3; }
   <input class="field-input auto-capitalize" type="text" id="profile-company" placeholder="Clarity Systems" oninput="toggleProfileSave()" />
 </div>
 
-   <button class="sheet-btn" id="profile-edit-btn" onclick="unlockProfileFields()" type="button" style="width:100%; display:none;">
+   <button class="sheet-btn" id="profile-edit-btn" onclick="unlockProfileFields()" type="button" style="width:100%; display:none; margin-top:20px;">
   ⚙️ Modifier les informations
 </button>
 
-<button class="save-btn" id="profile-save-btn" onclick="saveProfile()" type="button">
+<button class="save-btn" id="profile-save-btn" onclick="saveProfile()" type="button" style="margin-top:20px;">
   💾 Enregistrer les informations
 </button>
 
