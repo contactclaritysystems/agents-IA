@@ -6630,6 +6630,54 @@ body:not([data-theme="dark"]) .clarity-hero {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — Thème clair : effet "wouaw"
+
+   Constat (retour utilisateur sur capture d'écran PC) : même avec le
+   traitement premium ci-dessus, le thème clair reste plat comparé au
+   thème sombre. Cause : sur fond blanc, un dégradé/glow discret est
+   presque invisible (la même valeur qui "claque" sur fond noir se
+   dilue sur du blanc) — ce n'est pas un bug, juste une limite de
+   contraste inhérente à un fond clair, qu'il faut compenser par un
+   traitement plus marqué, pas identique en valeurs à celui du sombre.
+
+   3 leviers, uniquement en thème clair (les autres thèmes clairs —
+   ardoise, corail — n'ont pas encore été validés visuellement, on n'y
+   touche pas ici) :
+   1) La page entière baigne dans une légère ambiance bleutée (au lieu
+      du voile gris quasi invisible de la règle de base "body"),
+      pour que le halo du logo se fonde dans le reste de la page au
+      lieu d'être un rond isolé.
+   2) La carte héro (Bonjour Anthony) a un contour et un halo plus
+      marqués.
+   3) Une fine ligne d'accent en dégradé bleu en haut de la carte héro
+      — signature visuelle discrète mais typique des interfaces
+      "premium" (Linear, Notion...).
+   ========================================================= */
+body[data-theme="light"] {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(0, 145, 199, 0.16), transparent 42%),
+    var(--clarity-page);
+}
+
+body[data-theme="light"] .clarity-hero {
+  border-color: rgba(0, 145, 199, 0.4) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 0 60px 14px rgba(0, 145, 199, 0.20),
+    0 16px 40px rgba(0, 0, 0, 0.08) !important;
+}
+
+body[data-theme="light"] .clarity-hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 145, 199, 0.85), transparent);
+}
+
 </style>
 </head>
 <body data-theme="light">
