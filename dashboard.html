@@ -6314,6 +6314,22 @@ body[data-theme="dark"] .clarity-hero {
   body.is-standalone-ios .main {
     padding-bottom: calc(100px + env(safe-area-inset-bottom) + 10px) !important;
   }
+
+  /* Contacts / Planning / Historique / Réglages n'utilisent pas le
+     padding-top de .main : ces 4 pages ont leur propre règle sur l'ID
+     brut (#main-contacts, etc. — "Alignement uniforme des titres de
+     pages mobile"), qui bat .main via la spécificité (un ID l'emporte
+     toujours sur une classe), quel que soit l'ordre dans le fichier.
+     C'est pour ça que seule la page Agents était corrigée : elle seule
+     dépend réellement de .main. On neutralise ici avec le même niveau
+     de spécificité. */
+  body.is-standalone-ios #main-contacts,
+  body.is-standalone-ios #main-planning,
+  body.is-standalone-ios #main-historique,
+  body.is-standalone-ios #main-settings {
+    padding-top: calc(18px + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom) + 10px) !important;
+  }
 }
 
 </style>
