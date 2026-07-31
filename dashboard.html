@@ -8407,16 +8407,42 @@ window.addEventListener("resize", () => {
 (function () {
   const nav = document.getElementById("bottomNav");
   if (!nav || !window.visualViewport) return;
+  // Uniquement version navigateur mobile : l'app installée n'a pas
+  // cette barre d'outils, et sur PC il n'y a pas d'animation à
+  // compenser (aucune des 2 versions n'est modifiée par ce script).
+  if (document.body.classList.contains("is-standalone-ios")) return;
 
-  function pinBottomNav() {
+  let loopId = null;
+
+  function syncOnce() {
     const vv = window.visualViewport;
     const gap = window.innerHeight - (vv.height + vv.offsetTop);
     nav.style.transform = gap > 0.5 ? `translateY(-${gap}px)` : "";
   }
 
-  window.visualViewport.addEventListener("resize", pinBottomNav);
-  window.visualViewport.addEventListener("scroll", pinBottomNav);
-  pinBottomNav();
+  // Plutôt que d'attendre les évènements "resize"/"scroll" du
+  // visualViewport (qui ne se déclenchent pas assez souvent pendant
+  // l'animation propre de la barre Safari, d'où le petit sursaut
+  // résiduel), on recalcule à chaque frame pendant un court instant
+  // après chaque évènement, pour suivre l'animation en continu et
+  // rendre le mouvement quasi imperceptible.
+  function pumpFrames(framesLeft) {
+    syncOnce();
+    if (framesLeft > 0) {
+      loopId = requestAnimationFrame(() => pumpFrames(framesLeft - 1));
+    } else {
+      loopId = null;
+    }
+  }
+
+  function onViewportChange() {
+    if (loopId) cancelAnimationFrame(loopId);
+    pumpFrames(30); // ~0.5s à 60fps, largement assez pour l'animation Safari
+  }
+
+  window.visualViewport.addEventListener("resize", onViewportChange);
+  window.visualViewport.addEventListener("scroll", onViewportChange);
+  syncOnce();
 })();
 
 // ─── USER ────────────────────────────────────────────────
