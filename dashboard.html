@@ -6674,6 +6674,42 @@ body[data-theme="light"] .clarity-hero {
     0 32px 64px rgba(0, 0, 0, 0.16) !important;
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — Thème clair, VERSION NAVIGATEUR MOBILE uniquement
+   (jamais PC — figé —, jamais app installée, qui a ses propres
+   réglages déjà validés séparément).
+
+   1) "le haut de la page est blanc" : le halo (#main-agents::before)
+      est positionné par rapport à #main-agents, qui démarre après une
+      marge de sécurité (barre d'adresse Safari) — le dégradé du halo
+      est déjà quasiment retombé à transparent avant d'atteindre le
+      vrai haut de l'écran, d'où la bande blanche/plate au-dessus.
+      Un second dégradé, ancré cette fois sur le body (donc collé au
+      vrai haut du viewport, peu importe où #main-agents commence),
+      raccorde la couleur en continu depuis y=0.
+   2) Même liseré "LED" turquoise que sur PC pour la carte assistant,
+      mais nettement plus fin/discret (glow resserré, moins opaque) —
+      demande explicite "tres fin" pour cette taille de carte plus
+      petite. */
+@media (max-width: 600px) {
+  body[data-theme="light"]:not(.is-standalone-ios) {
+    background:
+      radial-gradient(ellipse 70% 380px at 50% 0%, rgba(0, 145, 199, 0.24), transparent 75%),
+      var(--clarity-page);
+  }
+
+  body[data-theme="light"]:not(.is-standalone-ios) .clarity-hero {
+    border-color: rgba(45, 224, 226, 0.4) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 0 0 1px rgba(45, 224, 226, 0.22),
+      0 0 5px 1px rgba(45, 224, 226, 0.30),
+      0 0 90px 22px rgba(0, 145, 199, 0.22),
+      0 10px 20px rgba(0, 0, 0, 0.10),
+      0 32px 64px rgba(0, 0, 0, 0.16) !important;
+  }
+}
+
 /* Les 3 icônes de stats : les essais précédents (badge plein, puis
    halo coloré léger, puis halo coloré intense) ont tous été rejetés —
    verdict final : "trop vif, casse le style de l'app, pas premium".
