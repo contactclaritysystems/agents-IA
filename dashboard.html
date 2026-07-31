@@ -6655,22 +6655,14 @@ body:not([data-theme="dark"]) .clarity-hero {
    l'impression de profondeur, une seule ombre ne suffit jamais. Le
    halo bleu est aussi élargi pour accompagner ce relief. */
 body[data-theme="light"] .clarity-hero {
-  border-color: rgba(0, 145, 199, 0.4) !important;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-color: rgba(0, 145, 199, 0.22) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
     0 0 90px 22px rgba(0, 145, 199, 0.22),
     0 10px 20px rgba(0, 0, 0, 0.10),
     0 32px 64px rgba(0, 0, 0, 0.16) !important;
-}
-
-body[data-theme="light"] .clarity-hero::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(0, 145, 199, 0.85), transparent);
 }
 
 /* Les 3 icônes de stats : les essais précédents (badge plein, puis
