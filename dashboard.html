@@ -6641,25 +6641,12 @@ body:not([data-theme="dark"]) .clarity-hero {
    contraste inhérente à un fond clair, qu'il faut compenser par un
    traitement plus marqué, pas identique en valeurs à celui du sombre.
 
-   3 leviers, uniquement en thème clair (les autres thèmes clairs —
-   ardoise, corail — n'ont pas encore été validés visuellement, on n'y
-   touche pas ici) :
-   1) La page entière baigne dans une légère ambiance bleutée (au lieu
-      du voile gris quasi invisible de la règle de base "body"),
-      pour que le halo du logo se fonde dans le reste de la page au
-      lieu d'être un rond isolé.
-   2) La carte héro (Bonjour Anthony) a un contour et un halo plus
-      marqués.
-   3) Une fine ligne d'accent en dégradé bleu en haut de la carte héro
-      — signature visuelle discrète mais typique des interfaces
-      "premium" (Linear, Notion...).
+   NOTE : le voile bleu pleine page essayé ici a été retiré (retour
+   utilisateur : préfère le halo du logo tel qu'il était avant, sans
+   ce voile qui le "délavait"). Il ne reste que le traitement de la
+   carte héro (contour + halo + ligne d'accent), qui n'a pas été
+   contesté.
    ========================================================= */
-body[data-theme="light"] {
-  background:
-    radial-gradient(circle at 50% -10%, rgba(0, 145, 199, 0.16), transparent 42%),
-    var(--clarity-page);
-}
-
 body[data-theme="light"] .clarity-hero {
   border-color: rgba(0, 145, 199, 0.4) !important;
   box-shadow:
@@ -6676,6 +6663,37 @@ body[data-theme="light"] .clarity-hero::before {
   right: 0;
   height: 3px;
   background: linear-gradient(90deg, transparent, rgba(0, 145, 199, 0.85), transparent);
+}
+
+/* Les 3 icônes de stats (Actions utilisées / Temps gagné / Abonnement) :
+   retour utilisateur "elles sont plates". Cause : un rond en teinte
+   pastel (10-18% d'opacité) + une lueur tout aussi pastel se voient à
+   peine sur fond blanc — même problème de contraste que le halo du
+   logo. On passe à un badge plein en dégradé (comme une icône d'app),
+   glyphe blanc, + une vraie ombre portée (élévation) en plus de la
+   lueur colorée, pour un effet de relief net. Uniquement thème clair. */
+body[data-theme="light"] .status-row .stat-icon-wrap.yellow {
+  background: linear-gradient(135deg, #fbbf4f, #f59e0b) !important;
+  color: #fff !important;
+  box-shadow:
+    0 6px 14px rgba(245, 158, 11, 0.38),
+    0 0 0 4px rgba(245, 158, 11, 0.10);
+}
+
+body[data-theme="light"] .status-row .stat-icon-wrap.blue {
+  background: linear-gradient(135deg, #60a5fa, #2563eb) !important;
+  color: #fff !important;
+  box-shadow:
+    0 6px 14px rgba(37, 99, 235, 0.38),
+    0 0 0 4px rgba(37, 99, 235, 0.10);
+}
+
+body[data-theme="light"] .status-row .stat-icon-wrap.purple {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed) !important;
+  color: #fff !important;
+  box-shadow:
+    0 6px 14px rgba(124, 58, 237, 0.38),
+    0 0 0 4px rgba(124, 58, 237, 0.10);
 }
 
 </style>
