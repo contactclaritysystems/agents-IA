@@ -8392,7 +8392,33 @@ window.addEventListener("resize", () => {
   __lastKnownInnerWidth = window.innerWidth;
   alignContactsAlphabet();
 });
-  
+
+// ─── BARRE DU BAS FIXE PENDANT LE SCROLL (Safari mobile) ──
+// Dans Safari mobile (hors app installée), la barre d'outils du
+// navigateur se rétracte automatiquement pendant le scroll, ce qui
+// agrandit la fenêtre "layout" (window.innerHeight) : notre barre en
+// position fixed;bottom:0 se recale alors sur ce nouveau bas, et donne
+// l'impression de "descendre". Le viewport VISUEL (ce qui est
+// réellement affiché à l'écran), lui, ne bouge pas de la même façon.
+// On compare les deux et on décale la barre avec un transform pour
+// qu'elle reste visuellement immobile. Sur PC et dans l'app installée
+// (pas de barre d'outils rétractable), l'écart est quasi nul : le
+// transform reste à 0, rien ne change pour ces 2 versions.
+(function () {
+  const nav = document.getElementById("bottomNav");
+  if (!nav || !window.visualViewport) return;
+
+  function pinBottomNav() {
+    const vv = window.visualViewport;
+    const gap = window.innerHeight - (vv.height + vv.offsetTop);
+    nav.style.transform = gap > 0.5 ? `translateY(-${gap}px)` : "";
+  }
+
+  window.visualViewport.addEventListener("resize", pinBottomNav);
+  window.visualViewport.addEventListener("scroll", pinBottomNav);
+  pinBottomNav();
+})();
+
 // ─── USER ────────────────────────────────────────────────
 
 async function handleUser(user) {
