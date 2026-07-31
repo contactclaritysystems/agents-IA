@@ -6378,20 +6378,6 @@ html:has(body[data-theme="light"]) { background: #f7f7f8; }
 html:has(body[data-theme="slate"]) { background: #c9ced6; }
 html:has(body[data-theme="corail"]) { background: #f6dfe3; }
 
-/* Version navigateur mobile uniquement : quand on tire la page vers le
-   bas tout en haut (geste "tirer pour actualiser"), Safari fait un
-   rebond élastique et ré-agrandit sa barre d'outils, ce qui fait
-   "descendre" notre barre du bas le temps du rebond. On désactive ce
-   rebond (uniquement en haut/bas de page, le scroll normal n'est pas
-   affecté) pour que la barre du bas reste immobile. Non appliqué à
-   l'app installée (pas concernée) ni à la version PC. */
-@media (max-width: 900px) {
-  body:not(.is-standalone-ios),
-  html:has(body:not(.is-standalone-ios)) {
-    overscroll-behavior-y: none;
-  }
-}
-
 </style>
 </head>
 <body data-theme="light">
