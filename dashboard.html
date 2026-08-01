@@ -10564,19 +10564,39 @@ function unlockVoicePlayback() {
   } catch (e) {}
 }
 
+let voicePlayToken = 0;
+
+function stopVoicePlayback() {
+  if (currentVoiceAudio) {
+    try {
+      currentVoiceAudio.pause();
+      currentVoiceAudio.currentTime = 0;
+    } catch (e) {}
+  }
+}
+
 function playVoiceLine(name) {
   if (!isVoiceEnabled()) return;
+  const myToken = ++voicePlayToken;
   try {
     // Coupe toute voix déjà en cours pour éviter deux messages qui se
     // chevauchent (ex : annulation qui coupe une confirmation précédente).
-    if (currentVoiceAudio && !currentVoiceAudio.paused) {
-      currentVoiceAudio.pause();
-      currentVoiceAudio.currentTime = 0;
-    }
+    stopVoicePlayback();
     const audio = getVoiceAudio(name);
     audio.currentTime = 0;
     currentVoiceAudio = audio;
-    audio.play().catch(() => {});
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise.then(function () {
+        // Sur iOS, play() peut être retardé par le navigateur : si un appel
+        // plus récent a eu lieu entre-temps, cette lecture est périmée dès
+        // qu'elle démarre enfin — on la coupe immédiatement pour ne jamais
+        // avoir deux voix superposées, même en cas de retard/course.
+        if (myToken !== voicePlayToken) {
+          try { audio.pause(); audio.currentTime = 0; } catch (e) {}
+        }
+      }).catch(() => {});
+    }
   } catch (e) {}
 }
 
@@ -11192,6 +11212,13 @@ progressIcon: "✨",
   setListeningUI(true);
   if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
 
+  // Sur iOS, le micro (session audio "enregistrement") et la lecture des
+  // confirmations vocales (session audio "lecture") peuvent entrer en
+  // conflit si une voix est encore en cours juste avant de redémarrer une
+  // dictée — la reconnaissance démarre "visuellement" mais ne capte plus
+  // rien. On coupe donc toute voix en cours avant de (re)lancer le micro.
+  stopVoicePlayback();
+
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
@@ -11421,11 +11448,16 @@ console.log("MESSAGE =", message);
   };
 
   recognition.onerror = function(event) {
+    console.error("Erreur reconnaissance vocale (orchestrateur) :", event.error);
     clearTimeout(silenceTimer);
     unlockAgentButtons();
     resetMicButton();
     setListeningUI(false);
-    flashInputError("✕ Autorisez le micro pour utiliser la dictée");
+    flashInputError(
+      event.error === "no-speech"
+        ? "✕ Aucune voix détectée, réessayez"
+        : "✕ Autorisez le micro pour utiliser la dictée"
+    );
   };
 }
 
@@ -11825,6 +11857,11 @@ function toggleQuickMailDictation() {
     return;
   }
 
+  // Voir commentaire équivalent dans startSimpleAgentDictation() : libère
+  // la session audio avant de démarrer le micro, pour éviter un conflit
+  // avec une confirmation vocale encore en cours.
+  stopVoicePlayback();
+
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
@@ -11850,8 +11887,14 @@ function toggleQuickMailDictation() {
     if (textarea) textarea.value = (finalText + interimText).trim();
   };
 
-  recognition.onerror = function() {
-    showToast("Autorisez le micro pour dicter", "error");
+  recognition.onerror = function(event) {
+    console.error("Erreur reconnaissance vocale (quick mail) :", event.error);
+    showToast(
+      event.error === "no-speech"
+        ? "Aucune voix détectée, réessayez"
+        : "Autorisez le micro pour dicter",
+      "error"
+    );
   };
 
   recognition.onend = function() {
