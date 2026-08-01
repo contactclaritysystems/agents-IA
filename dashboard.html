@@ -10509,10 +10509,73 @@ function syncVoiceButtons() {
   });
 }
 
+// Liste des phrases existantes : préchargées au chargement de la page
+// pour éviter le temps de récupération/décodage réseau au moment où
+// elles doivent réellement se jouer (source du décalage "parle trop tard").
+const VOICE_LINE_NAMES = [
+  "mail-pret",
+  "mail-envoye",
+  "contact-introuvable",
+  "envoi-annule",
+  "plusieurs-contacts"
+];
+const voiceAudioCache = {};
+let currentVoiceAudio = null;
+let voiceUnlocked = false;
+
+function getVoiceAudio(name) {
+  let audio = voiceAudioCache[name];
+  if (!audio) {
+    audio = new Audio(name + ".mp3");
+    audio.preload = "auto";
+    voiceAudioCache[name] = audio;
+  }
+  return audio;
+}
+
+function preloadVoiceLines() {
+  VOICE_LINE_NAMES.forEach(function (name) {
+    try {
+      getVoiceAudio(name).load();
+    } catch (e) {}
+  });
+}
+
+// iOS/Safari bloque ou retarde parfois audio.play() s'il n'est pas
+// déclenché de façon strictement synchrone dans un geste utilisateur —
+// après un fetch/await (réponse de l'agent), ce lien est rompu. On
+// "débloque" donc le lecteur audio dès la toute première interaction
+// (tap/clic), une seule fois, pour que les lectures suivantes déclenchées
+// après un appel réseau démarrent instantanément.
+function unlockVoicePlayback() {
+  if (voiceUnlocked) return;
+  voiceUnlocked = true;
+  try {
+    const audio = getVoiceAudio(VOICE_LINE_NAMES[0]);
+    const prevVolume = audio.volume;
+    audio.volume = 0;
+    audio.play().then(function () {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = prevVolume;
+    }).catch(function () {
+      audio.volume = prevVolume;
+    });
+  } catch (e) {}
+}
+
 function playVoiceLine(name) {
   if (!isVoiceEnabled()) return;
   try {
-    const audio = new Audio(name + ".mp3");
+    // Coupe toute voix déjà en cours pour éviter deux messages qui se
+    // chevauchent (ex : annulation qui coupe une confirmation précédente).
+    if (currentVoiceAudio && !currentVoiceAudio.paused) {
+      currentVoiceAudio.pause();
+      currentVoiceAudio.currentTime = 0;
+    }
+    const audio = getVoiceAudio(name);
+    audio.currentTime = 0;
+    currentVoiceAudio = audio;
     audio.play().catch(() => {});
   } catch (e) {}
 }
@@ -10520,6 +10583,9 @@ function playVoiceLine(name) {
 window.setVoiceEnabled = setVoiceEnabled;
 
 document.addEventListener("DOMContentLoaded", syncVoiceButtons);
+document.addEventListener("DOMContentLoaded", preloadVoiceLines);
+document.addEventListener("click", unlockVoicePlayback, { once: true });
+document.addEventListener("touchstart", unlockVoicePlayback, { once: true });
 
 async function saveActionLog(agent, action, status) {
   if (!currentUser) return;
