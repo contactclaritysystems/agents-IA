@@ -8040,6 +8040,7 @@ function closeContactChoiceModal() {
   resetOrchestratorMicButton();
 
   showToast("Préparation du mail annulée", "error");
+  playVoiceLine("envoi-annule");
 
   const box = document.getElementById("orchestrator-dictation-box");
 
@@ -11736,6 +11737,7 @@ function closeQuickMailModal(isCancel = true) {
     unlockAgentButtons();
     resetOrchestratorMicButton();
     showToast("Envoi du mail annulé", "error");
+    playVoiceLine("envoi-annule");
   }
   window.quickMailIsAgentHandoff = false;
 }
@@ -11953,6 +11955,8 @@ if (typeof data === "string") {
     setDictationBoxState(box, "info");
     box.innerHTML = "👤 Choisissez le bon contact";
   }
+
+  playVoiceLine("plusieurs-contacts");
 
   openContactChoiceModal(
     data.contacts,
@@ -13637,6 +13641,7 @@ if (window.pendingAction?.type === "mail") {
   }
 
   showToast("Envoi du mail annulé. Aucun contact n'a été ajouté.", "error");
+  playVoiceLine("envoi-annule");
 
   window.pendingAction = null;
 
