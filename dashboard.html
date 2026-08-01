@@ -11232,10 +11232,6 @@ progressIcon: "✨",
   setListeningUI(true);
   if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
 
-  // Coupe toute voix en cours avant de (re)lancer le micro (évite un
-  // chevauchement si une confirmation est encore en train de jouer).
-  stopVoicePlayback();
-
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
@@ -11869,11 +11865,6 @@ function toggleQuickMailDictation() {
     showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
     return;
   }
-
-  // Voir commentaire équivalent dans startSimpleAgentDictation() : libère
-  // la session audio avant de démarrer le micro, pour éviter un conflit
-  // avec une confirmation vocale encore en cours.
-  stopVoicePlayback();
 
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
