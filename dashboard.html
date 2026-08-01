@@ -11232,24 +11232,11 @@ progressIcon: "✨",
   setListeningUI(true);
   if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
 
-  // Sur iOS, le micro (session audio "enregistrement") et la lecture des
-  // confirmations vocales (session audio "lecture") peuvent entrer en
-  // conflit si une voix est encore en cours juste avant de redémarrer une
-  // dictée — la reconnaissance démarre "visuellement" mais ne capte plus
-  // rien. On coupe donc toute voix en cours avant de (re)lancer le micro.
+  // Coupe toute voix en cours avant de (re)lancer le micro (évite un
+  // chevauchement si une confirmation est encore en train de jouer).
   stopVoicePlayback();
 
-  // iOS/Safari : une session de reconnaissance précédente pas totalement
-  // relâchée peut faire échouer silencieusement la suivante (le micro a
-  // l'air actif mais ne capte plus rien). On force l'arrêt de toute
-  // session encore référencée avant d'en créer une nouvelle.
-  if (window.orchestratorRecognition) {
-    try { window.orchestratorRecognition.abort(); } catch (e) {}
-    window.orchestratorRecognition = null;
-  }
-
   const recognition = new SpeechRecognition();
-  window.orchestratorRecognition = recognition;
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
   recognition.continuous = true;
@@ -11305,16 +11292,8 @@ progressIcon: "✨",
   };
 
   recognition.onend = async function() {
-    // Session périmée (remplacée entre-temps par une plus récente, ex :
-    // abort() forcé au démarrage d'une nouvelle dictée) : on l'ignore
-    // complètement pour ne pas écraser l'état de la dictée en cours.
-    if (window.orchestratorRecognition && window.orchestratorRecognition !== recognition) {
-      return;
-    }
-
     clearTimeout(silenceTimer);
     setListeningUI(false);
-    window.orchestratorRecognition = null;
 
     const instruction = (latestText || finalText).trim();
 
@@ -11487,16 +11466,6 @@ console.log("MESSAGE =", message);
 
   recognition.onerror = function(event) {
     console.error("Erreur reconnaissance vocale (orchestrateur) :", event.error);
-
-    // "aborted" = arrêt volontaire (nouvelle dictée qui coupe l'ancienne
-    // session périmée) : pas une vraie erreur, on ne touche à rien.
-    if (event.error === "aborted") return;
-
-    if (window.orchestratorRecognition && window.orchestratorRecognition !== recognition) {
-      return;
-    }
-    window.orchestratorRecognition = null;
-
     clearTimeout(silenceTimer);
     unlockAgentButtons();
     resetMicButton();
