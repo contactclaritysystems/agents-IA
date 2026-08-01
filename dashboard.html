@@ -5766,6 +5766,9 @@ body[data-theme="corail"] .loader-halo {
   flex-basis: 100%;
   width: 100%;
 }
+#voice-settings-block .theme-swatch-row {
+  grid-template-columns: repeat(2, 1fr);
+}
 
 /* =========================================================
    CLARITY SYSTEMS — BLOC 36
@@ -7171,6 +7174,24 @@ body[data-theme="light"]::after {
       <button type="button" class="theme-swatch-btn" data-theme-option="corail" onclick="setTheme('corail')">
         <span class="theme-swatch-preview theme-swatch-corail"></span>
         Corail
+      </button>
+    </div>
+  </div>
+
+      <!-- RÉPONSES VOCALES -->
+  <div class="gmail-section" id="voice-settings-block" style="margin-top:8px;">
+    <div class="gmail-title">
+      <span>🔊</span> Réponses vocales
+    </div>
+    <div class="gmail-desc" style="margin-bottom:16px;">
+      Vos agents confirment certaines actions à voix haute.
+    </div>
+    <div class="theme-swatch-row">
+      <button type="button" class="theme-swatch-btn" data-voice-option="off" onclick="setVoiceEnabled(false)">
+        Désactivées
+      </button>
+      <button type="button" class="theme-swatch-btn" data-voice-option="on" onclick="setVoiceEnabled(true)">
+        Activées
       </button>
     </div>
   </div>
@@ -10463,6 +10484,42 @@ function showToast(msg, type = "success") {
   }, 2800);
 }
 
+// ─── RÉPONSES VOCALES (identité vocale Clarity) ─────────────
+// Phrases fixes précalculées (ElevenLabs), stockées à la racine du repo
+// (même dossier que dashboard.html), lues directement sans appel API.
+// Réglage "Réponses vocales" dans Réglages, activé par défaut.
+function isVoiceEnabled() {
+  const saved = localStorage.getItem("clarity-voice-enabled");
+  return saved === null ? true : saved === "true";
+}
+
+function setVoiceEnabled(enabled) {
+  try {
+    localStorage.setItem("clarity-voice-enabled", enabled ? "true" : "false");
+  } catch (e) {}
+  syncVoiceButtons();
+}
+
+function syncVoiceButtons() {
+  const enabled = isVoiceEnabled();
+  document.querySelectorAll("[data-voice-option]").forEach(function (btn) {
+    const isOn = btn.getAttribute("data-voice-option") === "on";
+    btn.classList.toggle("active", isOn === enabled);
+  });
+}
+
+function playVoiceLine(name) {
+  if (!isVoiceEnabled()) return;
+  try {
+    const audio = new Audio(name + ".mp3");
+    audio.play().catch(() => {});
+  } catch (e) {}
+}
+
+window.setVoiceEnabled = setVoiceEnabled;
+
+document.addEventListener("DOMContentLoaded", syncVoiceButtons);
+
 async function saveActionLog(agent, action, status) {
   if (!currentUser) return;
 
@@ -10697,6 +10754,8 @@ function openMailPreview(data, instruction) {
   const progressBox = document.getElementById("orchestrator-dictation-box");
   if (progressBox) progressBox.remove();
 
+  playVoiceLine("mail-pret");
+
   pendingMailInstruction = instruction || "";
 
   currentPreparedMail = {
@@ -10753,6 +10812,7 @@ function closeMailPreview(showCancel = true) {
 
  if (showCancel) {
   showToast("Envoi annulé", "error");
+  playVoiceLine("envoi-annule");
 
   const box = document.querySelector(".page-view.active #dictation-box");
 if (box) {
@@ -11929,6 +11989,8 @@ if (typeof data === "string") {
 
     if (!data.success && data.reason === "contact_not_found") {
       hideOrRemoveBox(box);
+
+      playVoiceLine("contact-introuvable");
 
       openAddContactPopup({
   name: data.contact_name || data.name || "",
@@ -14787,6 +14849,7 @@ setTimeout(async () => {
 }
 
   showToast("Mail envoyé");
+  playVoiceLine("mail-envoye");
 
   // Mail vraiment envoyé avec succès : c'est SEULEMENT maintenant que
   // le micro doit redevenir cliquable.
