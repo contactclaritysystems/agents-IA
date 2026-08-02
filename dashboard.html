@@ -10622,16 +10622,20 @@ function showDebugPanel(lines) {
   if (!isMobileDevice()) return;
   if (!debugPanelEl) {
     debugPanelEl = document.createElement("div");
+    // pointer-events:none = ne bloque JAMAIS les clics/boutons en dessous,
+    // quelle que soit sa taille. Placé en haut (sous la barre d'heure) et
+    // limité en hauteur pour ne jamais recouvrir les boutons du bas.
     debugPanelEl.style.cssText =
-      "position:fixed;left:8px;right:8px;bottom:90px;max-height:38vh;" +
-      "overflow-y:auto;background:rgba(0,0,0,0.88);color:#4ade80;" +
-      "font-family:monospace;font-size:11px;line-height:1.5;padding:10px;" +
+      "position:fixed;left:8px;right:8px;top:54px;max-height:22vh;" +
+      "overflow:hidden;background:rgba(0,0,0,0.88);color:#4ade80;" +
+      "font-family:monospace;font-size:10px;line-height:1.4;padding:8px;" +
       "border-radius:10px;z-index:999999;white-space:pre-wrap;" +
-      "border:1px solid #4ade80;";
+      "border:1px solid #4ade80;pointer-events:none;";
     document.body.appendChild(debugPanelEl);
   }
-  debugPanelEl.textContent = lines.join("\n");
-  debugPanelEl.scrollTop = debugPanelEl.scrollHeight;
+  // Seulement les 10 dernières lignes : reste compact même après
+  // plusieurs relances, au lieu de grossir indéfiniment.
+  debugPanelEl.textContent = lines.slice(-10).join("\n");
 }
 
 // Redemande une capture micro très courte (et la coupe aussitôt) juste
