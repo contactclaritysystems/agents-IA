@@ -10575,6 +10575,34 @@ function isMobileDevice() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
+// Spécifiquement iOS (pas Android) : Android utilise le moteur Chrome,
+// qui n'a pas ce bug. Le vrai coupable identifié : sur WebKit/iOS,
+// "continuous: true" est documenté comme provoquant un engorgement du
+// buffer audio qui rend les sessions suivantes muettes (aucun son capté),
+// alors que "continuous: false" (une seule phrase, fin automatique après
+// une pause) est stable. On désactive donc continuous UNIQUEMENT sur iOS.
+function isIOSDevice() {
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+// Redemande une capture micro très courte (et la coupe aussitôt) juste
+// avant chaque tentative de dictée sur iOS : ça force le système à
+// réétablir une session audio fraîche pour le micro, plutôt que de
+// réutiliser une ressource restée à moitié occupée par la tentative
+// précédente. Contrepartie documentée du "premier essai qui échoue" côté
+// iOS, réutilisée ici aussi pour les tentatives suivantes.
+async function warmupMic() {
+  if (!isIOSDevice()) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(function (track) { track.stop(); });
+  } catch (e) {
+    // Pas grave si ça échoue (ex: permission pas encore accordée) : la
+    // tentative de reconnaissance normale suivra son cours quand même.
+  }
+}
+
 function delayBeforeMic() {
   if (!isMobileDevice()) return Promise.resolve();
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
@@ -11383,7 +11411,10 @@ progressIcon: "✨",
     const rec = new SpeechRecognition();
     rec.lang = "fr-FR";
     rec.interimResults = true;
-    rec.continuous = true;
+    // "continuous: true" est stable sur PC/Android (moteur Chrome) mais
+    // documenté comme cause d'engorgement du buffer audio sur iOS/WebKit,
+    // ce qui rend une 2e session muette. Désactivé uniquement sur iOS.
+    rec.continuous = !isIOSDevice();
     rec.maxAlternatives = 1;
     recognition = rec;
 
@@ -11609,6 +11640,8 @@ console.log("MESSAGE =", message);
     stopVoicePlayback();
 
     (async () => {
+      await warmupMic();
+      if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
       await delayBeforeMic();
       if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
 
@@ -12048,7 +12081,7 @@ async function toggleQuickMailDictation() {
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
-  recognition.continuous = true;
+  recognition.continuous = !isIOSDevice();
   recognition.maxAlternatives = 1;
 
   let finalText = textarea ? textarea.value : "";
@@ -12080,6 +12113,7 @@ async function toggleQuickMailDictation() {
     if (micBtn) micBtn.classList.remove("is-recording");
   };
 
+  await warmupMic();
   await delayBeforeMic();
 
   try {
