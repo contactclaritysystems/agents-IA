@@ -10528,9 +10528,37 @@ function getVoiceAudio(name) {
   if (!audio) {
     audio = new Audio(name + ".mp3");
     audio.preload = "auto";
+    audio._clarityName = name;
+    // Cause confirmée par test A/B utilisateur (voix off = dictée OK, voix
+    // on = dictée cassée) : sur iOS, une fois qu'un son a été JOUÉ via cet
+    // élément <audio>, la session audio système reste "occupée" en mode
+    // lecture même après pause() — le micro suivant s'ouvre alors côté JS
+    // (onaudiostart se déclenche) mais ne capte jamais rien de réel. On
+    // force un vrai relâchement de la ressource dès la fin de la lecture
+    // (mobile uniquement), voir releaseVoiceAudio().
+    audio.addEventListener("ended", function () {
+      releaseVoiceAudio(audio);
+    });
     voiceAudioCache[name] = audio;
   }
   return audio;
+}
+
+function releaseVoiceAudio(audio) {
+  if (!isMobileDevice() || !audio || !audio._clarityName) return;
+  try {
+    audio.pause();
+    // removeAttribute + load() force un vrai relâchement de la ressource
+    // média (contrairement à pause() seul, qui garde la session active).
+    audio.removeAttribute("src");
+    audio.load();
+    // Re-précharge aussitôt (sans jouer) pour garder une latence quasi
+    // nulle au prochain playVoiceLine — seul le fait d'avoir JOUÉ le son
+    // retient la session audio iOS, pas le simple fait qu'il soit en
+    // mémoire tampon/préchargé.
+    audio.src = audio._clarityName + ".mp3";
+    audio.load();
+  } catch (e) {}
 }
 
 function preloadVoiceLines() {
@@ -10636,6 +10664,10 @@ function stopVoicePlayback() {
       currentVoiceAudio.pause();
       currentVoiceAudio.currentTime = 0;
     } catch (e) {}
+    // Couvre aussi l'arrêt forcé (annulation en pleine lecture), pas
+    // seulement la fin naturelle : dans les deux cas, la session audio
+    // iOS doit être relâchée avant la prochaine tentative de dictée.
+    releaseVoiceAudio(currentVoiceAudio);
   }
 }
 
