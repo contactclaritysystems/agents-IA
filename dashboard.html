@@ -10853,6 +10853,18 @@ Bonne journée,`
   }, "Compte rendu envoyé par mail");
 }
 
+// Filet de sécurité : l'agent (OpenAI, côté Make.com) omet parfois
+// l'objet du mail. Plutôt que de bloquer l'envoi et forcer l'utilisateur
+// à le taper lui-même (ce n'est pas son rôle), on déduit un objet
+// raisonnable à partir des premiers mots du message généré.
+function deriveFallbackSubject(body) {
+  const words = (body || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "Message de Clarity";
+  let subject = words.slice(0, 8).join(" ");
+  if (words.length > 8) subject += "…";
+  return subject.length > 70 ? subject.slice(0, 70).trim() + "…" : subject;
+}
+
 function openMailPreview(data, instruction) {
   // La popup de progression ("Demande comprise"...) devait sinon rester
   // visible jusqu'à 3.5s (son délai normal de disparition), pendant que
@@ -10867,7 +10879,7 @@ function openMailPreview(data, instruction) {
 
   currentPreparedMail = {
     to: data.to || data.email || data.recipient_email || "",
-    subject: data.subject || data.objet || "",
+    subject: (data.subject || data.objet || "").trim(),
     body: data.body || data.message || data.email_body || "",
     contact_name:
       data.contact_name ||
@@ -10878,6 +10890,10 @@ function openMailPreview(data, instruction) {
       data.name ||
       ""
   };
+
+  if (!currentPreparedMail.subject) {
+    currentPreparedMail.subject = deriveFallbackSubject(currentPreparedMail.body);
+  }
 
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
