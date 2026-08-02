@@ -10613,6 +10613,27 @@ function isIOSDevice() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+// DEBUG TEMPORAIRE : panneau non bloquant (contrairement à alert(), qui
+// gèle les setTimeout/relances tant qu'on ne l'a pas fermée) pour lire la
+// trace des évènements micro en direct, sans interrompre le mécanisme de
+// relance automatique en cours. À retirer une fois la vraie cause figée.
+let debugPanelEl = null;
+function showDebugPanel(lines) {
+  if (!isMobileDevice()) return;
+  if (!debugPanelEl) {
+    debugPanelEl = document.createElement("div");
+    debugPanelEl.style.cssText =
+      "position:fixed;left:8px;right:8px;bottom:90px;max-height:38vh;" +
+      "overflow-y:auto;background:rgba(0,0,0,0.88);color:#4ade80;" +
+      "font-family:monospace;font-size:11px;line-height:1.5;padding:10px;" +
+      "border-radius:10px;z-index:999999;white-space:pre-wrap;" +
+      "border:1px solid #4ade80;";
+    document.body.appendChild(debugPanelEl);
+  }
+  debugPanelEl.textContent = lines.join("\n");
+  debugPanelEl.scrollTop = debugPanelEl.scrollHeight;
+}
+
 // Redemande une capture micro très courte (et la coupe aussitôt) juste
 // avant chaque tentative de dictée sur iOS : ça force le système à
 // réétablir une session audio fraîche pour le micro, plutôt que de
@@ -11343,12 +11364,15 @@ progressIcon: "✨",
   let hasReceivedAnyResult = false;
   let lastErrorCode = null;
   let micRetryCount = 0;
-  // DEBUG TEMPORAIRE — voir commentaire dans startAttempt().
+  // DEBUG TEMPORAIRE — voir commentaire dans startAttempt(). Affiché dans
+  // un panneau à l'écran non bloquant (pas d'alert()) pour ne pas geler
+  // les relances automatiques pendant qu'on lit la trace.
   const attemptTrace = [];
   const flowStartTime = Date.now();
   function traceEvent(name) {
     if (!isMobileDevice()) return;
     attemptTrace.push(name + " +" + (Date.now() - flowStartTime) + "ms");
+    showDebugPanel(attemptTrace);
   }
   // iOS/WebKit peut mettre jusqu'à ~1 minute à libérer le micro après un
   // premier usage avant qu'une 2e session de reconnaissance ne capte quoi
@@ -11468,11 +11492,6 @@ progressIcon: "✨",
 
       if (!instruction) {
         if (isMobileDevice()) {
-          if (micRetryCount === 0) {
-            // 1er échec de cette session = exactement le scénario "2e
-            // dictée d'affilée qui ne capte rien". On fige la trace ici.
-            alert("DEBUG micro (à capturer) :\n" + attemptTrace.join("\n"));
-          }
           attemptFailed();
         } else {
           giveUpNoInstruction();
@@ -11679,13 +11698,14 @@ console.log("MESSAGE =", message);
 
         if (isMobileDevice()) {
           clearTimeout(watchdogTimer);
+          // Fenêtre élargie 3s → 8s à titre de test : si onaudiostart se
+          // déclenche "en avance" côté JS avant que le vrai routage audio
+          // ne soit terminé côté OS, peut-être que le son finit par arriver
+          // un peu plus tard que nos 3s précédentes le permettaient.
           watchdogTimer = setTimeout(function () {
             if (myGeneration !== recognitionGeneration) return;
             if (hasReceivedAnyResult || hasSent) return;
             traceEvent("watchdog fired (force abort)");
-            if (micRetryCount === 0) {
-              alert("DEBUG micro (à capturer) :\n" + attemptTrace.join("\n"));
-            }
             // Abandon forcé de cette tentative, qu'elle réponde ou non à
             // stop()/abort() — c'est ce chien de garde indépendant, pas
             // onend, qui décide de relancer : une session bloquée ne
@@ -11694,7 +11714,7 @@ console.log("MESSAGE =", message);
             try { rec.abort(); } catch(e) {}
             try { rec.stop(); } catch(e) {}
             attemptFailed();
-          }, 3000);
+          }, 8000);
         }
       } catch (e) {
         traceEvent("rec.start() threw: " + (e && e.message));
