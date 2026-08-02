@@ -10564,6 +10564,22 @@ function unlockVoicePlayback() {
   } catch (e) {}
 }
 
+// Sur PC (Chrome), plusieurs dictées d'affilée fonctionnent très bien.
+// Sur iOS (Safari, navigateur ET app installée — même moteur WebKit en
+// dessous), une 2e session webkitSpeechRecognition dans la même page a
+// tendance à échouer silencieusement (le micro a l'air actif mais ne
+// capte plus rien) — c'est un bug WebKit connu, pas quelque chose que le
+// code de l'app déclenche. Un court délai avant de redémarrer le micro,
+// uniquement sur mobile, laisse au moteur le temps de bien se libérer.
+function isMobileDevice() {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
+function delayBeforeMic() {
+  if (!isMobileDevice()) return Promise.resolve();
+  return new Promise(function (resolve) { setTimeout(resolve, 350); });
+}
+
 // Traduit les codes d'erreur du Web Speech API en messages compréhensibles.
 // "not-allowed"/"service-not-allowed" = vraiment un refus de permission ;
 // tous les autres cas (audio-capture, network...) ne le sont PAS et ne
@@ -11273,6 +11289,8 @@ progressIcon: "✨",
     }, 9000);
   }
 
+  await delayBeforeMic();
+
   try {
     recognition.start();
     resetSilenceTimer();
@@ -11867,7 +11885,7 @@ function closeQuickMailModal(isCancel = true) {
 
 let quickMailDictationRecognition = null;
 
-function toggleQuickMailDictation() {
+async function toggleQuickMailDictation() {
   const micBtn = document.getElementById("quick-mail-mic-btn");
   const textarea = document.getElementById("quick-mail-instruction");
 
@@ -11917,6 +11935,8 @@ function toggleQuickMailDictation() {
     quickMailDictationRecognition = null;
     if (micBtn) micBtn.classList.remove("is-recording");
   };
+
+  await delayBeforeMic();
 
   try {
     recognition.start();
