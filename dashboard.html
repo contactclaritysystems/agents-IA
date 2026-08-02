@@ -11261,41 +11261,27 @@ progressIcon: "✨",
     btn.onclick = startOrchestratorDictation;
   }
 
-  setListeningUI(true);
-  // Sur mobile, le micro n'est pas encore réellement actif tant que le
-  // délai de sécurité (voir delayBeforeMic()) n'est pas écoulé — si on
-  // affiche "Je vous écoute…" trop tôt, l'utilisateur commence à parler
-  // avant que le micro capte vraiment, et les premiers mots sont perdus.
-  if (placeholderEl) {
-    placeholderEl.textContent = isMobileDevice() ? "Préparation du micro…" : "Je vous écoute…";
-  }
-
-  // Sur iOS, le micro (session audio "enregistrement") et la lecture d'une
-  // confirmation vocale (session audio "lecture") partagent la même
-  // ressource système — si une voix vient de jouer (ex: "mail envoyé")
-  // juste avant, le micro suivant peut échouer à capter quoi que ce soit.
-  // On coupe donc toute voix en cours avant de redémarrer le micro.
-  stopVoicePlayback();
-
-  let recognition = new SpeechRecognition();
-  recognition.lang = "fr-FR";
-  recognition.interimResults = true;
-  recognition.continuous = true;
-  recognition.maxAlternatives = 1;
-
+  // Bug WebKit connu sur iOS : une session de reconnaissance vocale peut
+  // parfois capter silencieusement rien du tout, surtout peu après une
+  // précédente utilisation — le micro a l'air actif mais onresult ne se
+  // déclenche jamais, et parfois même onend/onerror ne se déclenchent pas
+  // non plus (session vraiment bloquée). On ne peut donc pas compter
+  // uniquement sur les évènements de l'objet recognition pour détecter
+  // l'échec : un "chien de garde" indépendant (watchdogTimer, simple
+  // setTimeout) surveille chaque tentative et, si rien n'a été capté après
+  // 3s, abandonne cette tentative (qu'elle réponde ou non) et en relance
+  // une toute nouvelle. Le compteur recognitionGeneration permet d'ignorer
+  // les évènements d'une tentative devenue périmée si jamais elle finit
+  // par répondre en retard.
+  let recognition = null;
+  let recognitionGeneration = 0;
+  let watchdogTimer = null;
+  let silenceTimer = null;
   let finalText = "";
   let latestText = "";
   let hasSent = false;
-  let silenceTimer = null;
   let hasReceivedAnyResult = false;
   let lastErrorCode = null;
-  // Bug WebKit connu sur iOS : une session de reconnaissance vocale peut
-  // parfois capter silencieusement rien du tout, surtout peu après une
-  // précédente utilisation (le micro semble actif mais onresult ne se
-  // déclenche jamais). Tant qu'aucun résultat n'a été reçu, on utilise une
-  // fenêtre d'écoute courte sur mobile pour détecter vite ce cas et
-  // relancer automatiquement, plutôt que d'attendre les 9s habituelles à
-  // chaque tentative.
   let micRetryCount = 0;
   const MIC_MAX_RETRIES = 6;
 
@@ -11303,88 +11289,90 @@ progressIcon: "✨",
     btn.onclick = () => {
       lockActiveAgentButton(btn, "⏳ Traitement...");
       micRetryCount = MIC_MAX_RETRIES; // un clic manuel annule les relances auto
-      try { recognition.stop(); } catch(e) {}
+      recognitionGeneration++; // périme la tentative en cours
+      clearTimeout(watchdogTimer);
+      try { if (recognition) recognition.stop(); } catch(e) {}
     };
   }
 
-  function resetSilenceTimer() {
-    clearTimeout(silenceTimer);
-    const delay = (!hasReceivedAnyResult && isMobileDevice()) ? 3000 : 9000;
-    silenceTimer = setTimeout(() => {
-      try { recognition.stop(); } catch(e) {}
-    }, delay);
+  function giveUpNoInstruction() {
+    setListeningUI(false);
+    unlockAgentButtons();
+    resetMicButton();
+    flashInputError(
+      lastErrorCode && lastErrorCode !== "no-speech" && lastErrorCode !== "aborted"
+        ? "✕ " + describeSpeechError(lastErrorCode)
+        : "✕ Aucune instruction détectée."
+    );
   }
 
-  const handleResult = function(event) {
-    hasReceivedAnyResult = true;
-    resetSilenceTimer();
-
-    let interimText = "";
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const text = event.results[i][0].transcript;
-
-      if (event.results[i].isFinal) {
-        finalText += text + " ";
-      } else {
-        interimText += text;
-      }
-    }
-
-    latestText = (finalText + interimText).trim();
-    if (placeholderEl) placeholderEl.textContent = latestText || "Je vous écoute…";
-  };
-
-  const handleEnd = async function() {
-    clearTimeout(silenceTimer);
-
-    const instruction = (latestText || finalText).trim();
-
-    // Échec silencieux connu sur iOS : la session se termine sans avoir
-    // rien capté (onresult ne s'est jamais déclenché), typiquement peu
-    // après une précédente dictée. Sur mobile, tant qu'il reste des
-    // tentatives, on relance automatiquement une nouvelle session plutôt
-    // que d'obliger l'utilisateur à retaper lui-même sur le micro.
-    if (!instruction && isMobileDevice() && micRetryCount < MIC_MAX_RETRIES) {
-      micRetryCount++;
-      if (placeholderEl) placeholderEl.textContent = "Le micro se prépare, patientez…";
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      try {
-        recognition = new SpeechRecognition();
-        recognition.lang = "fr-FR";
-        recognition.interimResults = true;
-        recognition.continuous = true;
-        recognition.maxAlternatives = 1;
-        recognition.onresult = handleResult;
-        recognition.onend = handleEnd;
-        recognition.onerror = handleError;
-        recognition.start();
-        resetSilenceTimer();
-        if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
-        return;
-      } catch (e) {
-        // Si même la relance échoue à démarrer, on tombe dans le
-        // traitement normal ci-dessous plutôt que de rester bloqué.
-      }
-    }
-
-    setListeningUI(false);
-
-    if (!instruction) {
-      unlockAgentButtons();
-      resetMicButton();
-      flashInputError(
-        lastErrorCode && lastErrorCode !== "no-speech" && lastErrorCode !== "aborted"
-          ? "✕ " + describeSpeechError(lastErrorCode)
-          : "✕ Aucune instruction détectée."
-      );
+  function attemptFailed() {
+    if (micRetryCount >= MIC_MAX_RETRIES) {
+      giveUpNoInstruction();
       return;
     }
+    micRetryCount++;
+    if (placeholderEl) placeholderEl.textContent = "Le micro se prépare, patientez…";
+    setTimeout(startAttempt, 600);
+  }
 
-    if (hasSent) return;
-    hasSent = true;
+  function startAttempt() {
+    const myGeneration = ++recognitionGeneration;
+    const rec = new SpeechRecognition();
+    rec.lang = "fr-FR";
+    rec.interimResults = true;
+    rec.continuous = true;
+    rec.maxAlternatives = 1;
+    recognition = rec;
 
-    ensureBox();
+    rec.onresult = function(event) {
+      if (myGeneration !== recognitionGeneration) return;
+      hasReceivedAnyResult = true;
+      clearTimeout(watchdogTimer);
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => { try { rec.stop(); } catch(e) {} }, 9000);
+
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += text + " ";
+        } else {
+          interimText += text;
+        }
+      }
+      latestText = (finalText + interimText).trim();
+      if (placeholderEl) placeholderEl.textContent = latestText || "Je vous écoute…";
+    };
+
+    rec.onerror = function(event) {
+      if (myGeneration !== recognitionGeneration) return;
+      console.error("Erreur reconnaissance vocale (orchestrateur) :", event.error);
+      lastErrorCode = event.error;
+    };
+
+    rec.onend = async function() {
+      if (myGeneration !== recognitionGeneration) return; // tentative périmée
+      clearTimeout(watchdogTimer);
+      clearTimeout(silenceTimer);
+
+      const instruction = (latestText || finalText).trim();
+
+      if (!instruction) {
+        if (isMobileDevice()) {
+          attemptFailed();
+        } else {
+          giveUpNoInstruction();
+        }
+        return;
+      }
+
+      setListeningUI(false);
+
+      if (hasSent) return;
+      hasSent = true;
+
+      ensureBox();
     setDictationBoxState(box, "info");
 
 if (config.agent === "orchestrator") {
@@ -11539,33 +11527,61 @@ console.log("MESSAGE =", message);
       autoHideDictationBox(box);
       await saveActionLog(config.agent, instruction, "error");
     }
-  };
+    };
 
-  // Se contente de mémoriser l'erreur : c'est handleEnd (qui se déclenche
-  // juste après, "end" suit toujours "error") qui décide seul de relancer
-  // ou d'abandonner, pour éviter que les deux gèrent l'UI en parallèle.
-  const handleError = function(event) {
-    console.error("Erreur reconnaissance vocale (orchestrateur) :", event.error);
-    lastErrorCode = event.error;
-  };
+    setListeningUI(true);
+    // Sur mobile, le micro n'est pas encore réellement actif tant que le
+    // délai de sécurité (voir delayBeforeMic()) n'est pas écoulé — si on
+    // affiche "Je vous écoute…" trop tôt, l'utilisateur commence à parler
+    // avant que le micro capte vraiment, et les premiers mots sont perdus.
+    if (placeholderEl) {
+      placeholderEl.textContent = isMobileDevice() ? "Préparation du micro…" : "Je vous écoute…";
+    }
 
-  recognition.onresult = handleResult;
-  recognition.onend = handleEnd;
-  recognition.onerror = handleError;
+    // Sur iOS, le micro (session audio "enregistrement") et la lecture
+    // d'une confirmation vocale (session audio "lecture") partagent la
+    // même ressource système — si une voix vient de jouer (ex: "mail
+    // envoyé") juste avant, le micro suivant peut échouer à capter quoi
+    // que ce soit. On coupe donc toute voix en cours avant de (re)lancer
+    // le micro, à chaque tentative (y compris les relances auto).
+    stopVoicePlayback();
 
-  await delayBeforeMic();
+    (async () => {
+      await delayBeforeMic();
+      if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
 
-  try {
-    recognition.start();
-    resetSilenceTimer();
-    if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
-  } catch(e) {
-    unlockAgentButtons();
-    resetMicButton();
-    setListeningUI(false);
-    flashInputError("✕ Impossible de démarrer le micro.");
-    return;
+      try {
+        rec.start();
+        if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => { try { rec.stop(); } catch(e) {} }, 9000);
+
+        if (isMobileDevice()) {
+          clearTimeout(watchdogTimer);
+          watchdogTimer = setTimeout(function () {
+            if (myGeneration !== recognitionGeneration) return;
+            if (hasReceivedAnyResult || hasSent) return;
+            // Abandon forcé de cette tentative, qu'elle réponde ou non à
+            // stop()/abort() — c'est ce chien de garde indépendant, pas
+            // onend, qui décide de relancer : une session bloquée ne
+            // déclenche parfois AUCUN évènement du tout.
+            try { rec.onresult = null; rec.onend = null; rec.onerror = null; } catch(e) {}
+            try { rec.abort(); } catch(e) {}
+            try { rec.stop(); } catch(e) {}
+            attemptFailed();
+          }, 3000);
+        }
+      } catch (e) {
+        if (myGeneration !== recognitionGeneration) return;
+        unlockAgentButtons();
+        resetMicButton();
+        setListeningUI(false);
+        flashInputError("✕ Impossible de démarrer le micro.");
+      }
+    })();
   }
+
+  startAttempt();
 }
 
   let quickMailSelectedContact = null;
