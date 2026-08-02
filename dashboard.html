@@ -10580,6 +10580,51 @@ function delayBeforeMic() {
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
 }
 
+// Un rechargement complet de la page libère l'AVAudioSession iOS bien
+// plus vite qu'une attente passive (constaté : recharger règle le souci
+// instantanément, alors qu'attendre sans rien faire prend jusqu'à ~1 min).
+// On profite donc du moment juste après l'envoi d'un mail — un point de
+// transition naturel — pour recharger tout seul sur mobile, en gardant la
+// vue courante en mémoire pour la restaurer sans que l'utilisateur ne
+// remarque rien. Comme le domaine est déjà autorisé pour le micro (accepté
+// une 1ère fois), ce rechargement ne redemande PAS la permission : Safari
+// ne redemande que si le réglage du site est resté sur "Demander" au lieu
+// de "Autoriser", ce qui est un réglage Safari indépendant de ce code.
+function scheduleMobileMicRefresh() {
+  if (!isMobileDevice()) return;
+  try {
+    const activePage = document.querySelector(".page-view.active");
+    sessionStorage.setItem(
+      "clarity_restore_section",
+      activePage ? activePage.id : "main-agents"
+    );
+  } catch (e) {}
+  setTimeout(function () {
+    window.location.reload();
+  }, 2200);
+}
+
+function restoreSectionAfterMicRefresh() {
+  let sectionId = null;
+  try {
+    sectionId = sessionStorage.getItem("clarity_restore_section");
+    sessionStorage.removeItem("clarity_restore_section");
+  } catch (e) {}
+  if (!sectionId) return;
+
+  const map = {
+    "main-agents": "agents",
+    "main-settings": "settings",
+    "main-contacts": "contacts",
+    "main-planning": "planning",
+    "main-historique": "historique"
+  };
+  const section = map[sectionId];
+  if (!section || section === "agents") return; // déjà la vue par défaut
+  const btn = document.querySelector('.bottom-tab[data-section="' + section + '"]');
+  showSection(section, btn);
+}
+
 // Traduit les codes d'erreur du Web Speech API en messages compréhensibles.
 // "not-allowed"/"service-not-allowed" = vraiment un refus de permission ;
 // tous les autres cas (audio-capture, network...) ne le sont PAS et ne
@@ -15140,7 +15185,11 @@ ${body}`,
 
   await loadActionCounter();
   onboardingOnEvent("mail_sent");
-  
+
+  // Recharge silencieuse (mobile uniquement) pour garantir que la
+  // prochaine dictée fonctionne du 1er coup, sans attendre le bug WebKit.
+  scheduleMobileMicRefresh();
+
 }, 550);
 
   } catch (err) {
@@ -15216,6 +15265,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
 
   await handleUser(data.session.user);
 hideAppLoader();
+restoreSectionAfterMicRefresh();
 })();
 
   window.disconnectGmail = disconnectGmail;
