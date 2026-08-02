@@ -10523,6 +10523,89 @@ const voiceAudioCache = {};
 let currentVoiceAudio = null;
 let voiceUnlocked = false;
 
+// ── Lecture via Web Audio API sur iOS ──────────────────────────────────
+// Cause confirmée par test A/B utilisateur : voix désactivée = dictée OK à
+// chaque fois, voix activée = 2e dictée systématiquement muette (le micro
+// "s'ouvre" côté JS mais ne capte plus rien). Deux correctifs basés sur
+// l'élément <audio> (relâchement de ressource, fenêtre d'écoute élargie)
+// n'ont rien changé : le vrai problème est que pause()/removeAttribute()
+// sur un <audio> ne force JAMAIS un vrai relâchement de la session audio
+// iOS. AudioContext.close(), lui, est une API dédiée et documentée pour
+// ça : on décode chaque phrase une fois (mise en cache), puis à chaque
+// lecture on ouvre un AudioContext tout neuf, on joue, et on le referme
+// (close()) sitôt la lecture finie — un vrai cycle ouverture/fermeture,
+// plutôt qu'un <audio> qu'on réutilise indéfiniment. Uniquement sur iOS ;
+// PC/Android gardent l'ancien système <audio>, qui n'a pas ce problème.
+const voiceAudioBuffers = {};
+let voiceDecodeContext = null;
+let voiceUseWebAudio = true;
+let currentVoiceSource = null;
+let currentVoiceContext = null;
+
+function getDecodeContext() {
+  if (!voiceDecodeContext) {
+    try {
+      voiceDecodeContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) {
+      voiceUseWebAudio = false;
+    }
+  }
+  return voiceDecodeContext;
+}
+
+async function decodeVoiceLine(name) {
+  if (voiceAudioBuffers[name]) return voiceAudioBuffers[name];
+  const ctx = getDecodeContext();
+  if (!ctx) return null;
+  try {
+    const response = await fetch(name + ".mp3");
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    voiceAudioBuffers[name] = audioBuffer;
+    return audioBuffer;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function playVoiceLineWebAudio(name, myToken) {
+  const buffer = await decodeVoiceLine(name);
+  if (!buffer) { voiceUseWebAudio = false; return false; }
+  if (myToken !== voicePlayToken) return true; // périmée pendant le décodage, mais pas une erreur
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    currentVoiceSource = source;
+    currentVoiceContext = ctx;
+    source.onended = function () {
+      if (currentVoiceSource === source) {
+        currentVoiceSource = null;
+        currentVoiceContext = null;
+      }
+      try { ctx.close(); } catch (e) {}
+    };
+    source.start(0);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function stopVoiceWebAudio() {
+  if (currentVoiceSource) {
+    try { currentVoiceSource.onended = null; currentVoiceSource.stop(); } catch (e) {}
+    currentVoiceSource = null;
+  }
+  if (currentVoiceContext) {
+    try { currentVoiceContext.close(); } catch (e) {}
+    currentVoiceContext = null;
+  }
+}
+// ────────────────────────────────────────────────────────────────────
+
 function getVoiceAudio(name) {
   let audio = voiceAudioCache[name];
   if (!audio) {
@@ -10566,6 +10649,9 @@ function preloadVoiceLines() {
     try {
       getVoiceAudio(name).load();
     } catch (e) {}
+    if (isIOSDevice()) {
+      decodeVoiceLine(name); // fire-and-forget, mis en cache pour plus tard
+    }
   });
 }
 
@@ -10590,6 +10676,26 @@ function unlockVoicePlayback() {
       audio.volume = prevVolume;
     });
   } catch (e) {}
+
+  // Débloque aussi la lecture via Web Audio API (iOS) : un AudioContext
+  // créé/repris hors d'un geste utilisateur reste "suspendu" sur iOS —
+  // on le fait donc une 1ère fois ici, dans ce tap/clic initial, pour que
+  // les lectures suivantes (déclenchées après un fetch réseau) puissent
+  // ouvrir et reprendre leurs propres contextes sans blocage.
+  if (isIOSDevice()) {
+    try {
+      const ctx = getDecodeContext();
+      if (ctx) {
+        ctx.resume().then(function () {
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.connect(ctx.destination);
+          src.start(0);
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
 }
 
 // Sur PC (Chrome), plusieurs dictées d'affilée fonctionnent très bien.
@@ -10684,6 +10790,10 @@ function describeSpeechError(code) {
 let voicePlayToken = 0;
 
 function stopVoicePlayback() {
+  if (isIOSDevice() && voiceUseWebAudio) {
+    stopVoiceWebAudio();
+    return;
+  }
   if (currentVoiceAudio) {
     try {
       currentVoiceAudio.pause();
@@ -10699,10 +10809,28 @@ function stopVoicePlayback() {
 function playVoiceLine(name) {
   if (!isVoiceEnabled()) return;
   const myToken = ++voicePlayToken;
+
+  // Coupe toute voix déjà en cours pour éviter deux messages qui se
+  // chevauchent (ex : annulation qui coupe une confirmation précédente).
+  stopVoicePlayback();
+
+  if (isIOSDevice() && voiceUseWebAudio) {
+    playVoiceLineWebAudio(name, myToken).then(function (ok) {
+      if (!ok) {
+        // Échec/indisponibilité de Web Audio : on retombe sur l'ancien
+        // système <audio> pour cette lecture (mieux vaut un son avec le
+        // vieux bug que pas de son du tout).
+        playVoiceLineHtmlAudio(name, myToken);
+      }
+    });
+    return;
+  }
+
+  playVoiceLineHtmlAudio(name, myToken);
+}
+
+function playVoiceLineHtmlAudio(name, myToken) {
   try {
-    // Coupe toute voix déjà en cours pour éviter deux messages qui se
-    // chevauchent (ex : annulation qui coupe une confirmation précédente).
-    stopVoicePlayback();
     const audio = getVoiceAudio(name);
     audio.currentTime = 0;
     currentVoiceAudio = audio;
