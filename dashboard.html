@@ -11288,8 +11288,13 @@ progressIcon: "✨",
   if (btn) {
     btn.onclick = () => {
       lockActiveAgentButton(btn, "⏳ Traitement...");
-      micRetryCount = MIC_MAX_RETRIES; // un clic manuel annule les relances auto
-      recognitionGeneration++; // périme la tentative en cours
+      // N'incrémente PAS recognitionGeneration ici : ça périmerait aussi le
+      // "onend" légitime de LA session qu'on est en train d'arrêter (celle
+      // qui contient le texte dicté), qui ne se déclencherait alors jamais
+      // — bouton bloqué sur "Traitement..." pour toujours. On coupe juste
+      // les relances auto (le micro s'arrête normalement et son résultat
+      // doit être traité comme d'habitude).
+      micRetryCount = MIC_MAX_RETRIES;
       clearTimeout(watchdogTimer);
       try { if (recognition) recognition.stop(); } catch(e) {}
     };
