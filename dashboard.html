@@ -11262,7 +11262,13 @@ progressIcon: "✨",
   }
 
   setListeningUI(true);
-  if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
+  // Sur mobile, le micro n'est pas encore réellement actif tant que le
+  // délai de sécurité (voir delayBeforeMic()) n'est pas écoulé — si on
+  // affiche "Je vous écoute…" trop tôt, l'utilisateur commence à parler
+  // avant que le micro capte vraiment, et les premiers mots sont perdus.
+  if (placeholderEl) {
+    placeholderEl.textContent = isMobileDevice() ? "Préparation du micro…" : "Je vous écoute…";
+  }
 
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
@@ -11294,6 +11300,7 @@ progressIcon: "✨",
   try {
     recognition.start();
     resetSilenceTimer();
+    if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
   } catch(e) {
     unlockAgentButtons();
     resetMicButton();
@@ -11910,7 +11917,6 @@ async function toggleQuickMailDictation() {
   if (finalText) finalText += " ";
 
   quickMailDictationRecognition = recognition;
-  if (micBtn) micBtn.classList.add("is-recording");
 
   recognition.onresult = function(event) {
     let interimText = "";
@@ -11940,6 +11946,7 @@ async function toggleQuickMailDictation() {
 
   try {
     recognition.start();
+    if (micBtn) micBtn.classList.add("is-recording");
   } catch(e) {
     quickMailDictationRecognition = null;
     if (micBtn) micBtn.classList.remove("is-recording");
