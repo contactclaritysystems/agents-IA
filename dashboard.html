@@ -11270,6 +11270,13 @@ progressIcon: "✨",
     placeholderEl.textContent = isMobileDevice() ? "Préparation du micro…" : "Je vous écoute…";
   }
 
+  // Sur iOS, le micro (session audio "enregistrement") et la lecture d'une
+  // confirmation vocale (session audio "lecture") partagent la même
+  // ressource système — si une voix vient de jouer (ex: "mail envoyé")
+  // juste avant, le micro suivant peut échouer à capter quoi que ce soit.
+  // On coupe donc toute voix en cours avant de redémarrer le micro.
+  stopVoicePlayback();
+
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
@@ -11906,6 +11913,9 @@ async function toggleQuickMailDictation() {
     showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
     return;
   }
+
+  // Voir commentaire équivalent dans startSimpleAgentDictation().
+  stopVoicePlayback();
 
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
