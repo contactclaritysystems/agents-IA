@@ -11628,10 +11628,13 @@ console.log("MESSAGE =", message);
     stopVoicePlayback();
 
     (async () => {
-      traceEvent("warmupMic() called");
-      await warmupMic();
-      traceEvent("warmupMic() resolved");
-      if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
+      // warmupMic() retiré : la trace a montré qu'onaudiostart se déclenche
+      // vite (+411ms) mais qu'ensuite AUCUN son n'est capté pendant 3s —
+      // le micro "s'ouvre" côté JS mais ne reçoit rien de réel. Hypothèse :
+      // notre propre warmupMic() (getUserMedia puis stop() immédiat juste
+      // avant rec.start()) crée elle-même ce trou — le matériel micro est
+      // libéré puis réclamé trop vite, sans laisser à iOS le temps de
+      // vraiment router l'audio avant que la reconnaissance ne démarre.
       await delayBeforeMic();
       if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
 
@@ -12109,7 +12112,6 @@ async function toggleQuickMailDictation() {
     if (micBtn) micBtn.classList.remove("is-recording");
   };
 
-  await warmupMic();
   await delayBeforeMic();
 
   try {
