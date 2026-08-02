@@ -11283,7 +11283,15 @@ progressIcon: "✨",
   let hasReceivedAnyResult = false;
   let lastErrorCode = null;
   let micRetryCount = 0;
-  const MIC_MAX_RETRIES = 6;
+  // iOS/WebKit peut mettre jusqu'à ~1 minute à libérer le micro après un
+  // premier usage avant qu'une 2e session de reconnaissance ne capte quoi
+  // que ce soit (bug plateforme connu, confirmé empiriquement : ça repart
+  // tout seul après une attente suffisante). Le budget de relances doit donc
+  // couvrir une fenêtre proche de cette minute, pas seulement quelques
+  // secondes, sinon on abandonne alors que ça allait justement se débloquer.
+  // ~3.95s par cycle (3s chien de garde + 0.6s pause + 0.35s délai mobile)
+  // → 20 relances ≈ 80s de couverture.
+  const MIC_MAX_RETRIES = 20;
 
   if (btn) {
     btn.onclick = () => {
@@ -11317,7 +11325,11 @@ progressIcon: "✨",
       return;
     }
     micRetryCount++;
-    if (placeholderEl) placeholderEl.textContent = "Le micro se prépare, patientez…";
+    if (placeholderEl) {
+      placeholderEl.textContent = micRetryCount <= 3
+        ? "Le micro se prépare, patientez…"
+        : "Réinitialisation du micro (jusqu'à 1 min après une dictée précédente), merci de patienter…";
+    }
     setTimeout(startAttempt, 600);
   }
 
