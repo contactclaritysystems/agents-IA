@@ -10570,7 +10570,11 @@ async function decodeVoiceLine(name) {
 
 async function playVoiceLineWebAudio(name, myToken) {
   const buffer = await decodeVoiceLine(name);
-  if (!buffer) { voiceUseWebAudio = false; return false; }
+  // Un échec ponctuel de décodage (ex: petit accroc réseau) ne doit PAS
+  // désactiver Web Audio pour tout le reste de la session — seulement
+  // faire retomber CETTE lecture sur l'ancien système <audio>. Sans ça,
+  // un seul raté désactivait la voix "de temps en temps" pour de bon.
+  if (!buffer) return false;
   if (myToken !== voicePlayToken) return true; // périmée pendant le décodage, mais pas une erreur
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -11561,10 +11565,12 @@ progressIcon: "✨",
     const rec = new SpeechRecognition();
     rec.lang = "fr-FR";
     rec.interimResults = true;
-    // "continuous: true" est stable sur PC/Android (moteur Chrome) mais
-    // documenté comme cause d'engorgement du buffer audio sur iOS/WebKit,
-    // ce qui rend une 2e session muette. Désactivé uniquement sur iOS.
-    rec.continuous = !isIOSDevice();
+    // La vraie cause du "2e mail muet" était la voix de confirmation qui
+    // gardait la session audio iOS occupée (réglé via Web Audio API), pas
+    // le mode continuous — remis à true partout : ça laisse le micro
+    // tolérer de vraies pauses dans la phrase au lieu de couper au bout
+    // de 1-2s (comportement natif d'iOS en mode continuous:false).
+    rec.continuous = true;
     rec.maxAlternatives = 1;
     recognition = rec;
 
@@ -12264,7 +12270,7 @@ async function toggleQuickMailDictation() {
   const recognition = new SpeechRecognition();
   recognition.lang = "fr-FR";
   recognition.interimResults = true;
-  recognition.continuous = !isIOSDevice();
+  recognition.continuous = true;
   recognition.maxAlternatives = 1;
 
   let finalText = textarea ? textarea.value : "";
