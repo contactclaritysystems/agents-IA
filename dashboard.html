@@ -10537,30 +10537,29 @@ let voiceUnlocked = false;
 // plutôt qu'un <audio> qu'on réutilise indéfiniment. Uniquement sur iOS ;
 // PC/Android gardent l'ancien système <audio>, qui n'a pas ce problème.
 const voiceAudioBuffers = {};
-let voiceDecodeContext = null;
 let voiceUseWebAudio = true;
 let currentVoiceSource = null;
 let currentVoiceContext = null;
 
-function getDecodeContext() {
-  if (!voiceDecodeContext) {
-    try {
-      voiceDecodeContext = new (window.AudioContext || window.webkitAudioContext)();
-    } catch (e) {
-      voiceUseWebAudio = false;
-    }
-  }
-  return voiceDecodeContext;
-}
-
+// "mail-pret" restait muet même avec le délai : un vrai AudioContext
+// gardé ouvert en permanence juste pour décoder (jamais fermé) est
+// lui-même une ressource audio persistante — potentiellement une
+// nouvelle source de contention avec le micro, exactement le genre de
+// souci qu'on vient de corriger côté <audio>. OfflineAudioContext, lui,
+// ne retient JAMAIS de route audio "en direct" (il ne sert qu'à décoder/
+// calculer hors-ligne) : aucun impact possible sur la session partagée
+// avec le micro. On l'utilise uniquement pour le décodage ; la lecture
+// réelle continue de passer par un vrai AudioContext frais à chaque fois
+// (ouvert puis fermé juste après), comme avant.
 async function decodeVoiceLine(name) {
   if (voiceAudioBuffers[name]) return voiceAudioBuffers[name];
-  const ctx = getDecodeContext();
-  if (!ctx) return null;
+  const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OfflineCtx) return null;
   try {
     const response = await fetch(name + ".mp3");
     const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    const decodeCtx = new OfflineCtx(1, 1, 22050);
+    const audioBuffer = await decodeCtx.decodeAudioData(arrayBuffer);
     voiceAudioBuffers[name] = audioBuffer;
     return audioBuffer;
   } catch (e) {
@@ -10685,19 +10684,21 @@ function unlockVoicePlayback() {
   // créé/repris hors d'un geste utilisateur reste "suspendu" sur iOS —
   // on le fait donc une 1ère fois ici, dans ce tap/clic initial, pour que
   // les lectures suivantes (déclenchées après un fetch réseau) puissent
-  // ouvrir et reprendre leurs propres contextes sans blocage.
+  // ouvrir et reprendre leurs propres contextes sans blocage. Contexte
+  // jetable, refermé aussitôt (pas de ressource laissée "ouverte").
   if (isIOSDevice()) {
     try {
-      const ctx = getDecodeContext();
-      if (ctx) {
-        ctx.resume().then(function () {
-          const buffer = ctx.createBuffer(1, 1, 22050);
-          const src = ctx.createBufferSource();
-          src.buffer = buffer;
-          src.connect(ctx.destination);
-          src.start(0);
-        }).catch(function () {});
-      }
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx.resume().then(function () {
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(ctx.destination);
+        src.onended = function () { try { ctx.close(); } catch (e) {} };
+        src.start(0);
+      }).catch(function () {
+        try { ctx.close(); } catch (e) {}
+      });
     } catch (e) {}
   }
 }
@@ -10721,31 +10722,6 @@ function isMobileDevice() {
 // une pause) est stable. On désactive donc continuous UNIQUEMENT sur iOS.
 function isIOSDevice() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-// DEBUG TEMPORAIRE : panneau non bloquant (contrairement à alert(), qui
-// gèle les setTimeout/relances tant qu'on ne l'a pas fermée) pour lire la
-// trace des évènements micro en direct, sans interrompre le mécanisme de
-// relance automatique en cours. À retirer une fois la vraie cause figée.
-let debugPanelEl = null;
-function showDebugPanel(lines) {
-  if (!isMobileDevice()) return;
-  if (!debugPanelEl) {
-    debugPanelEl = document.createElement("div");
-    // pointer-events:none = ne bloque JAMAIS les clics/boutons en dessous,
-    // quelle que soit sa taille. Placé en haut (sous la barre d'heure) et
-    // limité en hauteur pour ne jamais recouvrir les boutons du bas.
-    debugPanelEl.style.cssText =
-      "position:fixed;left:8px;right:8px;top:54px;max-height:22vh;" +
-      "overflow:hidden;background:rgba(0,0,0,0.88);color:#4ade80;" +
-      "font-family:monospace;font-size:10px;line-height:1.4;padding:8px;" +
-      "border-radius:10px;z-index:999999;white-space:pre-wrap;" +
-      "border:1px solid #4ade80;pointer-events:none;";
-    document.body.appendChild(debugPanelEl);
-  }
-  // Seulement les 10 dernières lignes : reste compact même après
-  // plusieurs relances, au lieu de grossir indéfiniment.
-  debugPanelEl.textContent = lines.slice(-10).join("\n");
 }
 
 // Redemande une capture micro très courte (et la coupe aussitôt) juste
@@ -11522,16 +11498,9 @@ progressIcon: "✨",
   let hasReceivedAnyResult = false;
   let lastErrorCode = null;
   let micRetryCount = 0;
-  // DEBUG TEMPORAIRE — voir commentaire dans startAttempt(). Affiché dans
-  // un panneau à l'écran non bloquant (pas d'alert()) pour ne pas geler
-  // les relances automatiques pendant qu'on lit la trace.
-  const attemptTrace = [];
-  const flowStartTime = Date.now();
-  function traceEvent(name) {
-    if (!isMobileDevice()) return;
-    attemptTrace.push(name + " +" + (Date.now() - flowStartTime) + "ms");
-    showDebugPanel(attemptTrace);
-  }
+  // Instrumentation de debug retirée (panneau à l'écran demandé supprimé) ;
+  // fonction gardée en no-op pour ne pas devoir toucher chaque point d'appel.
+  function traceEvent() {}
   // iOS/WebKit peut mettre jusqu'à ~1 minute à libérer le micro après un
   // premier usage avant qu'une 2e session de reconnaissance ne capte quoi
   // que ce soit (bug plateforme connu, confirmé empiriquement : ça repart
