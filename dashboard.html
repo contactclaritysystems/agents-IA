@@ -10810,27 +10810,49 @@ function stopVoicePlayback() {
   }
 }
 
+// "mail-pret" se joue quasi immédiatement après la fin de la dictée (dès
+// que l'aperçu du mail s'ouvre) — trop près de l'arrêt du micro pour que
+// iOS ait fini de rendre la main sur la route audio. Résultat observé :
+// son absent ou anormalement faible (contention audio), alors que
+// "mail-envoyé" (qui se joue après un aller-retour réseau, donc bien plus
+// tard) n'a pas ce souci. Même logique symétrique que delayBeforeMic().
+function delayBeforeVoice() {
+  if (!isIOSDevice()) return Promise.resolve();
+  return new Promise(function (resolve) { setTimeout(resolve, 350); });
+}
+
 function playVoiceLine(name) {
   if (!isVoiceEnabled()) return;
   const myToken = ++voicePlayToken;
 
   // Coupe toute voix déjà en cours pour éviter deux messages qui se
   // chevauchent (ex : annulation qui coupe une confirmation précédente).
+  // Fait tout de suite, sans délai, pour que l'annulation reste instantanée.
   stopVoicePlayback();
 
-  if (isIOSDevice() && voiceUseWebAudio) {
-    playVoiceLineWebAudio(name, myToken).then(function (ok) {
-      if (!ok) {
-        // Échec/indisponibilité de Web Audio : on retombe sur l'ancien
-        // système <audio> pour cette lecture (mieux vaut un son avec le
-        // vieux bug que pas de son du tout).
-        playVoiceLineHtmlAudio(name, myToken);
-      }
-    });
-    return;
-  }
+  const dispatch = function () {
+    if (myToken !== voicePlayToken) return; // périmée pendant le délai
 
-  playVoiceLineHtmlAudio(name, myToken);
+    if (isIOSDevice() && voiceUseWebAudio) {
+      playVoiceLineWebAudio(name, myToken).then(function (ok) {
+        if (!ok) {
+          // Échec/indisponibilité de Web Audio : on retombe sur l'ancien
+          // système <audio> pour cette lecture (mieux vaut un son avec le
+          // vieux bug que pas de son du tout).
+          playVoiceLineHtmlAudio(name, myToken);
+        }
+      });
+      return;
+    }
+
+    playVoiceLineHtmlAudio(name, myToken);
+  };
+
+  if (isIOSDevice()) {
+    delayBeforeVoice().then(dispatch);
+  } else {
+    dispatch();
+  }
 }
 
 function playVoiceLineHtmlAudio(name, myToken) {
