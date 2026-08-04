@@ -10733,6 +10733,22 @@ function isIOSDevice() {
   return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
+// Preuve définitive obtenue par test utilisateur : "Mail envoyé" et "Envoi
+// annulé" jouent TOUJOURS correctement (déclenchés par un clic — Envoyer/
+// Annuler — donc loin dans le temps de la dernière utilisation du micro),
+// alors que "Mail prêt" échoue TOUJOURS (déclenché directement par la fin
+// de la reconnaissance vocale, quasi au même instant que l'arrêt du
+// micro), et ce même avec un délai fixe de 700ms. Le vrai facteur n'est
+// donc pas "combien de temps avant de jouer" en absolu, mais "combien de
+// temps s'est écoulé depuis la dernière activité micro". On mémorise donc
+// ce moment précis, et delayBeforeVoice() attend ce qu'il faut pour
+// atteindre une vraie fenêtre de repos — pas un délai fixe appliqué à
+// l'aveugle à toutes les phrases, y compris celles qui n'en ont pas besoin.
+let lastMicActivityAt = 0;
+function markMicActivity() {
+  lastMicActivityAt = Date.now();
+}
+
 function delayBeforeMic() {
   if (!isMobileDevice()) return Promise.resolve();
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
@@ -10791,13 +10807,19 @@ function stopVoicePlayback() {
 
 // "mail-pret" se joue quasi immédiatement après la fin de la dictée (dès
 // que l'aperçu du mail s'ouvre) — trop près de l'arrêt du micro pour que
-// iOS ait fini de rendre la main sur la route audio. Résultat observé :
-// son absent ou anormalement faible (contention audio), alors que
-// "mail-envoyé" (qui se joue après un aller-retour réseau, donc bien plus
-// tard) n'a pas ce souci. Même logique symétrique que delayBeforeMic().
+// iOS ait fini de rendre la main sur la route audio, alors que "mail-
+// envoyé"/"envoi-annule" (déclenchés par un clic, donc loin de la
+// dernière activité micro) n'ont jamais ce souci. Un délai fixe (350ms
+// puis 700ms) n'a pas suffi : on calcule maintenant une vraie fenêtre de
+// repos depuis la DERNIÈRE activité micro (voir markMicActivity()), pas
+// un délai à l'aveugle appliqué à toutes les phrases.
+const MIC_VOICE_COOLDOWN_MS = 3000;
 function delayBeforeVoice() {
   if (!isIOSDevice()) return Promise.resolve();
-  return new Promise(function (resolve) { setTimeout(resolve, 700); });
+  const elapsed = Date.now() - lastMicActivityAt;
+  const remaining = MIC_VOICE_COOLDOWN_MS - elapsed;
+  if (remaining <= 0) return Promise.resolve();
+  return new Promise(function (resolve) { setTimeout(resolve, remaining); });
 }
 
 function playVoiceLine(name) {
@@ -11604,6 +11626,7 @@ progressIcon: "✨",
 
     rec.onend = async function() {
       if (myGeneration !== recognitionGeneration) return; // tentative périmée
+      markMicActivity();
       clearTimeout(watchdogTimer);
       clearTimeout(silenceTimer);
 
@@ -11821,6 +11844,7 @@ console.log("MESSAGE =", message);
             try { rec.onresult = null; rec.onend = null; rec.onerror = null; } catch(e) {}
             try { rec.abort(); } catch(e) {}
             try { rec.stop(); } catch(e) {}
+            markMicActivity();
             attemptFailed();
           }, 8000);
         }
@@ -12303,6 +12327,7 @@ async function toggleQuickMailDictation() {
 
     recognition.onend = function() {
       if (myGeneration !== quickMailRecognitionGeneration) return; // tentative périmée
+      markMicActivity();
       clearTimeout(quickMailWatchdogTimer);
       quickMailDictationRecognition = null;
 
@@ -12341,6 +12366,7 @@ async function toggleQuickMailDictation() {
             } catch (e) {}
             try { recognition.abort(); } catch (e) {}
             try { recognition.stop(); } catch (e) {}
+            markMicActivity();
             quickMailDictationRecognition = null;
             if (quickMailMicRetryCount < QUICK_MAIL_MIC_MAX_RETRIES) {
               quickMailMicRetryCount++;
