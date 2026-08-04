@@ -10810,8 +10810,25 @@ function delayBeforeMic() {
 // contrairement au cas "mail-prêt" (déclenché sans clic). On le joue et on
 // attend qu'il finisse AVANT de démarrer le micro (jamais pendant), pour
 // ne jamais reproduire le conflit voix/micro déjà corrigé par ailleurs.
+//
+// INCIDENT CRITIQUE corrigé ici : la 1ère version attendait uniquement
+// osc.onended pour continuer — si cet évènement ne se déclenche jamais
+// (constaté en conditions réelles, probablement au tout premier son joué
+// sur l'appareil, avant toute confirmation de sortie audio), la promesse
+// ne se résolvait JAMAIS : tout le flux de démarrage du micro restait
+// gelé pour toujours sur "Préparation du micro…", sans même déclencher la
+// demande d'autorisation. Cette fonction ne doit donc JAMAIS pouvoir
+// bloquer indéfiniment le démarrage du micro : deux filets de sécurité
+// (timeout interne sur onended + plafond global en Promise.race).
 async function playMicReadyTone() {
   if (!isMobileDevice()) return;
+  await Promise.race([
+    playMicReadyToneAttempt(),
+    new Promise(function (resolve) { setTimeout(resolve, 500); })
+  ]);
+}
+
+async function playMicReadyToneAttempt() {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtx) return;
   let ownCtx = null;
@@ -10839,11 +10856,19 @@ async function playMicReadyTone() {
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.18);
-        osc.onended = function () {
+        let done = false;
+        const finish = function () {
+          if (done) return;
+          done = true;
           if (ownCtx) { try { ownCtx.close(); } catch (e) {} }
           else { try { ctx.suspend(); } catch (e) {} }
           resolve();
         };
+        osc.onended = finish;
+        // Filet de sécurité local : si onended ne se déclenche jamais
+        // (bug navigateur constaté), on ne dépend pas que du plafond
+        // global — on relâche aussi la ressource nous-mêmes.
+        setTimeout(finish, 250);
       } catch (e) { resolve(); }
     });
   } catch (e) {}
