@@ -15588,6 +15588,13 @@ const payload = {
 
     const logSubject = subject || "Mail envoyé";
 
+    // Joué ICI, immédiatement à la confirmation d'envoi — pas dans le
+    // setTimeout(550ms) plus bas, qui n'existe que pour laisser voir
+    // l'animation "Envoi en cours..." un court instant avant de refermer
+    // la popup. Le son, lui, n'a aucune raison d'attendre : dès qu'on
+    // sait que c'est un succès, on le joue tout de suite.
+    playVoiceLine("mail-envoye");
+
 setTimeout(async () => {
   closeMailPreview(false);
 
@@ -15606,7 +15613,6 @@ setTimeout(async () => {
 }
 
   showToast("Mail envoyé");
-  playVoiceLine("mail-envoye");
 
   // Mail vraiment envoyé avec succès : c'est SEULEMENT maintenant que
   // le micro doit redevenir cliquable.
