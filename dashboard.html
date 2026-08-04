@@ -9115,7 +9115,8 @@ async function handleUser(user) {
   await loadActionCounter();
   await loadSubscription();
   await startOnboardingIfNeeded();
-  
+  restoreMailDraftIfAny();
+
   console.log("handleUser terminé");
 }
 
@@ -11096,6 +11097,88 @@ async function saveActionLog(agent, action, status) {
   let pendingMailInstruction = "";
   let currentPreparedMail = null;
 
+  // ─── Persistance du brouillon de mail (survit à un rechargement iOS) ───
+  // Si l'utilisateur pose son téléphone pendant que le mail est prêt à
+  // envoyer, iOS peut décharger l'onglet en mémoire pendant le verrouillage.
+  // Au déverrouillage, la page recharge et tout l'état JS est perdu. On
+  // sauvegarde donc le brouillon dans localStorage dès qu'il est prêt, et on
+  // le restaure au démarrage s'il n'est pas trop ancien.
+  const MAIL_DRAFT_MAX_AGE_MS = 2 * 60 * 60 * 1000; // 2h : au delà, trop périmé pour être resurgi sans prévenir
+
+  function mailDraftStorageKey() {
+    return "clarity_mail_draft_" + (currentUser && currentUser.email ? currentUser.email : "anonymous");
+  }
+
+  function saveMailDraftToStorage() {
+    if (!currentPreparedMail) return;
+    try {
+      localStorage.setItem(
+        mailDraftStorageKey(),
+        JSON.stringify({
+          mail: currentPreparedMail,
+          instruction: pendingMailInstruction,
+          savedAt: Date.now()
+        })
+      );
+    } catch (e) {}
+  }
+
+  function clearMailDraftFromStorage() {
+    try {
+      localStorage.removeItem(mailDraftStorageKey());
+    } catch (e) {}
+  }
+
+  function restoreMailDraftIfAny() {
+    try {
+      const key = mailDraftStorageKey();
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+
+      const saved = JSON.parse(raw);
+      if (!saved || !saved.mail) {
+        localStorage.removeItem(key);
+        return;
+      }
+
+      if (!saved.savedAt || Date.now() - saved.savedAt > MAIL_DRAFT_MAX_AGE_MS) {
+        localStorage.removeItem(key);
+        return;
+      }
+
+      pendingMailInstruction = saved.instruction || "";
+      currentPreparedMail = saved.mail;
+
+      const toEl = document.getElementById("preview-mail-to");
+      const subjectEl = document.getElementById("preview-mail-subject");
+      const bodyEl = document.getElementById("preview-mail-body");
+      if (toEl) toEl.value = currentPreparedMail.to || "";
+      if (subjectEl) subjectEl.value = currentPreparedMail.subject || "";
+      if (bodyEl) bodyEl.value = currentPreparedMail.body || "";
+
+      const suggestions = document.getElementById("mail-contact-suggestions");
+      if (suggestions) {
+        suggestions.style.display = "none";
+        suggestions.innerHTML = "";
+      }
+
+      const modal = document.getElementById("mail-preview-modal");
+      if (modal) {
+        modal.style.display = "block";
+        requestAnimationFrame(() => {
+          modal.scrollTop = 0;
+          const box = modal.querySelector(".mail-choice-box");
+          if (box) {
+            box.scrollTop = 0;
+            box.scrollIntoView({ behavior: "instant", block: "center" });
+          }
+        });
+      }
+
+      showToast("Brouillon de mail restauré", "success");
+    } catch (e) {}
+  }
+
   function animateCounter(element, start, end, duration = 1200, formatter = null) {
   if (!element) return;
 
@@ -11340,6 +11423,8 @@ function openMailPreview(data, instruction) {
     currentPreparedMail.subject = deriveFallbackSubject(currentPreparedMail.body);
   }
 
+  saveMailDraftToStorage();
+
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
   document.getElementById("preview-mail-body").value = currentPreparedMail.body;
@@ -11393,6 +11478,7 @@ if (box) {
   onboardingOnEvent("preview_cancelled");
 }
 
+  clearMailDraftFromStorage();
   currentPreparedMail = null;
 }
 
