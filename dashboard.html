@@ -10578,6 +10578,15 @@ async function playVoiceLineWebAudio(name, myToken) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     await ctx.resume();
+    // resume() peut résoudre sa promesse sans que le contexte soit
+    // vraiment "running" (ex: contention avec le micro qui vient de
+    // s'arrêter) — jouer quand même dans cet état donne un son absent ou
+    // très faible sans qu'aucune erreur ne soit levée. On le détecte ici
+    // pour déclencher le repli <audio> plutôt qu'un silence invisible.
+    if (ctx.state !== "running") {
+      try { ctx.close(); } catch (e) {}
+      return false;
+    }
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
@@ -10788,7 +10797,7 @@ function stopVoicePlayback() {
 // tard) n'a pas ce souci. Même logique symétrique que delayBeforeMic().
 function delayBeforeVoice() {
   if (!isIOSDevice()) return Promise.resolve();
-  return new Promise(function (resolve) { setTimeout(resolve, 350); });
+  return new Promise(function (resolve) { setTimeout(resolve, 700); });
 }
 
 function playVoiceLine(name) {
