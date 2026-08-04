@@ -10530,16 +10530,43 @@ let voiceUnlocked = false;
 // l'élément <audio> (relâchement de ressource, fenêtre d'écoute élargie)
 // n'ont rien changé : le vrai problème est que pause()/removeAttribute()
 // sur un <audio> ne force JAMAIS un vrai relâchement de la session audio
-// iOS. AudioContext.close(), lui, est une API dédiée et documentée pour
-// ça : on décode chaque phrase une fois (mise en cache), puis à chaque
-// lecture on ouvre un AudioContext tout neuf, on joue, et on le referme
-// (close()) sitôt la lecture finie — un vrai cycle ouverture/fermeture,
-// plutôt qu'un <audio> qu'on réutilise indéfiniment. Uniquement sur iOS ;
-// PC/Android gardent l'ancien système <audio>, qui n'a pas ce problème.
+// iOS. AudioContext, lui, est une API dédiée et documentée pour ça : on
+// décode chaque phrase une fois (mise en cache), puis on la joue via un
+// AudioContext.
+//
+// ATTENTION — piège rencontré : la 1ère version ouvrait un AudioContext
+// TOUT NEUF à chaque lecture puis le fermait (close()) juste après. Ça a
+// bien réglé le blocage du micro, mais un nouveau symptôme est apparu à
+// l'usage réel : sur 3 mails envoyés d'affilée, le 1er son était parfait,
+// le 2e légèrement plus faible, le 3e totalement muet — une dégradation
+// PROGRESSIVE liée au nombre de lectures dans la session, pas au délai
+// depuis le micro. C'est un bug WebKit documenté : créer/détruire de
+// nombreux AudioContext au cours d'une même session épuise petit à petit
+// les voix matérielles disponibles côté iOS, même si chacun est bien
+// fermé. La correction : un SEUL AudioContext créé une fois pour toute
+// la session (jamais recréé), qu'on met en pause (suspend()) après
+// chaque lecture au lieu de le fermer (close()) — ça relâche quand même
+// la route audio active pour laisser la main au micro (suspend() suffit,
+// pas besoin de détruire/reconstruire), sans jamais accumuler de
+// nouvelles instances. Uniquement sur iOS ; PC/Android gardent l'ancien
+// système <audio>, qui n'a pas ce problème.
 const voiceAudioBuffers = {};
 let voiceUseWebAudio = true;
 let currentVoiceSource = null;
 let currentVoiceContext = null;
+let sharedVoiceContext = null;
+
+function getSharedVoiceContext() {
+  if (sharedVoiceContext && sharedVoiceContext.state !== "closed") {
+    return sharedVoiceContext;
+  }
+  try {
+    sharedVoiceContext = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {
+    sharedVoiceContext = null;
+  }
+  return sharedVoiceContext;
+}
 
 // "mail-pret" restait muet même avec le délai : un vrai AudioContext
 // gardé ouvert en permanence juste pour décoder (jamais fermé) est
@@ -10549,8 +10576,8 @@ let currentVoiceContext = null;
 // ne retient JAMAIS de route audio "en direct" (il ne sert qu'à décoder/
 // calculer hors-ligne) : aucun impact possible sur la session partagée
 // avec le micro. On l'utilise uniquement pour le décodage ; la lecture
-// réelle continue de passer par un vrai AudioContext frais à chaque fois
-// (ouvert puis fermé juste après), comme avant.
+// réelle passe par le seul et même AudioContext partagé (voir
+// getSharedVoiceContext() ci-dessus).
 async function decodeVoiceLine(name) {
   if (voiceAudioBuffers[name]) return voiceAudioBuffers[name];
   const OfflineCtx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
@@ -10576,7 +10603,8 @@ async function playVoiceLineWebAudio(name, myToken) {
   if (!buffer) return false;
   if (myToken !== voicePlayToken) return true; // périmée pendant le décodage, mais pas une erreur
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getSharedVoiceContext();
+    if (!ctx) return false;
     await ctx.resume();
     // resume() peut résoudre sa promesse sans que le contexte soit
     // vraiment "running" (ex: contention avec le micro qui vient de
@@ -10584,7 +10612,6 @@ async function playVoiceLineWebAudio(name, myToken) {
     // très faible sans qu'aucune erreur ne soit levée. On le détecte ici
     // pour déclencher le repli <audio> plutôt qu'un silence invisible.
     if (ctx.state !== "running") {
-      try { ctx.close(); } catch (e) {}
       return false;
     }
     const source = ctx.createBufferSource();
@@ -10596,8 +10623,12 @@ async function playVoiceLineWebAudio(name, myToken) {
       if (currentVoiceSource === source) {
         currentVoiceSource = null;
         currentVoiceContext = null;
+        // suspend(), jamais close() : on relâche la route audio active
+        // pour le micro sans détruire le contexte partagé — le recréer à
+        // chaque lecture est ce qui causait la dégradation progressive du
+        // volume (mail 1 parfait, mail 2 plus faible, mail 3 muet).
+        try { ctx.suspend(); } catch (e) {}
       }
-      try { ctx.close(); } catch (e) {}
     };
     source.start(0);
     return true;
@@ -10612,7 +10643,7 @@ function stopVoiceWebAudio() {
     currentVoiceSource = null;
   }
   if (currentVoiceContext) {
-    try { currentVoiceContext.close(); } catch (e) {}
+    try { currentVoiceContext.suspend(); } catch (e) {}
     currentVoiceContext = null;
   }
 }
@@ -10693,21 +10724,22 @@ function unlockVoicePlayback() {
   // créé/repris hors d'un geste utilisateur reste "suspendu" sur iOS —
   // on le fait donc une 1ère fois ici, dans ce tap/clic initial, pour que
   // les lectures suivantes (déclenchées après un fetch réseau) puissent
-  // ouvrir et reprendre leurs propres contextes sans blocage. Contexte
-  // jetable, refermé aussitôt (pas de ressource laissée "ouverte").
+  // reprendre le MÊME contexte partagé sans blocage. On réutilise
+  // volontairement getSharedVoiceContext() (pas un contexte jetable) :
+  // créer un contexte distinct ici en plus de celui des lectures a été
+  // identifié comme une cause de dégradation progressive du son.
   if (isIOSDevice()) {
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = getSharedVoiceContext();
+      if (!ctx) return;
       ctx.resume().then(function () {
         const buffer = ctx.createBuffer(1, 1, 22050);
         const src = ctx.createBufferSource();
         src.buffer = buffer;
         src.connect(ctx.destination);
-        src.onended = function () { try { ctx.close(); } catch (e) {} };
+        src.onended = function () { try { ctx.suspend(); } catch (e) {} };
         src.start(0);
-      }).catch(function () {
-        try { ctx.close(); } catch (e) {}
-      });
+      }).catch(function () {});
     } catch (e) {}
   }
 }
