@@ -10789,18 +10789,34 @@ function preloadVoiceLines() {
 function unlockVoicePlayback() {
   if (voiceUnlocked) return;
   voiceUnlocked = true;
-  try {
-    const audio = getVoiceAudio(VOICE_LINE_NAMES[0]);
-    const prevVolume = audio.volume;
-    audio.volume = 0;
-    audio.play().then(function () {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.volume = prevVolume;
-    }).catch(function () {
-      audio.volume = prevVolume;
-    });
-  } catch (e) {}
+
+  // Audit complet du 2026-08-04 : cette fonction ne débloquait QUE le
+  // <audio> de "mail-pret" (VOICE_LINE_NAMES[0]). Web Audio peut échouer
+  // ou expirer ponctuellement pour N'IMPORTE QUELLE phrase (pas seulement
+  // "mail-pret") de façon imprévisible, même sur un contexte déjà utilisé
+  // avec succès (limite iOS/WebKit, pas un bug de notre code) — c'est ce
+  // qui explique un échec "aléatoire" de "mail-envoyé" alors qu'il
+  // fonctionnait juste avant. Dans ce cas, playVoiceLine() retombe sur
+  // playVoiceLineHtmlAudio() : si CETTE phrase précise n'a jamais été
+  // débloquée par un vrai geste utilisateur, ce repli est LUI AUSSI
+  // silencieusement bloqué par Safari, sans aucune erreur visible —
+  // silence total, sans second filet. On débloque donc les 5 phrases ici,
+  // pas seulement la 1ère, pour que le repli <audio> soit fiable à 100%
+  // dès que Web Audio a un accroc.
+  VOICE_LINE_NAMES.forEach(function (lineName) {
+    try {
+      const audio = getVoiceAudio(lineName);
+      const prevVolume = audio.volume;
+      audio.volume = 0;
+      audio.play().then(function () {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = prevVolume;
+      }).catch(function () {
+        audio.volume = prevVolume;
+      });
+    } catch (e) {}
+  });
 
   // Débloque aussi la lecture via Web Audio API (iOS) : un AudioContext
   // créé/repris hors d'un geste utilisateur reste "suspendu" sur iOS —
