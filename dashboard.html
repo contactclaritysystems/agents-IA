@@ -10740,18 +10740,30 @@ function getVoiceAudio(name) {
   return audio;
 }
 
+// VRAIE CAUSE ENFIN TROUVÉE (le vrai coupable de "mail-prêt" muet) :
+// removeAttribute("src") + load() force bien un relâchement de la session
+// audio iOS (utile avant la migration vers Web Audio), MAIS appeler
+// load() sur un <audio> réinitialise aussi son statut "débloqué pour
+// lecture programmatique" obtenu via le geste utilisateur initial
+// (unlockVoicePlayback). "mail-envoyé"/"envoi-annulé" sont TOUJOURS
+// déclenchés par un clic (bouton Envoyer/Annuler) : un clic redonne à
+// chaque fois ce droit, donc ils rejouent toujours. "mail-prêt" est
+// déclenché sans AUCUN geste (fin de dictée → réponse réseau) : dès que
+// son <audio> a été rechargé une 1ère fois par cette fonction (après sa
+// toute 1ère lecture réussie), Safari bloque silencieusement tous ses
+// play() suivants (promesse rejetée, avalée par le .catch(() => {}) de
+// playVoiceLineHtmlAudio) — d'où un silence total et permanent à partir
+// de la 2e tentative, quoi qu'on change côté Web Audio. Sur iOS, Web
+// Audio (suspend()) gère déjà le relâchement de la session : ce recyclage
+// <audio> n'est plus nécessaire là-bas et ne fait plus que casser la
+// lecture des phrases sans clic. On le restreint donc à Android (où il
+// est resté inoffensif, cette faille étant spécifique à iOS/WebKit).
 function releaseVoiceAudio(audio) {
-  if (!isMobileDevice() || !audio || !audio._clarityName) return;
+  if (!isMobileDevice() || isIOSDevice() || !audio || !audio._clarityName) return;
   try {
     audio.pause();
-    // removeAttribute + load() force un vrai relâchement de la ressource
-    // média (contrairement à pause() seul, qui garde la session active).
     audio.removeAttribute("src");
     audio.load();
-    // Re-précharge aussitôt (sans jouer) pour garder une latence quasi
-    // nulle au prochain playVoiceLine — seul le fait d'avoir JOUÉ le son
-    // retient la session audio iOS, pas le simple fait qu'il soit en
-    // mémoire tampon/préchargé.
     audio.src = audio._clarityName + ".mp3";
     audio.load();
   } catch (e) {}
