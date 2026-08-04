@@ -10813,112 +10813,6 @@ function delayBeforeMic() {
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
 }
 
-// Bip court joué juste avant l'ouverture réelle du micro, pour indiquer à
-// l'utilisateur QUAND commencer à parler (il arrive de parler trop tôt et
-// de perdre les premiers mots). Appelé directement depuis le clic sur le
-// bouton micro (vrai geste utilisateur), donc resume() est fiable ici —
-// contrairement au cas "mail-prêt" (déclenché sans clic). On le joue et on
-// attend qu'il finisse AVANT de démarrer le micro (jamais pendant), pour
-// ne jamais reproduire le conflit voix/micro déjà corrigé par ailleurs.
-//
-// INCIDENT CRITIQUE corrigé ici : la 1ère version attendait uniquement
-// osc.onended pour continuer — si cet évènement ne se déclenche jamais
-// (constaté en conditions réelles, probablement au tout premier son joué
-// sur l'appareil, avant toute confirmation de sortie audio), la promesse
-// ne se résolvait JAMAIS : tout le flux de démarrage du micro restait
-// gelé pour toujours sur "Préparation du micro…", sans même déclencher la
-// demande d'autorisation. Cette fonction ne doit donc JAMAIS pouvoir
-// bloquer indéfiniment le démarrage du micro : deux filets de sécurité
-// (timeout interne sur onended + plafond global en Promise.race).
-async function playMicReadyTone() {
-  if (!isMobileDevice()) return;
-  // Plafond élargi à 900ms (au lieu de 500ms) : l'amorçage silencieux
-  // ajouté ci-dessous prend lui-même jusqu'à 150ms dans le pire cas, avant
-  // même le vrai son (jusqu'à ~350ms) — un plafond trop court coupait le
-  // bip avant qu'il ait pu jouer, sur le tout 1er essai. Reste largement
-  // sous la seconde, donc sans impact perceptible sur le démarrage du micro.
-  await Promise.race([
-    playMicReadyToneAttempt(),
-    new Promise(function (resolve) { setTimeout(resolve, 900); })
-  ]);
-}
-
-// Rejoue un son totalement silencieux (1 échantillon) et attend sa vraie
-// fin (onended) — c'est CETTE attente qui force le réveil du matériel
-// audio, pas un simple délai fixe. Même principe que le "déblocage" de
-// unlockVoicePlayback(), mais fait ICI, localement et attendu, pour ne
-// plus dépendre de l'ordre d'exécution entre l'onclick du bouton micro
-// (qui se déclenche AVANT le listener "click" du document sur lequel
-// unlockVoicePlayback() est branché) et notre propre son audible — cet
-// écart d'ordre est la vraie cause du bip "avalé" au tout 1er essai.
-function primeAudioContext(ctx) {
-  return new Promise(function (resolve) {
-    try {
-      const buffer = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.connect(ctx.destination);
-      let done = false;
-      const finish = function () {
-        if (done) return;
-        done = true;
-        resolve();
-      };
-      src.onended = finish;
-      setTimeout(finish, 150);
-      src.start(0);
-    } catch (e) { resolve(); }
-  });
-}
-
-async function playMicReadyToneAttempt() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-  let ownCtx = null;
-  try {
-    const ctx = isIOSDevice() ? getSharedVoiceContext() : (ownCtx = new AudioCtx());
-    if (!ctx) return;
-    if (ctx.state !== "running") {
-      const running = await resumeAudioContextSafe(ctx, 300);
-      if (!running) {
-        if (ownCtx) { try { ownCtx.close(); } catch (e) {} }
-        return;
-      }
-    }
-    await primeAudioContext(ctx);
-    await new Promise(function (resolve) {
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = 880;
-        const now = ctx.currentTime + 0.02;
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
-        gain.gain.linearRampToValueAtTime(0, now + 0.16);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.18);
-        let done = false;
-        const finish = function () {
-          if (done) return;
-          done = true;
-          if (ownCtx) { try { ownCtx.close(); } catch (e) {} }
-          else { try { ctx.suspend(); } catch (e) {} }
-          resolve();
-        };
-        osc.onended = finish;
-        // Filet de sécurité local : si onended ne se déclenche jamais
-        // (bug navigateur constaté), on ne dépend pas que du plafond
-        // global — on relâche aussi la ressource nous-mêmes. Marge au-delà
-        // de la fin réelle programmée (0.06 + 0.18 = 0.24s).
-        setTimeout(finish, 350);
-      } catch (e) { resolve(); }
-    });
-  } catch (e) {}
-}
-
 // Traduit les codes d'erreur du Web Speech API en messages compréhensibles.
 // "not-allowed"/"service-not-allowed" = vraiment un refus de permission ;
 // tous les autres cas (audio-capture, network...) ne le sont PAS et ne
@@ -11986,12 +11880,6 @@ console.log("MESSAGE =", message);
     stopVoicePlayback();
 
     (async () => {
-      // Bip "vous pouvez parler" uniquement sur la toute 1ère tentative
-      // (pas sur les relances auto invisibles, sinon bips en rafale).
-      if (micRetryCount === 0) {
-        await playMicReadyTone();
-        if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
-      }
       await delayBeforeMic();
       if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
 
@@ -12516,10 +12404,6 @@ async function toggleQuickMailDictation() {
     };
 
     (async () => {
-      if (quickMailMicRetryCount === 0) {
-        await playMicReadyTone();
-        if (myGeneration !== quickMailRecognitionGeneration) return; // annulé entre-temps
-      }
       await delayBeforeMic();
       if (myGeneration !== quickMailRecognitionGeneration) return; // annulé entre-temps
 
