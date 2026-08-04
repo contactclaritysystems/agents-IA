@@ -10786,6 +10786,32 @@ function preloadVoiceLines() {
 // "débloque" donc le lecteur audio dès la toute première interaction
 // (tap/clic), une seule fois, pour que les lectures suivantes déclenchées
 // après un appel réseau démarrent instantanément.
+// Débloque UNE phrase précise pour la lecture <audio> programmatique, en
+// la jouant muette+pause immédiatement. À appeler synchroniquement, tout
+// en haut d'un vrai clic (pas après un await/setTimeout), pour que ce
+// geste précis serve de "laissez-passer". Utile pour "mail-envoyé" : il
+// se joue ~550ms après le clic sur "Envoyer" (délai UI volontaire), assez
+// pour parfois sortir de la fenêtre de tolérance de Safari si Web Audio a
+// eu un accroc entre-temps et qu'il faut retomber sur ce <audio> — alors
+// que "envoi-annulé" se joue lui de façon synchrone, sans délai, donc n'a
+// jamais eu ce souci. On ne débloque QUE cette phrase précise, séparément
+// du 1er tap qui démarre le micro (voir unlockVoicePlayback()) : mélanger
+// les deux gestes est ce qui a cassé le micro la dernière fois.
+function blessVoiceLine(name) {
+  try {
+    const audio = getVoiceAudio(name);
+    const prevVolume = audio.volume;
+    audio.volume = 0;
+    audio.play().then(function () {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = prevVolume;
+    }).catch(function () {
+      audio.volume = prevVolume;
+    });
+  } catch (e) {}
+}
+
 function unlockVoicePlayback() {
   if (voiceUnlocked) return;
   voiceUnlocked = true;
@@ -15408,6 +15434,13 @@ function isValidEmailList(value) {
 }
 
   async function sendPreparedMail() {
+    // Débloque "mail-envoyé" ICI, tout en haut, en réaction directe et
+    // synchrone à ce clic — le son réel n'arrivera que ~550ms plus tard
+    // (voir plus bas), largement après tout appel réseau : sans ce
+    // laissez-passer pris pendant qu'on est encore "dans" le clic, un
+    // éventuel repli <audio> (si Web Audio a un accroc à ce moment-là)
+    // risquait d'être bloqué silencieusement par Safari.
+    blessVoiceLine("mail-envoye");
 
     const to = document.getElementById("preview-mail-to").value.trim();
 const subject = document.getElementById("preview-mail-subject").value.trim();
