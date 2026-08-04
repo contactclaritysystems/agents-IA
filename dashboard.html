@@ -10790,33 +10790,29 @@ function unlockVoicePlayback() {
   if (voiceUnlocked) return;
   voiceUnlocked = true;
 
-  // Audit complet du 2026-08-04 : cette fonction ne débloquait QUE le
-  // <audio> de "mail-pret" (VOICE_LINE_NAMES[0]). Web Audio peut échouer
-  // ou expirer ponctuellement pour N'IMPORTE QUELLE phrase (pas seulement
-  // "mail-pret") de façon imprévisible, même sur un contexte déjà utilisé
-  // avec succès (limite iOS/WebKit, pas un bug de notre code) — c'est ce
-  // qui explique un échec "aléatoire" de "mail-envoyé" alors qu'il
-  // fonctionnait juste avant. Dans ce cas, playVoiceLine() retombe sur
-  // playVoiceLineHtmlAudio() : si CETTE phrase précise n'a jamais été
-  // débloquée par un vrai geste utilisateur, ce repli est LUI AUSSI
-  // silencieusement bloqué par Safari, sans aucune erreur visible —
-  // silence total, sans second filet. On débloque donc les 5 phrases ici,
-  // pas seulement la 1ère, pour que le repli <audio> soit fiable à 100%
-  // dès que Web Audio a un accroc.
-  VOICE_LINE_NAMES.forEach(function (lineName) {
-    try {
-      const audio = getVoiceAudio(lineName);
-      const prevVolume = audio.volume;
-      audio.volume = 0;
-      audio.play().then(function () {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = prevVolume;
-      }).catch(function () {
-        audio.volume = prevVolume;
-      });
-    } catch (e) {}
-  });
+  // ANNULÉ : une version précédente débloquait les 5 sons ici (5 <audio>
+  // joués quasi simultanément sur ce tout 1er clic/tap). Résultat en usage
+  // réel : "mail envoyé" a disparu ET la 2e dictée s'est mise à capter du
+  // vide — exactement le bug d'origine de toute cette session (occuper la
+  // session audio iOS juste au moment où le micro en a besoin). Ce 1er
+  // clic est PRÉCISÉMENT celui qui démarre aussi souvent la 1ère dictée :
+  // y jouer plusieurs sons, même muets, est trop risqué. On revient donc à
+  // un seul son débloqué ici ("mail-pret", le seul qui n'a jamais aucun
+  // clic propre pour se débloquer lui-même) ; les autres phrases sont
+  // toutes déclenchées par un clic réel (Envoyer/Annuler) qui les
+  // débloque suffisamment lui-même le moment venu.
+  try {
+    const audio = getVoiceAudio(VOICE_LINE_NAMES[0]);
+    const prevVolume = audio.volume;
+    audio.volume = 0;
+    audio.play().then(function () {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = prevVolume;
+    }).catch(function () {
+      audio.volume = prevVolume;
+    });
+  } catch (e) {}
 
   // Débloque aussi la lecture via Web Audio API (iOS) : un AudioContext
   // créé/repris hors d'un geste utilisateur reste "suspendu" sur iOS —
