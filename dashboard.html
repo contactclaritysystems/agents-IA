@@ -10702,6 +10702,19 @@ async function playVoiceLineWebAudio(name, myToken) {
         // pour le micro sans détruire le contexte partagé — le recréer à
         // chaque lecture est ce qui causait la dégradation progressive du
         // volume (mail 1 parfait, mail 2 plus faible, mail 3 muet).
+        //
+        // CORRECTIF IMPORTANT : sharedVoiceContextPrimed n'était mis à
+        // true QU'UNE SEULE FOIS pour toute la session — l'hypothèse de
+        // départ était que seul le tout 1er son jamais joué sur l'appareil
+        // risquait d'être "avalé" (route matérielle pas encore ouverte).
+        // En usage réel (silence après un envoi qui avait pourtant marché
+        // une fois), tout indique que CHAQUE réveil (resume) après une
+        // mise en pause (suspend) est À NOUVEAU risqué, pas seulement le
+        // 1er de la session — suspend() semble réellement fermer la route
+        // matérielle, pas juste la "geler". On réinitialise donc l'amorçage
+        // à chaque mise en veille, pour qu'il soit refait avant le
+        // prochain son réellement audible.
+        sharedVoiceContextPrimed = false;
         try { ctx.suspend(); } catch (e) {}
       }
     };
@@ -10718,6 +10731,10 @@ function stopVoiceWebAudio() {
     currentVoiceSource = null;
   }
   if (currentVoiceContext) {
+    // Même raison que dans playVoiceLineWebAudio() : un arrêt forcé remet
+    // aussi le contexte en veille, donc le prochain réveil doit être
+    // réamorcé.
+    sharedVoiceContextPrimed = false;
     try { currentVoiceContext.suspend(); } catch (e) {}
     currentVoiceContext = null;
   }
