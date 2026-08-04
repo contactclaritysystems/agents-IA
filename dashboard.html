@@ -10594,6 +10594,26 @@ async function decodeVoiceLine(name) {
   }
 }
 
+// resume() sur un AudioContext appelé HORS d'un vrai geste utilisateur
+// direct (ex: juste après la fin d'une dictée, sans clic) peut, sur
+// certaines versions d'iOS, ne JAMAIS résoudre sa promesse — ni se
+// résoudre, ni être rejetée, elle reste indéfiniment "en attente". C'est
+// ce qui expliquait la régression "plus AUCUN son mail-prêt" après le
+// passage à un contexte partagé réutilisé (resume() hors clic bloquait
+// silencieusement toute la chaîne, y compris le repli vers <audio>, qui
+// ne se déclenchait jamais puisque la fonction ne rendait jamais la
+// main). On borne donc systématiquement l'attente avec un timeout.
+function resumeAudioContextSafe(ctx, timeoutMs) {
+  return Promise.race([
+    ctx.resume().then(function () { return true; }).catch(function () { return false; }),
+    new Promise(function (resolve) {
+      setTimeout(function () { resolve(false); }, timeoutMs || 400);
+    })
+  ]).then(function (ok) {
+    return !!ok && ctx.state === "running";
+  });
+}
+
 async function playVoiceLineWebAudio(name, myToken) {
   const buffer = await decodeVoiceLine(name);
   // Un échec ponctuel de décodage (ex: petit accroc réseau) ne doit PAS
@@ -10605,14 +10625,11 @@ async function playVoiceLineWebAudio(name, myToken) {
   try {
     const ctx = getSharedVoiceContext();
     if (!ctx) return false;
-    await ctx.resume();
-    // resume() peut résoudre sa promesse sans que le contexte soit
-    // vraiment "running" (ex: contention avec le micro qui vient de
-    // s'arrêter) — jouer quand même dans cet état donne un son absent ou
-    // très faible sans qu'aucune erreur ne soit levée. On le détecte ici
-    // pour déclencher le repli <audio> plutôt qu'un silence invisible.
     if (ctx.state !== "running") {
-      return false;
+      const running = await resumeAudioContextSafe(ctx, 400);
+      // Repli <audio> immédiat si resume() a échoué OU expiré (timeout) —
+      // plutôt qu'un silence invisible qui bloquerait toute la chaîne.
+      if (!running) return false;
     }
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -10784,6 +10801,52 @@ function markMicActivity() {
 function delayBeforeMic() {
   if (!isMobileDevice()) return Promise.resolve();
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
+}
+
+// Bip court joué juste avant l'ouverture réelle du micro, pour indiquer à
+// l'utilisateur QUAND commencer à parler (il arrive de parler trop tôt et
+// de perdre les premiers mots). Appelé directement depuis le clic sur le
+// bouton micro (vrai geste utilisateur), donc resume() est fiable ici —
+// contrairement au cas "mail-prêt" (déclenché sans clic). On le joue et on
+// attend qu'il finisse AVANT de démarrer le micro (jamais pendant), pour
+// ne jamais reproduire le conflit voix/micro déjà corrigé par ailleurs.
+async function playMicReadyTone() {
+  if (!isMobileDevice()) return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  let ownCtx = null;
+  try {
+    const ctx = isIOSDevice() ? getSharedVoiceContext() : (ownCtx = new AudioCtx());
+    if (!ctx) return;
+    if (ctx.state !== "running") {
+      const running = await resumeAudioContextSafe(ctx, 300);
+      if (!running) {
+        if (ownCtx) { try { ownCtx.close(); } catch (e) {} }
+        return;
+      }
+    }
+    await new Promise(function (resolve) {
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+        gain.gain.linearRampToValueAtTime(0, now + 0.16);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+        osc.onended = function () {
+          if (ownCtx) { try { ownCtx.close(); } catch (e) {} }
+          else { try { ctx.suspend(); } catch (e) {} }
+          resolve();
+        };
+      } catch (e) { resolve(); }
+    });
+  } catch (e) {}
 }
 
 // Traduit les codes d'erreur du Web Speech API en messages compréhensibles.
@@ -11853,6 +11916,12 @@ console.log("MESSAGE =", message);
     stopVoicePlayback();
 
     (async () => {
+      // Bip "vous pouvez parler" uniquement sur la toute 1ère tentative
+      // (pas sur les relances auto invisibles, sinon bips en rafale).
+      if (micRetryCount === 0) {
+        await playMicReadyTone();
+        if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
+      }
       await delayBeforeMic();
       if (myGeneration !== recognitionGeneration) return; // annulé entre-temps
 
@@ -12377,6 +12446,10 @@ async function toggleQuickMailDictation() {
     };
 
     (async () => {
+      if (quickMailMicRetryCount === 0) {
+        await playMicReadyTone();
+        if (myGeneration !== quickMailRecognitionGeneration) return; // annulé entre-temps
+      }
       await delayBeforeMic();
       if (myGeneration !== quickMailRecognitionGeneration) return; // annulé entre-temps
 
