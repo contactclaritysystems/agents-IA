@@ -10663,36 +10663,22 @@ function resumeAudioContextSafe(ctx, timeoutMs) {
   });
 }
 
-// Diagnostic TEMPORAIRE (à retirer une fois la vraie cause trouvée) :
-// mémorise pourquoi la dernière tentative de lecture a échoué, pour
-// pouvoir l'afficher dans un toast plutôt que de deviner à l'aveugle.
-let voiceDebugLastReason = "";
-
 async function playVoiceLineWebAudio(name, myToken) {
   const buffer = await decodeVoiceLine(name);
   // Un échec ponctuel de décodage (ex: petit accroc réseau) ne doit PAS
   // désactiver Web Audio pour tout le reste de la session — seulement
   // faire retomber CETTE lecture sur l'ancien système <audio>. Sans ça,
   // un seul raté désactivait la voix "de temps en temps" pour de bon.
-  if (!buffer) {
-    voiceDebugLastReason = "WebAudio: décodage échoué (" + name + ")";
-    return false;
-  }
+  if (!buffer) return false;
   if (myToken !== voicePlayToken) return true; // périmée pendant le décodage, mais pas une erreur
   try {
     const ctx = getSharedVoiceContext();
-    if (!ctx) {
-      voiceDebugLastReason = "WebAudio: AudioContext indisponible";
-      return false;
-    }
+    if (!ctx) return false;
     if (ctx.state !== "running") {
       const running = await resumeAudioContextSafe(ctx, 400);
       // Repli <audio> immédiat si resume() a échoué OU expiré (timeout) —
       // plutôt qu'un silence invisible qui bloquerait toute la chaîne.
-      if (!running) {
-        voiceDebugLastReason = "WebAudio: resume() a échoué/expiré (état=" + ctx.state + ")";
-        return false;
-      }
+      if (!running) return false;
     }
     if (!sharedVoiceContextPrimed) {
       await primeAudioContext(ctx);
@@ -10732,11 +10718,9 @@ async function playVoiceLineWebAudio(name, myToken) {
         try { ctx.suspend(); } catch (e) {}
       }
     };
-    voiceDebugLastReason = "WebAudio: OK, source.start() appelé";
     source.start(0);
     return true;
   } catch (e) {
-    voiceDebugLastReason = "WebAudio: exception — " + (e && e.name) + ": " + (e && e.message);
     return false;
   }
 }
@@ -11041,13 +11025,7 @@ function playVoiceLine(name) {
           // Échec/indisponibilité de Web Audio : on retombe sur l'ancien
           // système <audio> pour cette lecture (mieux vaut un son avec le
           // vieux bug que pas de son du tout).
-          // DIAGNOSTIC TEMPORAIRE : Web Audio a échoué, on le signale, avec
-          // un court délai avant le repli pour laisser le temps de lire ce
-          // 1er toast avant qu'un 2e (succès/échec du repli) ne l'efface.
-          showToast("🔧 " + voiceDebugLastReason, "error");
-          setTimeout(function () {
-            if (myToken === voicePlayToken) playVoiceLineHtmlAudio(name, myToken);
-          }, 1800);
+          playVoiceLineHtmlAudio(name, myToken);
         }
       });
       return;
@@ -11077,23 +11055,10 @@ function playVoiceLineHtmlAudio(name, myToken) {
         // avoir deux voix superposées, même en cas de retard/course.
         if (myToken !== voicePlayToken) {
           try { audio.pause(); audio.currentTime = 0; } catch (e) {}
-        } else {
-          // DIAGNOSTIC TEMPORAIRE : confirme que le repli <audio> a
-          // vraiment démarré (promesse résolue = lecture en cours).
-          showToast("🔧 <audio> repli OK (" + name + ")", "success");
         }
-      }).catch(function (err) {
-        // DIAGNOSTIC TEMPORAIRE : le repli <audio> a aussi échoué — c'est
-        // la cause du silence total. On affiche l'erreur réelle du
-        // navigateur, plutôt que de continuer à deviner.
-        showToast("🔧 <audio> repli ÉCHEC : " + (err && err.name) + " — " + (err && err.message), "error");
-      });
-    } else {
-      showToast("🔧 <audio> play() n'a pas renvoyé de promesse (" + name + ")", "error");
+      }).catch(() => {});
     }
-  } catch (e) {
-    showToast("🔧 <audio> exception synchrone : " + (e && e.message), "error");
-  }
+  } catch (e) {}
 }
 
 window.setVoiceEnabled = setVoiceEnabled;
