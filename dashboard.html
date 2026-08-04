@@ -10522,12 +10522,17 @@ function syncVoiceButtons() {
 // Liste des phrases existantes : préchargées au chargement de la page
 // pour éviter le temps de récupération/décodage réseau au moment où
 // elles doivent réellement se jouer (source du décalage "parle trop tard").
+//
+// Décision produit du 2026-08-04 : la voix ne reste QUE sur les 2 moments
+// déclenchés par un vrai clic (Envoyer/Annuler), les seuls qu'on peut
+// rendre fiables sur iOS. "mail-pret", "contact-introuvable" et
+// "plusieurs-contacts" (déclenchés sans clic, par une réponse réseau)
+// étaient structurellement sujets à l'aléatoire de la fenêtre
+// d'autorisation audio d'iOS — retirés du produit, pas juste désactivés,
+// pour ne plus jamais risquer de son manquant sur ces moments-là.
 const VOICE_LINE_NAMES = [
-  "mail-pret",
   "mail-envoye",
-  "contact-introuvable",
-  "envoi-annule",
-  "plusieurs-contacts"
+  "envoi-annule"
 ];
 const voiceAudioCache = {};
 let currentVoiceAudio = null;
@@ -11292,7 +11297,11 @@ function openMailPreview(data, instruction) {
   const progressBox = document.getElementById("orchestrator-dictation-box");
   if (progressBox) progressBox.remove();
 
-  playVoiceLine("mail-pret");
+  // Décision produit du 2026-08-04 : plus de voix sur ce moment précis.
+  // Déclenché sans AUCUN clic (réponse réseau) — structurellement sujet à
+  // l'aléatoire de la fenêtre d'autorisation audio d'iOS, quoi qu'on
+  // essaie côté code. Le retour visuel (popup d'aperçu du mail) suffit et
+  // est fiable à 100%, contrairement à un son ici.
 
   pendingMailInstruction = instruction || "";
 
@@ -12701,7 +12710,9 @@ if (typeof data === "string") {
     box.innerHTML = "👤 Choisissez le bon contact";
   }
 
-  playVoiceLine("plusieurs-contacts");
+  // Voix retirée ici (moment sans clic, même raison qu'à "mail-pret" —
+  // voir openMailPreview()) : le popup de choix de contact reste le
+  // retour principal, fiable.
 
   openContactChoiceModal(
     data.contacts,
@@ -12739,7 +12750,8 @@ if (typeof data === "string") {
     if (!data.success && data.reason === "contact_not_found") {
       hideOrRemoveBox(box);
 
-      playVoiceLine("contact-introuvable");
+      // Voix retirée ici aussi (même raison) : le toast + le flux d'ajout
+      // de contact restent le retour principal, fiable.
 
       openAddContactPopup({
   name: data.contact_name || data.name || "",
