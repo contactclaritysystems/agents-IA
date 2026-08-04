@@ -10565,6 +10565,10 @@ let voiceUseWebAudio = true;
 let currentVoiceSource = null;
 let currentVoiceContext = null;
 let sharedVoiceContext = null;
+// Vrai même pour "running" annoncé trop tôt (voir primeAudioContext plus
+// bas) : tant que ce contexte précis n'a pas été amorcé une 1ère fois, on
+// ne lui fait pas confiance pour jouer un son directement audible.
+let sharedVoiceContextPrimed = false;
 
 function getSharedVoiceContext() {
   if (sharedVoiceContext && sharedVoiceContext.state !== "closed") {
@@ -10572,10 +10576,40 @@ function getSharedVoiceContext() {
   }
   try {
     sharedVoiceContext = new (window.AudioContext || window.webkitAudioContext)();
+    sharedVoiceContextPrimed = false;
   } catch (e) {
     sharedVoiceContext = null;
   }
   return sharedVoiceContext;
+}
+
+// Joue un son totalement silencieux (1 échantillon) et attend sa vraie fin
+// (onended, pas un délai fixe) — constaté en conditions réelles (bug du
+// bip "vous pouvez parler") : un AudioContext frais peut annoncer
+// state === "running" AVANT que la route audio matérielle iOS soit
+// vraiment ouverte. Un son programmé dans cette fenêtre est silencieusement
+// "avalé" (aucune erreur, source.start() réussit) — ce qui explique
+// "mail-prêt" muet SANS jamais déclencher le repli <audio> (puisque
+// playVoiceLineWebAudio() croit avoir réussi). On amorce donc une fois par
+// contexte avant tout son réellement destiné à être entendu.
+function primeAudioContext(ctx) {
+  return new Promise(function (resolve) {
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      let done = false;
+      const finish = function () {
+        if (done) return;
+        done = true;
+        resolve();
+      };
+      src.onended = finish;
+      setTimeout(finish, 150);
+      src.start(0);
+    } catch (e) { resolve(); }
+  });
 }
 
 // "mail-pret" restait muet même avec le délai : un vrai AudioContext
@@ -10640,6 +10674,15 @@ async function playVoiceLineWebAudio(name, myToken) {
       // Repli <audio> immédiat si resume() a échoué OU expiré (timeout) —
       // plutôt qu'un silence invisible qui bloquerait toute la chaîne.
       if (!running) return false;
+    }
+    if (!sharedVoiceContextPrimed) {
+      await primeAudioContext(ctx);
+      sharedVoiceContextPrimed = true;
+      // L'amorçage a pu prendre jusqu'à ~150ms : un appel plus récent a pu
+      // entre-temps devenir "le" courant (ex: annulation puis nouvelle
+      // lecture) — sans ce contrôle, ce son périmé pourrait quand même
+      // sortir par-dessus le bon.
+      if (myToken !== voicePlayToken) return true;
     }
     const source = ctx.createBufferSource();
     source.buffer = buffer;
@@ -10764,7 +10807,13 @@ function unlockVoicePlayback() {
         const src = ctx.createBufferSource();
         src.buffer = buffer;
         src.connect(ctx.destination);
-        src.onended = function () { try { ctx.suspend(); } catch (e) {} };
+        src.onended = function () {
+          // Ce son silencieux JOUÉ JUSQU'AU BOUT équivaut à l'amorçage de
+          // primeAudioContext() : inutile de le refaire une 2e fois au
+          // moment de la 1ère vraie lecture (voir playVoiceLineWebAudio).
+          sharedVoiceContextPrimed = true;
+          try { ctx.suspend(); } catch (e) {}
+        };
         src.start(0);
       }).catch(function () {});
     } catch (e) {}
