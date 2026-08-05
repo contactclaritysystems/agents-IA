@@ -11428,6 +11428,26 @@ function deriveFallbackSubject(body) {
   return subject.length > 70 ? subject.slice(0, 70).trim() + "…" : subject;
 }
 
+// Résout un nom dicté ("Anthony") en email via le carnet de contacts déjà
+// chargé côté app — utilisé pour la mise en copie (cc_name) dictée, sans
+// avoir à dupliquer côté Make.com toute la logique de recherche/désambi-
+// guïsation déjà en place pour le destinataire principal.
+function findContactEmailByName(name) {
+  if (!name || !Array.isArray(contactsCache)) return "";
+  const needle = name.trim().toLowerCase();
+  if (!needle) return "";
+
+  const exact = contactsCache.find(c => (c.full_name || "").trim().toLowerCase() === needle);
+  if (exact) return exact.email || "";
+
+  const partial = contactsCache.find(c => {
+    const fullName = (c.full_name || "").toLowerCase();
+    return fullName && (fullName.includes(needle) || needle.includes(fullName));
+  });
+
+  return partial ? (partial.email || "") : "";
+}
+
 function openMailPreview(data, instruction) {
   // La popup de progression ("Demande comprise"...) devait sinon rester
   // visible jusqu'à 3.5s (son délai normal de disparition), pendant que
@@ -11458,6 +11478,23 @@ function openMailPreview(data, instruction) {
       data.name ||
       ""
   };
+
+  // Mise en copie dictée ("mets Anthony en copie") : l'IA renvoie
+  // seulement le nom cité (cc_name), pas un email — la résolution
+  // nom → email se fait ici, côté app, via le carnet de contacts déjà
+  // chargé. Si on ne trouve rien, le champ Cc reste vide et l'utilisateur
+  // le complète lui-même dans l'aperçu (avec la liste de contacts au clic).
+  const ccName = (data.cc_name || data.copie_nom || "").trim();
+
+  if (!currentPreparedMail.cc && ccName) {
+    const resolvedCcEmail = findContactEmailByName(ccName);
+
+    if (resolvedCcEmail) {
+      currentPreparedMail.cc = resolvedCcEmail;
+    } else {
+      showToast("Contact « " + ccName + " » introuvable pour la copie, choisissez-le manuellement", "error");
+    }
+  }
 
   if (!currentPreparedMail.subject) {
     currentPreparedMail.subject = deriveFallbackSubject(currentPreparedMail.body);
