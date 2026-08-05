@@ -14078,14 +14078,20 @@ if (objetMatch && objetMatch[1]) {
 
 const text = log.action || "";
 
-const toMatch = text.match(/DESTINATAIRE:\s*([\s\S]*?)\nOBJET:/i);
+// DESTINATAIRE et CC sont toujours sur leur propre ligne (une seule
+// ligne, jamais de retour à la ligne dedans) — on les capture ligne par
+// ligne plutôt qu'en bloc, pour ne pas que CC se retrouve mélangé dans
+// le destinataire quand les deux sont présents.
+const toMatch = text.match(/DESTINATAIRE:\s*([^\n]*)/i);
+const ccMatch = text.match(/\nCC:\s*([^\n]*)/i);
 const objectMatch = text.match(/OBJET:\s*(.+)/i);
 
 const recipient = toMatch && toMatch[1] ? toMatch[1].trim() : "";
+const ccRecipient = ccMatch && ccMatch[1] ? ccMatch[1].trim() : "";
 const subject = objectMatch && objectMatch[1] ? objectMatch[1].trim() : "Mail envoyé";
 
 const body = text
-  .replace(/DESTINATAIRE:\s*[\s\S]*?\nOBJET:\s*.+\n*/i, "")
+  .replace(/DESTINATAIRE:\s*[^\n]*\n(?:CC:\s*[^\n]*\n)?OBJET:\s*.+\n*/i, "")
   .trim();
 
   // Les labels "À"/"Objet" restaient illisibles (trop pâles) en thème
@@ -14121,6 +14127,13 @@ const body = text
     <span${forcedLabelStyle}>À</span>
     <strong${forcedLabelStyle}>${recipient || "Non renseigné"}</strong>
   </div>
+
+  ${ccRecipient ? `
+  <div class="detail-line">
+    <span${forcedLabelStyle}>Cc</span>
+    <strong${forcedLabelStyle}>${ccRecipient}</strong>
+  </div>
+  ` : ""}
 
   <div class="detail-line">
     <span${forcedLabelStyle}>Objet</span>
@@ -16018,7 +16031,8 @@ if (!contactName && Array.isArray(contactsCache)) {
 await saveActionLog(
   "mails",
   `CONTACT: ${contactName}
-DESTINATAIRE: ${to}
+DESTINATAIRE: ${to}${cc ? `
+CC: ${cc}` : ""}
 OBJET: ${subject}
 
 ${body}`,
