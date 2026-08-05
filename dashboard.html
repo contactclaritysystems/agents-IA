@@ -9138,6 +9138,14 @@ async function handleUser(user) {
   await loadActionCounter();
   await loadSubscription();
   await startOnboardingIfNeeded();
+
+  // Chargé ici (et pas seulement à la demande, ex: en ouvrant la page
+  // Contacts) pour garantir que contactsCache est déjà prêt dès la
+  // connexion — sinon un cycle déconnexion/reconnexion laissait la liste
+  // de contacts vide dans l'aperçu du mail (À/Cc) jusqu'à ce qu'on aille
+  // par hasard sur la page Contacts.
+  await loadContacts();
+
   restoreMailDraftIfAny();
 
   console.log("handleUser terminé");
