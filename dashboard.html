@@ -2216,7 +2216,8 @@ select.field-input {
 }
 }
 
-  #mail-contact-suggestions {
+  #mail-contact-suggestions,
+  #mail-cc-suggestions {
   margin-top: 8px;
   border-radius: 14px;
   overflow-y: auto;
@@ -2226,11 +2227,13 @@ select.field-input {
   background: var(--clarity-surface);
 }
 
-#mail-contact-suggestions button:last-child {
+#mail-contact-suggestions button:last-child,
+#mail-cc-suggestions button:last-child {
   border-bottom: none !important;
 }
 
-#mail-contact-suggestions button:hover {
+#mail-contact-suggestions button:hover,
+#mail-cc-suggestions button:hover {
   background: rgba(0,0,0,.03);
 }
 
@@ -7756,8 +7759,14 @@ body[data-theme="light"]::after {
 
     <div class="field-group">
       <div class="field-label">Destinataire</div>
-      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions()" onfocus="showMailContactSuggestions()" onblur="hideMailContactSuggestionsDelayed()">
+      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onfocus="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onblur="hideMailContactSuggestionsDelayed('mail-contact-suggestions')">
       <div id="mail-contact-suggestions" style="display:none;"></div>
+    </div>
+
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Cc <span style="font-weight:400;color:var(--clarity-text-tertiary);">(optionnel)</span></div>
+      <input class="field-input" id="preview-mail-cc" placeholder="cc@email.com" oninput="showMailContactSuggestions('preview-mail-cc','mail-cc-suggestions')" onfocus="showMailContactSuggestions('preview-mail-cc','mail-cc-suggestions')" onblur="hideMailContactSuggestionsDelayed('mail-cc-suggestions')">
+      <div id="mail-cc-suggestions" style="display:none;"></div>
     </div>
 
     <div class="field-group" style="margin-top:12px;">
@@ -11164,9 +11173,11 @@ async function saveActionLog(agent, action, status) {
       currentPreparedMail = saved.mail;
 
       const toEl = document.getElementById("preview-mail-to");
+      const ccEl = document.getElementById("preview-mail-cc");
       const subjectEl = document.getElementById("preview-mail-subject");
       const bodyEl = document.getElementById("preview-mail-body");
       if (toEl) toEl.value = currentPreparedMail.to || "";
+      if (ccEl) ccEl.value = currentPreparedMail.cc || "";
       if (subjectEl) subjectEl.value = currentPreparedMail.subject || "";
       if (bodyEl) bodyEl.value = currentPreparedMail.body || "";
 
@@ -11174,6 +11185,12 @@ async function saveActionLog(agent, action, status) {
       if (suggestions) {
         suggestions.style.display = "none";
         suggestions.innerHTML = "";
+      }
+
+      const ccSuggestions = document.getElementById("mail-cc-suggestions");
+      if (ccSuggestions) {
+        ccSuggestions.style.display = "none";
+        ccSuggestions.innerHTML = "";
       }
 
       const modal = document.getElementById("mail-preview-modal");
@@ -11421,6 +11438,7 @@ function openMailPreview(data, instruction) {
 
   currentPreparedMail = {
     to: data.to || data.email || data.recipient_email || "",
+    cc: data.cc || data.copie || "",
     subject: (data.subject || data.objet || "").trim(),
     body: data.body || data.message || data.email_body || "",
     contact_name:
@@ -11440,6 +11458,7 @@ function openMailPreview(data, instruction) {
   saveMailDraftToStorage();
 
   document.getElementById("preview-mail-to").value = currentPreparedMail.to;
+  document.getElementById("preview-mail-cc").value = currentPreparedMail.cc || "";
   document.getElementById("preview-mail-subject").value = currentPreparedMail.subject;
   document.getElementById("preview-mail-body").value = currentPreparedMail.body;
 
@@ -11448,6 +11467,13 @@ function openMailPreview(data, instruction) {
   if (suggestions) {
     suggestions.style.display = "none";
     suggestions.innerHTML = "";
+  }
+
+  const ccSuggestions = document.getElementById("mail-cc-suggestions");
+
+  if (ccSuggestions) {
+    ccSuggestions.style.display = "none";
+    ccSuggestions.innerHTML = "";
   }
 
   const modal = document.getElementById("mail-preview-modal");
@@ -15517,9 +15543,15 @@ function isValidEmailList(value) {
   return emails.every(isValidEmail);
 }
 
-  function showMailContactSuggestions() {
-  const input = document.getElementById("preview-mail-to");
-  const box = document.getElementById("mail-contact-suggestions");
+  // Généralisé pour être réutilisé par "À" (preview-mail-to) et
+  // "Cc" (preview-mail-cc), chacun avec son propre champ + son propre
+  // panneau de suggestions, pour ne pas se marcher dessus.
+  function showMailContactSuggestions(fieldId, boxId) {
+  fieldId = fieldId || "preview-mail-to";
+  boxId = boxId || "mail-contact-suggestions";
+
+  const input = document.getElementById(fieldId);
+  const box = document.getElementById(boxId);
 
   if (!input || !box) return;
 
@@ -15528,8 +15560,8 @@ function isValidEmailList(value) {
 
   // Champ vide (ou juste focus, avant toute frappe) : on affiche la liste
   // complète des contacts au lieu de masquer le panneau — clic sur le
-  // champ "À" doit permettre de choisir directement dans le carnet,
-  // pas uniquement de filtrer une fois qu'on a commencé à taper.
+  // champ doit permettre de choisir directement dans le carnet, pas
+  // uniquement de filtrer une fois qu'on a commencé à taper.
   const showAll = !lastPart;
 
   const matches = showAll
@@ -15548,7 +15580,7 @@ function isValidEmailList(value) {
   }
 
   box.innerHTML = matches.map(c => `
-    <button type="button" onmousedown="event.preventDefault();" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
+    <button type="button" onmousedown="event.preventDefault();" onclick="selectMailSuggestion('${c.email || ""}', '${fieldId}', '${boxId}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
       <strong>${c.full_name || "Contact"}</strong><br>
       <span style="font-size:12px;color:var(--clarity-text-tertiary);">${c.email || ""}</span>
     </button>
@@ -15557,13 +15589,14 @@ function isValidEmailList(value) {
   box.style.display = "block";
 }
 
-  // Le blur du champ "À" arriverait avant le clic sur une suggestion et
+  // Le blur du champ arriverait avant le clic sur une suggestion et
   // fermerait la liste trop tôt : on masque après un court délai (annulé
   // ci-dessus par onmousedown.preventDefault() sur chaque suggestion, qui
   // empêche le blur de se déclencher du tout au clic sur une suggestion).
-  function hideMailContactSuggestionsDelayed() {
+  function hideMailContactSuggestionsDelayed(boxId) {
+    boxId = boxId || "mail-contact-suggestions";
     setTimeout(function () {
-      const box = document.getElementById("mail-contact-suggestions");
+      const box = document.getElementById(boxId);
       if (box) {
         box.style.display = "none";
         box.innerHTML = "";
@@ -15571,9 +15604,12 @@ function isValidEmailList(value) {
     }, 150);
   }
 
-  function selectMailSuggestion(email) {
-  const input = document.getElementById("preview-mail-to");
-  const box = document.getElementById("mail-contact-suggestions");
+  function selectMailSuggestion(email, fieldId, boxId) {
+  fieldId = fieldId || "preview-mail-to";
+  boxId = boxId || "mail-contact-suggestions";
+
+  const input = document.getElementById(fieldId);
+  const box = document.getElementById(boxId);
 
   if (!input || !email) return;
 
@@ -15598,6 +15634,8 @@ function isValidEmailList(value) {
     blessVoiceLine("mail-envoye");
 
     const to = document.getElementById("preview-mail-to").value.trim();
+const ccInput = document.getElementById("preview-mail-cc");
+const cc = ccInput ? ccInput.value.trim() : "";
 const subject = document.getElementById("preview-mail-subject").value.trim();
 const body = document.getElementById("preview-mail-body").value.trim();
 
@@ -15608,6 +15646,12 @@ if (!to) {
 
 if (!isValidEmailList(to)) {
   showToast("Adresse mail invalide", "error");
+  return;
+}
+
+// Cc optionnel : uniquement validé s'il est rempli.
+if (cc && !isValidEmailList(cc)) {
+  showToast("Adresse Cc invalide", "error");
   return;
 }
 
@@ -15710,6 +15754,7 @@ const payload = {
   provider: connectedProvider,
   sender_email: connectedEmail,
   to,
+  cc,
   subject,
   body
 };
