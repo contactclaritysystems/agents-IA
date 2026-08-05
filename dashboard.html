@@ -1993,6 +1993,17 @@ select.field-input {
 }
 }
 
+/* Labels "À" / "Objet" (détail d'un mail dans Historique) trop pâles en
+   thème sombre sur mobile : var(--muted) (#9a9ea8) manque de contraste
+   sur le fond noir pur utilisé côté mobile. On les éclaircit un peu,
+   uniquement mobile + thème sombre (desktop déjà lisible, autres
+   thèmes non concernés). */
+@media (max-width: 600px) {
+  body[data-theme="dark"] .detail-line span {
+    color: #b8bcc6;
+  }
+}
+
 @media (min-width: 601px) {
   #contact-mobile-section {
     display: none;
