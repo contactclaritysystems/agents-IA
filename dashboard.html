@@ -11432,20 +11432,43 @@ function deriveFallbackSubject(body) {
 // chargé côté app — utilisé pour la mise en copie (cc_name) dictée, sans
 // avoir à dupliquer côté Make.com toute la logique de recherche/désambi-
 // guïsation déjà en place pour le destinataire principal.
+//
+// Ne choisit JAMAIS silencieusement en cas d'homonymes (risque réel de
+// mettre en copie la mauvaise personne) : retourne un statut explicite
+// ("found" / "ambiguous" / "no_email" / "not_found") pour que l'appelant
+// décide quoi afficher, plutôt qu'un simple email qui masquerait ces cas.
 function findContactEmailByName(name) {
-  if (!name || !Array.isArray(contactsCache)) return "";
+  if (!name || !Array.isArray(contactsCache)) {
+    return { status: "not_found", email: "" };
+  }
+
   const needle = name.trim().toLowerCase();
-  if (!needle) return "";
+  if (!needle) return { status: "not_found", email: "" };
 
-  const exact = contactsCache.find(c => (c.full_name || "").trim().toLowerCase() === needle);
-  if (exact) return exact.email || "";
+  const exactMatches = contactsCache.filter(c => (c.full_name || "").trim().toLowerCase() === needle);
 
-  const partial = contactsCache.find(c => {
-    const fullName = (c.full_name || "").toLowerCase();
-    return fullName && (fullName.includes(needle) || needle.includes(fullName));
-  });
+  const matches = exactMatches.length
+    ? exactMatches
+    : contactsCache.filter(c => {
+        const fullName = (c.full_name || "").toLowerCase();
+        return fullName && (fullName.includes(needle) || needle.includes(fullName));
+      });
 
-  return partial ? (partial.email || "") : "";
+  if (matches.length === 0) {
+    return { status: "not_found", email: "" };
+  }
+
+  if (matches.length > 1) {
+    return { status: "ambiguous", email: "" };
+  }
+
+  const contact = matches[0];
+
+  if (!contact.email) {
+    return { status: "no_email", email: "" };
+  }
+
+  return { status: "found", email: contact.email };
 }
 
 function openMailPreview(data, instruction) {
@@ -11487,10 +11510,14 @@ function openMailPreview(data, instruction) {
   const ccName = (data.cc_name || data.copie_nom || "").trim();
 
   if (!currentPreparedMail.cc && ccName) {
-    const resolvedCcEmail = findContactEmailByName(ccName);
+    const ccMatch = findContactEmailByName(ccName);
 
-    if (resolvedCcEmail) {
-      currentPreparedMail.cc = resolvedCcEmail;
+    if (ccMatch.status === "found") {
+      currentPreparedMail.cc = ccMatch.email;
+    } else if (ccMatch.status === "ambiguous") {
+      showToast("Plusieurs contacts s'appellent « " + ccName + " », choisissez le bon en Cc", "error");
+    } else if (ccMatch.status === "no_email") {
+      showToast("« " + ccName + " » n'a pas d'email enregistré, complétez sa fiche ou choisissez un autre contact en Cc", "error");
     } else {
       showToast("Contact « " + ccName + " » introuvable pour la copie, choisissez-le manuellement", "error");
     }
