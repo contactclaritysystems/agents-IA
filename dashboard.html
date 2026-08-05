@@ -13892,7 +13892,15 @@ const subject = objectMatch && objectMatch[1] ? objectMatch[1].trim() : "Mail en
 const body = text
   .replace(/DESTINATAIRE:\s*[\s\S]*?\nOBJET:\s*.+\n*/i, "")
   .trim();
-    
+
+  // Les labels "À"/"Objet" restaient illisibles (trop pâles) en thème
+  // sombre malgré var(--text)/var(--muted) — cause exacte non reproductible
+  // en local. On force donc explicitement du blanc en inline (garanti,
+  // quelle que soit la cause), uniquement quand le thème actif est sombre
+  // (les 3 autres thèmes restent inchangés, ils étaient déjà lisibles).
+  const isDarkTheme = document.body.getAttribute("data-theme") === "dark";
+  const forcedLabelStyle = isDarkTheme ? ' style="color:#ffffff !important;"' : "";
+
   const list = document.getElementById("history-list");
   if (!list) return;
 
@@ -13915,13 +13923,13 @@ const body = text
 
       <div style="margin-top:18px;">
   <div class="detail-line">
-    <span>À</span>
-    <strong>${recipient || "Non renseigné"}</strong>
+    <span${forcedLabelStyle}>À</span>
+    <strong${forcedLabelStyle}>${recipient || "Non renseigné"}</strong>
   </div>
 
   <div class="detail-line">
-    <span>Objet</span>
-    <strong>${subject}</strong>
+    <span${forcedLabelStyle}>Objet</span>
+    <strong${forcedLabelStyle}>${subject}</strong>
   </div>
 </div>
 
