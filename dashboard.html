@@ -12190,7 +12190,23 @@ if (data.agent === "mail") {
   data.request_id || requestId
 );
 }
-        
+
+// Agents "simples" (une dictée -> une réponse, sans étape intermédiaire
+// côté UI) : chacun a son propre scénario Make dédié, appelé ici via une
+// fonction générique commune plutôt qu'une copie de callMailAgent par
+// agent. Compléter SIMPLE_AGENT_WEBHOOKS au fur et à mesure que de
+// nouveaux agents de ce type sont branchés (redaction, compte_rendu,
+// relance_clients...).
+if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
+  return callSimpleAgent(
+    data.agent,
+    SIMPLE_AGENT_WEBHOOKS[data.agent],
+    data.instruction,
+    box,
+    data.request_id || requestId
+  );
+}
+
       } catch(e) {
         data = { success: false, message: "Réponse Make invalide" };
       }
@@ -12887,6 +12903,126 @@ function hideOrRemoveBox(box) {
   } else {
     box.style.display = "none";
     box.innerHTML = "";
+  }
+}
+
+// Agents "simples" : une dictée envoyée au scénario Make dédié de l'agent,
+// qui répond directement en un seul aller-retour ({agent, success,
+// title, message}). Pas d'étape intermédiaire côté UI (contrairement à
+// Mail, qui a besoin de résoudre un contact, gérer les ambiguïtés, etc.
+// via callMailAgent). Ajouter une ligne ici suffit à brancher un nouvel
+// agent de ce type.
+const SIMPLE_AGENT_WEBHOOKS = {
+  assistant: ASSISTANT_WEBHOOK_URL
+};
+
+async function callSimpleAgent(
+  agentName,
+  webhookUrl,
+  instruction,
+  box = null,
+  requestId = window.currentRequestId
+) {
+  try {
+    if (!box) {
+      box = document.getElementById("orchestrator-dictation-box");
+    }
+
+    if (box) {
+      setDictationBoxState(box, "info");
+      box.style.opacity = "1";
+      box.innerHTML = "✨ Réflexion en cours...";
+    }
+
+    // Même garde-fou que pour Mail : si Make ne répond jamais sur ce
+    // chemin, on ne veut pas laisser le micro bloqué indéfiniment.
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 25000);
+
+    let response;
+    try {
+      response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          instruction,
+          request_id: requestId
+        }),
+        signal: timeoutController.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    const text = await response.text();
+
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { success: false, message: "Réponse Make invalide." };
+    }
+
+    if (!response.ok || data.success === false) {
+      unlockAgentButtons();
+      resetOrchestratorMicButton();
+
+      const message = data.message || "Impossible de générer la réponse.";
+
+      if (box) {
+        setDictationBoxState(box, "error");
+        box.innerHTML = "✕ " + message;
+        autoHideDictationBox(box);
+      }
+
+      showToast(message, "error");
+      await saveActionLog(agentName, instruction, "error");
+      return;
+    }
+
+    const content = data.message || data.content || "";
+
+    if (box) {
+      setDictationBoxState(box, "success");
+      box.innerHTML = "✅ Réponse prête";
+      autoHideDictationBox(box);
+    }
+
+    openSimpleAgentPreview({
+      title: data.title || "Réponse",
+      content,
+      modalTitle: "Clarity",
+      modalSubtitle: "Vous pouvez modifier le texte."
+    });
+
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
+
+    await incrementActions();
+    await loadSubscription();
+
+    const logText =
+      "DEMANDE:\n" + instruction +
+      "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+
+    await saveActionLog(agentName, logText, "success");
+    await loadActionCounter();
+  } catch (err) {
+    console.error("Erreur agent " + agentName + " :", err);
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
+
+    const box2 = box || document.getElementById("orchestrator-dictation-box");
+    if (box2) {
+      setDictationBoxState(box2, "error");
+      box2.innerHTML = "✕ Erreur lors de l'envoi à l'agent.";
+      autoHideDictationBox(box2);
+    }
+
+    showToast("Erreur agent", "error");
+    await saveActionLog(agentName, instruction, "error");
   }
 }
 
