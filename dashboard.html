@@ -11576,15 +11576,25 @@ function openMailPreview(data, instruction) {
       ""
   };
 
-  // Même repère visuel "Nom (email)" pour le destinataire principal quand
-  // on connaît son nom et qu'il n'y a qu'un seul email (pas de virgule) —
-  // permet de vérifier d'un coup d'œil qu'on envoie au bon destinataire.
-  if (
-    currentPreparedMail.to &&
-    currentPreparedMail.contact_name &&
-    !currentPreparedMail.to.includes(",")
-  ) {
-    currentPreparedMail.to = formatEmailWithName(currentPreparedMail.to, currentPreparedMail.contact_name);
+  // Même repère visuel "Nom (email)" pour le destinataire principal —
+  // le webhook "mail préparation" ne renvoie que l'email (pas de nom), donc
+  // si contact_name est vide on le retrouve ici via le carnet de contacts
+  // (recherche par email exact, sans ambiguïté possible contrairement à
+  // une recherche par nom). Uniquement si un seul email (pas de virgule).
+  if (currentPreparedMail.to && !currentPreparedMail.to.includes(",")) {
+    if (!currentPreparedMail.contact_name && Array.isArray(contactsCache)) {
+      const toEmailLower = currentPreparedMail.to.trim().toLowerCase();
+      const matchedContact = contactsCache.find(
+        c => (c.email || "").trim().toLowerCase() === toEmailLower
+      );
+      if (matchedContact) {
+        currentPreparedMail.contact_name = matchedContact.full_name || "";
+      }
+    }
+
+    if (currentPreparedMail.contact_name) {
+      currentPreparedMail.to = formatEmailWithName(currentPreparedMail.to, currentPreparedMail.contact_name);
+    }
   }
 
   // Mise en copie dictée ("mets Anthony en copie") : l'IA renvoie
