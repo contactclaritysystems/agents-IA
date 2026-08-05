@@ -2219,7 +2219,9 @@ select.field-input {
   #mail-contact-suggestions {
   margin-top: 8px;
   border-radius: 14px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 240px;
   border: 1px solid rgba(0,0,0,.06);
   background: var(--clarity-surface);
 }
@@ -7754,7 +7756,7 @@ body[data-theme="light"]::after {
 
     <div class="field-group">
       <div class="field-label">Destinataire</div>
-      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions()">
+      <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions()" onfocus="showMailContactSuggestions()" onblur="hideMailContactSuggestionsDelayed()">
       <div id="mail-contact-suggestions" style="display:none;"></div>
     </div>
 
@@ -15524,16 +15526,20 @@ function isValidEmailList(value) {
   const value = input.value;
   const lastPart = value.split(",").pop().trim().toLowerCase();
 
-  if (!lastPart || lastPart.length < 2) {
-    box.style.display = "none";
-    box.innerHTML = "";
-    return;
-  }
+  // Champ vide (ou juste focus, avant toute frappe) : on affiche la liste
+  // complète des contacts au lieu de masquer le panneau — clic sur le
+  // champ "À" doit permettre de choisir directement dans le carnet,
+  // pas uniquement de filtrer une fois qu'on a commencé à taper.
+  const showAll = !lastPart;
 
-  const matches = contactsCache.filter(c =>
-    (c.full_name || "").toLowerCase().includes(lastPart) ||
-    (c.email || "").toLowerCase().includes(lastPart)
-  ).slice(0, 5);
+  const matches = showAll
+    ? contactsCache.slice().sort((a, b) =>
+        (a.full_name || a.email || "").localeCompare(b.full_name || b.email || "", "fr", { sensitivity: "base" })
+      )
+    : contactsCache.filter(c =>
+        (c.full_name || "").toLowerCase().includes(lastPart) ||
+        (c.email || "").toLowerCase().includes(lastPart)
+      ).slice(0, 5);
 
   if (matches.length === 0) {
     box.style.display = "none";
@@ -15542,7 +15548,7 @@ function isValidEmailList(value) {
   }
 
   box.innerHTML = matches.map(c => `
-    <button type="button" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
+    <button type="button" onmousedown="event.preventDefault();" onclick="selectMailSuggestion('${c.email || ""}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
       <strong>${c.full_name || "Contact"}</strong><br>
       <span style="font-size:12px;color:var(--clarity-text-tertiary);">${c.email || ""}</span>
     </button>
@@ -15550,6 +15556,20 @@ function isValidEmailList(value) {
 
   box.style.display = "block";
 }
+
+  // Le blur du champ "À" arriverait avant le clic sur une suggestion et
+  // fermerait la liste trop tôt : on masque après un court délai (annulé
+  // ci-dessus par onmousedown.preventDefault() sur chaque suggestion, qui
+  // empêche le blur de se déclencher du tout au clic sur une suggestion).
+  function hideMailContactSuggestionsDelayed() {
+    setTimeout(function () {
+      const box = document.getElementById("mail-contact-suggestions");
+      if (box) {
+        box.style.display = "none";
+        box.innerHTML = "";
+      }
+    }, 150);
+  }
 
   function selectMailSuggestion(email) {
   const input = document.getElementById("preview-mail-to");
