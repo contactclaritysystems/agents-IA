@@ -11505,7 +11505,44 @@ function findContactEmailByName(name) {
     return { status: "no_email", email: "" };
   }
 
-  return { status: "found", email: contact.email };
+  return { status: "found", email: contact.email, name: contact.full_name || "" };
+}
+
+// Échappe une valeur (ex : nom avec apostrophe, "D'Angelo") avant de
+// l'insérer dans un attribut onclick délimité par des guillemets simples.
+function escapeForJsAttr(str) {
+  return (str || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+}
+
+// Affiche "Prénom Nom (email@exemple.com)" au lieu d'un email brut dans les
+// champs À/Cc, pour repérer une erreur de destinataire d'un coup d'œil.
+function formatEmailWithName(email, name) {
+  email = (email || "").trim();
+  name = (name || "").trim();
+  if (!email) return "";
+  if (!name) return email;
+  return name + " (" + email + ")";
+}
+
+// Retrouve l'adresse email brute dans une entrée "Nom (email@exemple.com)"
+// (ou renvoie l'entrée telle quelle si ce n'est qu'un email brut) — pour
+// valider et pour reconstituer la liste d'emails propre envoyée au webhook.
+function extractEmailAddress(entry) {
+  entry = (entry || "").trim();
+  const match = entry.match(/\(([^()]+)\)\s*$/);
+  return (match ? match[1] : entry).trim();
+}
+
+// Version "email brut" d'une liste À/Cc potentiellement affichée avec les
+// noms ("Anthony (anthony@mail.com), Julie (julie@mail.com)") — c'est
+// cette version nettoyée qui part réellement dans le payload envoyé au
+// webhook d'envoi, jamais le texte affiché avec le nom.
+function rawEmailListFromDisplay(value) {
+  return (value || "")
+    .split(",")
+    .map(entry => extractEmailAddress(entry))
+    .filter(Boolean)
+    .join(", ");
 }
 
 function openMailPreview(data, instruction) {
@@ -11539,6 +11576,17 @@ function openMailPreview(data, instruction) {
       ""
   };
 
+  // Même repère visuel "Nom (email)" pour le destinataire principal quand
+  // on connaît son nom et qu'il n'y a qu'un seul email (pas de virgule) —
+  // permet de vérifier d'un coup d'œil qu'on envoie au bon destinataire.
+  if (
+    currentPreparedMail.to &&
+    currentPreparedMail.contact_name &&
+    !currentPreparedMail.to.includes(",")
+  ) {
+    currentPreparedMail.to = formatEmailWithName(currentPreparedMail.to, currentPreparedMail.contact_name);
+  }
+
   // Mise en copie dictée ("mets Anthony en copie") : l'IA renvoie
   // seulement le nom cité (cc_name), pas un email — la résolution
   // nom → email se fait ici, côté app, via le carnet de contacts déjà
@@ -11550,7 +11598,7 @@ function openMailPreview(data, instruction) {
     const ccMatch = findContactEmailByName(ccName);
 
     if (ccMatch.status === "found") {
-      currentPreparedMail.cc = ccMatch.email;
+      currentPreparedMail.cc = formatEmailWithName(ccMatch.email, ccMatch.name);
     } else if (ccMatch.status === "ambiguous") {
       showToast("Plusieurs contacts s'appellent « " + ccName + " », choisissez le bon en Cc", "error");
     } else if (ccMatch.status === "no_email") {
@@ -15633,7 +15681,9 @@ if (sub.actionsRemaining <= 0) {
 }
 
   function isValidEmail(email) {
-  email = email.trim();
+  // Tolère aussi le format d'affichage "Nom (email@exemple.com)" — on
+  // valide l'adresse qu'il contient, pas la chaîne entière.
+  email = extractEmailAddress(email);
   return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email);
 }
 
@@ -15689,7 +15739,7 @@ function isValidEmailList(value) {
   }
 
   box.innerHTML = matches.map(c => `
-    <button type="button" onmousedown="event.preventDefault();" onclick="selectMailSuggestion('${c.email || ""}', '${fieldId}', '${boxId}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
+    <button type="button" onmousedown="event.preventDefault();" onclick="selectMailSuggestion('${c.email || ""}', '${escapeForJsAttr(c.full_name || "")}', '${fieldId}', '${boxId}')" style="width:100%;border:none;background:var(--clarity-surface);padding:10px 12px;text-align:left;border-bottom:1px solid rgba(0,0,0,.06);">
       <strong>${c.full_name || "Contact"}</strong><br>
       <span style="font-size:12px;color:var(--clarity-text-tertiary);">${c.email || ""}</span>
     </button>
@@ -15713,7 +15763,7 @@ function isValidEmailList(value) {
     }, 150);
   }
 
-  function selectMailSuggestion(email, fieldId, boxId) {
+  function selectMailSuggestion(email, fullName, fieldId, boxId) {
   fieldId = fieldId || "preview-mail-to";
   boxId = boxId || "mail-contact-suggestions";
 
@@ -15722,8 +15772,10 @@ function isValidEmailList(value) {
 
   if (!input || !email) return;
 
+  const displayValue = formatEmailWithName(email, fullName);
+
   const parts = input.value.split(",");
-  parts[parts.length - 1] = " " + email;
+  parts[parts.length - 1] = " " + displayValue;
 
   input.value = parts.join(",").replace(/^,/, "").trim();
 
@@ -15742,9 +15794,12 @@ function isValidEmailList(value) {
     // risquait d'être bloqué silencieusement par Safari.
     blessVoiceLine("mail-envoye");
 
-    const to = document.getElementById("preview-mail-to").value.trim();
+    // Les champs affichent "Nom (email@exemple.com)" pour éviter les
+    // erreurs de destinataire, mais c'est l'email brut, sans le nom, qui
+    // doit partir dans le payload (le "To:"/"Cc:" réel de l'email envoyé).
+    const to = rawEmailListFromDisplay(document.getElementById("preview-mail-to").value.trim());
 const ccInput = document.getElementById("preview-mail-cc");
-const cc = ccInput ? ccInput.value.trim() : "";
+const cc = ccInput ? rawEmailListFromDisplay(ccInput.value.trim()) : "";
 const subject = document.getElementById("preview-mail-subject").value.trim();
 const body = document.getElementById("preview-mail-body").value.trim();
 
