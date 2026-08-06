@@ -889,7 +889,23 @@ select.field-input {
    (420px/82vh) sans toucher aux autres popups qui partagent .mail-choice-box. */
 #simple-agent-preview-modal .mail-choice-box {
   max-width: 560px;
-  max-height: 90vh;
+  max-height: 92vh;
+}
+
+/* Boutons plus compacts que le style par défaut (50px/42px), pour laisser
+   plus de place verticale au texte de la réponse. */
+#simple-agent-preview-modal .save-btn {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+
+#simple-agent-preview-modal .sheet-btn {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  margin-top: 8px !important;
 }
 
   #contact-choice-modal {
@@ -7832,7 +7848,7 @@ body[data-theme="light"]::after {
 
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label" id="simple-agent-result-title">Résultat</div>
-      <textarea class="field-input" id="simple-agent-result-content" style="min-height:380px;"></textarea>
+      <textarea class="field-input" id="simple-agent-result-content" style="min-height:460px;"></textarea>
     </div>
 
     <button class="save-btn" onclick="copySimpleAgentResult()" type="button">
