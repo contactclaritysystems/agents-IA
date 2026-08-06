@@ -12993,7 +12993,8 @@ function hideOrRemoveBox(box) {
 // via callMailAgent). Ajouter une ligne ici suffit à brancher un nouvel
 // agent de ce type.
 const SIMPLE_AGENT_WEBHOOKS = {
-  assistant: ASSISTANT_WEBHOOK_URL
+  assistant: ASSISTANT_WEBHOOK_URL,
+  redaction: REDACTION_WEBHOOK_URL
 };
 
 async function callSimpleAgent(
