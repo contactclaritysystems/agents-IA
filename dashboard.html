@@ -7841,10 +7841,21 @@ body[data-theme="light"]::after {
   <div class="mail-choice-backdrop" onclick="closeSimpleAgentPreview()"></div>
 
   <div class="mail-choice-box">
-    <div class="mail-choice-title" id="simple-agent-modal-title">Résultat prêt</div>
-    <div class="mail-choice-subtitle" id="simple-agent-modal-subtitle">
-      Vous pouvez modifier le texte.
+    <div class="mail-choice-title" style="display:flex;align-items:center;gap:9px;">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;" aria-hidden="true">
+        <defs>
+          <linearGradient id="simpleAgentMarkGrad" x1="0" y1="0" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#3bd4ff"/>
+            <stop offset="1" stop-color="#0091c7"/>
+          </linearGradient>
+        </defs>
+        <circle cx="11" cy="11" r="10" fill="url(#simpleAgentMarkGrad)" opacity="0.16"/>
+        <circle cx="11" cy="11" r="6.5" fill="none" stroke="url(#simpleAgentMarkGrad)" stroke-width="1.6"/>
+        <circle cx="11" cy="11" r="2.1" fill="url(#simpleAgentMarkGrad)"/>
+      </svg>
+      <span id="simple-agent-modal-title">Résultat prêt</span>
     </div>
+    <div class="mail-choice-subtitle" id="simple-agent-modal-subtitle" style="display:none;"></div>
 
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label" id="simple-agent-result-title">Résultat</div>
@@ -11347,7 +11358,18 @@ updateStatProgresses();
   const relaunchBtn = document.getElementById("simple-agent-relaunch-btn");
 
   if (title) title.textContent = data.modalTitle || "Résultat prêt";
-  if (subtitle) subtitle.textContent = data.modalSubtitle || "Vous pouvez modifier le texte.";
+  if (subtitle) {
+    // Plus de texte générique par défaut ("Vous pouvez modifier le
+    // texte.") : la popup ne montre une sous-ligne que si un agent en
+    // fournit une explicitement, sinon elle reste masquée.
+    if (data.modalSubtitle) {
+      subtitle.textContent = data.modalSubtitle;
+      subtitle.style.display = "block";
+    } else {
+      subtitle.textContent = "";
+      subtitle.style.display = "none";
+    }
+  }
   if (resultTitle) resultTitle.textContent = data.title || "Résultat";
   if (content) content.value = data.content || "";
   if (modal) modal.style.display = "block";
@@ -13052,7 +13074,6 @@ async function callSimpleAgent(
       title: data.title || "Réponse",
       content,
       modalTitle: "Clarity",
-      modalSubtitle: "Vous pouvez modifier le texte.",
       onRelaunch: () => startOrchestratorDictation()
     });
 
