@@ -7831,6 +7831,10 @@ body[data-theme="light"]::after {
       📋 Copier le texte
     </button>
 
+    <button class="sheet-btn" id="simple-agent-relaunch-btn" onclick="relaunchSimpleAgent()" type="button" style="width:100%;justify-content:center;margin-top:10px;display:none;">
+      🔁 Poser une autre question
+    </button>
+
     <button class="sheet-btn" onclick="closeSimpleAgentPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
       Fermer
     </button>
@@ -10524,7 +10528,7 @@ function showToast(msg, type = "success") {
   setTimeout(() => {
     t.classList.remove("show");
     t.classList.remove("error");
-  }, 2800);
+  }, 1500);
 }
 
 // ─── RÉPONSES VOCALES (identité vocale Clarity) ─────────────
@@ -11305,18 +11309,28 @@ updateStatProgresses();
 
   
 
+  // Callback mémorisé pour le bouton "Poser une autre question" : permet de
+  // relancer exactement la même dictée (même webhook/config) sans avoir à
+  // rouvrir la carte concernée. Réinitialisé à chaque ouverture de la popup.
+  let simpleAgentRelaunch = null;
+
   function openSimpleAgentPreview(data) {
   const modal = document.getElementById("simple-agent-preview-modal");
   const title = document.getElementById("simple-agent-modal-title");
   const subtitle = document.getElementById("simple-agent-modal-subtitle");
   const resultTitle = document.getElementById("simple-agent-result-title");
   const content = document.getElementById("simple-agent-result-content");
+  const relaunchBtn = document.getElementById("simple-agent-relaunch-btn");
 
   if (title) title.textContent = data.modalTitle || "Résultat prêt";
   if (subtitle) subtitle.textContent = data.modalSubtitle || "Vous pouvez modifier le texte.";
   if (resultTitle) resultTitle.textContent = data.title || "Résultat";
   if (content) content.value = data.content || "";
   if (modal) modal.style.display = "block";
+
+  simpleAgentRelaunch = typeof data.onRelaunch === "function" ? data.onRelaunch : null;
+  if (relaunchBtn) relaunchBtn.style.display = simpleAgentRelaunch ? "flex" : "none";
+
     requestAnimationFrame(() => {
   const box = modal.querySelector(".mail-choice-box");
   if (box) {
@@ -11331,6 +11345,15 @@ updateStatProgresses();
 function closeSimpleAgentPreview() {
   const modal = document.getElementById("simple-agent-preview-modal");
   if (modal) modal.style.display = "none";
+}
+
+// Ferme la popup de résultat puis relance immédiatement la dictée d'origine
+// (même agent, même webhook), sans aucune mémoire de la question précédente
+// : chaque demande repart de zéro, seule la UX est enchaînée.
+function relaunchSimpleAgent() {
+  const fn = simpleAgentRelaunch;
+  closeSimpleAgentPreview();
+  if (typeof fn === "function") fn();
 }
 
 async function copySimpleAgentResult() {
@@ -12264,7 +12287,8 @@ console.log("MESSAGE =", message);
         title,
         content,
         modalTitle: config.modalTitle,
-        modalSubtitle: config.modalSubtitle
+        modalSubtitle: config.modalSubtitle,
+        onRelaunch: () => startSimpleAgentDictation(config)
       });
 
       unlockAgentButtons();
@@ -12994,7 +13018,8 @@ async function callSimpleAgent(
       title: data.title || "Réponse",
       content,
       modalTitle: "Clarity",
-      modalSubtitle: "Vous pouvez modifier le texte."
+      modalSubtitle: "Vous pouvez modifier le texte.",
+      onRelaunch: () => startOrchestratorDictation()
     });
 
     unlockAgentButtons();
