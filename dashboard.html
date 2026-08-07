@@ -7422,6 +7422,12 @@ body[data-theme="light"]::after {
         <button type="button" class="quick-action-btn" id="quick-mail-btn" onclick="openQuickMailCompose()">
           ✉️ Envoyer un mail
         </button>
+        <button type="button" class="quick-action-btn" id="quick-redaction-btn" onclick="quickAgentAction('Ex : Écris un SMS pour dire que je serai en retard')">
+          📝 Rédiger un texte
+        </button>
+        <button type="button" class="quick-action-btn" id="quick-assistant-btn" onclick="quickAgentAction('Ex : Quelles sont mes obligations pour afficher mes prix ?')">
+          💡 Poser une question
+        </button>
       </div>
     </div>
 
@@ -8152,6 +8158,22 @@ const HELP_ACTIONS = [
     color: "blue",
     example: 'Envoie un mail à "nom du contact" et dis-lui que "ce que vous voulez lui dire".',
     ready: true
+  },
+  {
+    id: "redaction",
+    label: "Rédaction",
+    icon: "📝",
+    color: "purple",
+    example: 'Écris un SMS pour dire à mon patron que je serai en retard.',
+    ready: true
+  },
+  {
+    id: "assistant",
+    label: "Assistant",
+    icon: "💡",
+    color: "green",
+    example: "Quelles sont les obligations légales pour afficher mes prix en tant qu'artisan ?",
+    ready: true
   }
 ];
 
@@ -8217,6 +8239,28 @@ function showHelpActionExample(index) {
 
 function tryHelpActionsExample() {
   closeHelpActionsModal();
+  startOrchestratorDictation();
+}
+
+// Boutons "Actions rapides" de l'accueil : un raccourci par agent connecté
+// (Mail, Rédaction, Assistant...). Comme tout continue de passer par le
+// Chef d'Orchestre (voir règle de continuité), ces boutons ne court-
+// circuitent rien : ils rappellent juste à l'utilisateur un exemple de ce
+// qu'il peut dire, puis ouvrent le micro, pour qu'il sache toujours ce qui
+// est possible sans avoir à deviner.
+function quickAgentAction(hintText) {
+  const placeholderEl = document.querySelector("#card-orchestrator-run .clarity-input-placeholder");
+  if (placeholderEl) {
+    if (placeholderEl.dataset.original === undefined) {
+      placeholderEl.dataset.original = placeholderEl.textContent;
+    }
+    placeholderEl.textContent = hintText;
+    setTimeout(() => {
+      if (placeholderEl.textContent === hintText) {
+        placeholderEl.textContent = placeholderEl.dataset.original || "Dites-moi ce qu'il vous faut…";
+      }
+    }, 4000);
+  }
   startOrchestratorDictation();
 }
 
