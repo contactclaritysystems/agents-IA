@@ -12869,6 +12869,12 @@ console.log("MESSAGE =", message);
 
   let quickMailSelectedContact = null;
 let quickMailFlowActive = false;
+// Nom du contact déjà résolu pour l'échange en cours, réutilisé par le
+// polling (loadAgentProgress) pour toutes les étapes qui suivent
+// "contact_found" : Make ne renvoie le nom qu'à cette étape précise, les
+// statuts suivants (generating_mail, ready) n'ont qu'un statut sans message,
+// donc sans ce cache le nom disparaissait dès l'étape suivante.
+let currentMailContactLabel = "";
 
 async function openQuickMailCompose() {
   if (!contactsCache || !contactsCache.length) {
@@ -13608,6 +13614,11 @@ if (quickMailFlowActive && contactId) {
       resolvedContact.full_name;
   }
 }
+// On mémorise ce libellé (avec le nom, s'il est connu) pour que le polling
+// puisse le réafficher aux étapes suivantes même quand Make ne renvoie pas
+// le nom à nouveau. Si le contact n'est pas encore connu ici (cas "Recherche
+// du contact..."), on efface l'ancien nom éventuel d'un échange précédent.
+currentMailContactLabel = quickMailFlowActive ? quickMailContactLabel : "";
 
 setAgentProgress(
     box,
@@ -13887,12 +13898,18 @@ async function loadAgentProgress(requestId) {
       {
         text: progress.message
           ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
-          : (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
+          : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné")),
         status: "done"
       },
       { text: "Préparation du mail...", status: "loading" }
     ]
   );
+  // On garde en mémoire le libellé le plus complet reçu jusqu'ici (avec le
+  // nom), pour les étapes suivantes qui n'auront pas ce message.
+  if (progress.message) {
+    currentMailContactLabel =
+      `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`;
+  }
   break;
 
     case "generating_mail":
@@ -13903,7 +13920,7 @@ async function loadAgentProgress(requestId) {
         [
           { text: "Demande comprise", status: "done" },
           {
-  text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
+  text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
   status: "done"
 },
           { text: "Rédaction du mail...", status: "loading" }
@@ -13919,7 +13936,7 @@ async function loadAgentProgress(requestId) {
         [
           { text: "Demande comprise", status: "done" },
           {
-  text: contactJustCreated ? "Contact enregistré" : "Contact sélectionné",
+  text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
   status: "done"
 },
           { text: "Mail rédigé", status: "done" }
