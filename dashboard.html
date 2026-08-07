@@ -13775,6 +13775,14 @@ if (typeof data === "string") {
       return "reopened";
     }
 
+    // Même règle que partout ailleurs dans ce flux : si le contact était
+    // déjà connu (currentMailContactLabel rempli plus haut), on garde son
+    // nom ici aussi, au lieu du texte générique "Contact trouvé" qui faisait
+    // disparaître le nom juste avant l'ouverture du mail final.
+    const finalContactLabel =
+      currentMailContactLabel ||
+      (contactJustCreated ? "Contact enregistré" : "Contact trouvé");
+
     if (box) {
   setAgentProgress(
     box,
@@ -13782,7 +13790,7 @@ if (typeof data === "string") {
     "✨",
     [
       { text: "Demande comprise", status: "done" },
-      { text: "Contact trouvé", status: "done" },
+      { text: finalContactLabel, status: "done" },
       { text: "Rédaction du mail...", status: "loading" }
     ]
   );
@@ -13795,7 +13803,7 @@ if (box) {
     "✨",
     [
       { text: "Demande comprise", status: "done" },
-      { text: "Contact trouvé", status: "done" },
+      { text: finalContactLabel, status: "done" },
       { text: "Mail rédigé", status: "done" }
     ],
     "Prêt à valider"
