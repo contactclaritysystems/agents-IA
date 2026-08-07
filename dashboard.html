@@ -11968,6 +11968,13 @@ icon= "✨",
     simpleAgentConversationHistory = simpleAgentConversationHistory.slice(-5);
   }
 
+  // Retient quel agent (Assistant, Rédaction...) a traité la dernière
+  // demande dispatchée par le Chef d'Orchestre, pour pouvoir lui renvoyer
+  // directement les demandes de suivi ("non, améliore-le") sans repasser
+  // par une reclassification qui n'a aucun contexte pour deviner qu'il
+  // s'agit du même agent. Remis à null en même temps que l'historique.
+  let lastAgentInfo = null;
+
   async function startOrchestratorDictation(continuing = false) {
   await startSimpleAgentDictation({
     agent: "orchestrator",
@@ -11990,6 +11997,7 @@ progressIcon: "✨",
 
   if (!continuing) {
     simpleAgentConversationHistory = [];
+    lastAgentInfo = null;
   }
 
   const allowed = await canUseAgents();
@@ -12224,6 +12232,9 @@ progressIcon: "✨",
       ensureBox();
     setDictationBoxState(box, "info");
 
+    const requestId = crypto.randomUUID();
+    window.currentRequestId = requestId;
+
 if (config.agent === "orchestrator") {
   updateAgentProgress(box, {
     title: config.progressTitle || "Clarity",
@@ -12239,9 +12250,6 @@ if (config.agent === "orchestrator") {
   box.innerHTML = config.loadingText;
 }
 
-    const requestId = crypto.randomUUID();
-    window.currentRequestId = requestId;
-
     try {
       const response = await fetch(config.webhookUrl, {
         method: "POST",
@@ -12252,7 +12260,8 @@ if (config.agent === "orchestrator") {
   user_email: currentUser.email,
   user_id: currentUser.id,
   instruction,
-  conversation_history: formatConversationHistory(simpleAgentConversationHistory)
+  conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+  last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
 })
 
       });
@@ -13095,6 +13104,7 @@ async function callSimpleAgent(
     }
 
     pushConversationHistory(instruction, content);
+    lastAgentInfo = { agentName: agentName, webhookUrl: webhookUrl };
 
     openSimpleAgentPreview({
       title: data.title || "Réponse",
