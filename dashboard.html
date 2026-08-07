@@ -7900,6 +7900,40 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+  <!-- Popup de clarification : remplace le toast éphémère quand un agent
+       (Rédaction, Assistant...) répond qu'il lui manque une info précise.
+       Reste ouverte tant que l'utilisateur ne l'a pas fermée, avec deux
+       façons d'y répondre : à l'oral (redicter) ou à l'écrit (champ texte
+       qui repart directement au Chef d'Orchestre). -->
+  <div id="clarify-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeClarifyModal()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title" style="display:flex;align-items:center;gap:9px;">
+      <img id="clarify-modal-logo" src="" alt="" style="height:26px;width:auto;flex-shrink:0;display:block;" />
+      <span>Il me manque une info</span>
+    </div>
+    <div class="mail-choice-subtitle" id="clarify-modal-message" style="margin-top:6px;"></div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Votre réponse</div>
+      <textarea class="field-input" id="clarify-modal-input" placeholder="Écrivez votre réponse ici…" style="min-height:100px;" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();submitClarifyReply();}"></textarea>
+    </div>
+
+    <button class="save-btn" onclick="submitClarifyReply()" type="button">
+      ➜ Envoyer
+    </button>
+
+    <button class="sheet-btn" onclick="retryClarifyByDictation()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      🎙️ Répondre à l'oral
+    </button>
+
+    <button class="sheet-btn" onclick="closeClarifyModal()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
+</div>
+
   <div id="pricing-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closePricingPage()"></div>
   <div class="mail-choice-box" id="pricing-modal-content"></div>
@@ -8287,6 +8321,208 @@ function quickAgentAction(hintText) {
     }, 4000);
   }
   startOrchestratorDictation();
+}
+
+// ─── POPUP DE CLARIFICATION ─────────────────────────────
+// Ouverte à la place d'un toast éphémère quand un agent répond qu'il lui
+// manque une info précise pour répondre correctement. Reste affichée tant
+// que l'utilisateur ne l'a pas fermée, et propose deux façons de compléter
+// la demande : à l'oral (redicter, mémoire de conversation conservée) ou
+// à l'écrit (champ texte qui repart directement au Chef d'Orchestre).
+function openClarifyModal(message) {
+  const modal = document.getElementById("clarify-modal");
+  if (!modal) return;
+
+  const msgEl = document.getElementById("clarify-modal-message");
+  if (msgEl) msgEl.textContent = message || "Pouvez-vous préciser votre demande ?";
+
+  const logoEl = document.getElementById("clarify-modal-logo");
+  if (logoEl && !logoEl.getAttribute("src")) {
+    logoEl.src = CLARITY_THINKING_LOGO_SRC;
+  }
+
+  const inputEl = document.getElementById("clarify-modal-input");
+  if (inputEl) inputEl.value = "";
+
+  modal.style.display = "block";
+
+  if (inputEl) setTimeout(() => inputEl.focus(), 60);
+}
+
+function closeClarifyModal() {
+  const modal = document.getElementById("clarify-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function retryClarifyByDictation() {
+  closeClarifyModal();
+  // continuing=true : garde l'historique (la question posée + ce qu'on va
+  // dicter en réponse) au lieu de repartir d'une conversation vide.
+  startOrchestratorDictation(true);
+}
+
+function submitClarifyReply() {
+  const inputEl = document.getElementById("clarify-modal-input");
+  const text = inputEl ? inputEl.value.trim() : "";
+  if (!text) {
+    showToast("Écrivez votre réponse avant d'envoyer", "error");
+    return;
+  }
+  closeClarifyModal();
+  sendTypedInstruction(text, true);
+}
+
+// Équivalent tapé au clavier du flux vocal principal (startOrchestratorDictation) : même
+// payload envoyé au Chef d'Orchestre (conversation_history, last_agent,
+// user_name...), même dispatch vers Mail/Rédaction/Assistant selon la
+// réponse. Utilisé pour répondre par écrit à la popup de clarification,
+// mais utilisable plus largement partout où on veut taper au lieu de dicter.
+async function sendTypedInstruction(instruction, continuing = false) {
+  instruction = (instruction || "").trim();
+  if (!instruction) {
+    showToast("Écrivez votre demande avant d'envoyer", "error");
+    return;
+  }
+
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
+  if (agentIsWorking) {
+    showToast("Un agent est déjà en cours", "error");
+    return;
+  }
+
+  if (!continuing) {
+    simpleAgentConversationHistory = [];
+    lastAgentInfo = null;
+  }
+
+  lockAgentButtons(null, "⏳ Agent en cours...");
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.opacity = "1";
+  setDictationBoxState(box, "info");
+
+  const requestId = crypto.randomUUID();
+  window.currentRequestId = requestId;
+
+  updateAgentProgress(box, {
+    title: "Clarity",
+    icon: "✨",
+    steps: [{ text: "Compréhension de votre demande...", status: "loading" }]
+  });
+
+  try {
+    const response = await fetch(ORCHESTRATOR_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        request_id: requestId,
+        user_email: currentUser.email,
+        user_id: currentUser.id,
+        user_name: getUserDisplayName(),
+        instruction,
+        conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+        last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
+      })
+    });
+
+    const text = await response.text();
+
+    let data = {};
+    try {
+      data = JSON.parse(text);
+
+      if (data.request_id && data.request_id !== window.currentRequestId) return;
+
+      if (data.agent === "mail") {
+        setDictationBoxState(box, "info");
+        box.innerHTML = "🔎 Recherche du contact...";
+        return callMailAgent(data.instruction, box, data.request_id || requestId);
+      }
+
+      if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
+        return callSimpleAgent(
+          data.agent,
+          SIMPLE_AGENT_WEBHOOKS[data.agent],
+          data.instruction,
+          box,
+          data.request_id || requestId
+        );
+      }
+    } catch (e) {
+      data = { success: false, message: "Réponse Make invalide" };
+    }
+
+    const effectiveAgent = (data && data.agent) ? data.agent : "orchestrator";
+
+    if (data.success === false) {
+      unlockAgentButtons();
+      const message = data.message || data.error || "Impossible de générer la réponse.";
+      pushConversationHistory(instruction, message);
+      resetOrchestratorMicButton(true);
+      setDictationBoxState(box, "error");
+      autoHideDictationBox(box, 50);
+      openClarifyModal(message);
+      await saveActionLog(effectiveAgent, instruction, "error");
+      return;
+    }
+
+    if (data.to || data.subject || data.body) {
+      setDictationBoxState(box, "success");
+      box.innerHTML = "✅ Mail préparé";
+      openMailPreview(data, instruction);
+      unlockAgentButtons();
+      resetOrchestratorMicButton();
+      await incrementActions();
+      await loadSubscription();
+      await saveActionLog(effectiveAgent, instruction, "success");
+      await loadActionCounter();
+      autoHideDictationBox(box);
+      return;
+    }
+
+    const title = data.title || data.titre || "Réponse";
+    const content = data.content || data.response || data.message || "";
+
+    setDictationBoxState(box, "success");
+    box.innerHTML = "✅ Réponse prête";
+
+    pushConversationHistory(instruction, content);
+
+    openSimpleAgentPreview({
+      title,
+      content,
+      modalTitle: "Clarity",
+      onRelaunch: () => startOrchestratorDictation(true)
+    });
+
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
+
+    await incrementActions();
+    await loadSubscription();
+
+    const logText = "DEMANDE:\n" + instruction + "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+    await saveActionLog(effectiveAgent, logText, "success");
+    await loadActionCounter();
+
+    autoHideDictationBox(box);
+  } catch (err) {
+    console.error("Erreur envoi instruction tapée:", err);
+    unlockAgentButtons();
+    resetOrchestratorMicButton();
+    setDictationBoxState(box, "error");
+    autoHideDictationBox(box, 50);
+    openClarifyModal("Une erreur est survenue. Vous pouvez réessayer votre demande.");
+    await saveActionLog("orchestrator", instruction, "error");
+  }
 }
 
 function openSupportChoiceModal() {
@@ -12456,14 +12692,17 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
         pushConversationHistory(instruction, message);
         resetMicButton(true);
 
-        setDictationBoxState(box, "error");
-        box.innerHTML = "✕ " + message;
-
 console.log("DATA =", data);
 console.log("MESSAGE =", message);
 
-        showToast(message, "error");
-        autoHideDictationBox(box);
+        // Un toast qui disparaît tout seul ne suffit pas quand Clarity pose
+        // une vraie question de clarification : l'utilisateur doit avoir le
+        // temps de la lire et de pouvoir y répondre (à l'oral ou à l'écrit),
+        // pas juste voir passer un message éphémère. On ouvre donc une
+        // popup persistante à la place.
+        setDictationBoxState(box, "error");
+        autoHideDictationBox(box, 50);
+        openClarifyModal(message);
         await saveActionLog(effectiveAgent, instruction, "error");
         return;
       }
@@ -13221,11 +13460,13 @@ async function callSimpleAgent(
 
       if (box) {
         setDictationBoxState(box, "error");
-        box.innerHTML = "✕ " + message;
-        autoHideDictationBox(box);
+        autoHideDictationBox(box, 50);
       }
 
-      showToast(message, "error");
+      // Popup persistante (au lieu d'un toast éphémère) : l'utilisateur doit
+      // pouvoir lire la question de clarification et y répondre, à l'oral
+      // ou à l'écrit.
+      openClarifyModal(message);
       await saveActionLog(agentName, instruction, "error");
       return;
     }
