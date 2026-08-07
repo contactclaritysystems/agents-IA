@@ -11844,7 +11844,7 @@ function unlockAgentButtons() {
 // micro doit VRAIMENT redevenir utilisable : succès ou échec final de
 // l'envoi du mail — jamais avant, sinon on peut recliquer pendant que
 // l'agent travaille encore.
-function resetOrchestratorMicButton() {
+function resetOrchestratorMicButton(continuing = false) {
   const btn = document.getElementById("orchestrator-dictation-btn");
   if (!btn) return;
   btn.disabled = false;
@@ -11860,7 +11860,11 @@ function resetOrchestratorMicButton() {
   // jamais vers startOrchestratorDictation. Résultat : dès la 2e pression,
   // le clic exécutait l'ancien handler (figé sur la 1ère reconnaissance,
   // déjà terminée) au lieu de démarrer une nouvelle dictée.
-  btn.onclick = startOrchestratorDictation;
+  // continuing=true : utilisé quand une demande a échoué faute de précision
+  // ("votre demande n'est pas assez précise...") — on garde l'historique de
+  // la conversation pour que l'utilisateur puisse juste compléter l'info
+  // manquante au lieu de tout redicter depuis zéro.
+  btn.onclick = () => startOrchestratorDictation(continuing);
 }
 
   function updateAgentProgress(box, config = {}) {
@@ -12117,7 +12121,7 @@ progressIcon: "✨",
     }, 2600);
   }
 
-  function resetMicButton() {
+  function resetMicButton(continuing = false) {
     if (!btn) return;
     btn.disabled = false;
     btn.style.opacity = "1";
@@ -12128,7 +12132,10 @@ progressIcon: "✨",
     }
     // Sans ça, btn.onclick reste figé sur le handler "arrêter l'enregistrement"
     // assigné plus bas, et un 2e clic ne relance jamais une nouvelle dictée.
-    btn.onclick = startOrchestratorDictation;
+    // continuing=true : cas d'une demande refusée faute de précision — on
+    // garde l'historique pour que l'utilisateur puisse compléter l'info
+    // manquante plutôt que tout redicter.
+    btn.onclick = () => startOrchestratorDictation(continuing);
   }
 
   // Bug WebKit connu sur iOS : une session de reconnaissance vocale peut
@@ -12372,8 +12379,14 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
 
       if (data.success === false) {
         unlockAgentButtons();
-        resetMicButton();
         const message = data.message || data.error || "Impossible de générer la réponse.";
+
+        // On garde le fil de la conversation : la prochaine dictée doit
+        // pouvoir juste compléter l'info manquante ("c'est pour ma femme")
+        // plutôt qu'obliger l'utilisateur à tout redire depuis zéro.
+        pushConversationHistory(instruction, message);
+        resetMicButton(true);
+
         setDictationBoxState(box, "error");
         box.innerHTML = "✕ " + message;
 
@@ -13129,9 +13142,13 @@ async function callSimpleAgent(
 
     if (!response.ok || data.success === false) {
       unlockAgentButtons();
-      resetOrchestratorMicButton();
 
       const message = data.message || "Impossible de générer la réponse.";
+
+      // Idem : on préserve le contexte pour que la prochaine dictée puisse
+      // compléter l'info manquante plutôt que forcer à tout redire.
+      pushConversationHistory(instruction, message);
+      resetOrchestratorMicButton(true);
 
       if (box) {
         setDictationBoxState(box, "error");
