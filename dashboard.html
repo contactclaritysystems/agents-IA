@@ -11968,6 +11968,18 @@ icon= "✨",
     simpleAgentConversationHistory = simpleAgentConversationHistory.slice(-5);
   }
 
+  // Nom affiché de l'utilisateur, envoyé aux agents (Rédaction, Assistant...)
+  // pour qu'ils puissent signer un texte avec le vrai nom au lieu d'un
+  // placeholder générique ("[Votre nom]"). Priorité au profil enregistré
+  // dans Réglages, sinon repli sur les métadonnées du compte.
+  function getUserDisplayName() {
+    const p = currentProfile || {};
+    const full = ((p.firstname || "") + " " + (p.lastname || "")).trim();
+    if (full) return full;
+    const meta = (currentUser && currentUser.user_metadata) || {};
+    return meta.firstname || meta.prenom || "";
+  }
+
   // Retient quel agent (Assistant, Rédaction...) a traité la dernière
   // demande dispatchée par le Chef d'Orchestre, pour pouvoir lui renvoyer
   // directement les demandes de suivi ("non, améliore-le") sans repasser
@@ -12259,6 +12271,7 @@ if (config.agent === "orchestrator") {
   request_id: requestId,
   user_email: currentUser.email,
   user_id: currentUser.id,
+  user_name: getUserDisplayName(),
   instruction,
   conversation_history: formatConversationHistory(simpleAgentConversationHistory),
   last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
@@ -13059,6 +13072,7 @@ async function callSimpleAgent(
         body: JSON.stringify({
           user_id: currentUser.id,
           user_email: currentUser.email,
+          user_name: getUserDisplayName(),
           instruction,
           request_id: requestId,
           conversation_history: formatConversationHistory(simpleAgentConversationHistory)
