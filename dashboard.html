@@ -12914,7 +12914,7 @@ function openMissingContentQuickMail(contactId, contactName, requestId) {
 
   let contact = (contactsCache || []).find(c => c.id === contactId);
   if (!contact) {
-    contact = { id: contactId, full_name: contactName || "ce contact", email: "" };
+    contact = { id: contactId, full_name: capitalizeName(contactName) || "ce contact", email: "" };
   }
 
   quickMailSelectedContact = contact;
@@ -13592,7 +13592,16 @@ box.style.opacity = "1";
 // enregistré", ce qui donne l'impression d'un changement de contact.
 let quickMailContactLabel = contactJustCreated ? "Contact enregistré" : "Contact sélectionné";
 if (quickMailFlowActive && contactId) {
-  const resolvedContact = (contactsCache || []).find(c => c.id === contactId);
+  // quickMailSelectedContact est déjà rempli à ce stade (choisi juste avant
+  // dans submitQuickMail()) : on s'en sert en priorité, plutôt que de
+  // relancer une recherche dans contactsCache qui peut échouer (contact tout
+  // juste résolu par l'agent, pas encore présent dans ce cache local) et
+  // faire disparaître le nom pendant une seconde ou deux, jusqu'à ce que le
+  // polling (loadAgentProgress) le rétablisse.
+  const resolvedContact =
+    (quickMailSelectedContact && quickMailSelectedContact.id === contactId)
+      ? quickMailSelectedContact
+      : (contactsCache || []).find(c => c.id === contactId);
   if (resolvedContact) {
     quickMailContactLabel =
       (contactJustCreated ? "Contact enregistré : " : "Contact sélectionné : ") +
@@ -16732,6 +16741,15 @@ ${body}`,
 function capitalizeFirstLetter(value) {
   if (!value) return "";
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+// Met une majuscule à chaque mot d'un nom (gère aussi les noms composés
+// avec espace ou tiret, ex: "jean-pierre dupont" -> "Jean-Pierre Dupont").
+// Utilisé pour les noms de contact qui arrivent en minuscules depuis l'agent
+// (transcription vocale, Make.com...).
+function capitalizeName(value) {
+  if (!value) return "";
+  return value.replace(/[^\s-]+/g, word => word.charAt(0).toUpperCase() + word.slice(1));
 }
 
 function setupAutoCapitalizeFields() {
