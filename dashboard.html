@@ -8346,6 +8346,119 @@ function quickAgentAction(hintText) {
   startOrchestratorDictation();
 }
 
+     let pendingReminderPartial = null;
+
+function openReminderScheduleSheet(data) {
+  pendingReminderPartial = data.partial || {};
+  const defaults = data.defaults || {};
+  const reason = data.message || pendingReminderPartial.reason || "Rappel";
+
+  const today = defaults.today || new Date().toISOString().slice(0, 10);
+  const tomorrow = defaults.tomorrow || today;
+  const defaultDate = defaults.date || tomorrow;
+  const defaultTime = defaults.time || "08:00";
+
+  let sheet = document.getElementById("reminder-schedule-sheet");
+  if (!sheet) {
+    sheet = document.createElement("div");
+    sheet.id = "reminder-schedule-sheet";
+    sheet.innerHTML = `
+      <div class="reminder-schedule-backdrop" onclick="closeReminderScheduleSheet()"></div>
+      <div class="reminder-schedule-card">
+        <div class="reminder-schedule-title">Rappel</div>
+        <div class="reminder-schedule-reason" id="reminder-sheet-reason"></div>
+        <div class="reminder-quick">
+          <button type="button" data-quick="today">Aujourd'hui</button>
+          <button type="button" data-quick="tomorrow">Demain</button>
+        </div>
+        <label class="reminder-label">Date</label>
+        <input type="date" id="reminder-sheet-date" class="field-input" />
+        <label class="reminder-label">Heure</label>
+        <input type="time" id="reminder-sheet-time" class="field-input" step="900" />
+        <button type="button" class="save-btn" id="reminder-sheet-confirm">✓ Noter le rappel</button>
+        <button type="button" class="sheet-btn" onclick="closeReminderScheduleSheet()">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(sheet);
+
+    const style = document.createElement("style");
+    style.textContent = `
+      #reminder-schedule-sheet{position:fixed;inset:0;z-index:99999;display:none;align-items:flex-end;justify-content:center}
+      #reminder-schedule-sheet.open{display:flex}
+      .reminder-schedule-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+      .reminder-schedule-card{position:relative;width:100%;max-width:420px;background:var(--clarity-surface,#1c1c1e);border-radius:20px 20px 0 0;padding:22px;color:var(--clarity-text,#fff)}
+      .reminder-schedule-title{font-weight:800;font-size:18px;margin-bottom:6px}
+      .reminder-schedule-reason{opacity:.8;margin-bottom:16px;font-size:14px}
+      .reminder-quick{display:flex;gap:8px;margin-bottom:14px}
+      .reminder-quick button{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;font-weight:700}
+      .reminder-label{display:block;font-size:12px;opacity:.6;margin:10px 0 4px;font-weight:700}
+    `;
+    document.head.appendChild(style);
+
+    sheet.querySelectorAll("[data-quick]").forEach(btn => {
+      btn.onclick = () => {
+        const d = document.getElementById("reminder-sheet-date");
+        d.value = btn.dataset.quick === "today" ? sheet.dataset.today : sheet.dataset.tomorrow;
+      };
+    });
+
+    document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
+  }
+
+  sheet.dataset.today = today;
+  sheet.dataset.tomorrow = tomorrow;
+  document.getElementById("reminder-sheet-reason").textContent = reason;
+  document.getElementById("reminder-sheet-date").value = defaultDate;
+  document.getElementById("reminder-sheet-time").value = defaultTime;
+  sheet.classList.add("open");
+}
+
+function closeReminderScheduleSheet() {
+  document.getElementById("reminder-schedule-sheet")?.classList.remove("open");
+}
+
+async function confirmReminderSchedule() {
+  const date = document.getElementById("reminder-sheet-date").value;
+  const time = document.getElementById("reminder-sheet-time").value;
+  if (!date || !time) {
+    showToast("Choisis une date et une heure", "error");
+    return;
+  }
+  closeReminderScheduleSheet();
+
+  const partial = pendingReminderPartial || {};
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: partial.reason || "Rappel",
+    reason: partial.reason,
+    reminder_date: date,
+    reminder_time: time,
+    contact_name: partial.contact_name || null,
+    message_context: partial.message_context || "",
+    request_id: window.currentRequestId
+  };
+
+  try {
+    const response = await fetch(RELANCE_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (data.success) {
+      showToast(data.message || "Rappel noté", "success");
+      if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+      if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+    } else {
+      showToast(data.message || "Impossible de créer le rappel", "error");
+    }
+  } catch (e) {
+    showToast("Erreur réseau", "error");
+  }
+}
+
 // ─── POPUP DE CLARIFICATION ─────────────────────────────
 // Ouverte à la place d'un toast éphémère quand un agent répond qu'il lui
 // manque une info précise pour répondre correctement. Reste affichée tant
@@ -13498,8 +13611,14 @@ async function callSimpleAgent(
 
     if (!response.ok || data.success === false) {
       unlockAgentButtons();
-
       const message = data.message || "Impossible de générer la réponse.";
+
+      if (agentName === "relance" && data.reason === "needs_schedule") {
+        openReminderScheduleSheet(data);
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        return;
+      }
 
       // Idem : on préserve le contexte pour que la prochaine dictée puisse
       // compléter l'info manquante plutôt que forcer à tout redire.
@@ -13517,7 +13636,7 @@ async function callSimpleAgent(
       openClarifyModal(message);
       await saveActionLog(agentName, instruction, "error");
       return;
-    }
+     }
 
     const content = data.message || data.content || "";
 
