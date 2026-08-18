@@ -13681,7 +13681,7 @@ try {
 if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
     cleaned = cleaned.slice(1, -1);
     cleaned = cleaned.replace(/\\"/g, '"');
-    cleaned = cleaned.replace(/\\n/g, "");
+    cleaned = cleaned.replace(/\\n/g, "\n");
 }
 
 data = JSON.parse(cleaned);
@@ -16643,7 +16643,7 @@ const payload = {
   to,
   cc,
   subject,
-  body
+  body: body.replace(/\n/g, "<br>\n")
 };
 
   try {
