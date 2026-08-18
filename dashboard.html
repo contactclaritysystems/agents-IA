@@ -8431,19 +8431,21 @@ async function confirmReminderSchedule() {
     showToast("Choisis une date et une heure", "error");
     return;
   }
-  closeReminderScheduleSheet();
+     
+    closeReminderScheduleSheet();
 
-  const stray = document.getElementById("orchestrator-dictation-box");
-  if (stray) {
-    stray.style.display = "none";
-    stray.innerHTML = "";
+  // Popup "enregistrement"
+  let saving = document.getElementById("orchestrator-dictation-box");
+  if (!saving) {
+    saving = document.createElement("div");
+    saving.id = "orchestrator-dictation-box";
+    document.body.appendChild(saving);
   }
-  document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
-    el.style.display = "none";
-    el.innerHTML = "";
-  });
+  saving.style.cssText = "display:block;position:fixed;left:50%;top:28%;transform:translateX(-50%);z-index:99998;background:rgba(28,28,30,.95);padding:12px 18px;border-radius:16px;color:#fff;font-weight:700;font-size:14px;";
+  saving.innerHTML = "⏳ Enregistrement du rappel…";
 
   const partial = pendingReminderPartial || {};
+  // ... le reste du payload + fetch ...
   const payload = {
     user_id: currentUser.id,
     user_email: currentUser.email,
@@ -8464,14 +8466,21 @@ async function confirmReminderSchedule() {
       body: JSON.stringify(payload)
     });
     const data = await response.json();
-    if (data.success) {
+       
+        if (data.success) {
+      saving.style.display = "none";
+      saving.innerHTML = "";
       showToast(data.message || "Rappel noté", "success");
       if (typeof unlockAgentButtons === "function") unlockAgentButtons();
       if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
     } else {
+      saving.style.display = "none";
+      saving.innerHTML = "";
       showToast(data.message || "Impossible de créer le rappel", "error");
     }
   } catch (e) {
+        saving.style.display = "none";
+    saving.innerHTML = "";
     showToast("Erreur réseau", "error");
   }
 }
@@ -13630,17 +13639,15 @@ async function callSimpleAgent(
       unlockAgentButtons();
       const message = data.message || "Impossible de générer la réponse.";
 
-            if (agentName === "relance" && data.reason === "needs_schedule") {
+     if (agentName === "relance" && data.reason === "needs_schedule") {
         if (box) {
-          setDictationBoxState(box, "success");
           box.style.display = "none";
           box.innerHTML = "";
         }
-        const stray = document.getElementById("orchestrator-dictation-box");
-        if (stray) {
-          stray.style.display = "none";
-          stray.innerHTML = "";
-        }
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
+          el.style.display = "none";
+          el.innerHTML = "";
+        });
         openReminderScheduleSheet(data);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
