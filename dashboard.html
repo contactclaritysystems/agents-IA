@@ -8348,6 +8348,8 @@ function quickAgentAction(hintText) {
 
      let pendingReminderPartial = null;
 
+let pendingReminderPartial = null;
+
 function openReminderScheduleSheet(data) {
   pendingReminderPartial = data.partial || {};
   const defaults = data.defaults || {};
@@ -8358,89 +8360,91 @@ function openReminderScheduleSheet(data) {
   const defaultDate = defaults.date || tomorrow;
   const defaultTime = defaults.time || "08:00";
 
-  let sheet = document.getElementById("reminder-schedule-sheet");
-  if (!sheet) {
-    sheet = document.createElement("div");
-    sheet.id = "reminder-schedule-sheet";
-    sheet.innerHTML = `
-      <div class="reminder-schedule-backdrop" onclick="closeReminderScheduleSheet()"></div>
-      <div class="reminder-schedule-card">
-        <div class="reminder-schedule-title">Rappel</div>
-        <div class="reminder-schedule-reason" id="reminder-sheet-reason"></div>
-        <div class="reminder-quick">
-          <button type="button" data-quick="today">Aujourd'hui</button>
-          <button type="button" data-quick="tomorrow">Demain</button>
+  let modal = document.getElementById("reminder-schedule-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "reminder-schedule-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeReminderScheduleSheet()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title">Rappel</div>
+        <div class="mail-choice-subtitle" id="reminder-sheet-reason"></div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;">
+          <button type="button" class="mail-choice-btn" id="reminder-quick-today" style="flex:1;justify-content:center;">Aujourd'hui</button>
+          <button type="button" class="mail-choice-btn" id="reminder-quick-tomorrow" style="flex:1;justify-content:center;">Demain</button>
         </div>
-        <label class="reminder-label">Date</label>
-        <input type="date" id="reminder-sheet-date" class="field-input" />
-        <label class="reminder-label">Heure</label>
-        <input type="time" id="reminder-sheet-time" class="field-input" step="900" />
-        <button type="button" class="save-btn" id="reminder-sheet-confirm">✓ Noter le rappel</button>
-        <button type="button" class="sheet-btn" onclick="closeReminderScheduleSheet()">Annuler</button>
+
+        <div class="field-group" style="margin-top:14px;">
+          <div class="field-label">Date</div>
+          <input class="field-input" type="date" id="reminder-sheet-date" />
+        </div>
+
+        <div class="field-group" style="margin-top:12px;">
+          <div class="field-label">Heure</div>
+          <input class="field-input" type="time" id="reminder-sheet-time" step="900" />
+        </div>
+
+        <button class="save-btn" type="button" id="reminder-sheet-confirm" style="margin-top:16px;">
+          ✓ Noter le rappel
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeReminderScheduleSheet()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
       </div>
     `;
-    document.body.appendChild(sheet);
+    document.body.appendChild(modal);
 
-    const style = document.createElement("style");
-    style.textContent = `
-      #reminder-schedule-sheet{position:fixed;inset:0;z-index:99999;display:none;align-items:flex-end;justify-content:center}
-      #reminder-schedule-sheet.open{display:flex}
-      .reminder-schedule-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-      .reminder-schedule-card{position:relative;width:100%;max-width:420px;background:var(--clarity-surface,#1c1c1e);border-radius:20px 20px 0 0;padding:22px;color:var(--clarity-text,#fff)}
-      .reminder-schedule-title{font-weight:800;font-size:18px;margin-bottom:6px}
-      .reminder-schedule-reason{opacity:.8;margin-bottom:16px;font-size:14px}
-      .reminder-quick{display:flex;gap:8px;margin-bottom:14px}
-      .reminder-quick button{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;font-weight:700}
-      .reminder-quick button.selected{background:#0a84ff!important;border-color:#0a84ff!important;color:#fff!important}
-      .reminder-label{display:block;font-size:12px;opacity:.6;margin:10px 0 4px;font-weight:700}
-      #reminder-sheet-confirm{margin-top:18px}
-      input[type="date"]::-webkit-clear-button,
-      input[type="time"]::-webkit-clear-button{display:none!important}
-      .reminder-schedule-card input.field-input,.reminder-schedule-card input[type="date"],.reminder-schedule-card input[type="time"]{width:100%;max-width:100%;box-sizing:border-box;display:block}
-      .reminder-schedule-card .save-btn,.reminder-schedule-card .sheet-btn{width:100%;box-sizing:border-box}
-    `;
-    document.head.appendChild(style);
-
-    sheet.querySelectorAll("[data-quick]").forEach(btn => {
-  btn.onclick = () => {
-    const d = document.getElementById("reminder-sheet-date");
-    d.value = btn.dataset.quick === "today" ? sheet.dataset.today : sheet.dataset.tomorrow;
-    sheet.querySelectorAll("[data-quick]").forEach(b => b.classList.remove("selected"));
-    btn.classList.add("selected");
-  };
-});
-       
-           const dateInput = document.getElementById("reminder-sheet-date");
-    if (dateInput) {
-      dateInput.addEventListener("change", () => {
-        const sheetEl = document.getElementById("reminder-schedule-sheet");
-        const val = dateInput.value;
-        sheetEl.querySelectorAll("[data-quick]").forEach(b => b.classList.remove("selected"));
-        if (val === sheetEl.dataset.today) {
-          sheetEl.querySelector('[data-quick="today"]')?.classList.add("selected");
-        } else if (val === sheetEl.dataset.tomorrow) {
-          sheetEl.querySelector('[data-quick="tomorrow"]')?.classList.add("selected");
-        }
-      });
-    }
-
+    document.getElementById("reminder-quick-today").onclick = () => {
+      document.getElementById("reminder-sheet-date").value = modal.dataset.today;
+      setReminderQuickSelected("today");
+    };
+    document.getElementById("reminder-quick-tomorrow").onclick = () => {
+      document.getElementById("reminder-sheet-date").value = modal.dataset.tomorrow;
+      setReminderQuickSelected("tomorrow");
+    };
+    document.getElementById("reminder-sheet-date").addEventListener("change", () => {
+      const val = document.getElementById("reminder-sheet-date").value;
+      if (val === modal.dataset.today) setReminderQuickSelected("today");
+      else if (val === modal.dataset.tomorrow) setReminderQuickSelected("tomorrow");
+      else setReminderQuickSelected(null);
+    });
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
 
-  sheet.dataset.today = today;
-  sheet.dataset.tomorrow = tomorrow;
+  modal.dataset.today = today;
+  modal.dataset.tomorrow = tomorrow;
   document.getElementById("reminder-sheet-reason").textContent = reason;
   document.getElementById("reminder-sheet-date").value = defaultDate;
   document.getElementById("reminder-sheet-time").value = defaultTime;
-  sheet.classList.add("open");
+
+  if (defaultDate === today) setReminderQuickSelected("today");
+  else if (defaultDate === tomorrow) setReminderQuickSelected("tomorrow");
+  else setReminderQuickSelected(null);
+
+  modal.style.display = "flex";
+}
+
+function setReminderQuickSelected(which) {
+  const todayBtn = document.getElementById("reminder-quick-today");
+  const tomorrowBtn = document.getElementById("reminder-quick-tomorrow");
+  if (!todayBtn || !tomorrowBtn) return;
+  todayBtn.style.background = "";
+  todayBtn.style.color = "";
+  tomorrowBtn.style.background = "";
+  tomorrowBtn.style.color = "";
+  const active = which === "today" ? todayBtn : which === "tomorrow" ? tomorrowBtn : null;
+  if (active) {
+    active.style.background = "var(--dark, #141416)";
+    active.style.color = "var(--clarity-primary-text, #fff)";
+  }
 }
 
 function closeReminderScheduleSheet() {
-  document.getElementById("reminder-schedule-sheet")?.classList.remove("open");
-  document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
-    el.style.display = "none";
-    el.innerHTML = "";
-  });
+  const modal = document.getElementById("reminder-schedule-modal");
+  if (modal) modal.style.display = "none";
 }
 
 async function confirmReminderSchedule() {
@@ -8451,17 +8455,18 @@ async function confirmReminderSchedule() {
     return;
   }
 
-  document.getElementById("reminder-schedule-sheet")?.classList.remove("open");
+  closeReminderScheduleSheet();
 
-  let saving = document.getElementById("reminder-saving-toast");
-  if (!saving) {
-    saving = document.createElement("div");
-    saving.id = "reminder-saving-toast";
-    document.body.appendChild(saving);
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    document.body.appendChild(box);
   }
-     
-  saving.style.cssText = "display:block;position:fixed;left:50%;bottom:28%;transform:translateX(-50%);z-index:100000;background:rgba(28,28,30,.96);padding:14px 20px;border-radius:16px;color:#fff;font-weight:800;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:90%;text-align:center;";
-  saving.textContent = "⏳ Enregistrement du rappel…";
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rappel…";
 
   const partial = pendingReminderPartial || {};
   const payload = {
@@ -8484,7 +8489,8 @@ async function confirmReminderSchedule() {
       body: JSON.stringify(payload)
     });
     const data = await response.json();
-    saving.style.display = "none";
+    box.style.display = "none";
+    box.innerHTML = "";
     if (data.success) {
       showToast(data.message || "Rappel noté", "success");
       if (typeof unlockAgentButtons === "function") unlockAgentButtons();
@@ -8493,7 +8499,8 @@ async function confirmReminderSchedule() {
       showToast(data.message || "Impossible de créer le rappel", "error");
     }
   } catch (e) {
-    saving.style.display = "none";
+    box.style.display = "none";
+    box.innerHTML = "";
     showToast("Erreur réseau", "error");
   }
 }
