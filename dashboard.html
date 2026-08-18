@@ -13528,12 +13528,16 @@ async function callSimpleAgent(
     pushConversationHistory(instruction, content);
     lastAgentInfo = { agentName: agentName, webhookUrl: webhookUrl };
 
-    openSimpleAgentPreview({
-      title: data.title || "Réponse",
-      content,
-      modalTitle: "Clarity",
-      onRelaunch: () => startOrchestratorDictation(true)
-    });
+    if (agentName === "planning") {
+  showToast(content || "Rendez-vous noté", "success");
+} else {
+  openSimpleAgentPreview({
+    title: data.title || "Réponse",
+    content,
+    modalTitle: "Clarity",
+    onRelaunch: () => startOrchestratorDictation(true)
+  });
+}
 
     unlockAgentButtons();
     resetOrchestratorMicButton();
