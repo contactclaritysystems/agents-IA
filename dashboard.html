@@ -8393,9 +8393,11 @@ function openReminderScheduleSheet(data) {
       .reminder-quick button{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;font-weight:700}
       .reminder-quick button.selected{background:#0a84ff!important;border-color:#0a84ff!important;color:#fff!important}
       .reminder-label{display:block;font-size:12px;opacity:.6;margin:10px 0 4px;font-weight:700}
-#reminder-sheet-confirm{margin-top:18px}
+      #reminder-sheet-confirm{margin-top:18px}
       input[type="date"]::-webkit-clear-button,
       input[type="time"]::-webkit-clear-button{display:none!important}
+      .reminder-schedule-card input.field-input,.reminder-schedule-card input[type="date"],.reminder-schedule-card input[type="time"]{width:100%;max-width:100%;box-sizing:border-box;display:block}
+      .reminder-schedule-card .save-btn,.reminder-schedule-card .sheet-btn{width:100%;box-sizing:border-box}
     `;
     document.head.appendChild(style);
 
@@ -8407,6 +8409,20 @@ function openReminderScheduleSheet(data) {
     btn.classList.add("selected");
   };
 });
+       
+           const dateInput = document.getElementById("reminder-sheet-date");
+    if (dateInput) {
+      dateInput.addEventListener("change", () => {
+        const sheetEl = document.getElementById("reminder-schedule-sheet");
+        const val = dateInput.value;
+        sheetEl.querySelectorAll("[data-quick]").forEach(b => b.classList.remove("selected"));
+        if (val === sheetEl.dataset.today) {
+          sheetEl.querySelector('[data-quick="today"]')?.classList.add("selected");
+        } else if (val === sheetEl.dataset.tomorrow) {
+          sheetEl.querySelector('[data-quick="tomorrow"]')?.classList.add("selected");
+        }
+      });
+    }
 
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
@@ -8443,7 +8459,8 @@ async function confirmReminderSchedule() {
     saving.id = "reminder-saving-toast";
     document.body.appendChild(saving);
   }
-  saving.style.cssText = "display:block;position:fixed;left:50%;top:30%;transform:translateX(-50%);z-index:100000;background:rgba(28,28,30,.96);padding:14px 20px;border-radius:16px;color:#fff;font-weight:800;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);";
+     
+  saving.style.cssText = "display:block;position:fixed;left:50%;bottom:28%;transform:translateX(-50%);z-index:100000;background:rgba(28,28,30,.96);padding:14px 20px;border-radius:16px;color:#fff;font-weight:800;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);max-width:90%;text-align:center;";
   saving.textContent = "⏳ Enregistrement du rappel…";
 
   const partial = pendingReminderPartial || {};
