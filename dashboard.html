@@ -8369,9 +8369,9 @@ function openReminderScheduleSheet(data) {
         <div class="mail-choice-title">Rappel</div>
         <div class="mail-choice-subtitle" id="reminder-sheet-reason"></div>
 
-        <div style="display:flex;gap:10px;margin-top:14px;">
-          <button type="button" class="mail-choice-btn" id="reminder-quick-today" style="flex:1;justify-content:center;">Aujourd'hui</button>
-          <button type="button" class="mail-choice-btn" id="reminder-quick-tomorrow" style="flex:1;justify-content:center;">Demain</button>
+        <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
+          <button type="button" class="mail-choice-btn" id="reminder-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
+          <button type="button" class="mail-choice-btn" id="reminder-quick-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
         </div>
 
         <div class="field-group" style="margin-top:14px;">
@@ -8440,9 +8440,17 @@ function setReminderQuickSelected(which) {
   }
 }
 
-function closeReminderScheduleSheet() {
+// isCancel=true (défaut) : vraie annulation (bouton "Annuler" ou clic sur le
+// fond) -> on prévient l'utilisateur avec un toast, comme pour les autres
+// popups (ex: closeQuickMailModal). isCancel=false : fermeture après une
+// validation réussie (confirmReminderSchedule), pas d'annulation donc pas de
+// toast "annulé" dans ce cas.
+function closeReminderScheduleSheet(isCancel = true) {
   const modal = document.getElementById("reminder-schedule-modal");
   if (modal) modal.style.display = "none";
+  if (isCancel) {
+    showToast("Rappel annulé", "error");
+  }
 }
 
 async function confirmReminderSchedule() {
@@ -8453,7 +8461,7 @@ async function confirmReminderSchedule() {
     return;
   }
 
-  closeReminderScheduleSheet();
+  closeReminderScheduleSheet(false);
 
   let box = document.getElementById("orchestrator-dictation-box");
   if (!box) {
