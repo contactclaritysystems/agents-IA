@@ -8391,6 +8391,7 @@ function openReminderScheduleSheet(data) {
       .reminder-schedule-reason{opacity:.8;margin-bottom:16px;font-size:14px}
       .reminder-quick{display:flex;gap:8px;margin-bottom:14px}
       .reminder-quick button{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;font-weight:700}
+      .reminder-quick button.selected{background:#0a84ff!important;border-color:#0a84ff!important;color:#fff!important}
       .reminder-label{display:block;font-size:12px;opacity:.6;margin:10px 0 4px;font-weight:700}
 #reminder-sheet-confirm{margin-top:18px}
       input[type="date"]::-webkit-clear-button,
@@ -8399,11 +8400,13 @@ function openReminderScheduleSheet(data) {
     document.head.appendChild(style);
 
     sheet.querySelectorAll("[data-quick]").forEach(btn => {
-      btn.onclick = () => {
-        const d = document.getElementById("reminder-sheet-date");
-        d.value = btn.dataset.quick === "today" ? sheet.dataset.today : sheet.dataset.tomorrow;
-      };
-    });
+  btn.onclick = () => {
+    const d = document.getElementById("reminder-sheet-date");
+    d.value = btn.dataset.quick === "today" ? sheet.dataset.today : sheet.dataset.tomorrow;
+    sheet.querySelectorAll("[data-quick]").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+  };
+});
 
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
@@ -8431,21 +8434,19 @@ async function confirmReminderSchedule() {
     showToast("Choisis une date et une heure", "error");
     return;
   }
-     
-    closeReminderScheduleSheet();
 
-  // Popup "enregistrement"
-  let saving = document.getElementById("orchestrator-dictation-box");
+  document.getElementById("reminder-schedule-sheet")?.classList.remove("open");
+
+  let saving = document.getElementById("reminder-saving-toast");
   if (!saving) {
     saving = document.createElement("div");
-    saving.id = "orchestrator-dictation-box";
+    saving.id = "reminder-saving-toast";
     document.body.appendChild(saving);
   }
-  saving.style.cssText = "display:block;position:fixed;left:50%;top:28%;transform:translateX(-50%);z-index:99998;background:rgba(28,28,30,.95);padding:12px 18px;border-radius:16px;color:#fff;font-weight:700;font-size:14px;";
-  saving.innerHTML = "⏳ Enregistrement du rappel…";
+  saving.style.cssText = "display:block;position:fixed;left:50%;top:30%;transform:translateX(-50%);z-index:100000;background:rgba(28,28,30,.96);padding:14px 20px;border-radius:16px;color:#fff;font-weight:800;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.4);";
+  saving.textContent = "⏳ Enregistrement du rappel…";
 
   const partial = pendingReminderPartial || {};
-  // ... le reste du payload + fetch ...
   const payload = {
     user_id: currentUser.id,
     user_email: currentUser.email,
@@ -8466,21 +8467,16 @@ async function confirmReminderSchedule() {
       body: JSON.stringify(payload)
     });
     const data = await response.json();
-       
-        if (data.success) {
-      saving.style.display = "none";
-      saving.innerHTML = "";
+    saving.style.display = "none";
+    if (data.success) {
       showToast(data.message || "Rappel noté", "success");
       if (typeof unlockAgentButtons === "function") unlockAgentButtons();
       if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
     } else {
-      saving.style.display = "none";
-      saving.innerHTML = "";
       showToast(data.message || "Impossible de créer le rappel", "error");
     }
   } catch (e) {
-        saving.style.display = "none";
-    saving.innerHTML = "";
+    saving.style.display = "none";
     showToast("Erreur réseau", "error");
   }
 }
