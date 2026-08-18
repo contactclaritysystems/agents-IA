@@ -8418,6 +8418,10 @@ function openReminderScheduleSheet(data) {
 
 function closeReminderScheduleSheet() {
   document.getElementById("reminder-schedule-sheet")?.classList.remove("open");
+  document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
+    el.style.display = "none";
+    el.innerHTML = "";
+  });
 }
 
 async function confirmReminderSchedule() {
@@ -8428,6 +8432,16 @@ async function confirmReminderSchedule() {
     return;
   }
   closeReminderScheduleSheet();
+
+  const stray = document.getElementById("orchestrator-dictation-box");
+  if (stray) {
+    stray.style.display = "none";
+    stray.innerHTML = "";
+  }
+  document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
+    el.style.display = "none";
+    el.innerHTML = "";
+  });
 
   const partial = pendingReminderPartial || {};
   const payload = {
@@ -13616,7 +13630,17 @@ async function callSimpleAgent(
       unlockAgentButtons();
       const message = data.message || "Impossible de générer la réponse.";
 
-      if (agentName === "relance" && data.reason === "needs_schedule") {
+            if (agentName === "relance" && data.reason === "needs_schedule") {
+        if (box) {
+          setDictationBoxState(box, "success");
+          box.style.display = "none";
+          box.innerHTML = "";
+        }
+        const stray = document.getElementById("orchestrator-dictation-box");
+        if (stray) {
+          stray.style.display = "none";
+          stray.innerHTML = "";
+        }
         openReminderScheduleSheet(data);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
