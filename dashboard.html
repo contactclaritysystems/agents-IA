@@ -8392,6 +8392,8 @@ function openReminderScheduleSheet(data) {
       .reminder-quick{display:flex;gap:8px;margin-bottom:14px}
       .reminder-quick button{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:inherit;font-weight:700}
       .reminder-label{display:block;font-size:12px;opacity:.6;margin:10px 0 4px;font-weight:700}
+      input[type="date"]::-webkit-clear-button,
+      input[type="time"]::-webkit-clear-button{display:none!important}
     `;
     document.head.appendChild(style);
 
