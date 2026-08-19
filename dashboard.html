@@ -12798,6 +12798,83 @@ if (!window._customPickersOutsideClickBound) {
   window.addEventListener("resize", closeAllCustomPickers);
 }
 
+// ─── VERROUILLAGE DU DÉFILEMENT DE LA PAGE PENDANT QU'UN POPUP EST OUVERT ───
+// Repéré sur "Poser une question" et "Rédiger un texte" : la page EN
+// DESSOUS du popup restait scrollable (molette/trackpad faisaient défiler
+// la page derrière, alors que le popup doit rester fixe et centré à
+// l'écran). Tous les popups de l'app (mail, planning, rappel, texte, aide,
+// tarifs, aperçus...) partagent le même moule (.mail-choice-backdrop +
+// .mail-choice-box) : plutôt que de modifier une par une chacune des
+// fonctions d'ouverture/fermeture (~17 popups, risque d'en oublier une
+// aujourd'hui ou pour un futur popup), on détecte automatiquement quand
+// N'IMPORTE LEQUEL de ces popups devient visible ou se cache, et on
+// verrouille/déverrouille le défilement de la page en conséquence.
+const CLARITY_MODAL_IDS = [
+  "mail-choice-modal", "smtp-config-modal", "mail-preview-modal",
+  "notes-preview-modal", "simple-agent-preview-modal", "clarify-modal",
+  "pricing-modal", "support-choice-modal", "help-actions-modal",
+  "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
+  "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
+  "planning-schedule-modal", "planning-contact-modal"
+];
+
+let clarityScrollLockY = 0;
+let clarityScrollLocked = false;
+
+function isAnyClarityModalOpen() {
+  return CLARITY_MODAL_IDS.some(id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    if (el.style.display === "none") return false;
+    return getComputedStyle(el).display !== "none";
+  });
+}
+
+// Technique "position:fixed" (pas juste overflow:hidden) : nécessaire pour
+// bloquer aussi le rebond de défilement tactile (iOS) derrière le popup,
+// pas seulement la molette sur PC.
+function recomputeClarityScrollLock() {
+  const shouldLock = isAnyClarityModalOpen();
+  if (shouldLock && !clarityScrollLocked) {
+    clarityScrollLocked = true;
+    clarityScrollLockY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = "-" + clarityScrollLockY + "px";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.documentElement.style.overflow = "hidden";
+  } else if (!shouldLock && clarityScrollLocked) {
+    clarityScrollLocked = false;
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    document.documentElement.style.overflow = "";
+    window.scrollTo(0, clarityScrollLockY);
+  }
+}
+
+if (!window._clarityModalScrollLockBound) {
+  window._clarityModalScrollLockBound = true;
+  const startClarityScrollLockObserver = () => {
+    const observer = new MutationObserver(() => recomputeClarityScrollLock());
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style"],
+      subtree: true,
+      childList: true
+    });
+    recomputeClarityScrollLock();
+  };
+  if (document.body) {
+    startClarityScrollLockObserver();
+  } else {
+    document.addEventListener("DOMContentLoaded", startClarityScrollLockObserver);
+  }
+}
+
 function formatDateHuman(iso) {
   if (!iso) return "Choisir une date";
   const parts = iso.split("-").map(Number);
@@ -18427,8 +18504,6 @@ if (reactivateHomeCard) {
   card.style.display = "none";
 }
 
-  let pricingScrollY = 0;
-
 function openPricingPage() {
   const modal = document.getElementById("pricing-modal");
   const content = document.getElementById("pricing-modal-content");
@@ -18506,10 +18581,6 @@ function openPricingPage() {
 }
 
   modal.style.display = "flex";
-  pricingScrollY = window.scrollY;
-
-document.documentElement.style.overflow = "hidden";
-document.body.style.overflow = "hidden";
 }
 
   function openChangePlanPage() {
@@ -18657,16 +18728,6 @@ function closePricingPage() {
   if (!modal) return;
 
   modal.style.display = "none";
-
-  document.documentElement.style.overflow = "";
-  document.body.style.overflow = "";
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.left = "";
-  document.body.style.right = "";
-  document.body.style.width = "";
-
-  window.scrollTo(0, pricingScrollY);
 }
 
 async function choosePlan(plan) {
