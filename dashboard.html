@@ -1706,6 +1706,7 @@ select.field-input {
   }
 
   #main-agents .status-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     padding: 0 !important;
     margin-bottom: 24px !important;
   }
@@ -7223,6 +7224,23 @@ body[data-theme="light"]::after {
 
   .status-row .stat-label {
     font-size: 12.5px !important;
+  }
+}
+
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 43
+   Vrai correctif : entre 601px et 900px, aucune règle #main-agents
+   ne redéfinissait grid-template-columns pour .status-row — la
+   feuille retombait donc sur la règle générale ".status-row
+   {grid-template-columns:1fr}" (BLOC mobile, ligne ~1132), qui
+   empile les 3 cartes en 3 lignes au lieu de les garder côte à
+   côte. On force 3 colonnes pour la page Agents à TOUTES les
+   largeurs ≤900px (ça couvre aussi le cas ≤600px déjà géré
+   ailleurs, sans conflit). Au-delà de 900px, BLOC 23 prend déjà le
+   relais avec les mêmes 3 colonnes. */
+@media (max-width: 900px) {
+  #main-agents .status-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 
