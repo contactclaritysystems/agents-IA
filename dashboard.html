@@ -10384,7 +10384,10 @@ async function loadAppointments() {
 
   const response = await fetch(
   SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) +
-"&status=eq.scheduled" +
+  // "cancelled" reste dans cette liste (avec une pastille rouge "Annulé")
+  // au lieu de disparaître immédiatement — seul "done" part en historique
+  // dès qu'il est marqué terminé.
+"&status=in.(scheduled,cancelled)" +
 "&order=appointment_date.asc,appointment_time.asc",
     {
       headers: {
@@ -10433,6 +10436,13 @@ async function loadAppointments() {
 
 function renderAppointment(a) {
   const index = currentAppointments.findIndex(item => item.id === a.id);
+  // Même badge de statut que la liste des relances (Prévu/Annulé/...) au
+  // lieu d'un "Voir" générique qui ne renseignait sur rien : un RDV annulé
+  // reste maintenant visible ici avec une pastille rouge "Annulé" au lieu
+  // de disparaître silencieusement.
+  const statusLabel = getItemStatusLabel(a.status);
+  const statusIcon = getItemStatusIcon(a.status);
+  const statusClass = getItemStatusClass(a.status);
 
   return `
     <div class="agent-card" onclick="openAppointmentDetail(${index})" style="cursor:pointer;">
@@ -10449,7 +10459,7 @@ function renderAppointment(a) {
           </div>
         </div>
 
-        <div class="agent-status ok">Voir</div>
+        <div class="agent-status ${statusClass}">${statusIcon} ${statusLabel}</div>
       </div>
     </div>
   `;
@@ -18025,7 +18035,9 @@ async function loadFollowUps() {
 
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
-"&status=eq.pending" +
+  // Même règle que pour le Planning : "cancelled" reste visible ici (badge
+  // rouge "Annulé") au lieu de disparaître, seul "done" part en historique.
+"&status=in.(pending,cancelled)" +
 "&order=reminder_date.asc,reminder_time.asc",
     {
       headers: {
