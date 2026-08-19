@@ -7710,10 +7710,10 @@ body[data-theme="light"]::after {
         <button type="button" class="quick-action-btn" id="quick-assistant-btn" onclick="quickAgentAction('Ex : Quelles sont mes obligations pour afficher mes prix ?')" title="Poser une question">
           <span class="quick-action-icon yellow">💡</span><span class="quick-action-label">Poser une<br>question</span>
         </button>
-        <button type="button" class="quick-action-btn" id="quick-planning-btn" onclick="quickAgentAction('Ex : Ajoute un rendez-vous demain à 14h avec Julie')" title="Planifier un rendez-vous">
+        <button type="button" class="quick-action-btn" id="quick-planning-btn" onclick="openQuickPlanningModal()" title="Planifier un rendez-vous">
           <span class="quick-action-icon green">📅</span><span class="quick-action-label">Planifier<br>un RDV</span>
         </button>
-        <button type="button" class="quick-action-btn" id="quick-relance-btn" onclick="quickAgentAction('Ex : Rappelle-moi de relancer Marc demain matin')" title="Créer un rappel">
+        <button type="button" class="quick-action-btn" id="quick-relance-btn" onclick="openQuickReminderModal()" title="Créer un rappel">
           <span class="quick-action-icon orange">⏰</span><span class="quick-action-label">Créer un<br>rappel</span>
         </button>
       </div>
@@ -8632,6 +8632,422 @@ function quickAgentAction(hintText) {
   if (selection) {
     selection.removeAllRanges();
     selection.addRange(range);
+  }
+}
+
+// ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
+// Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
+// aller-retour avec l'agent (souvent 2 popups : contact+motif, puis
+// date+heure) pour compléter ce qui manque. Ici, comme pour "Envoyer un
+// mail", un seul formulaire avec les 4 infos obligatoires d'un coup
+// (avec qui / motif / jour / heure) -> un seul appel à /agent/planning,
+// déjà complet.
+async function openQuickPlanningModal() {
+  if (!contactsCache || !contactsCache.length) {
+    await loadContacts();
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+
+  let modal = document.getElementById("quick-planning-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "quick-planning-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeQuickPlanningModal()"></div>
+      <div class="mail-choice-box" style="overflow-x:hidden;">
+        <div class="mail-choice-title">Planifier un rendez-vous</div>
+        <div class="mail-choice-subtitle">Remplissez les infos, c'est noté tout de suite.</div>
+
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Avec qui ?</div>
+          <input class="field-input" type="text" id="quick-planning-contact" list="quick-planning-contacts-list" placeholder="Nom du contact" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <datalist id="quick-planning-contacts-list"></datalist>
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Motif</div>
+          <input class="field-input" type="text" id="quick-planning-title" placeholder="Ex : point projet" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
+          <button type="button" class="mail-choice-btn" id="quick-planning-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
+          <button type="button" class="mail-choice-btn" id="quick-planning-quick-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
+        </div>
+
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Jour</div>
+          <input class="field-input" type="date" id="quick-planning-date" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Heure</div>
+          <input class="field-input" type="time" id="quick-planning-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <button class="save-btn" type="button" id="quick-planning-confirm" style="margin-top:16px;">
+          ✓ Noter le rendez-vous
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeQuickPlanningModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById("quick-planning-quick-today").onclick = () => {
+      document.getElementById("quick-planning-date").value = modal.dataset.today;
+      setQuickPlanningQuickSelected("today");
+      updateQuickPlanningTimeMin();
+    };
+    document.getElementById("quick-planning-quick-tomorrow").onclick = () => {
+      document.getElementById("quick-planning-date").value = modal.dataset.tomorrow;
+      setQuickPlanningQuickSelected("tomorrow");
+      updateQuickPlanningTimeMin();
+    };
+    document.getElementById("quick-planning-date").addEventListener("change", () => {
+      const dateInput = document.getElementById("quick-planning-date");
+      if (!dateInput.value) dateInput.value = modal.dataset.today;
+      const val = dateInput.value;
+      if (val === modal.dataset.today) setQuickPlanningQuickSelected("today");
+      else if (val === modal.dataset.tomorrow) setQuickPlanningQuickSelected("tomorrow");
+      else setQuickPlanningQuickSelected(null);
+      updateQuickPlanningTimeMin();
+    });
+    document.getElementById("quick-planning-confirm").onclick = confirmQuickPlanning;
+  }
+
+  const contactsListEl = document.getElementById("quick-planning-contacts-list");
+  if (contactsListEl) {
+    contactsListEl.innerHTML = (contactsCache || [])
+      .map(c => '<option value="' + (c.full_name || "").replace(/"/g, "&quot;") + '"></option>')
+      .join("");
+  }
+
+  modal.dataset.today = today;
+  modal.dataset.tomorrow = tomorrow;
+  document.getElementById("quick-planning-contact").value = "";
+  document.getElementById("quick-planning-title").value = "";
+  const dateInputEl = document.getElementById("quick-planning-date");
+  const timeInputEl = document.getElementById("quick-planning-time");
+  dateInputEl.value = tomorrow;
+  timeInputEl.value = "08:00";
+  dateInputEl.min = today;
+  setQuickPlanningQuickSelected("tomorrow");
+  updateQuickPlanningTimeMin();
+
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("quick-planning-contact").focus(), 60);
+}
+
+function updateQuickPlanningTimeMin() {
+  const dateInput = document.getElementById("quick-planning-date");
+  const timeInput = document.getElementById("quick-planning-time");
+  if (!dateInput || !timeInput) return;
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  if (dateInput.value === todayIso) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    timeInput.min = `${hh}:${mm}`;
+    if (timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+  } else {
+    timeInput.removeAttribute("min");
+  }
+}
+
+function setQuickPlanningQuickSelected(which) {
+  const todayBtn = document.getElementById("quick-planning-quick-today");
+  const tomorrowBtn = document.getElementById("quick-planning-quick-tomorrow");
+  if (!todayBtn || !tomorrowBtn) return;
+  todayBtn.style.background = "";
+  todayBtn.style.color = "";
+  tomorrowBtn.style.background = "";
+  tomorrowBtn.style.color = "";
+  const active = which === "today" ? todayBtn : which === "tomorrow" ? tomorrowBtn : null;
+  if (active) {
+    active.style.background = "var(--dark, #141416)";
+    active.style.color = "var(--clarity-primary-text, #fff)";
+  }
+}
+
+function closeQuickPlanningModal() {
+  const modal = document.getElementById("quick-planning-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function confirmQuickPlanning() {
+  const contact = document.getElementById("quick-planning-contact").value.trim();
+  const title = document.getElementById("quick-planning-title").value.trim();
+  const date = document.getElementById("quick-planning-date").value;
+  const time = document.getElementById("quick-planning-time").value;
+
+  if (!contact) { showToast("Indique avec qui est le rendez-vous", "error"); return; }
+  if (!title) { showToast("Indique le motif du rendez-vous", "error"); return; }
+  if (!date || !time) { showToast("Choisis une date et une heure", "error"); return; }
+
+  const chosen = new Date(`${date}T${time}`);
+  if (chosen.getTime() < Date.now()) {
+    showToast("Choisis une date et une heure dans le futur", "error");
+    return;
+  }
+
+  closeQuickPlanningModal();
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rendez-vous…";
+
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: title,
+    request_id: null,
+    conversation_history: [],
+    contact_name: contact,
+    title: title,
+    appointment_date: date,
+    appointment_time: time
+  };
+
+  try {
+    const response = await fetch(PLANNING_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    box.style.display = "none";
+    box.innerHTML = "";
+
+    if (data.success) {
+      showToast(data.message || "Rendez-vous noté", "success");
+      return;
+    }
+    showToast(data.message || "Impossible de créer le rendez-vous", "error");
+  } catch (e) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    showToast("Erreur réseau", "error");
+  }
+}
+
+// ─── ACTION RAPIDE "CRÉER UN RAPPEL" — formulaire direct ────────
+// Même principe que ci-dessus pour Relance : un formulaire complet
+// (avec qui / motif / jour / heure) au lieu du texte libre + micro.
+async function openQuickReminderModal() {
+  if (!contactsCache || !contactsCache.length) {
+    await loadContacts();
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+
+  let modal = document.getElementById("quick-reminder-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "quick-reminder-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeQuickReminderModal()"></div>
+      <div class="mail-choice-box" style="overflow-x:hidden;">
+        <div class="mail-choice-title">Créer un rappel</div>
+        <div class="mail-choice-subtitle">Remplissez les infos, c'est noté tout de suite.</div>
+
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Avec qui ? (optionnel)</div>
+          <input class="field-input" type="text" id="quick-reminder-contact" list="quick-reminder-contacts-list" placeholder="Nom du contact" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <datalist id="quick-reminder-contacts-list"></datalist>
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Motif</div>
+          <input class="field-input" type="text" id="quick-reminder-reason" placeholder="Ex : récupérer les outils" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
+          <button type="button" class="mail-choice-btn" id="quick-reminder-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
+          <button type="button" class="mail-choice-btn" id="quick-reminder-quick-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
+        </div>
+
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Jour</div>
+          <input class="field-input" type="date" id="quick-reminder-date" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Heure</div>
+          <input class="field-input" type="time" id="quick-reminder-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <button class="save-btn" type="button" id="quick-reminder-confirm" style="margin-top:16px;">
+          ✓ Noter le rappel
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeQuickReminderModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById("quick-reminder-quick-today").onclick = () => {
+      document.getElementById("quick-reminder-date").value = modal.dataset.today;
+      setQuickReminderQuickSelected("today");
+      updateQuickReminderTimeMin();
+    };
+    document.getElementById("quick-reminder-quick-tomorrow").onclick = () => {
+      document.getElementById("quick-reminder-date").value = modal.dataset.tomorrow;
+      setQuickReminderQuickSelected("tomorrow");
+      updateQuickReminderTimeMin();
+    };
+    document.getElementById("quick-reminder-date").addEventListener("change", () => {
+      const dateInput = document.getElementById("quick-reminder-date");
+      if (!dateInput.value) dateInput.value = modal.dataset.today;
+      const val = dateInput.value;
+      if (val === modal.dataset.today) setQuickReminderQuickSelected("today");
+      else if (val === modal.dataset.tomorrow) setQuickReminderQuickSelected("tomorrow");
+      else setQuickReminderQuickSelected(null);
+      updateQuickReminderTimeMin();
+    });
+    document.getElementById("quick-reminder-confirm").onclick = confirmQuickReminder;
+  }
+
+  const contactsListEl = document.getElementById("quick-reminder-contacts-list");
+  if (contactsListEl) {
+    contactsListEl.innerHTML = (contactsCache || [])
+      .map(c => '<option value="' + (c.full_name || "").replace(/"/g, "&quot;") + '"></option>')
+      .join("");
+  }
+
+  modal.dataset.today = today;
+  modal.dataset.tomorrow = tomorrow;
+  document.getElementById("quick-reminder-contact").value = "";
+  document.getElementById("quick-reminder-reason").value = "";
+  const dateInputEl = document.getElementById("quick-reminder-date");
+  const timeInputEl = document.getElementById("quick-reminder-time");
+  dateInputEl.value = tomorrow;
+  timeInputEl.value = "08:00";
+  dateInputEl.min = today;
+  setQuickReminderQuickSelected("tomorrow");
+  updateQuickReminderTimeMin();
+
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("quick-reminder-reason").focus(), 60);
+}
+
+function updateQuickReminderTimeMin() {
+  const dateInput = document.getElementById("quick-reminder-date");
+  const timeInput = document.getElementById("quick-reminder-time");
+  if (!dateInput || !timeInput) return;
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  if (dateInput.value === todayIso) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    timeInput.min = `${hh}:${mm}`;
+    if (timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+  } else {
+    timeInput.removeAttribute("min");
+  }
+}
+
+function setQuickReminderQuickSelected(which) {
+  const todayBtn = document.getElementById("quick-reminder-quick-today");
+  const tomorrowBtn = document.getElementById("quick-reminder-quick-tomorrow");
+  if (!todayBtn || !tomorrowBtn) return;
+  todayBtn.style.background = "";
+  todayBtn.style.color = "";
+  tomorrowBtn.style.background = "";
+  tomorrowBtn.style.color = "";
+  const active = which === "today" ? todayBtn : which === "tomorrow" ? tomorrowBtn : null;
+  if (active) {
+    active.style.background = "var(--dark, #141416)";
+    active.style.color = "var(--clarity-primary-text, #fff)";
+  }
+}
+
+function closeQuickReminderModal() {
+  const modal = document.getElementById("quick-reminder-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function confirmQuickReminder() {
+  const contact = document.getElementById("quick-reminder-contact").value.trim();
+  const reasonText = document.getElementById("quick-reminder-reason").value.trim();
+  const date = document.getElementById("quick-reminder-date").value;
+  const time = document.getElementById("quick-reminder-time").value;
+
+  if (!reasonText) { showToast("Indique de quoi je dois te rappeler", "error"); return; }
+  if (!date || !time) { showToast("Choisis une date et une heure", "error"); return; }
+
+  const chosen = new Date(`${date}T${time}`);
+  if (chosen.getTime() < Date.now()) {
+    showToast("Choisis une date et une heure dans le futur", "error");
+    return;
+  }
+
+  closeQuickReminderModal();
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rappel…";
+
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: reasonText,
+    reason: reasonText,
+    reminder_date: date,
+    reminder_time: time,
+    contact_name: contact || null,
+    message_context: "",
+    request_id: null
+  };
+
+  try {
+    const response = await fetch(RELANCE_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    box.style.display = "none";
+    box.innerHTML = "";
+    if (data.success) {
+      showToast(data.message || "Rappel noté", "success");
+    } else {
+      showToast(data.message || "Impossible de créer le rappel", "error");
+    }
+  } catch (e) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    showToast("Erreur réseau", "error");
   }
 }
 
