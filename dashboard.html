@@ -8517,8 +8517,7 @@ const HELP_ACTIONS = [
     color: "yellow",
     examples: [
       "Ajoute un rendez-vous demain à 14h avec Julie.",
-      "Prends un rendez-vous avec M. Dupont vendredi matin pour un devis.",
-      "Déplace mon rendez-vous de mardi à jeudi 10h."
+      "Prends un rendez-vous avec M. Dupont vendredi matin pour un devis."
     ],
     ready: true
   },
@@ -8614,20 +8613,26 @@ function tryHelpActionsExample() {
 // circuitent rien : ils rappellent juste à l'utilisateur un exemple de ce
 // qu'il peut dire, puis ouvrent le micro, pour qu'il sache toujours ce qui
 // est possible sans avoir à deviner.
+// Avant : un clic sur une action rapide lançait le micro (dictée), ce qui
+// surprenait — "Actions rapides" mais ça active le micro ? Maintenant : on
+// écrit directement l'exemple dans le champ de texte (modifiable, tout
+// sélectionné pour que taper remplace tout de suite les détails comme le
+// nom ou la date), et on laisse la personne l'éditer puis valider avec
+// Entrée — comme un point de départ, pas une dictée forcée.
 function quickAgentAction(hintText) {
-  const placeholderEl = document.querySelector("#card-orchestrator-run .clarity-input-placeholder");
-  if (placeholderEl) {
-    if (placeholderEl.dataset.original === undefined) {
-      placeholderEl.dataset.original = placeholderEl.textContent;
-    }
-    placeholderEl.textContent = hintText;
-    setTimeout(() => {
-      if (placeholderEl.textContent === hintText) {
-        placeholderEl.textContent = placeholderEl.dataset.original || "";
-      }
-    }, 4000);
+  const inputEl = document.getElementById("orchestrator-text-input");
+  if (!inputEl) return;
+
+  inputEl.textContent = hintText;
+  inputEl.focus();
+
+  const range = document.createRange();
+  range.selectNodeContents(inputEl);
+  const selection = window.getSelection();
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
-  startOrchestratorDictation();
 }
 
 let pendingReminderPartial = null;
