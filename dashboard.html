@@ -7306,6 +7306,186 @@ body[data-theme="light"]::after {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 50
+   Sélecteurs Date/Heure "maison" (calendrier + liste d'heures),
+   à la place des <input type="date"/"time"> natifs partout dans
+   l'app : le natif s'écrivait au clavier (pas de liste déroulante
+   pour l'heure) et le calendrier natif ne se refermait pas tout
+   seul après avoir choisi un jour (comportement du navigateur, pas
+   modifiable). Ici tout est fait main -> même comportement garanti
+   sur toutes les pages : clic sur un jour = ferme direct, l'heure
+   est une vraie liste déroulante à choisir, jamais à taper.
+   L'input natif d'origine reste présent (caché) : il continue de
+   porter la valeur réelle, min/max, et tous les listeners "change"
+   déjà branchés ailleurs (aujourd'hui/demain, garde-fous horaires...)
+   continuent de fonctionner sans y toucher.
+   ========================================================= */
+.custom-date-field-wrap,
+.custom-time-field-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.custom-date-field-wrap input[type="date"],
+.custom-time-field-wrap input[type="time"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.custom-date-display,
+.custom-time-display {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.custom-date-display::after,
+.custom-time-display::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--clarity-text-tertiary);
+  border-bottom: 2px solid var(--clarity-text-tertiary);
+  transform: rotate(45deg);
+  margin-top: -3px;
+}
+
+.custom-date-popover,
+.custom-time-popover {
+  display: none;
+  position: fixed;
+  z-index: 100000;
+  background: rgba(var(--clarity-glass-rgb), .98);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--clarity-border);
+  border-radius: 18px;
+  box-shadow: var(--clarity-shadow-md, 0 12px 40px rgba(0,0,0,.18));
+  padding: 10px;
+}
+
+.custom-date-popover.open,
+.custom-time-popover.open {
+  display: block;
+}
+
+.custom-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.custom-date-month-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clarity-text);
+  text-transform: capitalize;
+}
+
+.custom-date-nav-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--clarity-text-secondary);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.custom-date-nav-btn:hover {
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text);
+}
+
+.custom-date-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--clarity-text-tertiary);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.custom-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.custom-date-day {
+  aspect-ratio: 1 / 1;
+  min-width: 30px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--clarity-text);
+  font-family: inherit;
+}
+
+.custom-date-day:hover {
+  background: var(--clarity-surface-soft);
+}
+
+.custom-date-day.selected {
+  background: var(--dark, #141416);
+  color: var(--clarity-primary-text, #fff);
+}
+
+.custom-date-day.disabled {
+  opacity: .3;
+  pointer-events: none;
+}
+
+.custom-time-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-time-option {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--clarity-text);
+  font-family: inherit;
+}
+
+.custom-time-option:hover {
+  background: var(--clarity-surface-soft);
+}
+
+.custom-time-option.selected {
+  background: var(--dark, #141416);
+  color: var(--clarity-primary-text, #fff);
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -8701,12 +8881,16 @@ async function openQuickPlanningModal() {
     document.body.appendChild(modal);
 
     document.getElementById("quick-planning-quick-today").onclick = () => {
-      document.getElementById("quick-planning-date").value = modal.dataset.today;
+      const dateInput = document.getElementById("quick-planning-date");
+      dateInput.value = modal.dataset.today;
+      refreshCustomDisplay(dateInput);
       setQuickPlanningQuickSelected("today");
       updateQuickPlanningTimeMin();
     };
     document.getElementById("quick-planning-quick-tomorrow").onclick = () => {
-      document.getElementById("quick-planning-date").value = modal.dataset.tomorrow;
+      const dateInput = document.getElementById("quick-planning-date");
+      dateInput.value = modal.dataset.tomorrow;
+      refreshCustomDisplay(dateInput);
       setQuickPlanningQuickSelected("tomorrow");
       updateQuickPlanningTimeMin();
     };
@@ -8720,6 +8904,8 @@ async function openQuickPlanningModal() {
       updateQuickPlanningTimeMin();
     });
     document.getElementById("quick-planning-confirm").onclick = confirmQuickPlanning;
+    wireCustomDateInput(document.getElementById("quick-planning-date"));
+    wireCustomTimeInput(document.getElementById("quick-planning-time"));
   }
 
   const contactsListEl = document.getElementById("quick-planning-contacts-list");
@@ -8738,6 +8924,8 @@ async function openQuickPlanningModal() {
   dateInputEl.value = tomorrow;
   timeInputEl.value = "08:00";
   dateInputEl.min = today;
+  refreshCustomDisplay(dateInputEl);
+  refreshCustomDisplay(timeInputEl);
   setQuickPlanningQuickSelected("tomorrow");
   updateQuickPlanningTimeMin();
 
@@ -8755,7 +8943,7 @@ function updateQuickPlanningTimeMin() {
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     timeInput.min = `${hh}:${mm}`;
-    if (timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+    if (timeInput.value && timeInput.value < timeInput.min) { timeInput.value = timeInput.min; refreshCustomDisplay(timeInput); }
   } else {
     timeInput.removeAttribute("min");
   }
@@ -8816,8 +9004,8 @@ async function confirmQuickPlanning() {
     user_email: currentUser.email,
     user_name: getUserDisplayName(),
     instruction: title,
-    request_id: null,
-    conversation_history: [],
+    request_id: window.currentRequestId || null,
+    conversation_history: "",
     contact_name: contact,
     title: title,
     appointment_date: date,
@@ -8908,12 +9096,16 @@ async function openQuickReminderModal() {
     document.body.appendChild(modal);
 
     document.getElementById("quick-reminder-quick-today").onclick = () => {
-      document.getElementById("quick-reminder-date").value = modal.dataset.today;
+      const dateInput = document.getElementById("quick-reminder-date");
+      dateInput.value = modal.dataset.today;
+      refreshCustomDisplay(dateInput);
       setQuickReminderQuickSelected("today");
       updateQuickReminderTimeMin();
     };
     document.getElementById("quick-reminder-quick-tomorrow").onclick = () => {
-      document.getElementById("quick-reminder-date").value = modal.dataset.tomorrow;
+      const dateInput = document.getElementById("quick-reminder-date");
+      dateInput.value = modal.dataset.tomorrow;
+      refreshCustomDisplay(dateInput);
       setQuickReminderQuickSelected("tomorrow");
       updateQuickReminderTimeMin();
     };
@@ -8927,6 +9119,8 @@ async function openQuickReminderModal() {
       updateQuickReminderTimeMin();
     });
     document.getElementById("quick-reminder-confirm").onclick = confirmQuickReminder;
+    wireCustomDateInput(document.getElementById("quick-reminder-date"));
+    wireCustomTimeInput(document.getElementById("quick-reminder-time"));
   }
 
   const contactsListEl = document.getElementById("quick-reminder-contacts-list");
@@ -8945,6 +9139,8 @@ async function openQuickReminderModal() {
   dateInputEl.value = tomorrow;
   timeInputEl.value = "08:00";
   dateInputEl.min = today;
+  refreshCustomDisplay(dateInputEl);
+  refreshCustomDisplay(timeInputEl);
   setQuickReminderQuickSelected("tomorrow");
   updateQuickReminderTimeMin();
 
@@ -8962,7 +9158,7 @@ function updateQuickReminderTimeMin() {
     const hh = String(now.getHours()).padStart(2, "0");
     const mm = String(now.getMinutes()).padStart(2, "0");
     timeInput.min = `${hh}:${mm}`;
-    if (timeInput.value && timeInput.value < timeInput.min) timeInput.value = timeInput.min;
+    if (timeInput.value && timeInput.value < timeInput.min) { timeInput.value = timeInput.min; refreshCustomDisplay(timeInput); }
   } else {
     timeInput.removeAttribute("min");
   }
@@ -9122,6 +9318,7 @@ function openReminderScheduleSheet(data) {
       const dateInput = document.getElementById("reminder-sheet-date");
       dateInput.value = modal.dataset.today;
       dateInput.dataset.lastValid = dateInput.value;
+      refreshCustomDisplay(dateInput);
       setReminderQuickSelected("today");
       updateReminderTimeMin();
     };
@@ -9129,6 +9326,7 @@ function openReminderScheduleSheet(data) {
       const dateInput = document.getElementById("reminder-sheet-date");
       dateInput.value = modal.dataset.tomorrow;
       dateInput.dataset.lastValid = dateInput.value;
+      refreshCustomDisplay(dateInput);
       setReminderQuickSelected("tomorrow");
       updateReminderTimeMin();
     };
@@ -9160,6 +9358,8 @@ function openReminderScheduleSheet(data) {
       reasonInput.dataset.lastValid = reasonInput.value;
     });
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
+    wireCustomDateInput(document.getElementById("reminder-sheet-date"));
+    wireCustomTimeInput(document.getElementById("reminder-sheet-time"));
   }
 
   modal.dataset.today = today;
@@ -9174,6 +9374,8 @@ function openReminderScheduleSheet(data) {
   dateInputEl.dataset.lastValid = defaultDate;
   timeInputEl.dataset.lastValid = defaultTime;
   reasonInputEl.dataset.lastValid = initialReason;
+  refreshCustomDisplay(dateInputEl);
+  refreshCustomDisplay(timeInputEl);
   // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
   dateInputEl.min = today;
 
@@ -9212,6 +9414,7 @@ function updateReminderTimeMin() {
     // plutôt que de laisser une heure invalide silencieusement acceptée.
     if (timeInput.value && timeInput.value < timeInput.min) {
       timeInput.value = timeInput.min;
+      refreshCustomDisplay(timeInput);
     }
   } else {
     timeInput.removeAttribute("min");
@@ -9388,6 +9591,7 @@ function openPlanningScheduleSheet(data, instruction) {
       const dateInput = document.getElementById("planning-sheet-date");
       dateInput.value = modal.dataset.today;
       dateInput.dataset.lastValid = dateInput.value;
+      refreshCustomDisplay(dateInput);
       setPlanningQuickSelected("today");
       updatePlanningTimeMin();
     };
@@ -9395,6 +9599,7 @@ function openPlanningScheduleSheet(data, instruction) {
       const dateInput = document.getElementById("planning-sheet-date");
       dateInput.value = modal.dataset.tomorrow;
       dateInput.dataset.lastValid = dateInput.value;
+      refreshCustomDisplay(dateInput);
       setPlanningQuickSelected("tomorrow");
       updatePlanningTimeMin();
     };
@@ -9421,6 +9626,8 @@ function openPlanningScheduleSheet(data, instruction) {
       timeInput.dataset.lastValid = timeInput.value;
     });
     document.getElementById("planning-sheet-confirm").onclick = confirmPlanningSchedule;
+    wireCustomDateInput(document.getElementById("planning-sheet-date"));
+    wireCustomTimeInput(document.getElementById("planning-sheet-time"));
   }
 
   modal.dataset.today = today;
@@ -9432,6 +9639,8 @@ function openPlanningScheduleSheet(data, instruction) {
   timeInputEl.value = defaultTime;
   dateInputEl.dataset.lastValid = defaultDate;
   timeInputEl.dataset.lastValid = defaultTime;
+  refreshCustomDisplay(dateInputEl);
+  refreshCustomDisplay(timeInputEl);
   // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
   dateInputEl.min = today;
 
@@ -9458,6 +9667,7 @@ function updatePlanningTimeMin() {
     timeInput.min = `${hh}:${mm}`;
     if (timeInput.value && timeInput.value < timeInput.min) {
       timeInput.value = timeInput.min;
+      refreshCustomDisplay(timeInput);
     }
   } else {
     timeInput.removeAttribute("min");
@@ -11254,6 +11464,9 @@ function renderAppointment(a) {
 
     </div>
   `;
+
+  wireCustomDateInput(document.getElementById("appointment-date-input"));
+  wireCustomTimeInput(document.getElementById("appointment-time-input"));
 }
 
   async function saveAppointment(id) {
@@ -12459,6 +12672,263 @@ function showToast(msg, type = "success") {
     t.classList.remove("show");
     t.classList.remove("error");
   }, 1500);
+}
+
+// ─── SÉLECTEURS DATE/HEURE "MAISON" ─────────────────────────
+// Remplace le rendu des <input type="date"/"time"> natifs partout dans
+// l'app par un calendrier / une liste d'heures dessinés par nous : le
+// natif s'écrit au clavier (pas de vraie liste déroulante pour l'heure)
+// et son calendrier ne se ferme pas tout seul après un clic sur un jour
+// (comportement du navigateur, impossible à changer en CSS/JS). L'input
+// natif d'origine reste dans le DOM (cache visuellement) : il continue
+// de porter la valeur réelle, min/max, et tous les listeners "change"/
+// "input" déjà branchés ailleurs (boutons Aujourd'hui/Demain, garde-fous
+// horaires, toggleAppointmentSave...) continuent de marcher sans y
+// toucher, puisqu'on déclenche ces mêmes événements nous-mêmes.
+
+// Petit raccourci pour forcer le rafraîchissement de l'affichage "maison"
+// après qu'un autre code (boutons Aujourd'hui/Demain, valeurs par défaut à
+// l'ouverture d'un popup...) a changé .value directement sur l'input natif
+// caché, sans passer par le sélecteur (donc sans événement déclenché).
+function refreshCustomDisplay(el) {
+  if (el && typeof el._refreshCustomDisplay === "function") el._refreshCustomDisplay();
+}
+
+function closeAllCustomPickers() {
+  document.querySelectorAll(".custom-date-popover.open, .custom-time-popover.open")
+    .forEach(p => p.classList.remove("open"));
+}
+
+if (!window._customPickersOutsideClickBound) {
+  window._customPickersOutsideClickBound = true;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".custom-date-field-wrap") && !e.target.closest(".custom-time-field-wrap")) {
+      closeAllCustomPickers();
+    }
+  });
+  // Referme aussi si la page défile (position figée sinon).
+  document.addEventListener("scroll", closeAllCustomPickers, true);
+  window.addEventListener("resize", closeAllCustomPickers);
+}
+
+function formatDateHuman(iso) {
+  if (!iso) return "Choisir une date";
+  const parts = iso.split("-").map(Number);
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+  if (isNaN(d.getTime())) return "Choisir une date";
+  return d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long", year: "numeric" });
+}
+
+function positionCustomPopover(popover, anchorEl) {
+  popover.style.left = "-9999px";
+  popover.style.top = "-9999px";
+  popover.classList.add("open");
+  const rect = anchorEl.getBoundingClientRect();
+  const popRect = popover.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  const maxLeft = window.innerWidth - popRect.width - 8;
+  if (left > maxLeft) left = Math.max(8, maxLeft);
+  if (top + popRect.height > window.innerHeight - 8) {
+    top = rect.top - popRect.height - 6;
+  }
+  if (top < 8) top = 8;
+  popover.style.left = left + "px";
+  popover.style.top = top + "px";
+  popover.style.width = Math.max(rect.width, 240) + "px";
+}
+
+function wireCustomDateInput(nativeInput) {
+  if (!nativeInput || nativeInput.dataset.customWired) return;
+  nativeInput.dataset.customWired = "1";
+
+  // Certains champs (détail RDV/Relance) sont reconstruits à chaque
+  // ouverture via innerHTML : l'ancien popover flottant, attaché
+  // directement à <body>, ne serait sinon jamais retiré (fuite de
+  // "popovers fantômes" qui s'accumulent à chaque ouverture).
+  if (nativeInput.id) {
+    const stale = document.getElementById(nativeInput.id + "-popover");
+    if (stale) stale.remove();
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "custom-date-field-wrap";
+  nativeInput.parentNode.insertBefore(wrap, nativeInput);
+  wrap.appendChild(nativeInput);
+
+  const display = document.createElement("button");
+  display.type = "button";
+  display.className = "field-input custom-date-display";
+  wrap.appendChild(display);
+
+  const popover = document.createElement("div");
+  popover.className = "custom-date-popover";
+  if (nativeInput.id) popover.id = nativeInput.id + "-popover";
+  document.body.appendChild(popover);
+
+  function renderDisplay() {
+    display.textContent = nativeInput.value ? formatDateHuman(nativeInput.value) : "Choisir une date";
+  }
+
+  function selectDate(iso) {
+    nativeInput.value = iso;
+    nativeInput.dispatchEvent(new Event("input", { bubbles: true }));
+    nativeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    renderDisplay();
+    popover.classList.remove("open");
+  }
+
+  function renderCalendar(viewYear, viewMonth) {
+    const first = new Date(viewYear, viewMonth, 1);
+    const startDow = (first.getDay() + 6) % 7;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const monthLabel = first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+
+    let html = '<div class="custom-date-nav">'
+      + '<button type="button" class="custom-date-nav-btn" data-nav="-1">‹</button>'
+      + '<div class="custom-date-month-label">' + monthLabel + '</div>'
+      + '<button type="button" class="custom-date-nav-btn" data-nav="1">›</button>'
+      + '</div>'
+      + '<div class="custom-date-dow">' + ["L", "M", "M", "J", "V", "S", "D"].map(d => '<span>' + d + '</span>').join("") + '</div>'
+      + '<div class="custom-date-grid">';
+
+    for (let i = 0; i < startDow; i++) html += '<span></span>';
+
+    const minIso = nativeInput.min || "";
+    for (let d = 1; d <= daysInMonth; d++) {
+      const iso = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+      const disabled = minIso && iso < minIso;
+      const selected = iso === nativeInput.value;
+      html += '<button type="button" class="custom-date-day'
+        + (selected ? ' selected' : '') + (disabled ? ' disabled' : '')
+        + '" data-date="' + iso + '"' + (disabled ? ' disabled' : '') + '>' + d + '</button>';
+    }
+    html += '</div>';
+    popover.innerHTML = html;
+
+    popover.querySelectorAll(".custom-date-day:not(.disabled)").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectDate(btn.dataset.date);
+      });
+    });
+    popover.querySelector('[data-nav="-1"]').addEventListener("click", (e) => {
+      e.stopPropagation();
+      let y = viewYear, m = viewMonth - 1;
+      if (m < 0) { m = 11; y--; }
+      renderCalendar(y, m);
+      positionCustomPopover(popover, display);
+    });
+    popover.querySelector('[data-nav="1"]').addEventListener("click", (e) => {
+      e.stopPropagation();
+      let y = viewYear, m = viewMonth + 1;
+      if (m > 11) { m = 0; y++; }
+      renderCalendar(y, m);
+      positionCustomPopover(popover, display);
+    });
+  }
+
+  display.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasOpen = popover.classList.contains("open");
+    closeAllCustomPickers();
+    if (wasOpen) return;
+    const base = nativeInput.value ? new Date(nativeInput.value + "T00:00:00") : new Date();
+    renderCalendar(base.getFullYear(), base.getMonth());
+    positionCustomPopover(popover, display);
+  });
+
+  // Les boutons "Aujourd'hui"/"Demain" à côté (quand ils existent) changent
+  // nativeInput.value directement sans passer par selectDate() ni déclencher
+  // d'événement natif ("change" ne se déclenche jamais tout seul sur une
+  // simple assignation .value en JS) : on expose donc aussi renderDisplay
+  // pour que ce code externe puisse forcer le rafraîchissement après coup.
+  nativeInput.addEventListener("change", renderDisplay);
+  nativeInput._refreshCustomDisplay = renderDisplay;
+
+  renderDisplay();
+}
+
+function wireCustomTimeInput(nativeInput) {
+  if (!nativeInput || nativeInput.dataset.customWired) return;
+  nativeInput.dataset.customWired = "1";
+
+  if (nativeInput.id) {
+    const stale = document.getElementById(nativeInput.id + "-popover");
+    if (stale) stale.remove();
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "custom-time-field-wrap";
+  nativeInput.parentNode.insertBefore(wrap, nativeInput);
+  wrap.appendChild(nativeInput);
+
+  const display = document.createElement("button");
+  display.type = "button";
+  display.className = "field-input custom-time-display";
+  wrap.appendChild(display);
+
+  const popover = document.createElement("div");
+  popover.className = "custom-time-popover";
+  if (nativeInput.id) popover.id = nativeInput.id + "-popover";
+  document.body.appendChild(popover);
+
+  const step = parseInt(nativeInput.step, 10) || 900;
+  const stepMinutes = Math.max(5, Math.round(step / 60));
+
+  function renderDisplay() {
+    display.textContent = nativeInput.value || "Choisir une heure";
+  }
+
+  function selectTime(val) {
+    nativeInput.value = val;
+    nativeInput.dispatchEvent(new Event("input", { bubbles: true }));
+    nativeInput.dispatchEvent(new Event("change", { bubbles: true }));
+    renderDisplay();
+    popover.classList.remove("open");
+  }
+
+  function renderList() {
+    const minTime = nativeInput.min || "";
+    let html = '<div class="custom-time-list">';
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += stepMinutes) {
+        const val = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+        if (minTime && val < minTime) continue;
+        const selected = val === nativeInput.value;
+        html += '<button type="button" class="custom-time-option' + (selected ? ' selected' : '')
+          + '" data-time="' + val + '">' + val + '</button>';
+      }
+    }
+    html += '</div>';
+    popover.innerHTML = html;
+
+    popover.querySelectorAll(".custom-time-option").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectTime(btn.dataset.time);
+      });
+    });
+
+    const selectedBtn = popover.querySelector(".custom-time-option.selected");
+    if (selectedBtn) {
+      setTimeout(() => selectedBtn.scrollIntoView({ block: "center" }), 0);
+    }
+  }
+
+  display.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const wasOpen = popover.classList.contains("open");
+    closeAllCustomPickers();
+    if (wasOpen) return;
+    renderList();
+    positionCustomPopover(popover, display);
+  });
+
+  nativeInput.addEventListener("change", renderDisplay);
+  nativeInput._refreshCustomDisplay = renderDisplay;
+
+  renderDisplay();
 }
 
 // ─── RÉPONSES VOCALES (identité vocale Clarity) ─────────────
@@ -18941,6 +19411,9 @@ async function loadFollowUps() {
 
     </div>
   `;
+
+  wireCustomDateInput(document.getElementById("followup-date-input"));
+  wireCustomTimeInput(document.getElementById("followup-time-input"));
 }
 
   function toggleFollowUpSave() {
