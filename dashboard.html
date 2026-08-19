@@ -4636,33 +4636,30 @@ body,
 
 .clarity-quick-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
   gap: 8px;
 }
 
-/* Libellés raccourcis (BLOC 46) : "Envoyer un mail" → "Mail", etc.
-   Avant, le texte long + la grille figée à 3 colonnes forçaient une
-   ellipse ("Planifier un rendez-v…") peu premium. Avec un mot court
-   par bouton, plus besoin de troncature nulle part — la grille peut
-   aussi s'adapter (auto-fit) au lieu d'être bloquée à 3 colonnes. */
+/* Tuiles icône-dessus (BLOC 47) : même langage visuel que les cartes
+   stats et les cartes dossiers d'historique (icône ronde colorée +
+   libellé centré en dessous). Le libellé complet tient sur 2 lignes
+   (<br> volontaire à l'endroit naturel), donc plus jamais de
+   troncature ni de mot coupé à une seule syllabe. */
 .quick-action-btn {
   min-width: 0;
-  min-height: 38px;
-  padding: 0 12px;
+  min-height: 84px;
+  padding: 14px 6px 12px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid var(--clarity-border);
-  border-radius: var(--clarity-radius-pill);
+  border-radius: var(--clarity-radius-lg);
   background: var(--clarity-surface-soft);
   color: var(--clarity-text-secondary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 12.5px;
-  font-weight: 650;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  box-shadow: 0 1px 0 rgba(var(--clarity-glass-rgb), .75) inset;
   cursor: pointer;
   transition:
     background var(--clarity-duration) var(--clarity-ease),
@@ -4672,21 +4669,35 @@ body,
 }
 
 .quick-action-icon {
-  font-size: 14px;
-  line-height: 1;
-  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: var(--surface-soft);
 }
 
+.quick-action-icon.blue { background: rgba(59, 130, 246, .16); }
+.quick-action-icon.purple { background: rgba(139, 92, 246, .14); }
+.quick-action-icon.yellow { background: rgba(245, 158, 11, .18); }
+.quick-action-icon.green { background: rgba(34, 197, 94, .14); }
+.quick-action-icon.orange { background: var(--warning-bg); }
+
 .quick-action-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .quick-action-btn:hover {
   background: var(--clarity-surface);
   border-color: var(--clarity-accent);
   color: var(--clarity-text);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 #quick-mail-contact-list {
@@ -7686,19 +7697,19 @@ body[data-theme="light"]::after {
       <div class="clarity-quick-label">Actions rapides</div>
       <div class="clarity-quick-row">
         <button type="button" class="quick-action-btn" id="quick-mail-btn" onclick="openQuickMailCompose()" title="Envoyer un mail">
-          <span class="quick-action-icon">✉️</span><span class="quick-action-label">Mail</span>
+          <span class="quick-action-icon blue">✉️</span><span class="quick-action-label">Envoyer<br>un mail</span>
         </button>
         <button type="button" class="quick-action-btn" id="quick-redaction-btn" onclick="quickAgentAction('Ex : Écris un SMS pour dire que je serai en retard')" title="Rédiger un texte">
-          <span class="quick-action-icon">📝</span><span class="quick-action-label">Texte</span>
+          <span class="quick-action-icon purple">📝</span><span class="quick-action-label">Rédiger<br>un texte</span>
         </button>
         <button type="button" class="quick-action-btn" id="quick-assistant-btn" onclick="quickAgentAction('Ex : Quelles sont mes obligations pour afficher mes prix ?')" title="Poser une question">
-          <span class="quick-action-icon">💡</span><span class="quick-action-label">Question</span>
+          <span class="quick-action-icon yellow">💡</span><span class="quick-action-label">Poser une<br>question</span>
         </button>
         <button type="button" class="quick-action-btn" id="quick-planning-btn" onclick="quickAgentAction('Ex : Ajoute un rendez-vous demain à 14h avec Julie')" title="Planifier un rendez-vous">
-          <span class="quick-action-icon">📅</span><span class="quick-action-label">RDV</span>
+          <span class="quick-action-icon green">📅</span><span class="quick-action-label">Planifier<br>un RDV</span>
         </button>
         <button type="button" class="quick-action-btn" id="quick-relance-btn" onclick="quickAgentAction('Ex : Rappelle-moi de relancer Marc demain matin')" title="Créer un rappel">
-          <span class="quick-action-icon">⏰</span><span class="quick-action-label">Rappel</span>
+          <span class="quick-action-icon orange">⏰</span><span class="quick-action-label">Créer un<br>rappel</span>
         </button>
       </div>
     </div>
