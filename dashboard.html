@@ -4640,43 +4640,41 @@ body,
   gap: 8px;
 }
 
-/* Tuiles icône-dessus, version compacte (BLOC 48) : le premier essai
-   (BLOC 47) reprenait la taille des cartes stats — trop massif pour
-   des actions secondaires. Ici même principe (icône ronde + libellé
-   dessous) mais nettement resserré : icône plus petite, coins moins
-   arrondis, padding réduit — un vrai "chip", pas une carte. */
+/* Icônes rondes + légende (BLOC 49) : sur la suggestion "et si on les
+   faisait ronds ?" — abandon du chip/carte rectangulaire, qui restait
+   perçu comme lourd même resserré. Repris du langage "raccourcis iOS" :
+   seul le rond porte la couleur/bordure, la légende est un simple
+   texte sans cadre en dessous. Beaucoup plus léger visuellement. */
 .quick-action-btn {
   min-width: 0;
-  min-height: 58px;
-  padding: 9px 4px 7px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: 1px solid var(--clarity-border);
-  border-radius: var(--clarity-radius-sm);
-  background: var(--clarity-surface-soft);
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 2px;
+  border: none;
+  background: transparent;
   color: var(--clarity-text-secondary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   cursor: pointer;
-  transition:
-    background var(--clarity-duration) var(--clarity-ease),
-    color var(--clarity-duration) var(--clarity-ease),
-    border-color var(--clarity-duration) var(--clarity-ease),
-    transform var(--clarity-duration) var(--clarity-ease);
+  transition: transform var(--clarity-duration) var(--clarity-ease);
 }
 
 .quick-action-icon {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  border-radius: 8px;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  background: var(--surface-soft);
+  font-size: 18px;
+  border: 1px solid var(--clarity-border);
+  background: var(--clarity-surface-soft);
+  transition:
+    background var(--clarity-duration) var(--clarity-ease),
+    border-color var(--clarity-duration) var(--clarity-ease);
 }
 
 .quick-action-icon.blue { background: rgba(59, 130, 246, .16); }
@@ -4690,13 +4688,17 @@ body,
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
+  color: var(--clarity-text-secondary);
 }
 
 .quick-action-btn:hover {
-  background: var(--clarity-surface);
-  border-color: var(--clarity-accent);
+  transform: translateY(-2px);
   color: var(--clarity-text);
-  transform: translateY(-1px);
+}
+
+.quick-action-btn:hover .quick-action-icon {
+  border-color: var(--clarity-accent);
+  background: var(--clarity-surface);
 }
 
 #quick-mail-contact-list {
@@ -7091,21 +7093,22 @@ body[data-theme="light"] .clarity-input-mic img {
     drop-shadow(0 0 10px rgba(0, 145, 199, 0.35));
 }
 
-body[data-theme="light"] .quick-action-btn {
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%),
-    var(--clarity-surface-soft);
+/* Cible le rond (icon), plus le bouton lui-même (transparent depuis
+   BLOC 49) : sinon le fond/l'ombre "carte" réapparaissait en thème
+   clair par-dessus le rond. Pas de "background" ici : on ne touche
+   pas à la teinte de couleur (blue/purple/yellow/green/orange),
+   juste la bordure + un léger relief par-dessus. */
+body[data-theme="light"] .quick-action-icon {
   border-color: rgba(0, 0, 0, 0.07);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     0 3px 8px rgba(0, 0, 0, 0.05);
 }
 
-body[data-theme="light"] .quick-action-btn:hover {
+body[data-theme="light"] .quick-action-btn:hover .quick-action-icon {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
     0 5px 14px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
 }
 
 /* =========================================================
