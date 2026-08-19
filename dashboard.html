@@ -1138,7 +1138,11 @@ select.field-input {
   }
 
   .field-row {
-    grid-template-columns: 1fr;
+    /* minmax(0, 1fr) et pas juste "1fr" : même piège que la version bureau
+       (voir commentaire sur la règle .field-row de base) — sur mobile,
+       Date et Heure passent en une seule colonne, mais elle a besoin du
+       même minimum explicite à 0. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #card-suivi.open .agent-body {
