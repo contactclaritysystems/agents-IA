@@ -7244,6 +7244,26 @@ body[data-theme="light"]::after {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 44
+   Taille fixe, peu importe la largeur de fenêtre : avant, le plafond
+   "max-width:420px" (BLOC 23) ne s'appliquait qu'à partir de 901px —
+   entre 601 et 900px, le bloc des 3 cartes prenait toute la largeur
+   du conteneur et s'étirait (cartes qui s'écartent). On applique le
+   même plafond de 420px dès 601px : sur un téléphone (<601px, cap
+   sans effet car déjà plus étroit que 420px) rien ne change, et
+   partout ailleurs les 3 cartes gardent toujours la même taille et
+   le même espacement, centrées, quelle que soit la largeur réelle
+   de la fenêtre. */
+@media (min-width: 601px) {
+  #main-agents .status-row {
+    max-width: 420px !important;
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
