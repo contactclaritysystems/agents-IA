@@ -8636,6 +8636,251 @@ async function confirmReminderSchedule() {
   }
 }
 
+// ─── SHEET DATE/HEURE — RENDEZ-VOUS (Planning) ──────────
+// Même logique que la sheet des rappels (Relance) : quand /agent/planning
+// répond "missing_date" ou "missing_time", on ouvre ce popup dédié
+// (date + heure natives, boutons Aujourd'hui/Demain) au lieu de laisser
+// l'utilisateur taper une réponse libre dans la popup de clarification.
+let pendingPlanningPartial = null;
+let pendingPlanningInstruction = "";
+
+function openPlanningScheduleSheet(data, instruction) {
+  pendingPlanningPartial = data.partial || {};
+  pendingPlanningInstruction = instruction || "";
+  // Contrairement à Relance, Planning ne renvoie pas encore de "defaults" :
+  // on les calcule nous-mêmes ici, avec les mêmes règles (aujourd'hui/demain,
+  // 08:00 par défaut, ou la date/heure déjà connue dans "partial").
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = tomorrowDate.toISOString().slice(0, 10);
+  const defaultDate = pendingPlanningPartial.appointment_date || tomorrow;
+  const defaultTime = pendingPlanningPartial.appointment_time || "08:00";
+  const subtitleText = data.message || "";
+
+  let modal = document.getElementById("planning-schedule-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "planning-schedule-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closePlanningScheduleSheet()"></div>
+      <div class="mail-choice-box" style="overflow-x:hidden;">
+        <div class="mail-choice-title">Rendez-vous</div>
+        <div class="mail-choice-subtitle" id="planning-sheet-reason"></div>
+
+        <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
+          <button type="button" class="mail-choice-btn" id="planning-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
+          <button type="button" class="mail-choice-btn" id="planning-quick-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
+        </div>
+
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Date</div>
+          <input class="field-input" type="date" id="planning-sheet-date" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Heure</div>
+          <input class="field-input" type="time" id="planning-sheet-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
+        <button class="save-btn" type="button" id="planning-sheet-confirm" style="margin-top:16px;">
+          ✓ Noter le rendez-vous
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closePlanningScheduleSheet()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document.getElementById("planning-quick-today").onclick = () => {
+      const dateInput = document.getElementById("planning-sheet-date");
+      dateInput.value = modal.dataset.today;
+      dateInput.dataset.lastValid = dateInput.value;
+      setPlanningQuickSelected("today");
+      updatePlanningTimeMin();
+    };
+    document.getElementById("planning-quick-tomorrow").onclick = () => {
+      const dateInput = document.getElementById("planning-sheet-date");
+      dateInput.value = modal.dataset.tomorrow;
+      dateInput.dataset.lastValid = dateInput.value;
+      setPlanningQuickSelected("tomorrow");
+      updatePlanningTimeMin();
+    };
+    // Même garde-fou que pour les rappels : le bouton "Réinitialiser" du
+    // sélecteur natif iOS (partie de l'OS, pas modifiable en CSS) vide le
+    // champ ; on restaure aussitôt la dernière valeur valide.
+    document.getElementById("planning-sheet-date").addEventListener("change", () => {
+      const dateInput = document.getElementById("planning-sheet-date");
+      if (!dateInput.value) {
+        dateInput.value = dateInput.dataset.lastValid || modal.dataset.today;
+      }
+      dateInput.dataset.lastValid = dateInput.value;
+      const val = dateInput.value;
+      if (val === modal.dataset.today) setPlanningQuickSelected("today");
+      else if (val === modal.dataset.tomorrow) setPlanningQuickSelected("tomorrow");
+      else setPlanningQuickSelected(null);
+      updatePlanningTimeMin();
+    });
+    document.getElementById("planning-sheet-time").addEventListener("change", () => {
+      const timeInput = document.getElementById("planning-sheet-time");
+      if (!timeInput.value) {
+        timeInput.value = timeInput.dataset.lastValid || "08:00";
+      }
+      timeInput.dataset.lastValid = timeInput.value;
+    });
+    document.getElementById("planning-sheet-confirm").onclick = confirmPlanningSchedule;
+  }
+
+  modal.dataset.today = today;
+  modal.dataset.tomorrow = tomorrow;
+  document.getElementById("planning-sheet-reason").textContent = subtitleText;
+  const dateInputEl = document.getElementById("planning-sheet-date");
+  const timeInputEl = document.getElementById("planning-sheet-time");
+  dateInputEl.value = defaultDate;
+  timeInputEl.value = defaultTime;
+  dateInputEl.dataset.lastValid = defaultDate;
+  timeInputEl.dataset.lastValid = defaultTime;
+  // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
+  dateInputEl.min = today;
+
+  if (defaultDate === today) setPlanningQuickSelected("today");
+  else if (defaultDate === tomorrow) setPlanningQuickSelected("tomorrow");
+  else setPlanningQuickSelected(null);
+
+  updatePlanningTimeMin();
+
+  modal.style.display = "flex";
+}
+
+function updatePlanningTimeMin() {
+  const dateInput = document.getElementById("planning-sheet-date");
+  const timeInput = document.getElementById("planning-sheet-time");
+  if (!dateInput || !timeInput) return;
+
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+
+  if (dateInput.value === todayIso) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    timeInput.min = `${hh}:${mm}`;
+    if (timeInput.value && timeInput.value < timeInput.min) {
+      timeInput.value = timeInput.min;
+    }
+  } else {
+    timeInput.removeAttribute("min");
+  }
+}
+
+function setPlanningQuickSelected(which) {
+  const todayBtn = document.getElementById("planning-quick-today");
+  const tomorrowBtn = document.getElementById("planning-quick-tomorrow");
+  if (!todayBtn || !tomorrowBtn) return;
+  todayBtn.style.background = "";
+  todayBtn.style.color = "";
+  tomorrowBtn.style.background = "";
+  tomorrowBtn.style.color = "";
+  const active = which === "today" ? todayBtn : which === "tomorrow" ? tomorrowBtn : null;
+  if (active) {
+    active.style.background = "var(--dark, #141416)";
+    active.style.color = "var(--clarity-primary-text, #fff)";
+  }
+}
+
+// isCancel=true (défaut) : vraie annulation -> toast "Demande annulée",
+// comme convenu pour toutes les popups de l'app. isCancel=false : fermeture
+// interne juste avant l'envoi (confirmPlanningSchedule), pas de toast dans
+// ce cas.
+function closePlanningScheduleSheet(isCancel = true) {
+  const modal = document.getElementById("planning-schedule-modal");
+  if (modal) modal.style.display = "none";
+  if (isCancel) {
+    pendingClarifyAgent = null;
+    showToast("Demande annulée", "error");
+  }
+}
+
+async function confirmPlanningSchedule() {
+  const date = document.getElementById("planning-sheet-date").value;
+  const time = document.getElementById("planning-sheet-time").value;
+  if (!date || !time) {
+    showToast("Choisis une date et une heure", "error");
+    return;
+  }
+
+  // Même garde-fou qu'ailleurs (le "min" natif peut être ignoré par
+  // certains navigateurs mobiles) : refuse toute date/heure déjà passée.
+  const chosen = new Date(`${date}T${time}`);
+  if (chosen.getTime() < Date.now()) {
+    showToast("Choisis une date et une heure dans le futur", "error");
+    return;
+  }
+
+  closePlanningScheduleSheet(false);
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rendez-vous…";
+
+  const partial = pendingPlanningPartial || {};
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: pendingPlanningInstruction || partial.title || "Rendez-vous",
+    request_id: window.currentRequestId,
+    conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+    contact_name: partial.contact_name || null,
+    title: partial.title || null,
+    appointment_date: date,
+    appointment_time: time
+  };
+
+  try {
+    const response = await fetch(PLANNING_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    box.style.display = "none";
+    box.innerHTML = "";
+
+    if (data.success) {
+      showToast(data.message || "Rendez-vous noté", "success");
+      pendingClarifyAgent = null;
+      if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+      if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+      return;
+    }
+
+    // Toujours incomplet (ex : la date était bonne mais l'heure manque
+    // encore) : on rouvre directement la même sheet avec les infos à jour,
+    // plutôt qu'un toast d'erreur sec.
+    if (data.reason === "missing_date" || data.reason === "missing_time") {
+      openPlanningScheduleSheet(data, pendingPlanningInstruction);
+      return;
+    }
+
+    showToast(data.message || "Impossible de créer le rendez-vous", "error");
+  } catch (e) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    showToast("Erreur réseau", "error");
+  }
+}
+
 // ─── POPUP DE CLARIFICATION ─────────────────────────────
 // Ouverte à la place d'un toast éphémère quand un agent répond qu'il lui
 // manque une info précise pour répondre correctement. Reste affichée tant
@@ -13093,6 +13338,19 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
           return;
         }
 
+        if (
+          effectiveAgent === "planning" &&
+          (data.reason === "missing_date" || data.reason === "missing_time")
+        ) {
+          if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
+          }
+          openPlanningScheduleSheet(data, instruction);
+          resetMicButton(true);
+          return;
+        }
+
         // On garde le fil de la conversation : la prochaine dictée doit
         // pouvoir juste compléter l'info manquante ("c'est pour ma femme")
         // plutôt qu'obliger l'utilisateur à tout redire depuis zéro.
@@ -13895,6 +14153,28 @@ async function callSimpleAgent(
           el.innerHTML = "";
         });
         openReminderScheduleSheet(data);
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        return;
+      }
+
+      // Planning : le backend renvoie encore "missing_date"/"missing_time"
+      // séparément (pas encore le "needs_schedule" unifié de Relance) — on
+      // gère les deux cas pour ouvrir la même sheet date/heure plutôt que la
+      // popup de clarification à champ texte libre.
+      if (
+        agentName === "planning" &&
+        (data.reason === "missing_date" || data.reason === "missing_time")
+      ) {
+        if (box) {
+          box.style.display = "none";
+          box.innerHTML = "";
+        }
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
+          el.style.display = "none";
+          el.innerHTML = "";
+        });
+        openPlanningScheduleSheet(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
         return;
