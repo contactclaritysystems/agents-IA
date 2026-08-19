@@ -631,6 +631,13 @@ body.loading-subscription #actions-count {
   display: flex;
   flex-direction: column;
   gap: 7px;
+  /* Un .field-group est souvent lui-même un item d'un parent flex/grid
+     (ex: .field-row en grid 7fr/3fr pour Date+Heure). Sans min-width:0, un
+     item flex/grid refuse par défaut de rétrécir sous la largeur naturelle
+     de son contenu — et un <input type="date"/"time"> natif (surtout sur
+     iOS) peut avoir un rendu interne plus large que la colonne prévue,
+     poussant toute la ligne à déborder à droite. */
+  min-width: 0;
 }
 
 .field-label {
@@ -655,6 +662,12 @@ body.loading-subscription #actions-count {
   outline: none;
   transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
   width: 100%;
+  /* .field-group est en display:flex (colonne) : .field-input est donc
+     lui-même un item flex, avec le même piège min-width:auto que ci-dessus
+     dans sa propre direction. Nécessaire même quand .field-group n'est
+     dans aucun grid/flex parent. */
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 textarea.field-input {
@@ -9173,6 +9186,11 @@ async function sendTypedInstruction(instruction, continuing = false) {
     box.classList.add("agent-progress-popup");
     document.body.appendChild(box);
   }
+  // Filet de sécurité : si ce noeud existait déjà (réutilisé) et avait été
+  // masqué via display:none par un chemin qui ne l'aurait pas retiré du DOM,
+  // on le rend explicitement visible ici plutôt que de compter sur ce que
+  // chaque appelant précédent ait bien nettoyé après lui.
+  box.style.display = "";
   box.style.opacity = "1";
   setDictationBoxState(box, "info");
 
@@ -13459,6 +13477,9 @@ progressIcon: "✨",
       hasSent = true;
 
       ensureBox();
+    // Filet de sécurité : voir commentaire équivalent dans
+    // sendTypedInstruction().
+    box.style.display = "";
     setDictationBoxState(box, "info");
 
     const requestId = crypto.randomUUID();
@@ -13570,10 +13591,12 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
         const message = data.message || data.error || "Impossible de générer la réponse.";
 
         if (effectiveAgent === "relance" && data.reason === "needs_schedule") {
-          if (box) {
-            box.style.display = "none";
-            box.innerHTML = "";
-          }
+          // hideOrRemoveBox() RETIRE l'élément du DOM (au lieu d'un simple
+          // display:none qui le laissait "zombie" — la prochaine dictée
+          // retrouvait ce même noeud toujours caché, sans jamais rétablir
+          // son display, d'où des bandeaux de progression invisibles par
+          // intermittence sur les tours suivants).
+          hideOrRemoveBox(box);
           openReminderScheduleSheet(data);
           resetMicButton(true);
           return;
@@ -13583,20 +13606,14 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
           effectiveAgent === "planning" &&
           (data.reason === "missing_date" || data.reason === "missing_time")
         ) {
-          if (box) {
-            box.style.display = "none";
-            box.innerHTML = "";
-          }
+          hideOrRemoveBox(box);
           openPlanningScheduleSheet(data, instruction);
           resetMicButton(true);
           return;
         }
 
         if (effectiveAgent === "planning" && data.reason === "missing_contact") {
-          if (box) {
-            box.style.display = "none";
-            box.innerHTML = "";
-          }
+          hideOrRemoveBox(box);
           openPlanningContactModal(data, instruction);
           resetMicButton(true);
           return;
@@ -14347,6 +14364,9 @@ async function callSimpleAgent(
     }
 
     if (box) {
+      // Filet de sécurité : voir commentaire équivalent dans
+      // sendTypedInstruction().
+      box.style.display = "";
       setDictationBoxState(box, "info");
       box.style.opacity = "1";
       box.innerHTML = `
@@ -14404,14 +14424,13 @@ async function callSimpleAgent(
       const message = data.message || "Impossible de générer la réponse.";
 
      if (agentName === "relance" && data.reason === "needs_schedule") {
-        if (box) {
-          box.style.display = "none";
-          box.innerHTML = "";
-        }
-        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
-          el.style.display = "none";
-          el.innerHTML = "";
-        });
+        // hideOrRemoveBox() RETIRE l'élément du DOM plutôt qu'un simple
+        // display:none, qui le laissait "zombie" dans le DOM : le prochain
+        // bandeau de progression retrouvait ce même noeud toujours masqué
+        // sans jamais rétablir son display, d'où des bandeaux invisibles
+        // par intermittence sur les tours suivants.
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
         openReminderScheduleSheet(data);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
@@ -14426,14 +14445,8 @@ async function callSimpleAgent(
         agentName === "planning" &&
         (data.reason === "missing_date" || data.reason === "missing_time")
       ) {
-        if (box) {
-          box.style.display = "none";
-          box.innerHTML = "";
-        }
-        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
-          el.style.display = "none";
-          el.innerHTML = "";
-        });
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
         openPlanningScheduleSheet(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
@@ -14445,14 +14458,8 @@ async function callSimpleAgent(
       // suite), on ouvre un seul popup avec les 2 champs d'un coup (contact
       // + motif) quand le motif n'est pas encore connu non plus.
       if (agentName === "planning" && data.reason === "missing_contact") {
-        if (box) {
-          box.style.display = "none";
-          box.innerHTML = "";
-        }
-        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
-          el.style.display = "none";
-          el.innerHTML = "";
-        });
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
         openPlanningContactModal(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
@@ -14558,6 +14565,9 @@ async function callMailAgent(
     }
 
     if (box) {
+      // Filet de sécurité : voir commentaire équivalent dans
+      // sendTypedInstruction().
+      box.style.display = "";
       setDictationBoxState(box, "info");
 box.style.opacity = "1";
 
