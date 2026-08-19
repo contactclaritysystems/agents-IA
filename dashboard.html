@@ -7093,6 +7093,58 @@ body[data-theme="light"]::after {
 }
 
 /* =========================================================
+   CLARITY SYSTEMS — BLOC 42
+   TOAST — version premium (pilule conservée, distincte des popups
+   "carte" de progression pour ne pas créer de confusion avec l'état
+   "Clarity travaille"). Avant : succès et erreur se ressemblaient
+   presque (même fond verre, seule l'icône changeait de couleur) et
+   le texte était aligné à gauche même quand il passait sur 2 lignes.
+   Ici : fond légèrement teinté selon le type (vert doux / rouge doux,
+   mêmes tokens que le reste du site), liseré et halo colorés assortis,
+   texte toujours centré, entrée en léger zoom au lieu d'un simple
+   fondu vers le haut. Placé en toute fin de feuille de style pour
+   l'emporter sur BLOC 22 (base) sans le supprimer. */
+.toast {
+  background:
+    linear-gradient(160deg, var(--clarity-success-bg), rgba(var(--clarity-glass-rgb), .96)) !important;
+  border: 1px solid var(--clarity-success-border) !important;
+  box-shadow:
+    var(--clarity-shadow-md),
+    0 0 0 1px rgba(var(--clarity-glass-rgb), .4) inset,
+    0 6px 24px -4px rgba(22, 128, 60, .18) !important;
+  transform: translate(-50%, calc(-50% + 8px)) scale(.94) !important;
+  transition:
+    opacity 220ms var(--clarity-ease),
+    transform 220ms var(--clarity-ease) !important;
+}
+
+.toast.show {
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+.toast.error {
+  background:
+    linear-gradient(160deg, var(--clarity-danger-bg), rgba(var(--clarity-glass-rgb), .96)) !important;
+  border: 1px solid var(--clarity-danger-border) !important;
+  box-shadow:
+    var(--clarity-shadow-md),
+    0 0 0 1px rgba(var(--clarity-glass-rgb), .4) inset,
+    0 6px 24px -4px rgba(198, 63, 63, .22) !important;
+}
+
+.toast-icon {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  font-size: 12px !important;
+}
+
+.toast-text {
+  text-align: center !important;
+  flex: 1;
+}
+
+/* =========================================================
    CLARITY SYSTEMS — BLOC 41 (fix final)
    Les 3 cartes stats (Actions utilisées / Temps gagné / Abonnement)
    utilisaient une mise en page "en ligne" (icône à gauche, texte à
