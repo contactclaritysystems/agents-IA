@@ -8873,6 +8873,169 @@ async function confirmPlanningSchedule() {
       return;
     }
 
+    if (data.reason === "missing_contact") {
+      openPlanningContactModal(data, pendingPlanningInstruction);
+      return;
+    }
+
+    showToast(data.message || "Impossible de créer le rendez-vous", "error");
+  } catch (e) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    showToast("Erreur réseau", "error");
+  }
+}
+
+// ─── POPUP CONTACT + MOTIF — RENDEZ-VOUS (Planning) ─────
+// Avant : "avec qui ?" (popup 1, champ texte générique) puis, une fois
+// répondu, "pour quel motif ?" (popup 2) — deux allers-retours réseau
+// perçus comme lents. Ici, quand le motif n'est pas non plus connu, les
+// deux infos sont demandées d'un coup dans UNE seule popup, puis envoyées
+// ensemble à /agent/planning (contact_name + title explicites), qui n'a
+// alors plus besoin de redemander le motif séparément.
+let pendingPlanningContactNeedsTitle = false;
+
+function openPlanningContactModal(data, instruction) {
+  pendingPlanningPartial = data.partial || {};
+  pendingPlanningInstruction = instruction || pendingPlanningInstruction || "";
+
+  const needsTitle = !pendingPlanningPartial.title;
+  pendingPlanningContactNeedsTitle = needsTitle;
+
+  let modal = document.getElementById("planning-contact-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "planning-contact-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closePlanningContactModal()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title">Rendez-vous</div>
+        <div class="mail-choice-subtitle" id="planning-contact-sheet-message"></div>
+
+        <div class="field-group" style="margin-top:14px;">
+          <div class="field-label">Avec qui ?</div>
+          <input class="field-input" type="text" id="planning-contact-sheet-contact" placeholder="Nom du contact" />
+        </div>
+
+        <div class="field-group" id="planning-contact-sheet-title-group" style="margin-top:12px;">
+          <div class="field-label">Motif du rendez-vous</div>
+          <input class="field-input" type="text" id="planning-contact-sheet-title" placeholder="Ex : point projet" />
+        </div>
+
+        <button class="save-btn" type="button" id="planning-contact-sheet-confirm" style="margin-top:16px;">
+          ✓ Continuer
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closePlanningContactModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("planning-contact-sheet-confirm").onclick = confirmPlanningContact;
+  }
+
+  const messageEl = document.getElementById("planning-contact-sheet-message");
+  const contactInput = document.getElementById("planning-contact-sheet-contact");
+  const titleGroup = document.getElementById("planning-contact-sheet-title-group");
+  const titleInput = document.getElementById("planning-contact-sheet-title");
+
+  messageEl.textContent = data.message || "";
+  contactInput.value = pendingPlanningPartial.contact_name || "";
+  titleInput.value = pendingPlanningPartial.title || "";
+  // "Manque seulement le contact" -> un seul champ visible ; "manque
+  // contact et motif" -> les deux champs d'un coup (voir tableau ci-dessus).
+  titleGroup.style.display = needsTitle ? "" : "none";
+
+  modal.style.display = "flex";
+  setTimeout(() => contactInput.focus(), 60);
+}
+
+// isCancel=true (défaut) : vraie annulation -> toast "Demande annulée".
+// isCancel=false : fermeture interne avant l'envoi (confirmPlanningContact).
+function closePlanningContactModal(isCancel = true) {
+  const modal = document.getElementById("planning-contact-modal");
+  if (modal) modal.style.display = "none";
+  if (isCancel) {
+    pendingClarifyAgent = null;
+    showToast("Demande annulée", "error");
+  }
+}
+
+async function confirmPlanningContact() {
+  const contact = document.getElementById("planning-contact-sheet-contact").value.trim();
+  if (!contact) {
+    showToast("Indique avec qui est le rendez-vous", "error");
+    return;
+  }
+
+  const titleGroup = document.getElementById("planning-contact-sheet-title-group");
+  const titleInput = document.getElementById("planning-contact-sheet-title");
+  const titleGroupVisible = titleGroup.style.display !== "none";
+  const titleText = titleInput.value.trim();
+
+  if (titleGroupVisible && !titleText) {
+    showToast("Indique le motif du rendez-vous", "error");
+    return;
+  }
+
+  closePlanningContactModal(false);
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rendez-vous…";
+
+  const partial = pendingPlanningPartial || {};
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: pendingPlanningInstruction || titleText || partial.title || "Rendez-vous",
+    request_id: window.currentRequestId,
+    conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+    contact_name: contact,
+    title: titleText || partial.title || null,
+    appointment_date: partial.appointment_date || null,
+    appointment_time: partial.appointment_time || null
+  };
+
+  try {
+    const response = await fetch(PLANNING_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    box.style.display = "none";
+    box.innerHTML = "";
+
+    if (data.success) {
+      showToast(data.message || "Rendez-vous noté", "success");
+      pendingClarifyAgent = null;
+      if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+      if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+      return;
+    }
+
+    if (data.reason === "missing_date" || data.reason === "missing_time") {
+      openPlanningScheduleSheet(data, pendingPlanningInstruction);
+      return;
+    }
+
+    if (data.reason === "missing_contact") {
+      openPlanningContactModal(data, pendingPlanningInstruction);
+      return;
+    }
+
     showToast(data.message || "Impossible de créer le rendez-vous", "error");
   } catch (e) {
     box.style.display = "none";
@@ -10705,7 +10868,8 @@ buttons.forEach(btn => {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
       }
     }
   );
@@ -10719,6 +10883,22 @@ buttons.forEach(btn => {
     });
 
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  const deletedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    console.error("deleteFollowUp: 0 ligne supprimée pour id=", id, "— vérifier la policy RLS DELETE sur follow_ups");
+
+    window.isDeletingFollowUp = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Suppression bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -13300,11 +13480,16 @@ if (config.agent === "orchestrator") {
 }
 
     try {
-      const response = await fetch(config.webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        
-        body: JSON.stringify({
+      // Même délai minimum que côté texte : une réponse très rapide
+      // (surtout en continuation directe vers Planning/Relance après une
+      // clarification) ne doit pas faire disparaître le bandeau de
+      // progression avant que l'utilisateur ait pu le voir.
+      const [resp] = await Promise.all([
+        fetch(config.webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+
+          body: JSON.stringify({
   request_id: requestId,
   user_email: currentUser.email,
   user_id: currentUser.id,
@@ -13314,7 +13499,10 @@ if (config.agent === "orchestrator") {
   last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
 })
 
-      });
+        }),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+      const response = resp;
 
       const text = await response.text();
 
@@ -13400,6 +13588,16 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
             box.innerHTML = "";
           }
           openPlanningScheduleSheet(data, instruction);
+          resetMicButton(true);
+          return;
+        }
+
+        if (effectiveAgent === "planning" && data.reason === "missing_contact") {
+          if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
+          }
+          openPlanningContactModal(data, instruction);
           resetMicButton(true);
           return;
         }
@@ -14166,19 +14364,28 @@ async function callSimpleAgent(
 
     let response;
     try {
-      response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          user_email: currentUser.email,
-          user_name: getUserDisplayName(),
-          instruction,
-          request_id: requestId,
-          conversation_history: formatConversationHistory(simpleAgentConversationHistory)
+      // Même raison que le délai ajouté sur l'appel du Chef d'Orchestre :
+      // Planning/Relance peuvent répondre en quelques dizaines de ms
+      // (simple écriture Supabase), ce qui faisait disparaître "Réflexion
+      // en cours..." avant que l'utilisateur ait le temps de le voir. On
+      // force donc un minimum de 500ms d'affichage ici aussi.
+      const [resp] = await Promise.all([
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            user_email: currentUser.email,
+            user_name: getUserDisplayName(),
+            instruction,
+            request_id: requestId,
+            conversation_history: formatConversationHistory(simpleAgentConversationHistory)
+          }),
+          signal: timeoutController.signal
         }),
-        signal: timeoutController.signal
-      });
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
+      response = resp;
     } finally {
       clearTimeout(timeoutId);
     }
@@ -14228,6 +14435,25 @@ async function callSimpleAgent(
           el.innerHTML = "";
         });
         openPlanningScheduleSheet(data, instruction);
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        return;
+      }
+
+      // Contact manquant : au lieu du champ texte libre générique (qui, une
+      // fois répondu, pouvait redemander le motif dans une 2e popup à la
+      // suite), on ouvre un seul popup avec les 2 champs d'un coup (contact
+      // + motif) quand le motif n'est pas encore connu non plus.
+      if (agentName === "planning" && data.reason === "missing_contact") {
+        if (box) {
+          box.style.display = "none";
+          box.innerHTML = "";
+        }
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(el => {
+          el.style.display = "none";
+          el.innerHTML = "";
+        });
+        openPlanningContactModal(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
         return;
@@ -15184,6 +15410,7 @@ function closeHistoryDetail() {
   let currentFollowUpInitialReason = "";
   let currentAppointmentInitialTitle = "";
   let currentFollowUpInitialDate = "";
+  let currentFollowUpInitialTime = "";
   let currentFollowUpInitialContact = "";
   let currentAppointmentInitialContact = "";
   let currentAppointmentInitialDate = "";
@@ -17806,12 +18033,11 @@ list.innerHTML = relances.map((r, index) => {
 
         <div class="agent-title-wrap">
           <div class="agent-name">
-            ${r.contact_name || "Relance"}
+            ${formatDateShort(r.reminder_date)} · ${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}
           </div>
 
           <div class="agent-desc">
-            ${formatDateShort(r.reminder_date)}<br>
-            ${r.reason || ""}
+            ${r.reason || "Sans motif"}
           </div>
         </div>
 
@@ -17833,6 +18059,7 @@ list.innerHTML = relances.map((r, index) => {
   currentFollowUpInitialNote = r.message_context || "";
   currentFollowUpInitialReason = r.reason || "";
   currentFollowUpInitialDate = r.reminder_date || "";
+  currentFollowUpInitialTime = r.reminder_time?.slice(0, 5) || "";
   currentFollowUpInitialContact = r.contact_name || "";
 
   const detail = document.getElementById("planning-detail");
@@ -17863,19 +18090,32 @@ list.innerHTML = relances.map((r, index) => {
     </div>
 
       <div style="font-size:14px;color:var(--clarity-text-tertiary);margin-bottom:18px;">
-        ${formatDateShort(r.reminder_date)}
+        ${formatDateShort(r.reminder_date)} · ${r.reminder_time?.slice(0, 5) || ""}
       </div>
 
-      <div class="field-group" style="margin-bottom:14px;">
-  <div class="field-label">Date de relance</div>
-  <input
-    class="field-input"
-    id="followup-date-input"
-    type="date"
-    value="${r.reminder_date || ""}"
-    oninput="toggleFollowUpSave()"
-  >
-</div>
+      <div class="field-row" style="margin-bottom:14px;">
+        <div class="field-group">
+          <div class="field-label">Date</div>
+          <input
+            class="field-input"
+            id="followup-date-input"
+            type="date"
+            value="${r.reminder_date || ""}"
+            oninput="toggleFollowUpSave()"
+          >
+        </div>
+
+        <div class="field-group">
+          <div class="field-label">Heure</div>
+          <input
+            class="field-input"
+            id="followup-time-input"
+            type="time"
+            value="${r.reminder_time?.slice(0, 5) || ""}"
+            oninput="toggleFollowUpSave()"
+          >
+        </div>
+      </div>
 
       <div style="
         background:var(--clarity-surface-soft);
@@ -17936,11 +18176,14 @@ list.innerHTML = relances.map((r, index) => {
 
   const date =
   document.getElementById("followup-date-input")?.value || "";
+  const time =
+  document.getElementById("followup-time-input")?.value || "";
 
 const hasChanges =
   note.trim() !== currentFollowUpInitialNote.trim() ||
   reason.trim() !== currentFollowUpInitialReason.trim() ||
   date !== currentFollowUpInitialDate ||
+  time !== currentFollowUpInitialTime ||
   contact.trim() !== currentFollowUpInitialContact.trim();
 
   btn.disabled = !hasChanges;
@@ -17954,6 +18197,7 @@ const hasChanges =
   const note = document.getElementById("followup-note-input")?.value.trim() || "";
   const reason = document.getElementById("followup-reason-input")?.value.trim() || "";
   const date = document.getElementById("followup-date-input")?.value || "";
+  const time = document.getElementById("followup-time-input")?.value || "";
   const contact = document.getElementById("followup-contact-input")?.value.trim() || "";
 
   const btn = document.getElementById("followup-note-save-btn");
@@ -17981,12 +18225,16 @@ const hasChanges =
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
         "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        // "return=representation" : voir commentaire dans saveAppointment()
+        // — sans ça, un blocage RLS silencieux affichait quand même un toast
+        // de succès.
+        "Prefer": "return=representation"
       },
       body: JSON.stringify({
         reason,
         contact_name: contact,
         reminder_date: date,
+        reminder_time: time,
         message_context: note,
         updated_at: new Date().toISOString()
       })
@@ -18005,9 +18253,26 @@ const hasChanges =
     return;
   }
 
+  const updatedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    console.error("saveFollowUpNote: 0 ligne modifiée pour id=", followUpId, "— vérifier la policy RLS UPDATE sur follow_ups");
+
+    window.isSavingFollowUp = false;
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+
+    showToast("Sauvegarde bloquée (droits Supabase)", "error");
+    return;
+  }
+
   currentFollowUpInitialNote = note;
   currentFollowUpInitialReason = reason;
   currentFollowUpInitialDate = date;
+  currentFollowUpInitialTime = time;
   currentFollowUpInitialContact = contact;
 
   window.isSavingFollowUp = false;
@@ -18041,6 +18306,7 @@ async function updateFollowUpStatus(id, status, message) {
   const reason = document.getElementById("followup-reason-input")?.value || "";
   const contact = document.getElementById("followup-contact-input")?.value || "";
   const date = document.getElementById("followup-date-input")?.value || "";
+  const time = document.getElementById("followup-time-input")?.value || "";
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
@@ -18064,11 +18330,12 @@ async function updateFollowUpStatus(id, status, message) {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
         "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        "Prefer": "return=representation"
       },
       body: JSON.stringify({
         contact_name: contact,
         reminder_date: date,
+        reminder_time: time,
         reason,
         message_context: note,
         status,
@@ -18084,6 +18351,20 @@ async function updateFollowUpStatus(id, status, message) {
     });
 
     showToast("Erreur modification relance", "error");
+    return;
+  }
+
+  const updatedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    console.error("updateFollowUpStatus: 0 ligne modifiée pour id=", id, "— vérifier la policy RLS UPDATE sur follow_ups");
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Modification bloquée (droits Supabase)", "error");
     return;
   }
 
