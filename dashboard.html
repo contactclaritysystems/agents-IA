@@ -661,6 +661,16 @@ textarea.field-input {
   line-height: 1.55;
 }
 
+/* Masque le bouton natif "effacer" (une petite croix) qui apparaît dans les
+   champs date/heure une fois une valeur choisie (WebKit : Safari/Chrome).
+   Pour ce popup de rappel, on ne veut pas que l'utilisateur puisse vider le
+   champ, seulement changer la valeur via le sélecteur. */
+input[type="date"].field-input::-webkit-clear-button,
+input[type="time"].field-input::-webkit-clear-button {
+  display: none;
+  -webkit-appearance: none;
+}
+
 select.field-input {
   cursor: pointer;
 }
@@ -8371,7 +8381,7 @@ function openReminderScheduleSheet(data) {
     modal.style.display = "none";
     modal.innerHTML = `
       <div class="mail-choice-backdrop" onclick="closeReminderScheduleSheet()"></div>
-      <div class="mail-choice-box">
+      <div class="mail-choice-box" style="overflow-x:hidden;">
         <div class="mail-choice-title">Rappel</div>
         <div class="mail-choice-subtitle" id="reminder-sheet-reason"></div>
 
@@ -8404,16 +8414,19 @@ function openReminderScheduleSheet(data) {
     document.getElementById("reminder-quick-today").onclick = () => {
       document.getElementById("reminder-sheet-date").value = modal.dataset.today;
       setReminderQuickSelected("today");
+      updateReminderTimeMin();
     };
     document.getElementById("reminder-quick-tomorrow").onclick = () => {
       document.getElementById("reminder-sheet-date").value = modal.dataset.tomorrow;
       setReminderQuickSelected("tomorrow");
+      updateReminderTimeMin();
     };
     document.getElementById("reminder-sheet-date").addEventListener("change", () => {
       const val = document.getElementById("reminder-sheet-date").value;
       if (val === modal.dataset.today) setReminderQuickSelected("today");
       else if (val === modal.dataset.tomorrow) setReminderQuickSelected("tomorrow");
       else setReminderQuickSelected(null);
+      updateReminderTimeMin();
     });
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
@@ -8423,12 +8436,42 @@ function openReminderScheduleSheet(data) {
   document.getElementById("reminder-sheet-reason").textContent = reason;
   document.getElementById("reminder-sheet-date").value = defaultDate;
   document.getElementById("reminder-sheet-time").value = defaultTime;
+  // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
+  document.getElementById("reminder-sheet-date").min = today;
 
   if (defaultDate === today) setReminderQuickSelected("today");
   else if (defaultDate === tomorrow) setReminderQuickSelected("tomorrow");
   else setReminderQuickSelected(null);
 
+  updateReminderTimeMin();
+
   modal.style.display = "flex";
+}
+
+// Empêche de choisir une heure déjà passée quand la date sélectionnée est
+// aujourd'hui (aucune restriction sur l'heure si la date est dans le
+// futur). Appelé à l'ouverture du popup et à chaque changement de date.
+function updateReminderTimeMin() {
+  const dateInput = document.getElementById("reminder-sheet-date");
+  const timeInput = document.getElementById("reminder-sheet-time");
+  if (!dateInput || !timeInput) return;
+
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+
+  if (dateInput.value === todayIso) {
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    timeInput.min = `${hh}:${mm}`;
+    // Si l'heure déjà saisie est maintenant dans le passé (le temps a
+    // avancé depuis l'ouverture du popup), on la pousse au créneau suivant
+    // plutôt que de laisser une heure invalide silencieusement acceptée.
+    if (timeInput.value && timeInput.value < timeInput.min) {
+      timeInput.value = timeInput.min;
+    }
+  } else {
+    timeInput.removeAttribute("min");
+  }
 }
 
 function setReminderQuickSelected(which) {
@@ -8464,6 +8507,15 @@ async function confirmReminderSchedule() {
   const time = document.getElementById("reminder-sheet-time").value;
   if (!date || !time) {
     showToast("Choisis une date et une heure", "error");
+    return;
+  }
+
+  // Garde-fou en plus de l'attribut "min" natif (certains navigateurs
+  // mobiles l'ignorent silencieusement) : on refuse toute date/heure déjà
+  // passée au moment de valider, pas seulement à l'ouverture du popup.
+  const chosen = new Date(`${date}T${time}`);
+  if (chosen.getTime() < Date.now()) {
+    showToast("Choisis une date et une heure dans le futur", "error");
     return;
   }
 
