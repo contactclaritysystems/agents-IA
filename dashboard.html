@@ -10414,7 +10414,11 @@ if (btn) {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
         "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        // "return=representation" (au lieu de "minimal") : Supabase/PostgREST
+        // répond 200/204 OK même quand la policy RLS bloque silencieusement
+        // la modification (0 ligne réellement affectée) — sans le corps de
+        // la ligne modifiée, impossible de le distinguer d'un vrai succès.
+        "Prefer": "return=representation"
       },
       body: JSON.stringify({
         contact_name: contact,
@@ -10433,8 +10437,22 @@ if (btn) {
   btn.disabled = false;
   btn.style.opacity = "1";
 }
-    
+
     showToast("Erreur sauvegarde", "error");
+    return;
+  }
+
+  const updatedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    console.error("saveAppointment: 0 ligne modifiée pour id=", id, "— vérifier la policy RLS UPDATE sur appointments");
+
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    }
+
+    showToast("Sauvegarde bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -10506,7 +10524,11 @@ if (btn) {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        // Voir commentaire équivalent dans saveAppointment() : sans
+        // "return=representation", une suppression bloquée par RLS répond
+        // quand même 200/204 OK, ce qui affichait un faux toast de succès.
+        "Prefer": "return=representation"
       }
     }
   );
@@ -10520,6 +10542,22 @@ if (btn) {
     });
 
     showToast("Erreur suppression", "error");
+    return;
+  }
+
+  const deletedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    console.error("deleteAppointment: 0 ligne supprimée pour id=", id, "— vérifier la policy RLS DELETE sur appointments");
+
+    window.isDeletingAppointment = false;
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Suppression bloquée (droits Supabase)", "error");
     return;
   }
 
@@ -10581,7 +10619,8 @@ buttons.forEach(btn => {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
         "Content-Type": "application/json",
-        "Prefer": "return=minimal"
+        // Voir commentaire équivalent dans saveAppointment().
+        "Prefer": "return=representation"
       },
       body: JSON.stringify({
         contact_name: contact,
@@ -10601,8 +10640,22 @@ buttons.forEach(btn => {
   btn.disabled = false;
   btn.style.opacity = "1";
 });
-    
+
     showToast("Erreur modification rendez-vous", "error");
+    return;
+  }
+
+  const updatedRows = await response.json().catch(() => []);
+
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    console.error("updateAppointmentStatus: 0 ligne modifiée pour id=", id, "— vérifier la policy RLS UPDATE sur appointments");
+
+    buttons.forEach(btn => {
+      btn.disabled = false;
+      btn.style.opacity = "1";
+    });
+
+    showToast("Modification bloquée (droits Supabase)", "error");
     return;
   }
 
