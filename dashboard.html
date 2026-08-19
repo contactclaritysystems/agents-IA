@@ -12783,7 +12783,18 @@ if (!window._customPickersOutsideClickBound) {
     }
   });
   // Referme aussi si la page défile (position figée sinon).
-  document.addEventListener("scroll", closeAllCustomPickers, true);
+  // Attention : le scroll interne de la liste d'heures (scrollIntoView vers
+  // l'heure déjà sélectionnée, juste après l'ouverture) déclenche lui aussi
+  // un évènement "scroll" — sur son propre conteneur, pas sur la page. Sans
+  // ce filtre, ce scroll interne refermait le popover à l'instant même où
+  // il venait de s'ouvrir (ouverture invisible, en un instant). On ignore
+  // donc les scrolls qui viennent de l'intérieur d'un popover lui-même.
+  document.addEventListener("scroll", (e) => {
+    if (e.target && e.target.closest && e.target.closest(".custom-date-popover, .custom-time-popover")) {
+      return;
+    }
+    closeAllCustomPickers();
+  }, true);
   window.addEventListener("resize", closeAllCustomPickers);
 }
 
