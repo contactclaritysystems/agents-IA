@@ -8364,6 +8364,15 @@ function quickAgentAction(hintText) {
 
 let pendingReminderPartial = null;
 
+// Quand un agent "simple" (Planning, Relance...) demande une clarification
+// (motif manquant, heure manquante...), on retient ici qui a posé la
+// question pour pouvoir lui renvoyer directement la réponse — au lieu de
+// repasser par le Chef d'Orchestre "à froid", qui n'a pas le contexte pour
+// deviner qu'une réponse courte ("14h", "match de foot") continue la même
+// demande. Remis à null dès qu'une nouvelle conversation démarre ou qu'une
+// clarification est résolue.
+let pendingClarifyAgent = null;
+
 function openReminderScheduleSheet(data) {
   pendingReminderPartial = data.partial || {};
   const defaults = data.defaults || {};
@@ -8653,13 +8662,46 @@ function openClarifyModal(message) {
   if (inputEl) setTimeout(() => inputEl.focus(), 60);
 }
 
-function closeClarifyModal() {
+// isCancel=true (défaut) : vraie annulation (bouton "Fermer" ou clic sur le
+// fond) -> toast, comme les autres popups de l'app (mail, rappel...).
+// isCancel=false : fermeture interne avant d'enchaîner sur l'envoi de la
+// réponse (submitClarifyReply / retryClarifyByDictation), donc pas de toast
+// "annulé" dans ce cas.
+function closeClarifyModal(isCancel = true) {
   const modal = document.getElementById("clarify-modal");
   if (modal) modal.style.display = "none";
+  if (isCancel) {
+    pendingClarifyAgent = null;
+    showToast("Demande annulée", "error");
+  }
 }
 
 function retryClarifyByDictation() {
-  closeClarifyModal();
+  closeClarifyModal(false);
+  // Si la question vient d'un agent déjà identifié (Planning, Relance...),
+  // on continue directement avec CE même agent plutôt que de repasser par
+  // le Chef d'Orchestre "à froid", qui pourrait mal router une réponse
+  // courte ("14h", "match de foot") vers l'Assistant au lieu de compléter
+  // le rendez-vous/rappel en cours.
+  if (pendingClarifyAgent) {
+    startSimpleAgentDictation({
+      agent: pendingClarifyAgent.agentName,
+      buttonId: "orchestrator-dictation-btn",
+      cardId: "card-orchestrator-run",
+      boxId: "orchestrator-dictation-box",
+      webhookUrl: pendingClarifyAgent.webhookUrl,
+      loadingText: `
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+          <img src="${CLARITY_THINKING_LOGO_SRC}" alt="" class="clarity-thinking-logo" style="height:26px;width:auto;display:block;" />
+          <span style="font-size:13.5px;font-weight:800;color:var(--clarity-text);">Réflexion en cours...</span>
+        </div>
+      `,
+      successText: "✅ Réponse prête",
+      modalTitle: "Clarity",
+      modalSubtitle: "Je m'occupe de votre demande."
+    }, true);
+    return;
+  }
   // continuing=true : garde l'historique (la question posée + ce qu'on va
   // dicter en réponse) au lieu de repartir d'une conversation vide.
   startOrchestratorDictation(true);
@@ -8672,7 +8714,19 @@ function submitClarifyReply() {
     showToast("Écrivez votre réponse avant d'envoyer", "error");
     return;
   }
-  closeClarifyModal();
+  closeClarifyModal(false);
+  // Même règle qu'en vocal : rester sur l'agent déjà identifié quand il y
+  // en a un, au lieu de repasser par le Chef d'Orchestre.
+  if (pendingClarifyAgent) {
+    callSimpleAgent(
+      pendingClarifyAgent.agentName,
+      pendingClarifyAgent.webhookUrl,
+      text,
+      null,
+      window.currentRequestId
+    );
+    return;
+  }
   sendTypedInstruction(text, true);
 }
 
@@ -8699,6 +8753,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
   if (!continuing) {
     simpleAgentConversationHistory = [];
     lastAgentInfo = null;
+    pendingClarifyAgent = null;
   }
 
   lockAgentButtons(null, "⏳ Agent en cours...");
@@ -8781,6 +8836,10 @@ async function sendTypedInstruction(instruction, continuing = false) {
       resetOrchestratorMicButton(true);
       setDictationBoxState(box, "error");
       autoHideDictationBox(box, 50);
+      // Échec au niveau du Chef d'Orchestre lui-même (pas encore routé vers
+      // un agent précis) : la prochaine réponse doit repartir de zéro par
+      // l'orchestrateur, pas rester "collée" à un agent.
+      pendingClarifyAgent = null;
       openClarifyModal(message);
       await saveActionLog(effectiveAgent, instruction, "error");
       return;
@@ -8807,6 +8866,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
     box.innerHTML = "✅ Réponse prête";
 
     pushConversationHistory(instruction, content);
+    pendingClarifyAgent = null;
 
     openSimpleAgentPreview({
       title,
@@ -8832,6 +8892,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
     resetOrchestratorMicButton();
     setDictationBoxState(box, "error");
     autoHideDictationBox(box, 50);
+    pendingClarifyAgent = null;
     openClarifyModal("Une erreur est survenue. Vous pouvez réessayer votre demande.");
     await saveActionLog("orchestrator", instruction, "error");
   }
@@ -12678,6 +12739,7 @@ progressIcon: "✨",
   if (!continuing) {
     simpleAgentConversationHistory = [];
     lastAgentInfo = null;
+    pendingClarifyAgent = null;
   }
 
   const allowed = await canUseAgents();
@@ -13015,6 +13077,16 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
         unlockAgentButtons();
         const message = data.message || data.error || "Impossible de générer la réponse.";
 
+        if (effectiveAgent === "relance" && data.reason === "needs_schedule") {
+          if (box) {
+            box.style.display = "none";
+            box.innerHTML = "";
+          }
+          openReminderScheduleSheet(data);
+          resetMicButton(true);
+          return;
+        }
+
         // On garde le fil de la conversation : la prochaine dictée doit
         // pouvoir juste compléter l'info manquante ("c'est pour ma femme")
         // plutôt qu'obliger l'utilisateur à tout redire depuis zéro.
@@ -13031,6 +13103,15 @@ console.log("MESSAGE =", message);
         // popup persistante à la place.
         setDictationBoxState(box, "error");
         autoHideDictationBox(box, 50);
+        // Si l'agent qui pose la question est déjà connu (Planning, Relance,
+        // appelé directement hors orchestrateur), on retient son identité :
+        // la réponse à cette clarification doit lui être renvoyée
+        // directement, pas repartir "à froid" par le Chef d'Orchestre qui
+        // pourrait mal router une réponse courte ("14h", "match de foot").
+        pendingClarifyAgent =
+          config.agent !== "orchestrator"
+            ? { agentName: config.agent, webhookUrl: config.webhookUrl }
+            : null;
         openClarifyModal(message);
         await saveActionLog(effectiveAgent, instruction, "error");
         return;
@@ -13062,14 +13143,23 @@ console.log("MESSAGE =", message);
       box.innerHTML = config.successText;
 
       pushConversationHistory(instruction, content);
+      // Clarification résolue avec succès : plus rien en attente.
+      pendingClarifyAgent = null;
 
-      openSimpleAgentPreview({
-        title,
-        content,
-        modalTitle: config.modalTitle,
-        modalSubtitle: config.modalSubtitle,
-        onRelaunch: () => startSimpleAgentDictation(config, true)
-      });
+      // Même règle que callSimpleAgent() : Planning/Relance confirment par
+      // un simple toast (pas de contenu à relire), les autres agents
+      // affichent l'aperçu du texte généré.
+      if (config.agent === "planning" || config.agent === "relance") {
+        showToast(content || "C'est noté", "success");
+      } else {
+        openSimpleAgentPreview({
+          title,
+          content,
+          modalTitle: config.modalTitle,
+          modalSubtitle: config.modalSubtitle,
+          onRelaunch: () => startSimpleAgentDictation(config, true)
+        });
+      }
 
       unlockAgentButtons();
       resetMicButton();
@@ -13814,6 +13904,12 @@ async function callSimpleAgent(
         autoHideDictationBox(box, 50);
       }
 
+      // On retient quel agent pose la question, pour que la réponse à cette
+      // clarification lui soit renvoyée directement (voir submitClarifyReply
+      // / retryClarifyByDictation) plutôt que de repasser par le Chef
+      // d'Orchestre à froid.
+      pendingClarifyAgent = { agentName, webhookUrl };
+
       // Popup persistante (au lieu d'un toast éphémère) : l'utilisateur doit
       // pouvoir lire la question de clarification et y répondre, à l'oral
       // ou à l'écrit.
@@ -13823,6 +13919,9 @@ async function callSimpleAgent(
      }
 
     const content = data.message || data.content || "";
+    // Clarification résolue avec succès (le cas échéant) : plus rien en
+    // attente.
+    pendingClarifyAgent = null;
 
     if (box) {
       setDictationBoxState(box, "success");
