@@ -6261,11 +6261,13 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
 .help-icon.yellow { background: rgba(245, 158, 11, .18); }
 .help-icon.purple { background: rgba(139, 92, 246, .16); }
 .help-icon.green { background: rgba(34, 197, 94, .16); }
+.help-icon.orange { background: var(--warning-bg); }
 
 body[data-theme="dark"] .help-icon.blue { box-shadow: 0 0 22px 5px rgba(92, 156, 224, 0.32); }
 body[data-theme="dark"] .help-icon.yellow { box-shadow: 0 0 22px 5px rgba(245, 185, 77, 0.32); }
 body[data-theme="dark"] .help-icon.purple { box-shadow: 0 0 22px 5px rgba(167, 139, 250, 0.32); }
 body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209, 124, 0.32); }
+body[data-theme="dark"] .help-icon.orange { box-shadow: 0 0 22px 5px rgba(230, 150, 60, 0.32); }
 
 /* Remplace le gros bouton bleu plein "Essayer maintenant" (pas assez
    premium, retour utilisateur) par une icône seule, plus grande et
@@ -6788,6 +6790,7 @@ body:not([data-theme="dark"]) .help-icon.blue { box-shadow: 0 0 18px 4px rgba(92
 body:not([data-theme="dark"]) .help-icon.yellow { box-shadow: 0 0 18px 4px rgba(245, 185, 77, 0.28); }
 body:not([data-theme="dark"]) .help-icon.purple { box-shadow: 0 0 18px 4px rgba(167, 139, 250, 0.28); }
 body:not([data-theme="dark"]) .help-icon.green { box-shadow: 0 0 18px 4px rgba(52, 209, 124, 0.28); }
+body:not([data-theme="dark"]) .help-icon.orange { box-shadow: 0 0 18px 4px rgba(230, 150, 60, 0.28); }
 
 /* Carte héro d'accueil : même teinte bleu marque que le thème sombre
    (couleur fixe), adaptée en intensité pour un fond clair. */
@@ -8504,6 +8507,30 @@ const HELP_ACTIONS = [
       "Quelles sont mes obligations légales pour afficher mes prix en tant qu'artisan ?",
       "Quel est le cours actuel du cuivre et son évolution récente ?",
       "Comment répondre poliment à un client qui conteste une facture ?"
+    ],
+    ready: true
+  },
+  {
+    id: "planning",
+    label: "Planning",
+    icon: "📅",
+    color: "yellow",
+    examples: [
+      "Ajoute un rendez-vous demain à 14h avec Julie.",
+      "Prends un rendez-vous avec M. Dupont vendredi matin pour un devis.",
+      "Déplace mon rendez-vous de mardi à jeudi 10h."
+    ],
+    ready: true
+  },
+  {
+    id: "relance",
+    label: "Relance",
+    icon: "⏰",
+    color: "orange",
+    examples: [
+      "Rappelle-moi de relancer Marc demain matin.",
+      "Crée un rappel pour envoyer le devis à Sophie vendredi.",
+      "Préviens-moi dans 3 jours si le client n'a pas répondu."
     ],
     ready: true
   }
