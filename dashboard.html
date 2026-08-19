@@ -7884,10 +7884,10 @@ body[data-theme="light"]::after {
         <button type="button" class="quick-action-btn" id="quick-mail-btn" onclick="openQuickMailCompose()" title="Envoyer un mail">
           <span class="quick-action-icon blue">✉️</span><span class="quick-action-label">Envoyer<br>un mail</span>
         </button>
-        <button type="button" class="quick-action-btn" id="quick-redaction-btn" onclick="quickAgentAction('Ex : Écris un SMS pour dire que je serai en retard')" title="Rédiger un texte">
+        <button type="button" class="quick-action-btn" id="quick-redaction-btn" onclick="openQuickTextModal('redaction')" title="Rédiger un texte">
           <span class="quick-action-icon purple">📝</span><span class="quick-action-label">Rédiger<br>un texte</span>
         </button>
-        <button type="button" class="quick-action-btn" id="quick-assistant-btn" onclick="quickAgentAction('Ex : Quelles sont mes obligations pour afficher mes prix ?')" title="Poser une question">
+        <button type="button" class="quick-action-btn" id="quick-assistant-btn" onclick="openQuickTextModal('assistant')" title="Poser une question">
           <span class="quick-action-icon yellow">💡</span><span class="quick-action-label">Poser une<br>question</span>
         </button>
         <button type="button" class="quick-action-btn" id="quick-planning-btn" onclick="openQuickPlanningModal()" title="Planifier un rendez-vous">
@@ -8788,32 +8788,108 @@ function tryHelpActionsExample() {
 }
 
 // Boutons "Actions rapides" de l'accueil : un raccourci par agent connecté
-// (Mail, Rédaction, Assistant...). Comme tout continue de passer par le
-// Chef d'Orchestre (voir règle de continuité), ces boutons ne court-
-// circuitent rien : ils rappellent juste à l'utilisateur un exemple de ce
-// qu'il peut dire, puis ouvrent le micro, pour qu'il sache toujours ce qui
-// est possible sans avoir à deviner.
-// Avant : un clic sur une action rapide lançait le micro (dictée), ce qui
-// surprenait — "Actions rapides" mais ça active le micro ? Maintenant : on
-// écrit directement l'exemple dans le champ de texte (modifiable, tout
-// sélectionné pour que taper remplace tout de suite les détails comme le
-// nom ou la date), et on laisse la personne l'éditer puis valider avec
-// Entrée — comme un point de départ, pas une dictée forcée.
-function quickAgentAction(hintText) {
-  const inputEl = document.getElementById("orchestrator-text-input");
-  if (!inputEl) return;
-
-  inputEl.textContent = hintText;
-  inputEl.focus();
-
-  const range = document.createRange();
-  range.selectNodeContents(inputEl);
-  const selection = window.getSelection();
-  if (selection) {
-    selection.removeAllRanges();
-    selection.addRange(range);
+// (Mail, Rédaction, Assistant, Planning, Relance). Comme tout continue de
+// passer par le Chef d'Orchestre (voir règle de continuité), ces boutons ne
+// court-circuitent rien : ils ouvrent un popup dédié pré-rempli avec les
+// infos nécessaires, comme pour "Envoyer un mail" / "Planifier un RDV" /
+// "Créer un rappel". Ici, "Rédiger un texte" et "Poser une question" n'ont
+// pas d'infos structurées à demander (pas de contact/date) : le popup
+// propose juste un champ où écrire OU dicter, avant l'envoi au Chef
+// d'Orchestre qui route vers le bon agent.
+const QUICK_TEXT_MODAL_CONFIG = {
+  redaction: {
+    title: "Rédiger un texte",
+    subtitle: "Décrivez ce que vous voulez dire, Clarity le rédige pour vous.",
+    placeholder: "Que voulez-vous écrire ?",
+    submitLabel: "📝 Envoyer à l'agent"
+  },
+  assistant: {
+    title: "Poser une question",
+    subtitle: "Écrivez ou dictez votre question, Clarity vous répond.",
+    placeholder: "Quelle est votre question ?",
+    submitLabel: "💡 Envoyer à l'agent"
   }
+};
+
+function openQuickTextModal(kind) {
+  const config = QUICK_TEXT_MODAL_CONFIG[kind] || QUICK_TEXT_MODAL_CONFIG.redaction;
+
+  let modal = document.getElementById("quick-text-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "quick-text-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeQuickTextModal()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title" id="quick-text-title"></div>
+        <div class="mail-choice-subtitle" id="quick-text-subtitle"></div>
+
+        <div class="clarity-input-row" id="quick-text-input-row" style="align-items:center;margin-top:14px;">
+          <textarea class="field-input" id="quick-text-instruction" rows="4" placeholder="" style="flex:1;min-width:0;resize:vertical;min-height:90px;"></textarea>
+          <button class="clarity-input-mic" id="quick-text-mic-btn" type="button" onclick="toggleQuickTextDictation()">
+            <span class="mic-stop-icon" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="clarity-mic-hint">🎙️ Parlez lentement et articulez bien pour une meilleure reconnaissance</div>
+
+        <button class="save-btn" type="button" id="quick-text-submit-btn" style="width:100%;margin-top:14px;" onclick="submitQuickText()"></button>
+        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeQuickTextModal()">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Réutilise l'icône micro déjà encodée en base64 dans le champ principal
+    // (#orchestrator-dictation-btn), plutôt que de la dupliquer une 3e fois
+    // en dur dans le HTML — même image, juste clonée dans ce nouveau bouton.
+    const sourceMicImg = document.querySelector("#orchestrator-dictation-btn .mic-icon-img");
+    const targetMicBtn = document.getElementById("quick-text-mic-btn");
+    if (sourceMicImg && targetMicBtn) {
+      targetMicBtn.prepend(sourceMicImg.cloneNode(true));
+    }
+  }
+
+  modal.dataset.kind = kind;
+  document.getElementById("quick-text-title").textContent = config.title;
+  document.getElementById("quick-text-subtitle").textContent = config.subtitle;
+  const textarea = document.getElementById("quick-text-instruction");
+  textarea.value = "";
+  textarea.placeholder = config.placeholder;
+  document.getElementById("quick-text-submit-btn").textContent = config.submitLabel;
+
+  modal.style.display = "flex";
+  setTimeout(() => textarea.focus(), 60);
 }
+
+function closeQuickTextModal() {
+  const modal = document.getElementById("quick-text-modal");
+  if (modal) modal.style.display = "none";
+
+  quickTextMicRetryCount = QUICK_TEXT_MIC_MAX_RETRIES;
+  clearTimeout(quickTextWatchdogTimer);
+  if (quickTextDictationRecognition) {
+    try { quickTextDictationRecognition.stop(); } catch (e) {}
+  }
+  const micBtn = document.getElementById("quick-text-mic-btn");
+  if (micBtn) micBtn.classList.remove("is-recording");
+}
+
+function submitQuickText() {
+  const textarea = document.getElementById("quick-text-instruction");
+  const text = (textarea ? textarea.value : "").trim();
+  if (!text) {
+    showToast("Écrivez ou dictez votre demande avant d'envoyer", "error");
+    return;
+  }
+  closeQuickTextModal();
+  sendTypedInstruction(text, false);
+}
+
+window.openQuickTextModal = openQuickTextModal;
+window.closeQuickTextModal = closeQuickTextModal;
+window.submitQuickText = submitQuickText;
 
 // ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
 // Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
@@ -15477,6 +15553,141 @@ async function toggleQuickMailDictation() {
 }
 
 window.openQuickMailCompose = openQuickMailCompose;
+
+// ─── DICTÉE DU POPUP "RÉDIGER UN TEXTE" / "POSER UNE QUESTION" ───────
+// Même mécanique robuste que toggleQuickMailDictation() (compteur de
+// génération, chien de garde mobile 8s, relances bornées) mais avec ses
+// propres variables d'état et ID d'éléments, pour ne pas toucher au flux
+// mail qui fonctionne déjà.
+let quickTextDictationRecognition = null;
+let quickTextRecognitionGeneration = 0;
+let quickTextWatchdogTimer = null;
+let quickTextMicRetryCount = 0;
+let quickTextHasReceivedAnyResult = false;
+const QUICK_TEXT_MIC_MAX_RETRIES = 20;
+
+async function toggleQuickTextDictation() {
+  const micBtn = document.getElementById("quick-text-mic-btn");
+  const textarea = document.getElementById("quick-text-instruction");
+
+  if (quickTextDictationRecognition) {
+    quickTextMicRetryCount = QUICK_TEXT_MIC_MAX_RETRIES;
+    clearTimeout(quickTextWatchdogTimer);
+    try { quickTextDictationRecognition.stop(); } catch (e) {}
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
+    return;
+  }
+
+  quickTextMicRetryCount = 0;
+
+  function startQuickTextAttempt() {
+    const myGeneration = ++quickTextRecognitionGeneration;
+    quickTextHasReceivedAnyResult = false;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
+
+    let finalText = textarea ? textarea.value : "";
+    if (finalText) finalText += " ";
+
+    quickTextDictationRecognition = recognition;
+
+    recognition.onresult = function (event) {
+      if (myGeneration !== quickTextRecognitionGeneration) return;
+      quickTextHasReceivedAnyResult = true;
+      clearTimeout(quickTextWatchdogTimer);
+
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += text + " ";
+        } else {
+          interimText += text;
+        }
+      }
+      if (textarea) textarea.value = (finalText + interimText).trim();
+    };
+
+    recognition.onerror = function (event) {
+      if (myGeneration !== quickTextRecognitionGeneration) return;
+      console.error("Erreur reconnaissance vocale (quick text) :", event.error);
+      if (event.error === "aborted") return;
+      if (!isMobileDevice()) {
+        showToast(describeSpeechError(event.error), "error");
+      }
+    };
+
+    recognition.onend = function () {
+      if (myGeneration !== quickTextRecognitionGeneration) return;
+      markMicActivity();
+      clearTimeout(quickTextWatchdogTimer);
+      quickTextDictationRecognition = null;
+
+      if (
+        isMobileDevice() &&
+        !quickTextHasReceivedAnyResult &&
+        quickTextMicRetryCount < QUICK_TEXT_MIC_MAX_RETRIES
+      ) {
+        quickTextMicRetryCount++;
+        setTimeout(startQuickTextAttempt, 600);
+        return;
+      }
+
+      if (micBtn) micBtn.classList.remove("is-recording");
+    };
+
+    (async () => {
+      await delayBeforeMic();
+      if (myGeneration !== quickTextRecognitionGeneration) return;
+
+      try {
+        recognition.start();
+        if (micBtn) micBtn.classList.add("is-recording");
+
+        if (isMobileDevice()) {
+          clearTimeout(quickTextWatchdogTimer);
+          quickTextWatchdogTimer = setTimeout(function () {
+            if (myGeneration !== quickTextRecognitionGeneration) return;
+            if (quickTextHasReceivedAnyResult) return;
+            try {
+              recognition.onresult = null;
+              recognition.onend = null;
+              recognition.onerror = null;
+            } catch (e) {}
+            try { recognition.abort(); } catch (e) {}
+            try { recognition.stop(); } catch (e) {}
+            markMicActivity();
+            quickTextDictationRecognition = null;
+            if (quickTextMicRetryCount < QUICK_TEXT_MIC_MAX_RETRIES) {
+              quickTextMicRetryCount++;
+              setTimeout(startQuickTextAttempt, 600);
+            } else if (micBtn) {
+              micBtn.classList.remove("is-recording");
+            }
+          }, 8000);
+        }
+      } catch (e) {
+        if (myGeneration !== quickTextRecognitionGeneration) return;
+        quickTextDictationRecognition = null;
+        if (micBtn) micBtn.classList.remove("is-recording");
+      }
+    })();
+  }
+
+  stopVoicePlayback();
+  startQuickTextAttempt();
+}
+
+window.toggleQuickTextDictation = toggleQuickTextDictation;
 window.renderQuickMailContacts = renderQuickMailContacts;
 window.submitQuickMail = submitQuickMail;
 window.closeQuickMailModal = closeQuickMailModal;
