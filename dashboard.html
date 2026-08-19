@@ -7092,6 +7092,76 @@ body[data-theme="light"]::after {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — BLOC 41 (fix final)
+   Les 3 cartes stats (Actions utilisées / Temps gagné / Abonnement)
+   utilisaient une mise en page "en ligne" (icône à gauche, texte à
+   droite) héritée du bloc de base .stat-card. Cette mise en page ne
+   tient que sur un écran très large : dès que la fenêtre PC n'est
+   pas maximisée (sidebar + fenêtre pas très large), les 3 colonnes
+   deviennent trop étroites pour ce texte à côté de l'icône — le
+   label déborde ou revient à la ligne de travers ("trop laid").
+   Fix définitif : au lieu de retoucher encore les tailles de police
+   au pixel près (fragile, cf. BLOC 39 déjà insuffisant), on adopte
+   partout — hors mobile étroit qui a déjà sa propre variante bien
+   testée — la mise en page verticale (icône au-dessus, texte centré
+   en dessous, une seule ligne garantie) qui ne dépend plus de la
+   largeur disponible. Règle placée en toute fin de feuille de style
+   + !important pour l'emporter sur tout l'empilement de correctifs
+   précédents (BLOC 17, 39...) sans les supprimer. */
+@media (min-width: 601px) {
+  .status-row .stat-card {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 8px !important;
+    padding: 18px 10px !important;
+    min-height: 108px !important;
+  }
+
+  .status-row .stat-icon-wrap {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .status-row .stat-value {
+    font-size: 16px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+
+  .status-row .stat-label {
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    letter-spacing: -0.01em;
+  }
+}
+
+@media (min-width: 1300px) {
+  .status-row .stat-card {
+    padding: 20px 12px !important;
+  }
+
+  .status-row .stat-icon-wrap {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .status-row .stat-value {
+    font-size: 18px !important;
+  }
+
+  .status-row .stat-label {
+    font-size: 12.5px !important;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -10398,7 +10468,13 @@ async function loadAppointments() {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": "Bearer " + accessToken,
         "Content-Type": "application/json"
-      }
+      },
+      // Sans ça, Safari iOS peut resservir la réponse mise en cache de cette
+      // même URL GET (mêmes paramètres à chaque appel) au lieu d'aller
+      // rechercher les données fraîches juste après un PATCH — d'où
+      // l'impression qu'un rendez-vous "reste" affiché avec son ancien
+      // statut juste après l'avoir marqué terminé/annulé.
+      cache: "no-store"
     }
   );
 
