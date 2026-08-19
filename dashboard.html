@@ -8367,7 +8367,11 @@ let pendingReminderPartial = null;
 function openReminderScheduleSheet(data) {
   pendingReminderPartial = data.partial || {};
   const defaults = data.defaults || {};
-  const reason = data.message || pendingReminderPartial.reason || "Rappel";
+  // Message informatif du backend (ex: la question posée s'il manque un
+  // motif). Le motif lui-même est saisi/édité via le champ dédié ci-dessous,
+  // pré-rempli seulement s'il est déjà connu.
+  const subtitleText = data.message || "";
+  const initialReason = pendingReminderPartial.reason || "";
 
   const today = defaults.today || new Date().toISOString().slice(0, 10);
   const tomorrow = defaults.tomorrow || today;
@@ -8384,6 +8388,11 @@ function openReminderScheduleSheet(data) {
       <div class="mail-choice-box" style="overflow-x:hidden;">
         <div class="mail-choice-title">Rappel</div>
         <div class="mail-choice-subtitle" id="reminder-sheet-reason"></div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">De quoi dois-je te rappeler ?</div>
+          <input class="field-input" type="text" id="reminder-sheet-reason-input" placeholder="Ex : récupérer les outils" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
 
         <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
           <button type="button" class="mail-choice-btn" id="reminder-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
@@ -8448,18 +8457,25 @@ function openReminderScheduleSheet(data) {
       }
       timeInput.dataset.lastValid = timeInput.value;
     });
+    document.getElementById("reminder-sheet-reason-input").addEventListener("change", () => {
+      const reasonInput = document.getElementById("reminder-sheet-reason-input");
+      reasonInput.dataset.lastValid = reasonInput.value;
+    });
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
 
   modal.dataset.today = today;
   modal.dataset.tomorrow = tomorrow;
-  document.getElementById("reminder-sheet-reason").textContent = reason;
+  document.getElementById("reminder-sheet-reason").textContent = subtitleText;
   const dateInputEl = document.getElementById("reminder-sheet-date");
   const timeInputEl = document.getElementById("reminder-sheet-time");
+  const reasonInputEl = document.getElementById("reminder-sheet-reason-input");
   dateInputEl.value = defaultDate;
   timeInputEl.value = defaultTime;
+  reasonInputEl.value = initialReason;
   dateInputEl.dataset.lastValid = defaultDate;
   timeInputEl.dataset.lastValid = defaultTime;
+  reasonInputEl.dataset.lastValid = initialReason;
   // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
   dateInputEl.min = today;
 
@@ -8468,6 +8484,12 @@ function openReminderScheduleSheet(data) {
   else setReminderQuickSelected(null);
 
   updateReminderTimeMin();
+
+  // Si le motif n'est pas encore connu, place le focus directement dans le
+  // champ pour que l'utilisateur puisse taper sans avoir à cliquer.
+  if (!initialReason) {
+    setTimeout(() => reasonInputEl.focus(), 60);
+  }
 
   modal.style.display = "flex";
 }
@@ -8529,6 +8551,13 @@ function closeReminderScheduleSheet(isCancel = true) {
 async function confirmReminderSchedule() {
   const date = document.getElementById("reminder-sheet-date").value;
   const time = document.getElementById("reminder-sheet-time").value;
+  const reasonText = (document.getElementById("reminder-sheet-reason-input").value || "").trim();
+
+  if (!reasonText) {
+    showToast("Indique de quoi je dois te rappeler", "error");
+    return;
+  }
+
   if (!date || !time) {
     showToast("Choisis une date et une heure", "error");
     return;
@@ -8566,8 +8595,8 @@ async function confirmReminderSchedule() {
     user_id: currentUser.id,
     user_email: currentUser.email,
     user_name: getUserDisplayName(),
-    instruction: partial.reason || "Rappel",
-    reason: partial.reason,
+    instruction: reasonText,
+    reason: reasonText,
     reminder_date: date,
     reminder_time: time,
     contact_name: partial.contact_name || null,
@@ -8694,19 +8723,27 @@ async function sendTypedInstruction(instruction, continuing = false) {
   });
 
   try {
-    const response = await fetch(ORCHESTRATOR_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        user_email: currentUser.email,
-        user_id: currentUser.id,
-        user_name: getUserDisplayName(),
-        instruction,
-        conversation_history: formatConversationHistory(simpleAgentConversationHistory),
-        last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
-      })
-    });
+    // À l'oral, "Compréhension de votre demande..." reste visible le temps
+    // de la dictée + du réseau, donc toujours perceptible. À l'écrit, l'appel
+    // réseau peut répondre en quelques dizaines de ms : sans ce délai minimum,
+    // l'étape s'affiche et disparaît trop vite pour être vue. On force donc
+    // un minimum de 500ms d'affichage, identique aux deux modes.
+    const [response] = await Promise.all([
+      fetch(ORCHESTRATOR_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: requestId,
+          user_email: currentUser.email,
+          user_id: currentUser.id,
+          user_name: getUserDisplayName(),
+          instruction,
+          conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+          last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
+        })
+      }),
+      new Promise(resolve => setTimeout(resolve, 500))
+    ]);
 
     const text = await response.text();
 
