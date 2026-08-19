@@ -700,8 +700,21 @@ select.field-input {
 
 .field-row {
   display: grid;
-  grid-template-columns: 7fr 3fr;
+  /* minmax(0, Nfr) plutôt que "Nfr" tout court : par défaut une piste de
+     grille se dimensionne au moins à minmax(auto, Nfr), et "auto" reprend
+     le min-content de son contenu — donc même avec min-width:0 sur l'item
+     lui-même, la piste pouvait rester trop large si un <input type="date"
+     /"time"> natif (surtout iOS) réclame un rendu interne plus large que
+     prévu. En forçant explicitement le minimum de la piste à 0, la colonne
+     peut toujours rétrécir jusqu'à tenir dans l'espace disponible. */
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   gap: 12px;
+  max-width: 100%;
+  /* Filet de sécurité final : si malgré tout un rendu natif déborde
+     visuellement (bug de peinture WebKit plutôt qu'un vrai souci de
+     layout), on le coupe plutôt que de laisser toute la page déborder à
+     l'horizontale. */
+  overflow-x: hidden;
 }
 
 .sheet-btn {
@@ -15130,7 +15143,7 @@ if (detail) {
           </div>
 
           <div class="agent-desc">
-            ${a.appointment_date} à ${a.appointment_time?.slice(0,5) || ""}<br>
+            ${formatDateShort(a.appointment_date)} à ${a.appointment_time?.slice(0,5) || ""}<br>
             ${a.title || "Sans motif"}
           </div>
         </div>
@@ -15236,7 +15249,7 @@ if (detail) {
           </div>
 
           <div class="agent-desc">
-            ${formatDateShort(r.reminder_date)}<br>
+            ${formatDateShort(r.reminder_date)} à ${r.reminder_time?.slice(0,5) || ""}<br>
             ${r.reason || ""}
           </div>
         </div>
@@ -15266,39 +15279,48 @@ if (detail) {
   list.style.flexDirection = "column";
   list.style.gap = "14px";
 
+  // Même structure que openPastAppointmentDetail() (gmail-section +
+  // detail-line) : les deux pages d'historique doivent être identiques.
   list.innerHTML = `
-    <div class="agent-card" style="padding:22px;">
-      <div style="font-size:22px;font-weight:900;margin-bottom:6px;">
-        ${r.contact_name || "Relance"}
-      </div>
+  <div class="gmail-section" style="display:block;">
 
-      <div style="font-size:14px;color:var(--clarity-text-tertiary);margin-bottom:14px;">
-        ${formatDateShort(r.reminder_date)}
-      </div>
-
-      <div class="agent-status ${statusClass}" style="display:inline-flex;margin-bottom:18px;">
-        ${statusIcon} ${statusLabel}
-      </div>
-
-      <div style="background:var(--clarity-surface-soft);border-radius:16px;padding:14px;margin-bottom:18px;">
-        <div style="font-size:12px;color:var(--clarity-text-tertiary);font-weight:700;margin-bottom:4px;">
-          Motif
-        </div>
-        <div style="font-size:16px;font-weight:800;line-height:1.35;">
-          ${r.reason || "Non renseigné"}
-        </div>
-      </div>
-
-      ${
-        r.message_context
-          ? `<div style="margin-top:14px;white-space:pre-wrap;line-height:1.6;font-size:14px;word-break:break-word;">${r.message_context}</div>`
-          : ""
-      }
-
-      <button class="sheet-btn" onclick="deletePastFollowUp('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
-        Supprimer
-      </button>
+    <div class="section-title">
+      ${r.contact_name || "Relance"}
     </div>
+
+    <div class="gmail-desc" style="margin-top:8px;">
+      ${formatDateShort(r.reminder_date)} à ${r.reminder_time?.slice(0,5) || ""}
+    </div>
+
+    <div class="agent-status ${statusClass}" style="display:inline-flex;margin-top:10px;">
+      ${statusIcon} ${statusLabel}
+    </div>
+
+    <div class="detail-line" style="margin-top:16px;">
+      <span>Motif</span>
+      <strong>${r.reason || "Non renseigné"}</strong>
+    </div>
+
+    ${
+      r.message_context
+        ? `
+        <div style="
+          margin-top:18px;
+          white-space:pre-wrap;
+          line-height:1.6;
+          font-size:14px;
+          word-break:break-word;
+        ">
+          ${r.message_context}
+        </div>
+      `
+        : ""
+    }
+
+    <button class="sheet-btn" onclick="deletePastFollowUp('${r.id}')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
+      Supprimer
+    </button>
+  </div>
   `;
 }
 
@@ -15324,7 +15346,7 @@ if (detail) {
     </div>
 
     <div class="gmail-desc" style="margin-top:8px;">
-      ${a.appointment_date || ""} à ${a.appointment_time?.slice(0,5) || ""}
+      ${a.appointment_date ? formatDateShort(a.appointment_date) : ""} à ${a.appointment_time?.slice(0,5) || ""}
     </div>
 
     <div class="detail-line" style="margin-top:16px;">
@@ -18004,7 +18026,7 @@ async function loadFollowUps() {
   const response = await fetch(
     SUPABASE_URL + "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
 "&status=eq.pending" +
-"&order=reminder_date.asc",
+"&order=reminder_date.asc,reminder_time.asc",
     {
       headers: {
         "apikey": SUPABASE_ANON_KEY,
@@ -18026,39 +18048,111 @@ async function loadFollowUps() {
     list.innerHTML = `<div class="info-box">Aucune relance prévue.</div>`;
     return;
   }
-  
-list.innerHTML = relances.map((r, index) => {
 
-  const statusLabel = getItemStatusLabel(r.status);
-  const statusIcon = getItemStatusIcon(r.status);
-  const statusClass = getItemStatusClass(r.status);
+  // Même découpage par période que le Planning (Aujourd'hui / Cette semaine
+  // / Semaine prochaine / À venir) — pour que les deux pages soient
+  // structurellement identiques, comme demandé.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  return `
-    <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
-      <div class="agent-head">
+  const endThisWeek = new Date(today);
+  endThisWeek.setDate(today.getDate() + (7 - today.getDay()));
 
-        <div class="agent-emoji">
-          ${statusIcon}
-        </div>
+  const startNextWeek = new Date(endThisWeek);
+  startNextWeek.setDate(endThisWeek.getDate() + 1);
 
-        <div class="agent-title-wrap">
-          <div class="agent-name">
-            ${formatDateShort(r.reminder_date)} · ${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}
+  const endNextWeek = new Date(startNextWeek);
+  endNextWeek.setDate(startNextWeek.getDate() + 6);
+
+  function dateOnlyFollowUp(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+
+  function renderFollowUp(r) {
+    const index = currentFollowUps.findIndex(item => item.id === r.id);
+    const statusLabel = getItemStatusLabel(r.status);
+    const statusIcon = getItemStatusIcon(r.status);
+    const statusClass = getItemStatusClass(r.status);
+
+    return `
+      <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
+        <div class="agent-head">
+
+          <div class="agent-emoji">
+            ${statusIcon}
           </div>
 
-          <div class="agent-desc">
-            ${r.reason || "Sans motif"}
+          <div class="agent-title-wrap">
+            <div class="agent-name">
+              ${formatDateShort(r.reminder_date)} · ${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}
+            </div>
+
+            <div class="agent-desc">
+              ${r.reason || "Sans motif"}
+            </div>
           </div>
-        </div>
 
-        <div class="agent-status ${statusClass}">
-          ${statusLabel}
-        </div>
+          <div class="agent-status ${statusClass}">
+            ${statusLabel}
+          </div>
 
+        </div>
       </div>
-    </div>
+    `;
+  }
+
+  function renderFollowUpSection(title, items) {
+    if (!items.length) return "";
+
+    return `
+      <div style="margin-bottom:18px;">
+        <div class="section-title" style="margin-bottom:10px;">${title}</div>
+        ${items.map(renderFollowUp).join("")}
+      </div>
+    `;
+  }
+
+  const todayItems = [];
+  const thisWeekItems = [];
+  const nextWeekItems = [];
+  const futureItems = [];
+  const undatedItems = [];
+
+  relances.forEach(r => {
+    if (!r.reminder_date) {
+      undatedItems.push(r);
+      return;
+    }
+    const d = dateOnlyFollowUp(r.reminder_date);
+
+    if (d.getTime() === today.getTime()) {
+      todayItems.push(r);
+    } else if (d > today && d <= endThisWeek) {
+      thisWeekItems.push(r);
+    } else if (d >= startNextWeek && d <= endNextWeek) {
+      nextWeekItems.push(r);
+    } else if (d > endNextWeek) {
+      futureItems.push(r);
+    } else {
+      // Date déjà passée (ex: rappel non traité à temps) : toujours
+      // affiché, dans sa propre section plutôt que perdu silencieusement.
+      todayItems.push(r);
+    }
+  });
+
+  list.innerHTML = `
+    ${renderFollowUpSection("Aujourd’hui", todayItems)}
+    ${renderFollowUpSection("Cette semaine", thisWeekItems)}
+    ${renderFollowUpSection("Semaine prochaine", nextWeekItems)}
+    ${renderFollowUpSection("À venir", futureItems)}
+    ${renderFollowUpSection("Sans date", undatedItems)}
   `;
-}).join("");
+
+  if (!list.innerHTML.trim()) {
+    list.innerHTML = `<div class="info-box">Aucune relance prévue.</div>`;
+  }
 }
 
   function openFollowUpDetail(index) {
