@@ -4864,7 +4864,7 @@ body,
   }
 }
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   #main-agents .mobile-agent-top {
     display: flex;
     justify-content: center;
@@ -4985,7 +4985,7 @@ body,
   height: 210px !important;
 }
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   .brand-logo-img {
     height: 190px !important;
   }
@@ -5442,9 +5442,17 @@ body[data-theme="corail"] .loader-halo {
    CLARITY SYSTEMS — BLOC 23
    Desktop uniquement : accueil resserré (cartes stats carrées,
    carte Clarity moins étirée). N'affecte pas le mobile.
+   Seuil abaissé de 901px à 601px (BLOC 45) : entre 601 et 900px,
+   aucune de ces règles ne s'appliquait, donc la carte Clarity
+   perdait son plafond de largeur (elle s'étirait, la bordure
+   redevenait visible) et l'en-tête "Clarity / En ligne" réapparaissait
+   au lieu de rester masqué — cassant l'espacement sous le logo.
+   Même correctif que pour les 3 cartes stats (BLOC 43/44) : le
+   traitement "desktop compact" doit démarrer dès qu'on n'est plus en
+   vrai mobile (601px), pas seulement au-delà de 901px.
    ========================================================= */
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   #main-agents .status-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     max-width: 420px;
