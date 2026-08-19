@@ -8392,12 +8392,12 @@ function openReminderScheduleSheet(data) {
 
         <div class="field-group" style="margin-top:14px;min-width:0;">
           <div class="field-label">Date</div>
-          <input class="field-input" type="date" id="reminder-sheet-date" style="width:100%;max-width:100%;box-sizing:border-box;" />
+          <input class="field-input" type="date" id="reminder-sheet-date" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="reminder-sheet-time" step="900" style="width:100%;max-width:100%;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="reminder-sheet-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="reminder-sheet-confirm" style="margin-top:16px;">
@@ -8412,21 +8412,41 @@ function openReminderScheduleSheet(data) {
     document.body.appendChild(modal);
 
     document.getElementById("reminder-quick-today").onclick = () => {
-      document.getElementById("reminder-sheet-date").value = modal.dataset.today;
+      const dateInput = document.getElementById("reminder-sheet-date");
+      dateInput.value = modal.dataset.today;
+      dateInput.dataset.lastValid = dateInput.value;
       setReminderQuickSelected("today");
       updateReminderTimeMin();
     };
     document.getElementById("reminder-quick-tomorrow").onclick = () => {
-      document.getElementById("reminder-sheet-date").value = modal.dataset.tomorrow;
+      const dateInput = document.getElementById("reminder-sheet-date");
+      dateInput.value = modal.dataset.tomorrow;
+      dateInput.dataset.lastValid = dateInput.value;
       setReminderQuickSelected("tomorrow");
       updateReminderTimeMin();
     };
+    // Le bouton "Réinitialiser" du sélecteur natif iOS (pas modifiable en CSS,
+    // c'est une pièce de l'OS) vide le champ. Si ça arrive, on restaure
+    // aussitôt la dernière valeur valide pour ne jamais laisser le rappel
+    // sans date/heure.
     document.getElementById("reminder-sheet-date").addEventListener("change", () => {
-      const val = document.getElementById("reminder-sheet-date").value;
+      const dateInput = document.getElementById("reminder-sheet-date");
+      if (!dateInput.value) {
+        dateInput.value = dateInput.dataset.lastValid || modal.dataset.today;
+      }
+      dateInput.dataset.lastValid = dateInput.value;
+      const val = dateInput.value;
       if (val === modal.dataset.today) setReminderQuickSelected("today");
       else if (val === modal.dataset.tomorrow) setReminderQuickSelected("tomorrow");
       else setReminderQuickSelected(null);
       updateReminderTimeMin();
+    });
+    document.getElementById("reminder-sheet-time").addEventListener("change", () => {
+      const timeInput = document.getElementById("reminder-sheet-time");
+      if (!timeInput.value) {
+        timeInput.value = timeInput.dataset.lastValid || "08:00";
+      }
+      timeInput.dataset.lastValid = timeInput.value;
     });
     document.getElementById("reminder-sheet-confirm").onclick = confirmReminderSchedule;
   }
@@ -8434,10 +8454,14 @@ function openReminderScheduleSheet(data) {
   modal.dataset.today = today;
   modal.dataset.tomorrow = tomorrow;
   document.getElementById("reminder-sheet-reason").textContent = reason;
-  document.getElementById("reminder-sheet-date").value = defaultDate;
-  document.getElementById("reminder-sheet-time").value = defaultTime;
+  const dateInputEl = document.getElementById("reminder-sheet-date");
+  const timeInputEl = document.getElementById("reminder-sheet-time");
+  dateInputEl.value = defaultDate;
+  timeInputEl.value = defaultTime;
+  dateInputEl.dataset.lastValid = defaultDate;
+  timeInputEl.dataset.lastValid = defaultTime;
   // On ne peut jamais choisir une date déjà passée dans le sélecteur natif.
-  document.getElementById("reminder-sheet-date").min = today;
+  dateInputEl.min = today;
 
   if (defaultDate === today) setReminderQuickSelected("today");
   else if (defaultDate === tomorrow) setReminderQuickSelected("tomorrow");
