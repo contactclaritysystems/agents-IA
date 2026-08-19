@@ -234,7 +234,7 @@ body.loading-subscription #actions-count {
 /* STATUS ROW */
 .status-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 36px;
 }
@@ -1259,7 +1259,7 @@ select.field-input {
 }
 
 #main-agents .status-row {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 24px;
   padding: 0 18px;
@@ -5445,7 +5445,7 @@ body[data-theme="corail"] .loader-halo {
 
 @media (min-width: 901px) {
   #main-agents .status-row {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     max-width: 420px;
     width: 100%;
     margin-left: auto;
@@ -7162,7 +7162,13 @@ body[data-theme="light"]::after {
    + !important pour l'emporter sur tout l'empilement de correctifs
    précédents (BLOC 17, 39...) sans les supprimer. */
 @media (min-width: 601px) {
-  .status-row .stat-card {
+  /* Sélecteur dupliqué avec #main-agents pour battre en spécificité
+     "#main-agents .stat-card" (BLOC 23, ≥901px) qui sinon garde la
+     main sur aspect-ratio/padding et provoque le chevauchement des
+     icônes (carte forcée en carré alors que le contenu veut plus de
+     hauteur que la largeur de colonne ne le permet). */
+  .status-row .stat-card,
+  #main-agents .status-row .stat-card {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
@@ -7170,11 +7176,16 @@ body[data-theme="light"]::after {
     gap: 8px !important;
     padding: 18px 10px !important;
     min-height: 108px !important;
+    aspect-ratio: auto !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    overflow: hidden !important;
   }
 
   .status-row .stat-icon-wrap {
     width: 40px !important;
     height: 40px !important;
+    flex-shrink: 0 !important;
   }
 
   .status-row .stat-value {
@@ -7196,7 +7207,8 @@ body[data-theme="light"]::after {
 }
 
 @media (min-width: 1300px) {
-  .status-row .stat-card {
+  .status-row .stat-card,
+  #main-agents .status-row .stat-card {
     padding: 20px 12px !important;
   }
 
