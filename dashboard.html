@@ -12402,6 +12402,12 @@ function openMailPreview(data, instruction) {
     } else {
       showToast("Contact « " + ccName + " » introuvable pour la copie, choisissez-le manuellement", "error");
     }
+  } else if (currentPreparedMail.cc && ccName && !currentPreparedMail.cc.includes(",") && !currentPreparedMail.cc.includes("(")) {
+    // Le backend renvoie déjà l'email ET le nom du contact en copie
+    // séparément : on les combine directement en "Nom (email)", comme pour
+    // le destinataire principal, sans repasser par une recherche dans le
+    // carnet de contacts (inutile ici, et risquerait de trouver un homonyme).
+    currentPreparedMail.cc = formatEmailWithName(currentPreparedMail.cc, ccName);
   }
 
   if (!currentPreparedMail.subject) {
@@ -14108,7 +14114,10 @@ if (typeof data === "string") {
 
     console.log("Réponse Agent Mail :", data);
 
-    if (data.action === "choose_contact") {
+    // "action":"choose_contact" = ancienne forme (Make) ; "reason":"ambiguous_contact"
+    // = nouvelle forme (backend Render). On accepte les deux pour ne rien
+    // casser pendant la transition.
+    if (data.action === "choose_contact" || data.reason === "ambiguous_contact") {
   // (déjà arrêté juste au-dessus, appel redondant retiré)
 
   if (box) {
@@ -14139,8 +14148,11 @@ if (typeof data === "string") {
     if (!data.success && data.reason === "no_recipient") {
       hideOrRemoveBox(box);
 
-      showToast("Choisissez un destinataire", "error");
-
+      // Pas de toast d'erreur ici : choisir un destinataire est une étape
+      // normale du flux (pas un échec), le popup qui s'ouvre juste en
+      // dessous suffit comme retour. Un toast rouge à ce stade donnait
+      // l'impression que quelque chose avait raté alors que le mail se
+      // prépare ensuite normalement.
       openContactPickerForAgent(
         "À qui voulez-vous envoyer ce mail ?",
         "Choisissez un contact, ou ajoutez-en un nouveau.",
