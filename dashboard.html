@@ -2070,6 +2070,16 @@ select.field-input {
   }
 }
 
+/* "Motif" (valeur en gras) illisible en thème sombre dans Historique
+   RDV/Relance (le libellé "Motif" reste lisible, mais pas la valeur
+   juste à côté) : var(--text) devrait déjà suivre le thème via l'alias
+   de compatibilité vers --clarity-text, mais reste trop foncé ici en
+   pratique — on force donc la variable directement, PC et mobile,
+   comme pour le libellé ci-dessus. */
+body[data-theme="dark"] .detail-line strong {
+  color: var(--clarity-text);
+}
+
 @media (min-width: 601px) {
   #contact-mobile-section {
     display: none;
@@ -7486,6 +7496,122 @@ body[data-theme="light"]::after {
   color: var(--clarity-primary-text, #fff);
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — Vue calendrier mensuelle (Planning > Rendez-vous)
+   ========================================================= */
+.planning-calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.planning-calendar-nav-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--clarity-border);
+  border-radius: 10px;
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--clarity-duration) var(--clarity-ease), border-color var(--clarity-duration) var(--clarity-ease);
+}
+
+.planning-calendar-nav-btn:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+}
+
+.planning-calendar-month-label {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--clarity-text);
+  text-transform: capitalize;
+}
+
+.planning-calendar-dow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--clarity-text-tertiary);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.planning-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.planning-calendar-day {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  border: 1px solid var(--clarity-border);
+  border-radius: 12px;
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  transition: background var(--clarity-duration) var(--clarity-ease), border-color var(--clarity-duration) var(--clarity-ease);
+}
+
+.planning-calendar-day:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+}
+
+.planning-calendar-day.empty {
+  visibility: hidden;
+  pointer-events: none;
+  border: none;
+  background: none;
+}
+
+.planning-calendar-day.today {
+  border-color: var(--clarity-primary);
+  box-shadow: 0 0 0 1px var(--clarity-primary) inset;
+}
+
+.planning-calendar-day-dots {
+  display: flex;
+  gap: 3px;
+  min-height: 6px;
+}
+
+.planning-calendar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.planning-calendar-dot.rdv {
+  background: var(--clarity-tag-green, #22c55e);
+}
+
+.planning-calendar-dot.relance {
+  background: var(--clarity-tag-amber, #f59e0b);
+}
+
+@media (max-width: 420px) {
+  .planning-calendar-day {
+    font-size: 11.5px;
+  }
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -9051,13 +9177,15 @@ async function confirmQuickPlanning() {
   const date = document.getElementById("quick-planning-date").value;
   const time = document.getElementById("quick-planning-time").value;
 
-  if (!contact) { showToast("Indique avec qui est le rendez-vous", "error"); return; }
-  if (!title) { showToast("Indique le motif du rendez-vous", "error"); return; }
-  if (!date || !time) { showToast("Choisis une date et une heure", "error"); return; }
+  // "Avec qui" et "motif" ne sont plus TOUS LES DEUX obligatoires : l'un
+  // ou l'autre suffit pour enregistrer (demande explicite, pour ne pas
+  // bloquer quand on ne connaît que l'un des deux).
+  if (!contact && !title) { showToast("Indiquez avec qui est le rendez-vous, ou son motif", "error"); return; }
+  if (!date || !time) { showToast("Choisissez une date et une heure", "error"); return; }
 
   const chosen = new Date(`${date}T${time}`);
   if (chosen.getTime() < Date.now()) {
-    showToast("Choisis une date et une heure dans le futur", "error");
+    showToast("Choisissez une date et une heure dans le futur", "error");
     return;
   }
 
@@ -9079,7 +9207,9 @@ async function confirmQuickPlanning() {
     user_id: currentUser.id,
     user_email: currentUser.email,
     user_name: getUserDisplayName(),
-    instruction: title,
+    // "title" peut être vide si seul "avec qui" a été rempli (voir plus
+    // haut) : on garde quand même une instruction lisible pour l'agent.
+    instruction: title || ("Rendez-vous avec " + contact),
     request_id: window.currentRequestId || null,
     conversation_history: "",
     contact_name: contact,
@@ -9266,12 +9396,12 @@ async function confirmQuickReminder() {
   const date = document.getElementById("quick-reminder-date").value;
   const time = document.getElementById("quick-reminder-time").value;
 
-  if (!reasonText) { showToast("Indique de quoi je dois te rappeler", "error"); return; }
-  if (!date || !time) { showToast("Choisis une date et une heure", "error"); return; }
+  if (!reasonText) { showToast("Indiquez le motif du rappel", "error"); return; }
+  if (!date || !time) { showToast("Choisissez une date et une heure", "error"); return; }
 
   const chosen = new Date(`${date}T${time}`);
   if (chosen.getTime() < Date.now()) {
-    showToast("Choisis une date et une heure dans le futur", "error");
+    showToast("Choisissez une date et une heure dans le futur", "error");
     return;
   }
 
@@ -9531,12 +9661,12 @@ async function confirmReminderSchedule() {
   const reasonText = (document.getElementById("reminder-sheet-reason-input").value || "").trim();
 
   if (!reasonText) {
-    showToast("Indique de quoi je dois te rappeler", "error");
+    showToast("Indiquez le motif du rappel", "error");
     return;
   }
 
   if (!date || !time) {
-    showToast("Choisis une date et une heure", "error");
+    showToast("Choisissez une date et une heure", "error");
     return;
   }
 
@@ -9545,7 +9675,7 @@ async function confirmReminderSchedule() {
   // passée au moment de valider, pas seulement à l'ouverture du popup.
   const chosen = new Date(`${date}T${time}`);
   if (chosen.getTime() < Date.now()) {
-    showToast("Choisis une date et une heure dans le futur", "error");
+    showToast("Choisissez une date et une heure dans le futur", "error");
     return;
   }
 
@@ -9782,7 +9912,7 @@ async function confirmPlanningSchedule() {
   const date = document.getElementById("planning-sheet-date").value;
   const time = document.getElementById("planning-sheet-time").value;
   if (!date || !time) {
-    showToast("Choisis une date et une heure", "error");
+    showToast("Choisissez une date et une heure", "error");
     return;
   }
 
@@ -9790,7 +9920,7 @@ async function confirmPlanningSchedule() {
   // certains navigateurs mobiles) : refuse toute date/heure déjà passée.
   const chosen = new Date(`${date}T${time}`);
   if (chosen.getTime() < Date.now()) {
-    showToast("Choisis une date et une heure dans le futur", "error");
+    showToast("Choisissez une date et une heure dans le futur", "error");
     return;
   }
 
@@ -9941,7 +10071,7 @@ function closePlanningContactModal(isCancel = true) {
 async function confirmPlanningContact() {
   const contact = document.getElementById("planning-contact-sheet-contact").value.trim();
   if (!contact) {
-    showToast("Indique avec qui est le rendez-vous", "error");
+    showToast("Indiquez avec qui est le rendez-vous", "error");
     return;
   }
 
@@ -9951,7 +10081,7 @@ async function confirmPlanningContact() {
   const titleText = titleInput.value.trim();
 
   if (titleGroupVisible && !titleText) {
-    showToast("Indique le motif du rendez-vous", "error");
+    showToast("Indiquez le motif du rendez-vous", "error");
     return;
   }
 
@@ -11313,7 +11443,237 @@ function getItemStatusClass(status) {
   if (status === "missed") return "pending";
   return "ok";
 }
-  
+
+// ─── PLANNING — VUE CALENDRIER MENSUELLE (dossier "Rendez-vous") ───────
+// Remplace l'ancienne liste chronologique du dossier "Rendez-vous" par une
+// vraie grille du mois, avec RDV (vert) ET relances (orange) indiqués
+// ensemble sur les jours concernés — cliquer un jour affiche le détail des
+// deux types ce jour-là. Le dossier "Relances" garde son propre affichage
+// habituel (liste chronologique), inchangé.
+//
+// window.currentPlanningViewMode ("calendar" | "list") retient par où
+// l'utilisateur est arrivé sur un RDV/une relance en cours d'édition, pour
+// que le bouton "Retour" (et un enregistrement/suppression réussi) le
+// ramène au bon endroit : la grille/le jour du calendrier pour un RDV
+// (toujours atteint via le calendrier maintenant), ou la liste classique
+// pour une relance ouverte depuis son propre dossier.
+window.currentPlanningViewMode = "list";
+window.currentCalendarYear = null;
+window.currentCalendarMonth = null; // 0-11
+window.currentCalendarSelectedDay = null; // "YYYY-MM-DD" ou null
+
+const PLANNING_CALENDAR_DOW = ["L", "M", "M", "J", "V", "S", "D"];
+
+// Charge RDV + relances en parallèle (nécessaire pour afficher les deux
+// types de pastilles sur le même calendrier) sans passer par
+// loadAppointments()/loadFollowUps(), qui rendent chacune leur propre
+// liste dans #planning-list — ici on veut juste les données.
+async function loadPlanningCalendarData() {
+  if (!currentUser) return false;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) return false;
+
+  const headers = {
+    "apikey": SUPABASE_ANON_KEY,
+    "Authorization": "Bearer " + accessToken,
+    "Content-Type": "application/json"
+  };
+
+  const [apptRes, followRes] = await Promise.all([
+    fetch(
+      SUPABASE_URL + "/rest/v1/appointments?user_id=eq." + encodeURIComponent(currentUser.id) +
+      "&status=in.(scheduled,cancelled)" +
+      "&order=appointment_date.asc,appointment_time.asc",
+      { headers, cache: "no-store" }
+    ),
+    fetch(
+      SUPABASE_URL + "/rest/v1/follow_ups?user_id=eq." + currentUser.id +
+      "&status=in.(pending,cancelled)" +
+      "&order=reminder_date.asc,reminder_time.asc",
+      { headers, cache: "no-store" }
+    )
+  ]);
+
+  currentAppointments = apptRes.ok ? (await apptRes.json()) || [] : [];
+  currentFollowUps = followRes.ok ? (await followRes.json()) || [] : [];
+  return true;
+}
+
+async function openPlanningCalendar() {
+  window.currentPlanningViewMode = "calendar";
+  window.currentPlanningSubPage = "calendar-grid";
+  window.currentCalendarSelectedDay = null;
+
+  const now = new Date();
+  window.currentCalendarYear = now.getFullYear();
+  window.currentCalendarMonth = now.getMonth();
+
+  const list = document.getElementById("planning-list");
+  if (list) list.innerHTML = `<div class="info-box">Chargement du planning...</div>`;
+
+  const ok = await loadPlanningCalendarData();
+  if (!ok) {
+    if (list) list.innerHTML = `<div class="info-box">Session expirée. Reconnectez-vous.</div>`;
+    return;
+  }
+
+  renderPlanningCalendarMonth();
+}
+
+function navigatePlanningCalendarMonth(delta) {
+  let y = window.currentCalendarYear;
+  let m = window.currentCalendarMonth + delta;
+  if (m < 0) { m = 11; y--; }
+  if (m > 11) { m = 0; y++; }
+  window.currentCalendarYear = y;
+  window.currentCalendarMonth = m;
+  renderPlanningCalendarMonth();
+}
+
+function planningCalendarEventsForDay(iso) {
+  const appts = (currentAppointments || []).filter(a => a.appointment_date === iso);
+  const relances = (currentFollowUps || []).filter(r => r.reminder_date === iso);
+  return { appts, relances };
+}
+
+function renderPlanningCalendarMonth() {
+  window.currentPlanningSubPage = "calendar-grid";
+  window.currentCalendarSelectedDay = null;
+
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
+  if (!list) return;
+  if (title) title.textContent = "Rendez-vous";
+
+  const year = window.currentCalendarYear;
+  const month = window.currentCalendarMonth;
+
+  const first = new Date(year, month, 1);
+  const startDow = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  let cellsHtml = "";
+  for (let i = 0; i < startDow; i++) {
+    cellsHtml += `<div class="planning-calendar-day empty"></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    const { appts, relances } = planningCalendarEventsForDay(iso);
+    const isToday = iso === todayIso;
+
+    let dots = "";
+    if (appts.length) dots += `<span class="planning-calendar-dot rdv"></span>`;
+    if (relances.length) dots += `<span class="planning-calendar-dot relance"></span>`;
+
+    cellsHtml += `
+      <button type="button" class="planning-calendar-day${isToday ? " today" : ""}" onclick="openPlanningCalendarDay('${iso}')">
+        <span>${d}</span>
+        <span class="planning-calendar-day-dots">${dots}</span>
+      </button>
+    `;
+  }
+
+  list.innerHTML = `
+    <div class="agent-card" style="padding:18px;">
+      <div class="planning-calendar-nav">
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
+        <div class="planning-calendar-month-label">${monthLabel}</div>
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(1)">›</button>
+      </div>
+      <div class="planning-calendar-dow">${PLANNING_CALENDAR_DOW.map(d => `<span>${d}</span>`).join("")}</div>
+      <div class="planning-calendar-grid">${cellsHtml}</div>
+      <div style="display:flex;gap:16px;margin-top:16px;font-size:12px;color:var(--clarity-text-tertiary);">
+        <span><span class="planning-calendar-dot rdv" style="display:inline-block;margin-right:5px;"></span>Rendez-vous</span>
+        <span><span class="planning-calendar-dot relance" style="display:inline-block;margin-right:5px;"></span>Relance</span>
+      </div>
+    </div>
+  `;
+}
+
+function openPlanningCalendarDay(iso) {
+  window.currentPlanningSubPage = "calendar-day";
+  window.currentCalendarSelectedDay = iso;
+
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
+  if (!list) return;
+
+  const { appts, relances } = planningCalendarEventsForDay(iso);
+  if (title) title.textContent = formatDateHuman(iso);
+
+  function renderApptCard(a) {
+    const index = currentAppointments.findIndex(item => item.id === a.id);
+    const statusLabel = getItemStatusLabel(a.status);
+    const statusIcon = getItemStatusIcon(a.status);
+    const statusClass = getItemStatusClass(a.status);
+    return `
+      <div class="agent-card" onclick="openAppointmentDetail(${index})" style="cursor:pointer;">
+        <div class="agent-head">
+          <div class="agent-emoji">📅</div>
+          <div class="agent-title-wrap">
+            <div class="agent-name">${a.appointment_time?.slice(0,5) || ""}  ${a.contact_name || "Rendez-vous"}</div>
+            <div class="agent-desc">${a.title || "Sans motif"}</div>
+          </div>
+          <div class="agent-status ${statusClass}">${statusIcon} ${statusLabel}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRelanceCard(r) {
+    const index = currentFollowUps.findIndex(item => item.id === r.id);
+    const statusLabel = getItemStatusLabel(r.status);
+    const statusIcon = getItemStatusIcon(r.status);
+    const statusClass = getItemStatusClass(r.status);
+    return `
+      <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
+        <div class="agent-head">
+          <div class="agent-emoji">${statusIcon}</div>
+          <div class="agent-title-wrap">
+            <div class="agent-name">${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}</div>
+            <div class="agent-desc">${r.reason || "Sans motif"}</div>
+          </div>
+          <div class="agent-status ${statusClass}">${statusLabel}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const hasEvents = appts.length || relances.length;
+
+  list.innerHTML = `
+    <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-bottom:14px;" onclick="renderPlanningCalendarMonth()">
+      ← Retour au calendrier
+    </button>
+    ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
+    ${appts.length ? `<div class="section-title" style="margin-bottom:10px;">Rendez-vous</div>${appts.map(renderApptCard).join("")}` : ""}
+    ${relances.length ? `<div class="section-title" style="margin:${appts.length ? "18px" : "0"} 0 10px;">Relances</div>${relances.map(renderRelanceCard).join("")}` : ""}
+  `;
+}
+
+// Après avoir sauvegardé/supprimé/modifié un RDV ou une relance : retourne
+// à l'endroit d'où l'utilisateur venait -- la liste classique (Relances),
+// ou la vue calendrier (jour, puis grille si le jour n'est plus dispo)
+// pour un RDV, toujours atteint via le calendrier désormais.
+async function returnToPlanningAfterAction(listSubPage, listLoader) {
+  if (window.currentPlanningViewMode === "calendar") {
+    await loadPlanningCalendarData();
+    if (window.currentCalendarSelectedDay) {
+      openPlanningCalendarDay(window.currentCalendarSelectedDay);
+    } else {
+      renderPlanningCalendarMonth();
+    }
+    return;
+  }
+  window.currentPlanningSubPage = listSubPage;
+  await listLoader();
+}
+
 async function loadAppointments() {
   if (!currentUser) return;
 
@@ -11624,15 +11984,13 @@ if (btn) {
   currentAppointmentInitialDate = date;
   currentAppointmentInitialTime = time;
 
-  window.currentPlanningSubPage = "appointments-list";
-
 if (btn) {
   btn.disabled = true;
   btn.style.opacity = ".45";
 }
-    
+
   showToast("Rendez-vous mis à jour");
-  await loadAppointments();
+  await returnToPlanningAfterAction("appointments-list", loadAppointments);
 }
 
   async function deleteAppointment(id) {
@@ -11727,9 +12085,7 @@ if (btn) {
 
   showToast("Rendez-vous supprimé");
 
-  window.currentPlanningSubPage = "appointments-list";
-
-  await loadAppointments();
+  await returnToPlanningAfterAction("appointments-list", loadAppointments);
 }
 
   async function markAppointmentDone(id) {
@@ -11822,8 +12178,7 @@ buttons.forEach(btn => {
   }
 
   showToast(message);
-  window.currentPlanningSubPage = "appointments-list";
-  await loadAppointments();
+  await returnToPlanningAfterAction("appointments-list", loadAppointments);
 }
 
   async function deleteFollowUp(id) {
@@ -11902,10 +12257,9 @@ buttons.forEach(btn => {
   }
 
   window.isDeletingFollowUp = false;
-  window.currentPlanningSubPage = "followups-list";
 
   showToast("Relance supprimée");
-  await loadFollowUps();
+  await returnToPlanningAfterAction("followups-list", loadFollowUps);
 }
 
   function handleGmailMobileCard() {
@@ -19290,7 +19644,6 @@ window.logout = logout;
 });
 
   function openPlanningAppointments() {
-  window.currentPlanningSubPage = "appointments-list";
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
@@ -19304,11 +19657,14 @@ window.logout = logout;
 
   if (title) title.textContent = "Rendez-vous";
 
-  loadAppointments();
+  // Dossier "Rendez-vous" : vue calendrier mensuelle (voir plus haut),
+  // au lieu de l'ancienne liste chronologique.
+  openPlanningCalendar();
 }
 
 function openPlanningFollowUps() {
   window.currentPlanningSubPage = "followups-list";
+  window.currentPlanningViewMode = "list";
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
   const title = document.getElementById("planning-detail-title");
@@ -19344,6 +19700,17 @@ function closePlanningDetail() {
     if (!confirmLeave) return;
   }
 
+  // Un RDV est toujours atteint via le calendrier désormais : retour au
+  // jour d'où on venait, pas à l'ancienne liste chronologique.
+  if (window.currentPlanningViewMode === "calendar") {
+    if (window.currentCalendarSelectedDay) {
+      openPlanningCalendarDay(window.currentCalendarSelectedDay);
+    } else {
+      renderPlanningCalendarMonth();
+    }
+    return;
+  }
+
   window.currentPlanningSubPage = "appointments-list";
   loadAppointments();
   return;
@@ -19367,12 +19734,31 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
     if (!confirmLeave) return;
   }
 
+  // Une relance peut être ouverte depuis son propre dossier (liste) OU
+  // depuis un jour du calendrier des RDV : retour au bon endroit.
+  if (window.currentPlanningViewMode === "calendar") {
+    if (window.currentCalendarSelectedDay) {
+      openPlanningCalendarDay(window.currentCalendarSelectedDay);
+    } else {
+      renderPlanningCalendarMonth();
+    }
+    return;
+  }
+
   window.currentPlanningSubPage = "followups-list";
   loadFollowUps();
   return;
 }
 
   // ↑↑↑ ICI
+
+  // Vue calendrier : "Retour" depuis un jour sélectionné revient à la
+  // grille du mois ; depuis la grille elle-même, referme le dossier
+  // (comportement normal ci-dessous, comme avant).
+  if (window.currentPlanningSubPage === "calendar-day") {
+    renderPlanningCalendarMonth();
+    return;
+  }
 
   const folders = document.getElementById("planning-folders");
   const detail = document.getElementById("planning-detail");
@@ -19809,10 +20195,9 @@ const hasChanges =
   currentFollowUpInitialContact = contact;
 
   window.isSavingFollowUp = false;
-  window.currentPlanningSubPage = "followups-list";
 
   showToast("Relance mise à jour");
-  await loadFollowUps();
+  await returnToPlanningAfterAction("followups-list", loadFollowUps);
 }
 
   async function markFollowUpDone(id) {
@@ -19902,8 +20287,7 @@ async function updateFollowUpStatus(id, status, message) {
   }
 
   showToast(message);
-  window.currentPlanningSubPage = "followups-list";
-  await loadFollowUps();
+  await returnToPlanningAfterAction("followups-list", loadFollowUps);
 }
 
   function toggleAppointmentSave() {
