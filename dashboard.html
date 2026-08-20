@@ -12371,6 +12371,7 @@ function renderPlanningCalendarMonth() {
   // proportionnellement (transform:scale) pour qu'elle tienne toujours
   // dans availableHeight.
   const card = list.querySelector(".planning-calendar-card");
+  let finalCardHeight = 0;
   if (card) {
     card.style.transform = "";
     card.style.transformOrigin = "top center";
@@ -12378,13 +12379,24 @@ function renderPlanningCalendarMonth() {
     if (naturalHeight > availableHeight && naturalHeight > 0) {
       const scale = Math.max(0.55, availableHeight / naturalHeight);
       card.style.transform = "scale(" + scale + ")";
-      list.style.minHeight = (naturalHeight * scale) + "px";
+      finalCardHeight = naturalHeight * scale;
     } else {
-      list.style.minHeight = availableHeight + "px";
+      finalCardHeight = naturalHeight;
     }
-  } else {
-    list.style.minHeight = availableHeight + "px";
   }
+
+  // Centrage : pas un simple justify-content:center. Le bandeau titre
+  // (au-dessus) est presque toujours plus haut que la marge réservée en
+  // bas (sous la carte, au-dessus du menu) — un centrage mathématique
+  // pur dans [listTop, bottomLimit] place donc la carte visiblement plus
+  // bas que le milieu réel de l'écran (constaté sur l'app installée,
+  // où le menu du bas est collé tout en bas et laisse énormément
+  // d'espace dispo). On répartit l'espace restant avec un biais vers le
+  // haut (~35% au-dessus, ~65% en dessous) plutôt que 50/50.
+  list.style.justifyContent = "flex-start";
+  const leftover = Math.max(0, availableHeight - finalCardHeight);
+  list.style.paddingTop = (leftover * 0.35) + "px";
+  list.style.minHeight = availableHeight + "px";
 }
 
 function openPlanningCalendarDay(iso) {
@@ -12403,6 +12415,7 @@ function openPlanningCalendarDay(iso) {
   if (header) header.style.display = "";
   list.style.justifyContent = "";
   list.style.minHeight = "";
+  list.style.paddingTop = "";
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
   document.body.style.touchAction = "";
