@@ -12219,6 +12219,13 @@ function renderPlanningCalendarMonth() {
   // n'a normalement rien à masquer — c'est juste un filet de sécurité.
   document.documentElement.style.overflow = "hidden";
   document.body.style.overflow = "hidden";
+  // touch-action:none (en plus d'overflow:hidden) : sur iOS, overflow:hidden
+  // seul n'empêche pas toujours le petit rebond tactile résiduel au doigt,
+  // même quand le contenu tient réellement dans l'écran. touch-action ne
+  // touche ni au positionnement ni au "containing block" (contrairement à
+  // position:fixed sur body, qui avait décalé le menu du bas en app
+  // installée) : aucun effet de bord sur le reste de la page.
+  document.body.style.touchAction = "none";
 
   // Centrage vertical de la carte calendrier dans l'espace visible (sous
   // le titre, au-dessus du menu du bas), sans jamais dépasser la hauteur
@@ -12368,6 +12375,7 @@ function openPlanningCalendarDay(iso) {
   list.style.minHeight = "";
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
+  document.body.style.touchAction = "";
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
   if (title) title.textContent = formatDateHuman(iso);
@@ -17610,6 +17618,7 @@ function showSection(section, btn) {
   // menu du bas (sans repasser par closePlanningDetail/openPlanningCalendarDay).
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
+  document.body.style.touchAction = "";
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
