@@ -12207,13 +12207,13 @@ function renderPlanningCalendarMonth() {
   // règle spécifique à .section-header venait s'ajouter ailleurs.
   if (header) header.style.setProperty("display", "none", "important");
 
-  // Empêche tout scroll de page tant que la grille du calendrier est
-  // affichée : filet de sécurité en plus du dimensionnement ci-dessous.
-  // Nécessaire car .main n'a pas de hauteur/overflow propre : sans ça,
-  // un contenu trop haut fait grandir body/html et rend la page
-  // scrollable, quel que soit le calcul de hauteur fait par ailleurs.
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
+  // Empêche tout scroll de page (y compris le rebond tactile iOS) tant
+  // que la grille du calendrier est affichée : filet de sécurité en plus
+  // du dimensionnement ci-dessous. Réutilise le même verrou "position:fixed"
+  // que les popups (un simple overflow:hidden ne bloque pas le rebond
+  // tactile sur mobile, d'où le scroll qui persistait sur iOS/Safari).
+  clarityExtraLockActive = true;
+  recomputeClarityScrollLock();
 
   // Centrage vertical de la carte calendrier dans l'espace visible (sous
   // le titre, au-dessus du menu du bas), sans jamais dépasser la hauteur
@@ -12347,8 +12347,8 @@ function openPlanningCalendarDay(iso) {
   if (header) header.style.display = "";
   list.style.justifyContent = "";
   list.style.minHeight = "";
-  document.documentElement.style.overflow = "";
-  document.body.style.overflow = "";
+  clarityExtraLockActive = false;
+  recomputeClarityScrollLock();
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
   if (title) title.textContent = formatDateHuman(iso);
@@ -13919,6 +13919,11 @@ const CLARITY_MODAL_IDS = [
 
 let clarityScrollLockY = 0;
 let clarityScrollLocked = false;
+// Verrou additionnel (hors popups) : utilisé par la grille du calendrier
+// planning, qui doit elle aussi bloquer le scroll de page (y compris le
+// rebond tactile iOS, d'où la réutilisation de ce même mécanisme plutôt
+// qu'un simple overflow:hidden qui ne suffit pas sur mobile).
+let clarityExtraLockActive = false;
 
 function isAnyClarityModalOpen() {
   return CLARITY_MODAL_IDS.some(id => {
@@ -13933,7 +13938,7 @@ function isAnyClarityModalOpen() {
 // bloquer aussi le rebond de défilement tactile (iOS) derrière le popup,
 // pas seulement la molette sur PC.
 function recomputeClarityScrollLock() {
-  const shouldLock = isAnyClarityModalOpen();
+  const shouldLock = isAnyClarityModalOpen() || clarityExtraLockActive;
   if (shouldLock && !clarityScrollLocked) {
     clarityScrollLocked = true;
     clarityScrollLockY = window.scrollY;
@@ -17589,8 +17594,8 @@ function showSection(section, btn) {
   // Filet de sécurité : annule le blocage de scroll appliqué par la vue
   // calendrier du planning si on la quitte directement via un onglet du
   // menu du bas (sans repasser par closePlanningDetail/openPlanningCalendarDay).
-  document.documentElement.style.overflow = "";
-  document.body.style.overflow = "";
+  clarityExtraLockActive = false;
+  recomputeClarityScrollLock();
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
