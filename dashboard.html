@@ -16371,6 +16371,18 @@ async function callSimpleAgent(
     if (!box) {
       box = document.getElementById("orchestrator-dictation-box");
     }
+    // Le bandeau créé au 1er tour est retiré du DOM après son fondu (voir
+    // autoHideDictationBox) : sur les tours suivants d'une clarification
+    // (submitClarifyReply/retryClarifyByDictation, appelés avec box=null),
+    // il n'existait donc plus -> aucun "Réflexion en cours..." ne
+    // s'affichait entre chaque popup. On le recrée si besoin, comme
+    // sendTypedInstruction() le fait déjà au 1er tour.
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "orchestrator-dictation-box";
+      box.classList.add("agent-progress-popup");
+      document.body.appendChild(box);
+    }
 
     if (box) {
       // Filet de sécurité : voir commentaire équivalent dans
