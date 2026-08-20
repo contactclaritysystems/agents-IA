@@ -12219,7 +12219,15 @@ function renderPlanningCalendarMonth() {
   // calendrier est affichée : ce hack forçait la page à être réellement
   // plus haute que l'écran sur l'app installée, rendant tout blocage de
   // scroll JS inutile. Retiré en quittant la grille (vue jour).
-  document.getElementById("main-planning")?.classList.add("planning-calendar-fit");
+  const mainPlanningEl = document.getElementById("main-planning");
+  if (mainPlanningEl) {
+    mainPlanningEl.classList.add("planning-calendar-fit");
+    // Filet de sécurité supplémentaire : style inline, qui l'emporte
+    // TOUJOURS sur une règle externe sans !important, quelle que soit
+    // sa spécificité — au cas où la règle CSS ci-dessus ne suffirait
+    // pas seule (autre règle non repérée, ordre de cascade inattendu...).
+    mainPlanningEl.style.minHeight = "0px";
+  }
   if (title) title.textContent = "Rendez-vous";
   // Rien à quitter tant qu'on est au niveau le plus haut du planning (plus
   // de dossiers "Rendez-vous"/"Relances" au-dessus) : le bouton "← Retour"
@@ -12398,7 +12406,11 @@ function openPlanningCalendarDay(iso) {
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
   document.body.style.touchAction = "";
-  document.getElementById("main-planning")?.classList.remove("planning-calendar-fit");
+  const mainPlanningElDay = document.getElementById("main-planning");
+  if (mainPlanningElDay) {
+    mainPlanningElDay.classList.remove("planning-calendar-fit");
+    mainPlanningElDay.style.minHeight = "";
+  }
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
   if (title) title.textContent = formatDateHuman(iso);
@@ -17642,7 +17654,11 @@ function showSection(section, btn) {
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
   document.body.style.touchAction = "";
-  document.getElementById("main-planning")?.classList.remove("planning-calendar-fit");
+  const mainPlanningElNav = document.getElementById("main-planning");
+  if (mainPlanningElNav) {
+    mainPlanningElNav.classList.remove("planning-calendar-fit");
+    mainPlanningElNav.style.minHeight = "";
+  }
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
