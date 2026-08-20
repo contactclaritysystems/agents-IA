@@ -10270,6 +10270,17 @@ function closeClarifyModal(isCancel = true) {
 
 function retryClarifyByDictation() {
   closeClarifyModal(false);
+
+  // "Répondre à l'oral" doit ressembler exactement au micro de l'accueil
+  // (bulle "Clarity", barre de saisie, animation du micro) : ces éléments
+  // n'existent que sur la page d'accueil (#main-agents). Si l'utilisateur
+  // est ailleurs (Planning, Historique...) au moment où la popup de
+  // clarification apparaît, on l'y ramène d'abord, sinon l'animation se
+  // joue sur une page invisible et il ne voit qu'un bandeau flottant
+  // générique à la place.
+  const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+  showSection("agents", homeBtn);
+
   // Si la question vient d'un agent déjà identifié (Planning, Relance...),
   // on continue directement avec CE même agent plutôt que de repasser par
   // le Chef d'Orchestre "à froid", qui pourrait mal router une réponse
@@ -10310,12 +10321,20 @@ function submitClarifyReply() {
   // Même règle qu'en vocal : rester sur l'agent déjà identifié quand il y
   // en a un, au lieu de repasser par le Chef d'Orchestre.
   if (pendingClarifyAgent) {
+    // Nouvel identifiant de requête : c'est une toute nouvelle demande pour
+    // le backend (la réponse à la clarification), pas une redite de la
+    // précédente. Réutiliser l'ancien request_id (bug précédent) faisait
+    // parfois répondre le backend comme s'il recevait à nouveau la 1ère
+    // demande — la popup de clarification se rouvrait alors "vide"/à
+    // l'identique au lieu de traiter la réponse.
+    const requestId = crypto.randomUUID();
+    window.currentRequestId = requestId;
     callSimpleAgent(
       pendingClarifyAgent.agentName,
       pendingClarifyAgent.webhookUrl,
       text,
       null,
-      window.currentRequestId
+      requestId
     );
     return;
   }
