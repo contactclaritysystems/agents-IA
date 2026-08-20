@@ -10441,8 +10441,9 @@ async function sendTypedInstruction(instruction, continuing = false) {
     const title = data.title || data.titre || "Réponse";
     const content = data.content || data.response || data.message || "";
 
-    setDictationBoxState(box, "success");
-    box.innerHTML = "✅ Réponse prête";
+    // Pas de bandeau "✅ Réponse prête" (trop long à l'écran) : on referme
+    // directement le bandeau de progression et on ouvre la popup.
+    if (box) hideOrRemoveBox(box);
 
     pushConversationHistory(instruction, content);
     pendingClarifyAgent = null;
@@ -10463,8 +10464,6 @@ async function sendTypedInstruction(instruction, continuing = false) {
     const logText = "DEMANDE:\n" + instruction + "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
     await saveActionLog(effectiveAgent, logText, "success");
     await loadActionCounter();
-
-    autoHideDictationBox(box);
   } catch (err) {
     console.error("Erreur envoi instruction tapée:", err);
     unlockAgentButtons();
@@ -15482,19 +15481,21 @@ console.log("MESSAGE =", message);
       const title = data.title || data.titre || config.modalTitle;
       const content = data.content || data.response || data.message || "";
 
-      setDictationBoxState(box, "success");
-      box.innerHTML = config.successText;
-
       pushConversationHistory(instruction, content);
       // Clarification résolue avec succès : plus rien en attente.
       pendingClarifyAgent = null;
 
       // Même règle que callSimpleAgent() : Planning/Relance confirment par
-      // un simple toast (pas de contenu à relire), les autres agents
-      // affichent l'aperçu du texte généré.
+      // un simple toast (pas de contenu à relire, donc le bandeau
+      // "Réponse prête" a le temps d'être vu). Les autres agents (Assistant,
+      // Rédaction) ouvrent directement la popup avec le texte généré, sans
+      // bandeau intermédiaire (trop long à l'écran pour rien).
       if (config.agent === "planning" || config.agent === "relance") {
+        setDictationBoxState(box, "success");
+        box.innerHTML = config.successText;
         showToast(content || "C'est noté", "success");
       } else {
+        if (box) hideOrRemoveBox(box);
         openSimpleAgentPreview({
           title,
           content,
@@ -16441,18 +16442,21 @@ async function callSimpleAgent(
     // attente.
     pendingClarifyAgent = null;
 
-    if (box) {
-      setDictationBoxState(box, "success");
-      box.innerHTML = "✅ Réponse prête";
-      autoHideDictationBox(box);
-    }
-
     pushConversationHistory(instruction, content);
     lastAgentInfo = { agentName: agentName, webhookUrl: webhookUrl };
 
     if (agentName === "planning" || agentName === "relance") {
+  if (box) {
+    setDictationBoxState(box, "success");
+    box.innerHTML = "✅ Réponse prête";
+    autoHideDictationBox(box);
+  }
   showToast(content || "C’est noté", "success");
 } else {
+  // Assistant / Rédaction : pas de bandeau "✅ Réponse prête" (trop long
+  // à l'écran) — on referme directement le bandeau de progression et on
+  // ouvre la popup avec la réponse.
+  if (box) hideOrRemoveBox(box);
   openSimpleAgentPreview({
     title: data.title || "Réponse",
     content,
