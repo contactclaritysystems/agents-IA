@@ -16664,6 +16664,12 @@ async function callSimpleAgent(
       if (agentName === "redaction" && data.reason === "needs_form" && Array.isArray(data.fields)) {
         hideOrRemoveBox(box);
         document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
+        // Comme pour la clarification classique : garder une trace de ce
+        // tour dans l'historique (sinon vide au tour suivant). Pas de
+        // data.message ici (le contrat "needs_form" n'en a pas) -> on
+        // utilise le brief/titre à la place plutôt que le message d'erreur
+        // générique par défaut, qui polluerait l'historique.
+        pushConversationHistory(instruction, data.brief || data.title || "Formulaire de précisions");
         pendingClarifyAgent = { agentName, webhookUrl };
         openRedactionFormModal(data, webhookUrl, instruction);
         unlockAgentButtons();
