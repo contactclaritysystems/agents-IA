@@ -7967,6 +7967,22 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
+      <!-- STYLES D'ÉCRITURE -->
+  <div class="gmail-section" id="writing-styles-settings-block" style="margin-top:8px;">
+    <div class="gmail-title">
+      <span>✍️</span> Styles d'écriture
+    </div>
+    <div class="gmail-desc" style="margin-bottom:16px;">
+      Enregistrez à l'avance vos formules pour chaque type de personne (famille, collègue, patron...) : Clarity les réutilise en rédigeant, sans avoir à tout réexpliquer à chaque fois.
+    </div>
+    <div id="writing-styles-list" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="info-box">Chargement...</div>
+    </div>
+    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="openWritingStyleEditor(null)">
+      + Ajouter un style
+    </button>
+  </div>
+
       <!-- BLOC SUR MESURE -->
   <div class="gmail-section" id="custom-agent-block" style="display:block; margin-top:8px; grid-column: 1 / -1;">
     <div class="gmail-title">
@@ -8674,6 +8690,43 @@ body[data-theme="light"]::after {
       Rédiger
     </button>
     <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeRedactionFormModal()">
+      Annuler
+    </button>
+  </div>
+</div>
+
+  <!-- Créer/modifier un style d'écriture depuis les Réglages (indépendant
+       du mini-formulaire "+ Nouveau style" de la popup de rédaction, mais
+       même contenu de champs). -->
+  <div id="writing-style-editor-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeWritingStyleEditor()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">
+      <span id="writing-style-editor-title">Nouveau style</span>
+    </div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Nom</div>
+      <input class="field-input" type="text" id="writing-style-editor-label" placeholder="Ex : Cousin" autocomplete="off" />
+    </div>
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Exemple d'un message écrit ainsi</div>
+      <textarea class="field-input" id="writing-style-editor-example" rows="3" placeholder="Ex : Hé cous', tu viens manger ce soir ?"></textarea>
+    </div>
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Formule d'ouverture (optionnel)</div>
+      <input class="field-input" type="text" id="writing-style-editor-opening" placeholder="Ex : Salut" autocomplete="off" />
+    </div>
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">Formule de fin (optionnel)</div>
+      <input class="field-input" type="text" id="writing-style-editor-closing" placeholder="Ex : À plus" autocomplete="off" />
+    </div>
+
+    <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="saveWritingStyleEditor()">
+      💾 Enregistrer
+    </button>
+    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeWritingStyleEditor()">
       Annuler
     </button>
   </div>
@@ -10694,6 +10747,124 @@ async function submitNewStyle() {
     document.getElementById("redaction-new-style-closing").value = "";
 
     showToast("Style « " + (style.label || label) + " » créé", "success");
+  } catch (e) {
+    showToast("Erreur réseau", "error");
+  }
+}
+
+// ─── RÉGLAGES > STYLES D'ÉCRITURE ───────────────────────────────────────
+// Permet d'enregistrer à l'avance les formules de chaque style (famille,
+// collègue, patron...) au lieu d'improviser uniquement au moment de
+// rédiger. Même API que le mini-formulaire "+ Nouveau style" (GET/POST
+// /styles), avec en plus la possibilité de modifier un style existant.
+let writingStylesCache = [];
+let editingWritingStyleKey = null; // null = création d'un nouveau style
+
+async function loadWritingStyles() {
+  const list = document.getElementById("writing-styles-list");
+  if (!list || !currentUser) return;
+
+  list.innerHTML = '<div class="info-box">Chargement...</div>';
+
+  try {
+    const response = await fetch(STYLES_API_URL + "/" + currentUser.id);
+    const data = await response.json();
+    writingStylesCache = (data && data.success && Array.isArray(data.styles)) ? data.styles : [];
+    renderWritingStylesList();
+  } catch (e) {
+    list.innerHTML = '<div class="info-box">Impossible de charger les styles pour le moment.</div>';
+  }
+}
+
+function renderWritingStylesList() {
+  const list = document.getElementById("writing-styles-list");
+  if (!list) return;
+
+  if (!writingStylesCache.length) {
+    list.innerHTML = '<div class="info-box">Aucun style enregistré pour l\'instant.</div>';
+    return;
+  }
+
+  list.innerHTML = writingStylesCache.map(function (s) {
+    const label = (s.label || s.key || "").replace(/</g, "&lt;");
+    const example = (s.example_message || "").replace(/</g, "&lt;");
+    return (
+      '<div class="agent-card" style="padding:14px 16px;cursor:pointer;" onclick="openWritingStyleEditor(\'' + s.key + '\')">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
+          '<div style="min-width:0;">' +
+            '<div style="font-weight:700;font-size:14px;color:var(--clarity-text);">' + label + '</div>' +
+            (example
+              ? '<div style="font-size:12.5px;color:var(--clarity-text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + example + '</div>'
+              : '') +
+          '</div>' +
+          '<span style="font-size:12px;color:var(--clarity-text-tertiary);flex-shrink:0;">Modifier ›</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join("");
+}
+
+function openWritingStyleEditor(key) {
+  const modal = document.getElementById("writing-style-editor-modal");
+  if (!modal) return;
+
+  editingWritingStyleKey = key || null;
+  const style = key ? writingStylesCache.find(function (s) { return s.key === key; }) : null;
+
+  const titleEl = document.getElementById("writing-style-editor-title");
+  if (titleEl) titleEl.textContent = style ? "Modifier ce style" : "Nouveau style";
+
+  document.getElementById("writing-style-editor-label").value = style ? (style.label || "") : "";
+  document.getElementById("writing-style-editor-example").value = style ? (style.example_message || "") : "";
+  document.getElementById("writing-style-editor-opening").value = style ? (style.opening || "") : "";
+  document.getElementById("writing-style-editor-closing").value = style ? (style.closing || "") : "";
+
+  modal.style.display = "flex";
+}
+
+function closeWritingStyleEditor() {
+  const modal = document.getElementById("writing-style-editor-modal");
+  if (modal) modal.style.display = "none";
+  editingWritingStyleKey = null;
+}
+
+async function saveWritingStyleEditor() {
+  const label = (document.getElementById("writing-style-editor-label")?.value || "").trim();
+  const example = (document.getElementById("writing-style-editor-example")?.value || "").trim();
+  const opening = (document.getElementById("writing-style-editor-opening")?.value || "").trim();
+  const closing = (document.getElementById("writing-style-editor-closing")?.value || "").trim();
+
+  if (!label || !example) {
+    showToast("Indiquez au moins un nom et un exemple", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(STYLES_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        // Envoyé en plus du contrat de base : si un style est en cours de
+        // modification, permet au backend de le mettre à jour en place
+        // plutôt que d'en créer un nouveau (à confirmer côté backend).
+        key: editingWritingStyleKey || undefined,
+        label,
+        example_message: example,
+        opening,
+        closing
+      })
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.style) {
+      showToast(data.message || "Impossible d'enregistrer ce style", "error");
+      return;
+    }
+
+    closeWritingStyleEditor();
+    await loadWritingStyles();
+    showToast("Style enregistré", "success");
   } catch (e) {
     showToast("Erreur réseau", "error");
   }
@@ -13690,7 +13861,8 @@ const CLARITY_MODAL_IDS = [
   "pricing-modal", "support-choice-modal", "help-actions-modal",
   "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
-  "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal"
+  "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal",
+  "writing-style-editor-modal"
 ];
 
 let clarityScrollLockY = 0;
@@ -17387,6 +17559,7 @@ if (section === "settings") {
     document.getElementById("main-settings").classList.add("active");
     if (btn) btn.classList.add("active");
     onboardingOnEvent("page:settings");
+    loadWritingStyles();
     return;
   }
 
