@@ -12207,6 +12207,14 @@ function renderPlanningCalendarMonth() {
   // règle spécifique à .section-header venait s'ajouter ailleurs.
   if (header) header.style.setProperty("display", "none", "important");
 
+  // Empêche tout scroll de page tant que la grille du calendrier est
+  // affichée : filet de sécurité en plus du dimensionnement ci-dessous.
+  // Nécessaire car .main n'a pas de hauteur/overflow propre : sans ça,
+  // un contenu trop haut fait grandir body/html et rend la page
+  // scrollable, quel que soit le calcul de hauteur fait par ailleurs.
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+
   // Centrage vertical de la carte calendrier dans l'espace visible (sous
   // le titre, au-dessus du menu du bas), sans jamais dépasser la hauteur
   // de l'écran (pas de scroll de page). Réinitialisé en vue jour.
@@ -12220,7 +12228,6 @@ function renderPlanningCalendarMonth() {
   // 116px : marge de sécurité pour le menu du bas + son padding, déjà
   // réservés par ailleurs via le padding-bottom de #main-planning.
   const availableHeight = Math.max(200, viewportHeight - listTop - 116);
-  list.style.minHeight = availableHeight + "px";
 
   const year = window.currentCalendarYear;
   const month = window.currentCalendarMonth;
@@ -12298,6 +12305,30 @@ function renderPlanningCalendarMonth() {
       </div>
     </div>
   `;
+
+  // La hauteur naturelle de la carte varie selon le mois (5 ou 6 lignes
+  // de semaines selon le jour de départ) et selon l'écran : sur les mois
+  // à 6 lignes (ex. août 2026) ou les petits écrans, elle peut dépasser
+  // l'espace disponible. Une simple min-height ne fait qu'agrandir le
+  // conteneur si le contenu est trop grand (jamais le réduire), d'où le
+  // scroll de page qui persistait. On réduit donc la carte
+  // proportionnellement (transform:scale) pour qu'elle tienne toujours
+  // dans availableHeight.
+  const card = list.querySelector(".planning-calendar-card");
+  if (card) {
+    card.style.transform = "";
+    card.style.transformOrigin = "top center";
+    const naturalHeight = card.getBoundingClientRect().height;
+    if (naturalHeight > availableHeight && naturalHeight > 0) {
+      const scale = Math.max(0.55, availableHeight / naturalHeight);
+      card.style.transform = "scale(" + scale + ")";
+      list.style.minHeight = (naturalHeight * scale) + "px";
+    } else {
+      list.style.minHeight = availableHeight + "px";
+    }
+  } else {
+    list.style.minHeight = availableHeight + "px";
+  }
 }
 
 function openPlanningCalendarDay(iso) {
@@ -12311,10 +12342,13 @@ function openPlanningCalendarDay(iso) {
 
   // On quitte la vue calendrier : le "← Retour" réapparaît (retour à la
   // grille du mois), et on annule le centrage vertical de la grille (la
-  // liste des RDV/relances du jour doit s'aligner en haut, pas au centre).
+  // liste des RDV/relances du jour doit s'aligner en haut, pas au centre)
+  // ainsi que le blocage du scroll de page réservé à la grille.
   if (header) header.style.display = "";
   list.style.justifyContent = "";
   list.style.minHeight = "";
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
   if (title) title.textContent = formatDateHuman(iso);
@@ -17552,6 +17586,11 @@ function showSection(section, btn) {
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
+  // Filet de sécurité : annule le blocage de scroll appliqué par la vue
+  // calendrier du planning si on la quitte directement via un onglet du
+  // menu du bas (sans repasser par closePlanningDetail/openPlanningCalendarDay).
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
