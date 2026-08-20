@@ -10447,13 +10447,19 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
 
   const fieldsWrap = document.getElementById("redaction-form-fields");
   if (fieldsWrap) {
+    // name="" aléatoire à chaque ouverture (en plus d'autocomplete="off",
+    // que Safari ignore souvent pour les champs texte) : sans ça, Safari
+    // reconnaît les champs d'une précédente demande (même id/name) et les
+    // repréremplit tout seul avec les anciennes réponses, même pour une
+    // toute nouvelle demande sans rapport.
     fieldsWrap.innerHTML = pendingRedactionForm.fields.map(function (f) {
       const label = (f.label || f.id || "").replace(/</g, "&lt;");
       const placeholder = (f.placeholder || "").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      const uniqueName = "rf_" + f.id + "_" + Math.random().toString(36).slice(2);
       return (
         '<div class="field-group">' +
           '<div class="field-label">' + label + (f.required ? " *" : "") + "</div>" +
-          '<input class="field-input" type="text" id="redaction-form-field-' + f.id + '" placeholder="' + placeholder + '" />' +
+          '<input class="field-input" type="text" id="redaction-form-field-' + f.id + '" name="' + uniqueName + '" autocomplete="off" data-lpignore="true" placeholder="' + placeholder + '" />' +
         "</div>"
       );
     }).join("");
@@ -10463,6 +10469,17 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
   if (submitBtn) submitBtn.textContent = data.submit_label || "Rédiger";
 
   modal.style.display = "flex";
+
+  // Filet de sécurité si Safari autoremplit quand même juste après
+  // l'insertion dans le DOM : on revide les champs juste après.
+  if (fieldsWrap) {
+    requestAnimationFrame(() => {
+      pendingRedactionForm.fields.forEach(function (f) {
+        const el = document.getElementById("redaction-form-field-" + f.id);
+        if (el) el.value = "";
+      });
+    });
+  }
 
   const firstInput = fieldsWrap ? fieldsWrap.querySelector(".field-input") : null;
   if (firstInput) setTimeout(() => firstInput.focus(), 60);
