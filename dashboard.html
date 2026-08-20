@@ -7968,7 +7968,7 @@ body[data-theme="light"]::after {
   </div>
 
       <!-- STYLES D'ÉCRITURE -->
-  <div class="gmail-section" id="writing-styles-settings-block" style="margin-top:8px;">
+  <div class="gmail-section" id="writing-styles-settings-block" style="margin-top:8px;display:block;">
     <div class="gmail-title">
       <span>✍️</span> Styles d'écriture
     </div>
@@ -12210,9 +12210,17 @@ function renderPlanningCalendarMonth() {
   // Centrage vertical de la carte calendrier dans l'espace visible (sous
   // le titre, au-dessus du menu du bas), sans jamais dépasser la hauteur
   // de l'écran (pas de scroll de page). Réinitialisé en vue jour.
+  // Hauteur calculée dynamiquement (position réelle de la liste à
+  // l'écran) plutôt qu'une valeur fixe devinée : un nombre en dur ne
+  // correspond pas à la fois au mobile et au desktop (topbar différente),
+  // d'où le scroll de page resté possible sur desktop.
   list.style.justifyContent = "center";
-  list.style.minHeight = "calc(100vh - 260px)";
-  list.style.minHeight = "calc(100dvh - 260px)";
+  const listTop = list.getBoundingClientRect().top;
+  const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  // 116px : marge de sécurité pour le menu du bas + son padding, déjà
+  // réservés par ailleurs via le padding-bottom de #main-planning.
+  const availableHeight = Math.max(200, viewportHeight - listTop - 116);
+  list.style.minHeight = availableHeight + "px";
 
   const year = window.currentCalendarYear;
   const month = window.currentCalendarMonth;
