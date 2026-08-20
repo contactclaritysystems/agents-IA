@@ -6665,6 +6665,21 @@ body[data-theme="dark"] .clarity-hero {
   body.is-standalone-ios .page-view.active {
     min-height: calc(100lvh + 40px);
   }
+
+  /* Exception : la grille du calendrier planning calcule elle-même sa
+     hauteur au pixel près en JS (renderPlanningCalendarMonth) pour ne
+     JAMAIS scroller. Ce hack de +40px (nécessaire ailleurs pour
+     débloquer window.innerHeight en WKWebView) entrait directement en
+     conflit avec cette contrainte : quoi que fasse le JS (overflow:hidden,
+     touch-action:none...), la page restait réellement 40px plus haute
+     que l'écran, donc réellement scrollable, sur l'app installée
+     uniquement. Spécificité (id) plus forte que la règle ci-dessus, pas
+     besoin de !important pour l'annuler proprement quand ce sous-écran
+     est actif (classe posée/retirée en JS).
+   */
+  body.is-standalone-ios #main-planning.page-view.active.planning-calendar-fit {
+    min-height: 0;
+  }
 }
 
 /* =========================================================
@@ -12198,6 +12213,13 @@ function renderPlanningCalendarMonth() {
   const title = document.getElementById("planning-detail-title");
   const header = document.getElementById("planning-detail-header");
   if (!list) return;
+
+  // Désactive le hack "+40px" de #main-planning (voir CSS, règle
+  // body.is-standalone-ios .page-view.active) tant que la grille du
+  // calendrier est affichée : ce hack forçait la page à être réellement
+  // plus haute que l'écran sur l'app installée, rendant tout blocage de
+  // scroll JS inutile. Retiré en quittant la grille (vue jour).
+  document.getElementById("main-planning")?.classList.add("planning-calendar-fit");
   if (title) title.textContent = "Rendez-vous";
   // Rien à quitter tant qu'on est au niveau le plus haut du planning (plus
   // de dossiers "Rendez-vous"/"Relances" au-dessus) : le bouton "← Retour"
@@ -12376,6 +12398,7 @@ function openPlanningCalendarDay(iso) {
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
   document.body.style.touchAction = "";
+  document.getElementById("main-planning")?.classList.remove("planning-calendar-fit");
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
   if (title) title.textContent = formatDateHuman(iso);
@@ -17619,6 +17642,7 @@ function showSection(section, btn) {
   document.documentElement.style.overflow = "";
   document.body.style.overflow = "";
   document.body.style.touchAction = "";
+  document.getElementById("main-planning")?.classList.remove("planning-calendar-fit");
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
