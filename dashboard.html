@@ -953,6 +953,34 @@ select.field-input {
   margin-top: 8px !important;
 }
 
+/* Petit bouton rond "?" dans le formulaire de rédaction (offre, post...),
+   à côté du titre : affiche/masque l'explication de chaque champ. */
+.redaction-form-help-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--clarity-border);
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--clarity-duration) var(--clarity-ease), border-color var(--clarity-duration) var(--clarity-ease);
+}
+
+.redaction-form-help-btn:hover {
+  background: var(--clarity-surface-hover);
+  border-color: var(--clarity-border-hover);
+}
+
+#redaction-form-modal .mail-choice-box {
+  max-width: 460px;
+}
+
 /* La zone de résultat se redimensionne selon le texte (voir JS,
    openSimpleAgentPreview) : plus de min-height fixe qui laissait un grand
    vide pour les réponses courtes (2-3 lignes). resize:none car la
@@ -8594,6 +8622,36 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+  <!-- Formulaire de rédaction (offre, post, compte-rendu...) : au lieu
+       d'enchaîner les questions une par une, l'agent Rédaction peut
+       demander directement plusieurs infos d'un coup via un petit
+       formulaire. L'utilisateur ne remplit que ce qu'il sait ; le bouton
+       "?" explique chaque champ en mots simples. -->
+  <div id="redaction-form-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeRedactionFormModal()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title" style="display:flex;align-items:center;justify-content:space-between;gap:9px;">
+      <div style="display:flex;align-items:center;gap:9px;min-width:0;">
+        <img id="redaction-form-logo" src="" alt="" style="height:26px;width:auto;flex-shrink:0;display:block;" />
+        <span id="redaction-form-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Précisions</span>
+      </div>
+      <button type="button" class="redaction-form-help-btn" onclick="toggleRedactionFormHelp()" aria-label="Aide">?</button>
+    </div>
+
+    <div id="redaction-form-help" style="display:none;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--clarity-surface-soft);border:1px solid var(--clarity-border);font-size:13px;line-height:1.55;color:var(--clarity-text-secondary);white-space:pre-line;"></div>
+
+    <div id="redaction-form-fields" style="margin-top:14px;display:flex;flex-direction:column;gap:12px;"></div>
+
+    <button class="save-btn" type="button" id="redaction-form-submit-btn" style="width:100%;margin-top:14px;" onclick="submitRedactionForm()">
+      Rédiger
+    </button>
+    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeRedactionFormModal()">
+      Annuler
+    </button>
+  </div>
+</div>
+
   <div id="pricing-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closePricingPage()"></div>
   <div class="mail-choice-box" id="pricing-modal-content"></div>
@@ -10353,6 +10411,117 @@ function submitClarifyReply() {
     return;
   }
   sendTypedInstruction(text, true);
+}
+
+// ─── FORMULAIRE DE RÉDACTION (offre, post, compte-rendu...) ────────────
+// Au lieu d'enchaîner les questions une par une (popup de clarification
+// classique), l'agent Rédaction peut demander plusieurs infos d'un coup
+// via un petit formulaire (reason:"needs_form"). L'utilisateur ne remplit
+// que ce qu'il sait ; le bouton "?" explique chaque champ.
+let pendingRedactionForm = null; // { agentName, webhookUrl, originalInstruction, fields }
+
+function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
+  const modal = document.getElementById("redaction-form-modal");
+  if (!modal) return;
+
+  pendingRedactionForm = {
+    agentName: "redaction",
+    webhookUrl: webhookUrl,
+    originalInstruction: data.original_instruction || fallbackInstruction || "",
+    fields: Array.isArray(data.fields) ? data.fields : []
+  };
+
+  const titleEl = document.getElementById("redaction-form-title");
+  if (titleEl) titleEl.textContent = data.title || "Précisions";
+
+  const logoEl = document.getElementById("redaction-form-logo");
+  if (logoEl && !logoEl.getAttribute("src")) {
+    logoEl.src = CLARITY_THINKING_LOGO_SRC;
+  }
+
+  const helpBox = document.getElementById("redaction-form-help");
+  if (helpBox) {
+    helpBox.textContent = data.help || "";
+    helpBox.style.display = "none";
+  }
+
+  const fieldsWrap = document.getElementById("redaction-form-fields");
+  if (fieldsWrap) {
+    fieldsWrap.innerHTML = pendingRedactionForm.fields.map(function (f) {
+      const label = (f.label || f.id || "").replace(/</g, "&lt;");
+      const placeholder = (f.placeholder || "").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      return (
+        '<div class="field-group">' +
+          '<div class="field-label">' + label + (f.required ? " *" : "") + "</div>" +
+          '<input class="field-input" type="text" id="redaction-form-field-' + f.id + '" placeholder="' + placeholder + '" />' +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  const submitBtn = document.getElementById("redaction-form-submit-btn");
+  if (submitBtn) submitBtn.textContent = data.submit_label || "Rédiger";
+
+  modal.style.display = "flex";
+
+  const firstInput = fieldsWrap ? fieldsWrap.querySelector(".field-input") : null;
+  if (firstInput) setTimeout(() => firstInput.focus(), 60);
+}
+
+function closeRedactionFormModal(isCancel = true) {
+  const modal = document.getElementById("redaction-form-modal");
+  if (modal) modal.style.display = "none";
+  const helpBox = document.getElementById("redaction-form-help");
+  if (helpBox) helpBox.style.display = "none";
+  if (isCancel) {
+    pendingRedactionForm = null;
+    pendingClarifyAgent = null;
+    showToast("Demande annulée", "error");
+  }
+}
+
+function toggleRedactionFormHelp() {
+  const helpBox = document.getElementById("redaction-form-help");
+  if (!helpBox) return;
+  helpBox.style.display = helpBox.style.display === "none" ? "block" : "none";
+}
+
+function submitRedactionForm() {
+  if (!pendingRedactionForm) return;
+
+  const answers = {};
+  let missingRequiredLabel = null;
+
+  pendingRedactionForm.fields.forEach(function (f) {
+    const el = document.getElementById("redaction-form-field-" + f.id);
+    const val = el ? el.value.trim() : "";
+    if (val) {
+      answers[f.id] = val;
+    } else if (f.required && !missingRequiredLabel) {
+      missingRequiredLabel = f.label || f.id;
+    }
+  });
+
+  if (missingRequiredLabel) {
+    showToast("Indiquez au moins : " + missingRequiredLabel, "error");
+    return;
+  }
+
+  const agentName = pendingRedactionForm.agentName;
+  const webhookUrl = pendingRedactionForm.webhookUrl;
+  const instruction = pendingRedactionForm.originalInstruction;
+
+  closeRedactionFormModal(false);
+
+  // Nouvel identifiant de requête à chaque envoi (même règle que
+  // submitClarifyReply) : le backend s'en sert pour identifier chaque
+  // demande, réutiliser l'ancien mélangerait cette réponse avec la
+  // précédente.
+  const requestId = crypto.randomUUID();
+  window.currentRequestId = requestId;
+  pendingClarifyAgent = { agentName, webhookUrl };
+
+  callSimpleAgent(agentName, webhookUrl, instruction, null, requestId, { form_answers: answers });
 }
 
 // Équivalent tapé au clavier du flux vocal principal (startOrchestratorDictation) : même
@@ -13346,7 +13515,7 @@ const CLARITY_MODAL_IDS = [
   "pricing-modal", "support-choice-modal", "help-actions-modal",
   "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
-  "planning-schedule-modal", "planning-contact-modal"
+  "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal"
 ];
 
 let clarityScrollLockY = 0;
@@ -16365,7 +16534,8 @@ async function callSimpleAgent(
   webhookUrl,
   instruction,
   box = null,
-  requestId = window.currentRequestId
+  requestId = window.currentRequestId,
+  extra = null
 ) {
   try {
     if (!box) {
@@ -16414,14 +16584,14 @@ async function callSimpleAgent(
         fetch(webhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          body: JSON.stringify(Object.assign({
             user_id: currentUser.id,
             user_email: currentUser.email,
             user_name: getUserDisplayName(),
             instruction,
             request_id: requestId,
             conversation_history: formatConversationHistory(simpleAgentConversationHistory)
-          }),
+          }, extra || {})),
           signal: timeoutController.signal
         }),
         new Promise(resolve => setTimeout(resolve, 500))
@@ -16484,6 +16654,21 @@ async function callSimpleAgent(
         openPlanningContactModal(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
+        return;
+      }
+
+      // Rédaction : au lieu d'enchaîner les questions une par une, l'agent
+      // peut demander plusieurs infos d'un coup via un petit formulaire
+      // (offre, post, compte-rendu...). L'utilisateur ne remplit que ce
+      // qu'il sait, un bouton "?" explique chaque champ.
+      if (agentName === "redaction" && data.reason === "needs_form" && Array.isArray(data.fields)) {
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
+        pendingClarifyAgent = { agentName, webhookUrl };
+        openRedactionFormModal(data, webhookUrl, instruction);
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        await saveActionLog(agentName, instruction, "error");
         return;
       }
 
