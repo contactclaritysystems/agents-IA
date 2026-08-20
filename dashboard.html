@@ -12371,7 +12371,6 @@ function renderPlanningCalendarMonth() {
   // proportionnellement (transform:scale) pour qu'elle tienne toujours
   // dans availableHeight.
   const card = list.querySelector(".planning-calendar-card");
-  let finalCardHeight = 0;
   if (card) {
     card.style.transform = "";
     card.style.transformOrigin = "top center";
@@ -12379,24 +12378,29 @@ function renderPlanningCalendarMonth() {
     if (naturalHeight > availableHeight && naturalHeight > 0) {
       const scale = Math.max(0.55, availableHeight / naturalHeight);
       card.style.transform = "scale(" + scale + ")";
-      finalCardHeight = naturalHeight * scale;
-    } else {
-      finalCardHeight = naturalHeight;
     }
   }
 
-  // Centrage : pas un simple justify-content:center. Le bandeau titre
-  // (au-dessus) est presque toujours plus haut que la marge réservée en
-  // bas (sous la carte, au-dessus du menu) — un centrage mathématique
-  // pur dans [listTop, bottomLimit] place donc la carte visiblement plus
-  // bas que le milieu réel de l'écran (constaté sur l'app installée,
-  // où le menu du bas est collé tout en bas et laisse énormément
-  // d'espace dispo). On répartit l'espace restant avec un biais vers le
-  // haut (~35% au-dessus, ~65% en dessous) plutôt que 50/50.
+  // Centrage : PAS de calcul basé sur un budget estimé à l'avance
+  // (availableHeight sert uniquement à décider si la carte doit être
+  // réduite, ci-dessus). Pour le centrage lui-même, on mesure l'espace
+  // RÉELLEMENT restant au-dessus et en dessous de la carte une fois
+  // tout rendu (échelle comprise), et on égalise les deux. Fiable quel
+  // que soit le mode (Safari, app installée...), sans dépendre d'une
+  // estimation de hauteur de viewport qui peut se tromper selon
+  // l'environnement (zone de sécurité iOS, unités d'affichage lvh/svh,
+  // position réelle du menu du bas qui diffère entre les deux modes).
   list.style.justifyContent = "flex-start";
-  const leftover = Math.max(0, availableHeight - finalCardHeight);
-  list.style.paddingTop = (leftover * 0.35) + "px";
+  list.style.paddingTop = "0px";
   list.style.minHeight = availableHeight + "px";
+
+  if (card && bottomNav) {
+    const cardRectAfter = card.getBoundingClientRect();
+    const gapAbove = cardRectAfter.top - listTop;
+    const gapBelow = (bottomNav.getBoundingClientRect().top - 12) - cardRectAfter.bottom;
+    const adjust = Math.max(0, (gapBelow - gapAbove) / 2);
+    if (adjust > 0) list.style.paddingTop = adjust + "px";
+  }
 }
 
 function openPlanningCalendarDay(iso) {
