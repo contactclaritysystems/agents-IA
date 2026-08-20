@@ -944,6 +944,16 @@ select.field-input {
   margin-top: 8px !important;
 }
 
+/* La zone de résultat se redimensionne selon le texte (voir JS,
+   openSimpleAgentPreview) : plus de min-height fixe qui laissait un grand
+   vide pour les réponses courtes (2-3 lignes). resize:none car la
+   hauteur est déjà gérée automatiquement. */
+#simple-agent-result-content {
+  min-height: 60px;
+  resize: none;
+  overflow-y: auto;
+}
+
   #contact-choice-modal {
   position: fixed;
   inset: 0;
@@ -8518,7 +8528,7 @@ body[data-theme="light"]::after {
 
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label" id="simple-agent-result-title">Résultat</div>
-      <textarea class="field-input" id="simple-agent-result-content" style="min-height:460px;"></textarea>
+      <textarea class="field-input" id="simple-agent-result-content"></textarea>
     </div>
 
     <button class="save-btn" onclick="copySimpleAgentResult()" type="button">
@@ -14383,6 +14393,13 @@ updateStatProgresses();
   if (content) {
     content.scrollTop = 0;
     content.setSelectionRange(0, 0);
+
+    // Hauteur adaptée au texte : pas de grand vide pour une réponse
+    // courte (2-3 lignes), et un plafond (70% de l'écran) + scroll
+    // interne pour les réponses longues.
+    content.style.height = "auto";
+    const maxContentHeight = window.innerHeight * 0.7;
+    content.style.height = Math.min(content.scrollHeight, maxContentHeight) + "px";
   }
   if (box) box.scrollTop = 0;
 
