@@ -12229,11 +12229,18 @@ function renderPlanningCalendarMonth() {
   // hauteur/position varie selon le mode (Safari normal vs app installée
   // "standalone", qui a son propre padding pour la zone de sécurité iOS
   // et n'est pas positionnée pareil — cf. règles body.is-standalone-ios
-  // .bottom-nav). Un nombre fixe (116px) ne correspondait qu'au mode
-  // navigateur classique, d'où le léger scroll qui persistait en app
-  // installée. 12px de marge en plus, au cas où.
+  // .bottom-nav). Sert de garde-fou dur contre le scroll : jamais dépassé.
   const bottomNav = document.querySelector(".bottom-nav");
-  const bottomLimit = bottomNav ? bottomNav.getBoundingClientRect().top - 12 : viewportHeight - 116;
+  const measuredBottomLimit = bottomNav ? bottomNav.getBoundingClientRect().top - 12 : viewportHeight - 116;
+  // Marge "confortable" historique (116px), utilisée pour le centrage
+  // visuel : en app installée le vrai espace dispo (mesuré ci-dessus)
+  // est parfois bien plus grand que ça (menu du bas collé tout en bas),
+  // et centrer la carte dans TOUT cet espace la faisait paraître trop
+  // basse. On prend donc la plus restrictive des deux limites : jamais
+  // de dépassement (grâce à la mesure réelle) et jamais un centrage
+  // exagérément bas (grâce à cette marge de confort).
+  const comfortBottomLimit = viewportHeight - 116;
+  const bottomLimit = Math.min(measuredBottomLimit, comfortBottomLimit);
   const availableHeight = Math.max(200, bottomLimit - listTop);
 
   const year = window.currentCalendarYear;
