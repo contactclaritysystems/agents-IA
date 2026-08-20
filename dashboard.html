@@ -921,11 +921,20 @@ select.field-input {
 }
 
 /* Popup de résultat des agents (Assistant, etc.) : le texte généré peut
-   être long, donc on lui donne plus de place qu'aux popups standard
-   (420px/82vh) sans toucher aux autres popups qui partagent .mail-choice-box. */
+   être long, donc on lui donne un peu plus de place qu'aux popups
+   standard (420px/82vh), mais sans dépasser l'écran : la zone de texte
+   elle-même est plafonnée (voir JS, openSimpleAgentPreview), donc la
+   popup entière (titre + texte + boutons) reste toujours bien plus
+   petite que 100% de l'écran. */
 #simple-agent-preview-modal .mail-choice-box {
   max-width: 560px;
-  max-height: 92vh;
+  max-height: 80vh;
+}
+
+@media (max-width: 600px) {
+  #simple-agent-preview-modal .mail-choice-box {
+    max-height: 72vh;
+  }
 }
 
 /* Boutons plus compacts que le style par défaut (50px/42px), pour laisser
@@ -14394,20 +14403,23 @@ updateStatProgresses();
     content.setSelectionRange(0, 0);
 
     // Hauteur adaptée au texte : pas de grand vide pour une réponse
-    // courte (2-3 lignes), et un plafond (70% de l'écran) + scroll
-    // interne pour les réponses longues.
+    // courte (2-3 lignes), et un plafond (45% de l'écran) + scroll
+    // interne pour les réponses longues. Plafond volontairement modeste
+    // (avant : 70%) pour que la popup entière (titre + boutons compris)
+    // reste toujours nettement plus petite que l'écran, sur mobile comme
+    // sur desktop.
     content.style.height = "auto";
-    const maxContentHeight = window.innerHeight * 0.7;
+    const maxContentHeight = window.innerHeight * 0.45;
     content.style.height = Math.min(content.scrollHeight, maxContentHeight) + "px";
+    content.scrollTop = 0;
   }
   if (box) box.scrollTop = 0;
 
-  if (box) {
-    box.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-  }
+  // Pas de scrollIntoView ici : la popup est déjà centrée par CSS
+  // (position:absolute + transform), et cet appel entrait en conflit
+  // avec le verrouillage de scroll de la page une fois la popup assez
+  // grande pour dépasser l'écran (texte long) — résultat : popup mal
+  // positionnée, coupée en haut et en bas au lieu d'être centrée.
 });
 }
 
