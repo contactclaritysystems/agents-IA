@@ -8567,7 +8567,13 @@ body[data-theme="light"]::after {
       <img id="clarify-modal-logo" src="" alt="" style="height:26px;width:auto;flex-shrink:0;display:block;" />
       <span>Il me manque une info</span>
     </div>
-    <div class="mail-choice-subtitle" id="clarify-modal-message" style="margin-top:6px;"></div>
+
+    <div id="clarify-modal-brief-box" style="display:none;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--clarity-surface-soft);border:1px solid var(--clarity-border);">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;color:var(--clarity-text-tertiary);margin-bottom:3px;">Ce que Clarity a retenu</div>
+      <div id="clarify-modal-brief" style="font-size:13.5px;font-weight:600;color:var(--clarity-text);"></div>
+    </div>
+
+    <div class="mail-choice-subtitle" id="clarify-modal-message" style="margin-top:12px;font-size:16px;font-weight:750;color:var(--clarity-text);line-height:1.35;"></div>
 
     <div class="field-group" style="margin-top:14px;">
       <div class="field-label">Votre réponse</div>
@@ -10234,9 +10240,17 @@ async function confirmPlanningContact() {
 // que l'utilisateur ne l'a pas fermée, et propose deux façons de compléter
 // la demande : à l'oral (redicter, mémoire de conversation conservée) ou
 // à l'écrit (champ texte qui repart directement au Chef d'Orchestre).
-function openClarifyModal(message) {
+function openClarifyModal(message, brief) {
   const modal = document.getElementById("clarify-modal");
   if (!modal) return;
+
+  // "Ce que Clarity a retenu" (Rédaction) : montre que chaque réponse fait
+  // avancer la rédaction, mis à jour à chaque nouveau tour. Masqué pour les
+  // agents qui n'envoient pas de brief (Planning, Relance...).
+  const briefBox = document.getElementById("clarify-modal-brief-box");
+  const briefEl = document.getElementById("clarify-modal-brief");
+  if (briefEl) briefEl.textContent = brief || "";
+  if (briefBox) briefBox.style.display = brief ? "block" : "none";
 
   const msgEl = document.getElementById("clarify-modal-message");
   if (msgEl) msgEl.textContent = message || "Pouvez-vous préciser votre demande ?";
@@ -15497,7 +15511,9 @@ console.log("MESSAGE =", message);
           config.agent !== "orchestrator"
             ? { agentName: config.agent, webhookUrl: config.webhookUrl }
             : null;
-        openClarifyModal(message);
+        // "brief" (Rédaction) : ce que Clarity a déjà comme infos, affiché
+        // au-dessus de la question pour montrer que ça avance à chaque tour.
+        openClarifyModal(message, data.brief || (data.partial && data.partial.brief) || "");
         await saveActionLog(effectiveAgent, instruction, "error");
         return;
       }
@@ -16478,7 +16494,9 @@ async function callSimpleAgent(
       // Popup persistante (au lieu d'un toast éphémère) : l'utilisateur doit
       // pouvoir lire la question de clarification et y répondre, à l'oral
       // ou à l'écrit.
-      openClarifyModal(message);
+      // "brief" (Rédaction) : ce que Clarity a déjà comme infos, affiché
+      // au-dessus de la question pour montrer que ça avance à chaque tour.
+      openClarifyModal(message, data.brief || (data.partial && data.partial.brief) || "");
       await saveActionLog(agentName, instruction, "error");
       return;
      }
