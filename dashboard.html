@@ -12225,9 +12225,16 @@ function renderPlanningCalendarMonth() {
   list.style.justifyContent = "center";
   const listTop = list.getBoundingClientRect().top;
   const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  // 116px : marge de sécurité pour le menu du bas + son padding, déjà
-  // réservés par ailleurs via le padding-bottom de #main-planning.
-  const availableHeight = Math.max(200, viewportHeight - listTop - 116);
+  // Position réelle du haut du menu du bas (mesurée, pas devinée) : sa
+  // hauteur/position varie selon le mode (Safari normal vs app installée
+  // "standalone", qui a son propre padding pour la zone de sécurité iOS
+  // et n'est pas positionnée pareil — cf. règles body.is-standalone-ios
+  // .bottom-nav). Un nombre fixe (116px) ne correspondait qu'au mode
+  // navigateur classique, d'où le léger scroll qui persistait en app
+  // installée. 12px de marge en plus, au cas où.
+  const bottomNav = document.querySelector(".bottom-nav");
+  const bottomLimit = bottomNav ? bottomNav.getBoundingClientRect().top - 12 : viewportHeight - 116;
+  const availableHeight = Math.max(200, bottomLimit - listTop);
 
   const year = window.currentCalendarYear;
   const month = window.currentCalendarMonth;
