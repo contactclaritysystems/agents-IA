@@ -10759,6 +10759,7 @@ async function submitNewStyle() {
 // /styles), avec en plus la possibilité de modifier un style existant.
 let writingStylesCache = [];
 let editingWritingStyleKey = null; // null = création d'un nouveau style
+let editingWritingStyleId = null; // id (uuid) du style en cours de modification, si connu
 
 async function loadWritingStyles() {
   const list = document.getElementById("writing-styles-list");
@@ -10814,6 +10815,7 @@ function openWritingStyleEditor(key) {
 
   editingWritingStyleKey = key || null;
   const style = key ? writingStylesCache.find(function (s) { return s.key === key; }) : null;
+  editingWritingStyleId = style ? (style.id || null) : null;
 
   const titleEl = document.getElementById("writing-style-editor-title");
   if (titleEl) titleEl.textContent = style ? "Modifier ce style" : "Nouveau style";
@@ -10830,6 +10832,7 @@ function closeWritingStyleEditor() {
   const modal = document.getElementById("writing-style-editor-modal");
   if (modal) modal.style.display = "none";
   editingWritingStyleKey = null;
+  editingWritingStyleId = null;
 }
 
 async function saveWritingStyleEditor() {
@@ -10849,9 +10852,10 @@ async function saveWritingStyleEditor() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: currentUser.id,
-        // Envoyé en plus du contrat de base : si un style est en cours de
-        // modification, permet au backend de le mettre à jour en place
-        // plutôt que d'en créer un nouveau (à confirmer côté backend).
+        // Modification d'un style existant : id en priorité (clé stable,
+        // même si le nom change), key en repli. Absents tous les deux =
+        // création d'un nouveau style.
+        id: editingWritingStyleId || undefined,
         key: editingWritingStyleKey || undefined,
         label,
         example_message: example,
@@ -10861,8 +10865,10 @@ async function saveWritingStyleEditor() {
     });
     const data = await response.json();
 
-    if (!response.ok || !data.success || !data.style) {
-      showToast(data.message || "Impossible d'enregistrer ce style", "error");
+    // N'affiche "enregistré" que si le backend confirme un vrai succès
+    // (avec le style renvoyé) — jamais sur la base d'un simple 200 OK.
+    if (!response.ok || data.success !== true || !data.style) {
+      showToast((data && data.message) || "Impossible d'enregistrer ce style", "error");
       return;
     }
 
