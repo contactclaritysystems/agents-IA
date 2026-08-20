@@ -7534,6 +7534,40 @@ body[data-theme="light"]::after {
   padding: 20px 18px !important;
 }
 
+/* Ligne des initiales des jours (L M M J V S D), alignée sur la même
+   grille que les lignes de semaines (22px de marge à gauche pour le
+   numéro de semaine, puis 7 colonnes égales). */
+.planning-calendar-weekday-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 6px;
+}
+
+.planning-calendar-weekday-spacer {
+  width: 22px;
+  flex-shrink: 0;
+}
+
+.planning-calendar-weekday-days {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.planning-calendar-weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--clarity-text-tertiary);
+  text-transform: uppercase;
+}
+
+.planning-calendar-weekday.weekend {
+  color: var(--clarity-text-tertiary);
+  opacity: 0.7;
+}
+
 .planning-calendar-weeks {
   display: flex;
   flex-direction: column;
@@ -11654,6 +11688,12 @@ function renderPlanningCalendarMonth() {
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
         <div class="planning-calendar-month-label">${monthLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(1)">›</button>
+      </div>
+      <div class="planning-calendar-weekday-header">
+        <div class="planning-calendar-weekday-spacer"></div>
+        <div class="planning-calendar-weekday-days">
+          ${["L", "M", "M", "J", "V", "S", "D"].map((letter, i) => `<div class="planning-calendar-weekday${i >= 5 ? " weekend" : ""}">${letter}</div>`).join("")}
+        </div>
       </div>
       <div class="planning-calendar-weeks">${rowsHtml}</div>
       <div style="display:flex;gap:16px;margin-top:14px;font-size:12px;color:var(--clarity-text-tertiary);">
