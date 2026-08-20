@@ -9009,7 +9009,7 @@ const QUICK_TEXT_MODAL_CONFIG = {
   }
 };
 
-function openQuickTextModal(kind) {
+function openQuickTextModal(kind, continuing = false) {
   const config = QUICK_TEXT_MODAL_CONFIG[kind] || QUICK_TEXT_MODAL_CONFIG.redaction;
 
   let modal = document.getElementById("quick-text-modal");
@@ -9050,6 +9050,11 @@ function openQuickTextModal(kind) {
   }
 
   modal.dataset.kind = kind;
+  // "Poser une autre question" / relance depuis la popup de résultat :
+  // on garde l'historique de la conversation (pour "plus court", "plus
+  // professionnel"...) au lieu de repartir de zéro comme pour une
+  // première demande via le bouton d'action rapide.
+  modal.dataset.continuing = continuing ? "1" : "0";
   document.getElementById("quick-text-title").textContent = config.title;
   document.getElementById("quick-text-subtitle").textContent = config.subtitle;
   const textarea = document.getElementById("quick-text-instruction");
@@ -9075,6 +9080,8 @@ function closeQuickTextModal() {
 }
 
 function submitQuickText() {
+  const modal = document.getElementById("quick-text-modal");
+  const continuing = modal && modal.dataset.continuing === "1";
   const textarea = document.getElementById("quick-text-instruction");
   const text = (textarea ? textarea.value : "").trim();
   if (!text) {
@@ -9082,7 +9089,7 @@ function submitQuickText() {
     return;
   }
   closeQuickTextModal();
-  sendTypedInstruction(text, false);
+  sendTypedInstruction(text, continuing);
 }
 
 window.openQuickTextModal = openQuickTextModal;
@@ -10463,7 +10470,10 @@ async function sendTypedInstruction(instruction, continuing = false) {
       title,
       content,
       modalTitle: "Clarity",
-      onRelaunch: () => startOrchestratorDictation(true)
+      // "Poser une autre question" : rouvre la popup avec champ texte +
+      // micro (comme le bouton d'action rapide), pas le micro plein écran
+      // de l'orchestrateur qui renvoyait l'utilisateur à l'accueil.
+      onRelaunch: () => openQuickTextModal("assistant", true)
     });
 
     unlockAgentButtons();
@@ -15515,7 +15525,10 @@ console.log("MESSAGE =", message);
           content,
           modalTitle: config.modalTitle,
           modalSubtitle: config.modalSubtitle,
-          onRelaunch: () => startSimpleAgentDictation(config, true)
+          // Comme pour callSimpleAgent() : rouvre la popup texte + micro
+          // (bouton d'action rapide), pas le micro plein écran qui
+          // renvoyait l'utilisateur à l'accueil.
+          onRelaunch: () => openQuickTextModal(config.agent === "redaction" ? "redaction" : "assistant", true)
         });
       }
 
@@ -16475,7 +16488,9 @@ async function callSimpleAgent(
     title: data.title || "Réponse",
     content,
     modalTitle: "Clarity",
-    onRelaunch: () => startOrchestratorDictation(true)
+    // Rouvre la popup texte + micro (bouton d'action rapide), pas le
+    // micro plein écran de l'orchestrateur.
+    onRelaunch: () => openQuickTextModal(agentName === "redaction" ? "redaction" : "assistant", true)
   });
 }
 
