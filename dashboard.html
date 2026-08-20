@@ -10767,7 +10767,11 @@ async function loadWritingStyles() {
   list.innerHTML = '<div class="info-box">Chargement...</div>';
 
   try {
-    const response = await fetch(STYLES_API_URL + "/" + currentUser.id);
+    // cache:"no-store" + paramètre anti-cache : sans ça, le navigateur (ou
+    // un cache intermédiaire) peut renvoyer l'ancienne liste après une
+    // modification, donnant l'impression que rien n'a été enregistré alors
+    // que ça l'a peut-être bien été côté backend.
+    const response = await fetch(STYLES_API_URL + "/" + currentUser.id + "?t=" + Date.now(), { cache: "no-store" });
     const data = await response.json();
     writingStylesCache = (data && data.success && Array.isArray(data.styles)) ? data.styles : [];
     renderWritingStylesList();
