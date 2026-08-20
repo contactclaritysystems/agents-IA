@@ -2280,15 +2280,10 @@ body[data-theme="dark"] .detail-line strong {
   display: none !important;
 }
 
-#planning-detail.open {
-  display: block !important;
-  position: fixed;
-  inset: 0;
-  z-index: 500;
-  background: var(--clarity-page);
-  overflow-y: auto;
-  padding: 18px 18px 110px;
-}
+/* #planning-detail n'est plus un panneau plein écran "par-dessus" les
+   dossiers (les cartes RDV/Relances ont été supprimées) : c'est
+   maintenant le contenu permanent de l'onglet Planning. On ne le passe
+   plus en position:fixed/z-index:500 (ça cachait le menu du bas). */
 }
 
   #mail-contact-suggestions,
@@ -11584,8 +11579,11 @@ function renderPlanningCalendarMonth() {
   if (title) title.textContent = "Rendez-vous";
   // Rien à quitter tant qu'on est au niveau le plus haut du planning (plus
   // de dossiers "Rendez-vous"/"Relances" au-dessus) : le bouton "← Retour"
-  // ne réapparaît qu'en vue jour ou en édition d'un RDV/d'une relance.
-  if (header) header.style.display = "none";
+  // et le titre ne réapparaissent qu'en vue jour ou en édition d'un
+  // RDV/d'une relance. setProperty(..., "important") : garantit que ça
+  // gagne face à n'importe quelle règle CSS externe, même si une future
+  // règle spécifique à .section-header venait s'ajouter ailleurs.
+  if (header) header.style.setProperty("display", "none", "important");
 
   const year = window.currentCalendarYear;
   const month = window.currentCalendarMonth;
@@ -11644,7 +11642,7 @@ function renderPlanningCalendarMonth() {
   }
 
   list.innerHTML = `
-    <div class="agent-card planning-calendar-card">
+    <div class="agent-card planning-calendar-card" style="margin-top:8vh;">
       <div class="planning-calendar-nav">
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
         <div class="planning-calendar-month-label">${monthLabel}</div>
@@ -11657,14 +11655,6 @@ function renderPlanningCalendarMonth() {
       </div>
     </div>
   `;
-
-  // Calendrier centré verticalement sur la page (pas collé en haut) :
-  // #planning-list est déjà en display:flex/column, on l'étire sur toute
-  // la hauteur dispo et on centre son unique enfant (la carte calendrier).
-  // Remis à vide en vue jour/édition (voir openPlanningCalendarDay) pour ne
-  // pas centrer aussi ces autres contenus.
-  list.style.justifyContent = "center";
-  list.style.minHeight = "calc(100vh - 220px)";
 }
 
 function openPlanningCalendarDay(iso) {
@@ -11676,11 +11666,8 @@ function openPlanningCalendarDay(iso) {
   const header = document.getElementById("planning-detail-header");
   if (!list) return;
 
-  // On quitte la vue "carte centrée" du calendrier (voir
-  // renderPlanningCalendarMonth) : liste normale, plus de centrage, et le
-  // "← Retour" réapparaît (retour à la grille du mois).
-  list.style.justifyContent = "";
-  list.style.minHeight = "";
+  // On quitte la vue calendrier : le "← Retour" réapparaît (retour à la
+  // grille du mois).
   if (header) header.style.display = "";
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
