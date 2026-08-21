@@ -8294,6 +8294,14 @@ body[data-theme="light"]::after {
         <input class="field-input" id="contact-phone" placeholder="Ex : 06 12 34 56 78" oninput="toggleContactSave()" />
       </div>
 
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Style d'écriture (optionnel)</div>
+        <select class="field-input" id="contact-writing-style" oninput="toggleContactSave()">
+          <option value="">Aucun style particulier</option>
+        </select>
+        <div class="field-hint" style="margin-top:6px;font-size:12px;color:var(--clarity-text-tertiary);">Clarity l'utilisera automatiquement pour tous les mails envoyés à ce contact — rien à choisir à chaque fois.</div>
+      </div>
+
       <button class="save-btn" id="contact-save-page-btn" onclick="saveContactFromPage()" type="button">
         💾 Enregistrer le contact
       </button>
@@ -18975,6 +18983,7 @@ async function updateContact(id) {
         company,
         email,
         phone,
+        writing_style_key: document.getElementById("contact-writing-style")?.value || null,
         updated_at: new Date().toISOString()
       })
     }
@@ -18989,6 +18998,8 @@ async function updateContact(id) {
   document.getElementById("contact-company").value = "";
   document.getElementById("contact-email").value = "";
   document.getElementById("contact-phone").value = "";
+  const writingStyleSelectAfterSave = document.getElementById("contact-writing-style");
+  if (writingStyleSelectAfterSave) writingStyleSelectAfterSave.value = "";
 
   showToast("Contact modifié");
   await loadContacts();
@@ -19033,15 +19044,48 @@ function getContactFormState() {
     name: document.getElementById("contact-name")?.value || "",
     company: document.getElementById("contact-company")?.value || "",
     email: document.getElementById("contact-email")?.value || "",
-    phone: document.getElementById("contact-phone")?.value || ""
+    phone: document.getElementById("contact-phone")?.value || "",
+    writingStyle: document.getElementById("contact-writing-style")?.value || ""
   };
 }
 
-function setContactFormState(contact) {
+async function setContactFormState(contact) {
   document.getElementById("contact-name").value = contact.name || contact.full_name || "";
   document.getElementById("contact-company").value = contact.company || "";
   document.getElementById("contact-email").value = contact.email || "";
   document.getElementById("contact-phone").value = contact.phone || "";
+  // Attendu (await) : sans ça, contactInitialState (calculé juste après
+  // dans openContactPage) capture la liste déroulante encore vide/pas à
+  // jour, et le bouton Enregistrer s'activerait tout seul dès que le
+  // style se charge, sans que l'utilisateur ait rien changé.
+  await populateContactWritingStyleSelect(contact.writing_style_key || "");
+}
+
+// Remplit la liste déroulante "Style d'écriture" du formulaire contact à
+// partir des styles enregistrés dans Réglages (même source que le
+// sélecteur du formulaire de rédaction). selectedKey : style à
+// présélectionner (contact existant qui en a déjà un).
+async function populateContactWritingStyleSelect(selectedKey) {
+  const select = document.getElementById("contact-writing-style");
+  if (!select || !currentUser) return;
+
+  if (!writingStylesCache.length) {
+    try {
+      const response = await fetch(STYLES_API_URL + "/" + currentUser.id + "?t=" + Date.now(), { cache: "no-store" });
+      const data = await response.json();
+      writingStylesCache = (data && data.success && Array.isArray(data.styles)) ? data.styles : [];
+    } catch (e) {
+      // Pas grave si ça échoue : le champ reste sur "Aucun style particulier".
+    }
+  }
+
+  select.innerHTML =
+    '<option value="">Aucun style particulier</option>' +
+    writingStylesCache.map(function (s) {
+      return '<option value="' + s.key + '">' + (s.label || s.key).replace(/</g, "&lt;") + "</option>";
+    }).join("");
+
+  select.value = selectedKey || "";
 }
 
 // Le bouton Enregistrer (ajout ET modification de contact) doit rester
@@ -19062,7 +19106,7 @@ function toggleContactSave() {
   btn.style.opacity = "";
 }
   
-function openContactPage(contactId = null, fromAgent = false) {
+async function openContactPage(contactId = null, fromAgent = false) {
 
   const detailPage = document.getElementById("contact-detail-page");
 
@@ -19102,7 +19146,7 @@ selectedContactId = null;
       return;
     }
 
-    setContactFormState(contact);
+    await setContactFormState(contact);
 
     if (title) {
       title.textContent = "Modifier le contact";
@@ -19112,7 +19156,7 @@ selectedContactId = null;
       btn.innerHTML = "💾 Enregistrer les modifications";
     }
   } else {
-    setContactFormState({});
+    await setContactFormState({});
 
     if (title) {
       title.textContent = "Nouveau contact";
@@ -19161,7 +19205,16 @@ function closeContactPage() {
     const confirmLeave = confirm("Vous n’avez pas enregistré ce contact. Si vous quittez, les modifications seront perdues.");
     if (!confirmLeave) return;
 
-    setContactFormState(contactInitialState);
+    // Pas setContactFormState() ici : ses champs viennent d'un vrai
+    // contact (snake_case, ex. writing_style_key), alors que
+    // contactInitialState est l'état du FORMULAIRE (camelCase, voir
+    // getContactFormState) — remise à zéro directe des champs à la place.
+    document.getElementById("contact-name").value = contactInitialState.name || "";
+    document.getElementById("contact-company").value = contactInitialState.company || "";
+    document.getElementById("contact-email").value = contactInitialState.email || "";
+    document.getElementById("contact-phone").value = contactInitialState.phone || "";
+    const writingStyleSelectReset = document.getElementById("contact-writing-style");
+    if (writingStyleSelectReset) writingStyleSelectReset.value = contactInitialState.writingStyle || "";
   }
 
   editingContactId = null;
@@ -19405,7 +19458,8 @@ async function addContact() {
         full_name: fullName,
         company,
         email,
-        phone
+        phone,
+        writing_style_key: document.getElementById("contact-writing-style")?.value || null
       })
     }
   );
@@ -19421,6 +19475,8 @@ async function addContact() {
   document.getElementById("contact-company").value = "";
   document.getElementById("contact-email").value = "";
   document.getElementById("contact-phone").value = "";
+  const writingStyleSelectAfterSave = document.getElementById("contact-writing-style");
+  if (writingStyleSelectAfterSave) writingStyleSelectAfterSave.value = "";
 
   showToast("Contact ajouté");
 
