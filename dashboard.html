@@ -7644,6 +7644,58 @@ body[data-theme="light"]::after {
   font-weight: 800;
   color: var(--clarity-text);
   text-transform: capitalize;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 9px;
+  transition: background var(--clarity-duration) var(--clarity-ease);
+}
+
+.planning-calendar-month-label:hover {
+  background: var(--clarity-surface-soft);
+}
+
+.planning-calendar-month-chevron {
+  font-size: 10px;
+  color: var(--clarity-text-tertiary);
+}
+
+/* Sous-page "aller à un mois" : réutilise le moule .custom-date-popover
+   (même style flottant + même verrou de fermeture au clic extérieur /
+   scroll / resize, déjà géré globalement pour cette classe) plutôt que
+   d'inventer un nouveau mécanisme d'ouverture/fermeture. */
+.planning-month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  min-width: 220px;
+}
+
+.planning-month-picker-btn {
+  padding: 9px 4px;
+  border-radius: 9px;
+  border: none;
+  background: var(--clarity-surface-soft);
+  color: var(--clarity-text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: capitalize;
+  font-family: inherit;
+}
+
+.planning-month-picker-btn:hover {
+  background: var(--clarity-surface-hover);
+}
+
+.planning-month-picker-btn.active {
+  background: var(--dark, #141416);
+  color: var(--clarity-primary-text, #fff);
 }
 
 /* Style "liste de semaines" (comme l'app Calendrier iOS) : une ligne par
@@ -12445,6 +12497,80 @@ function navigatePlanningCalendarMonth(delta) {
   renderPlanningCalendarMonth();
 }
 
+const PLANNING_MONTH_PICKER_LABELS = [
+  "Janv.", "Févr.", "Mars", "Avr.", "Mai", "Juin",
+  "Juil.", "Août", "Sept.", "Oct.", "Nov.", "Déc."
+];
+
+// Sélecteur "aller à un mois" (bande déroulante ouverte en cliquant sur le
+// libellé du mois) : réutilise le moule .custom-date-popover (même
+// position:fixed + fermeture au clic extérieur/scroll/resize déjà gérée
+// globalement pour cette classe — voir closeAllCustomPickers) plutôt que
+// d'inventer un nouveau mécanisme.
+function ensurePlanningMonthPickerPopover() {
+  let popover = document.getElementById("planning-month-picker-popover");
+  if (!popover) {
+    popover = document.createElement("div");
+    popover.className = "custom-date-popover";
+    popover.id = "planning-month-picker-popover";
+    document.body.appendChild(popover);
+  }
+  return popover;
+}
+
+function renderPlanningMonthPicker(viewYear) {
+  const popover = ensurePlanningMonthPickerPopover();
+  const selectedYear = window.currentCalendarYear;
+  const selectedMonth = window.currentCalendarMonth;
+
+  let html = '<div class="custom-date-nav">'
+    + '<button type="button" class="custom-date-nav-btn" data-picker-year="-1">‹</button>'
+    + '<div class="custom-date-month-label">' + viewYear + '</div>'
+    + '<button type="button" class="custom-date-nav-btn" data-picker-year="1">›</button>'
+    + '</div>'
+    + '<div class="planning-month-picker-grid">'
+    + PLANNING_MONTH_PICKER_LABELS.map((label, i) => {
+        const active = viewYear === selectedYear && i === selectedMonth;
+        return '<button type="button" class="planning-month-picker-btn' + (active ? ' active' : '')
+          + '" data-picker-month="' + i + '">' + label + '</button>';
+      }).join("")
+    + '</div>';
+  popover.innerHTML = html;
+
+  const anchor = document.getElementById("planning-calendar-month-btn");
+
+  popover.querySelector('[data-picker-year="-1"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    renderPlanningMonthPicker(viewYear - 1);
+    if (anchor) positionCustomPopover(popover, anchor);
+  });
+  popover.querySelector('[data-picker-year="1"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    renderPlanningMonthPicker(viewYear + 1);
+    if (anchor) positionCustomPopover(popover, anchor);
+  });
+  popover.querySelectorAll("[data-picker-month]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      window.currentCalendarYear = viewYear;
+      window.currentCalendarMonth = parseInt(btn.dataset.pickerMonth, 10);
+      popover.classList.remove("open");
+      renderPlanningCalendarMonth();
+    });
+  });
+}
+
+function togglePlanningMonthPicker(e) {
+  if (e) e.stopPropagation();
+  const popover = ensurePlanningMonthPickerPopover();
+  const wasOpen = popover.classList.contains("open");
+  closeAllCustomPickers();
+  if (wasOpen) return;
+  renderPlanningMonthPicker(window.currentCalendarYear);
+  const anchor = document.getElementById("planning-calendar-month-btn");
+  if (anchor) positionCustomPopover(popover, anchor);
+}
+
 function planningCalendarEventsForDay(iso) {
   const appts = (currentAppointments || []).filter(a => a.appointment_date === iso);
   const relances = (currentFollowUps || []).filter(r => r.reminder_date === iso);
@@ -12603,7 +12729,7 @@ function renderPlanningCalendarMonth() {
     <div class="agent-card planning-calendar-card">
       <div class="planning-calendar-nav">
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
-        <div class="planning-calendar-month-label">${monthLabel}</div>
+        <button type="button" class="planning-calendar-month-label" id="planning-calendar-month-btn" onclick="togglePlanningMonthPicker(event)">${monthLabel} <span class="planning-calendar-month-chevron">▾</span></button>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(1)">›</button>
       </div>
       <div class="planning-calendar-weekday-header">
