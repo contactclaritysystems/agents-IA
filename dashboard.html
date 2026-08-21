@@ -5833,6 +5833,12 @@ body[data-theme="corail"] .loader-halo {
     margin-right: auto !important;
   }
 
+  #main-settings .settings-page-block {
+    max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   #main-settings .settings-topbar {
     position: relative !important;
     flex-direction: row !important;
@@ -7805,10 +7811,10 @@ body[data-theme="light"]::after {
 
 #main-settings .settings-group {
   background: rgba(var(--clarity-glass-rgb),.78);
-  border: 1px solid var(--line);
+  border: 1px solid var(--clarity-border);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--clarity-shadow-sm);
 }
 
 #main-settings .settings-row {
@@ -7816,7 +7822,7 @@ body[data-theme="light"]::after {
   align-items: center;
   gap: 12px;
   padding: 13px 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--clarity-border);
   min-height: 52px;
   position: relative;
 }
@@ -7848,17 +7854,17 @@ body[data-theme="light"]::after {
 
 #main-settings .settings-row-icon-blue { background: rgba(59,130,246,.16); }
 #main-settings .settings-row-icon-yellow { background: rgba(245,158,11,.18); }
-#main-settings .settings-row-icon-purple { background: var(--surface-soft); }
+#main-settings .settings-row-icon-purple { background: var(--clarity-surface-soft); }
 #main-settings .settings-row-icon-violet { background: rgba(168,85,247,.16); }
 #main-settings .settings-row-icon-amber { background: rgba(245,158,11,.18); }
-#main-settings .settings-row-icon-green { background: var(--success-bg); }
+#main-settings .settings-row-icon-green { background: var(--clarity-success-bg); }
 
 #main-settings .settings-row-title {
   flex: 1;
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text);
+  color: var(--clarity-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7866,7 +7872,7 @@ body[data-theme="light"]::after {
 
 #main-settings .settings-row-value {
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--clarity-text-secondary);
   flex-shrink: 0;
   max-width: 140px;
   white-space: nowrap;
@@ -7881,7 +7887,7 @@ body[data-theme="light"]::after {
 }
 
 #main-settings #profil-stat-card.needs-attention .settings-row-value {
-  color: var(--warning);
+  color: var(--clarity-warning);
 }
 
 #main-settings .settings-theme-dots {
@@ -7897,7 +7903,7 @@ body[data-theme="light"]::after {
   border: 2px solid transparent;
   padding: 0;
   cursor: pointer;
-  box-shadow: 0 0 0 1px var(--line-strong) inset;
+  box-shadow: 0 0 0 1px var(--clarity-border-hover) inset;
 }
 
 #main-settings .settings-theme-dot.active {
@@ -7915,7 +7921,7 @@ body[data-theme="light"]::after {
   border-radius: 999px;
   border: none;
   padding: 3px;
-  background: var(--line-strong);
+  background: var(--clarity-border-hover);
   flex-shrink: 0;
   cursor: pointer;
   display: flex;
