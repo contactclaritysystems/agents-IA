@@ -8706,15 +8706,7 @@ body[data-theme="light"]::after {
       </div>
       <div class="field-group">
         <div class="field-label">Exemple d'un message écrit ainsi</div>
-        <textarea class="field-input" id="redaction-new-style-example" rows="3" placeholder="Ex : Hé cous', tu viens manger ce soir ?"></textarea>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Formule d'ouverture (optionnel)</div>
-        <input class="field-input" type="text" id="redaction-new-style-opening" placeholder="Ex : Salut" autocomplete="off" />
-      </div>
-      <div class="field-group">
-        <div class="field-label">Formule de fin (optionnel)</div>
-        <input class="field-input" type="text" id="redaction-new-style-closing" placeholder="Ex : À plus" autocomplete="off" />
+        <textarea class="field-input" id="redaction-new-style-example" rows="4" placeholder="Ex : Hé cous', tu viens manger ce soir ? À plus !"></textarea>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="sheet-btn" type="button" style="flex:1;justify-content:center;" onclick="cancelNewStyle()">Annuler</button>
@@ -8748,15 +8740,8 @@ body[data-theme="light"]::after {
     </div>
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label">Exemple d'un message écrit ainsi</div>
-      <textarea class="field-input" id="writing-style-editor-example" rows="3" placeholder="Ex : Hé cous', tu viens manger ce soir ?" oninput="toggleWritingStyleEditorSave()"></textarea>
-    </div>
-    <div class="field-group" style="margin-top:12px;">
-      <div class="field-label">Formule d'ouverture (optionnel)</div>
-      <input class="field-input" type="text" id="writing-style-editor-opening" placeholder="Ex : Salut" autocomplete="off" oninput="toggleWritingStyleEditorSave()" />
-    </div>
-    <div class="field-group" style="margin-top:12px;">
-      <div class="field-label">Formule de fin (optionnel)</div>
-      <input class="field-input" type="text" id="writing-style-editor-closing" placeholder="Ex : À plus" autocomplete="off" oninput="toggleWritingStyleEditorSave()" />
+      <textarea class="field-input" id="writing-style-editor-example" rows="4" placeholder="Ex : Hé cous', tu viens manger ce soir ? À plus !" oninput="toggleWritingStyleEditorSave()"></textarea>
+      <div class="field-hint" style="margin-top:6px;font-size:12px;color:var(--clarity-text-tertiary);">Écrivez l'exemple tel que Clarity doit s'en inspirer, du début à la fin (formule d'ouverture et de fin comprises) : un seul texte de référence, pas de contradiction possible.</div>
     </div>
 
     <button class="save-btn" type="button" id="writing-style-editor-save-btn" style="width:100%;margin-top:14px;" onclick="saveWritingStyleEditor()" disabled>
@@ -10732,8 +10717,6 @@ async function submitNewStyle() {
 
   const label = (document.getElementById("redaction-new-style-label")?.value || "").trim();
   const example = (document.getElementById("redaction-new-style-example")?.value || "").trim();
-  const opening = (document.getElementById("redaction-new-style-opening")?.value || "").trim();
-  const closing = (document.getElementById("redaction-new-style-closing")?.value || "").trim();
 
   if (!label || !example) {
     showToast("Indiquez au moins un nom et un exemple", "error");
@@ -10747,9 +10730,7 @@ async function submitNewStyle() {
       body: JSON.stringify({
         user_id: currentUser.id,
         label,
-        example_message: example,
-        opening,
-        closing
+        example_message: example
       })
     });
     const data = await response.json();
@@ -10779,8 +10760,6 @@ async function submitNewStyle() {
 
     document.getElementById("redaction-new-style-label").value = "";
     document.getElementById("redaction-new-style-example").value = "";
-    document.getElementById("redaction-new-style-opening").value = "";
-    document.getElementById("redaction-new-style-closing").value = "";
 
     showToast("Style « " + (style.label || label) + " » créé", "success");
   } catch (e) {
@@ -10861,19 +10840,19 @@ function openWritingStyleEditor(key) {
   if (titleEl) titleEl.textContent = style ? "Modifier ce style" : "Nouveau style";
 
   const labelVal = style ? (style.label || "") : "";
+  // Un seul champ fait foi pour le ton (voir discussion : les anciens
+  // champs "opening"/"closing" séparés pouvaient contredire l'exemple,
+  // ambiguïté que le backend ne pouvait pas trancher). On garde
+  // désormais uniquement l'exemple complet (ouverture et fin comprises).
   const exampleVal = style ? (style.example_message || "") : "";
-  const openingVal = style ? (style.opening || "") : "";
-  const closingVal = style ? (style.closing || "") : "";
 
   document.getElementById("writing-style-editor-label").value = labelVal;
   document.getElementById("writing-style-editor-example").value = exampleVal;
-  document.getElementById("writing-style-editor-opening").value = openingVal;
-  document.getElementById("writing-style-editor-closing").value = closingVal;
 
   // Mémorise l'état de départ pour détecter un vrai changement (voir
   // toggleWritingStyleEditorSave) : le bouton Enregistrer doit rester
   // grisé tant que rien n'a été modifié.
-  writingStyleEditorInitial = { label: labelVal, example: exampleVal, opening: openingVal, closing: closingVal };
+  writingStyleEditorInitial = { label: labelVal, example: exampleVal };
 
   modal.style.display = "flex";
   toggleWritingStyleEditorSave();
@@ -10885,8 +10864,6 @@ function toggleWritingStyleEditorSave() {
 
   const label = document.getElementById("writing-style-editor-label")?.value || "";
   const example = document.getElementById("writing-style-editor-example")?.value || "";
-  const opening = document.getElementById("writing-style-editor-opening")?.value || "";
-  const closing = document.getElementById("writing-style-editor-closing")?.value || "";
 
   const requiredFilled = label.trim() && example.trim();
   // Pour un nouveau style (rien à comparer), tout remplissage valide
@@ -10894,9 +10871,7 @@ function toggleWritingStyleEditorSave() {
   // ait réellement changé par rapport à l'état de départ.
   const hasChanges = !editingWritingStyleKey || (
     label !== writingStyleEditorInitial.label ||
-    example !== writingStyleEditorInitial.example ||
-    opening !== writingStyleEditorInitial.opening ||
-    closing !== writingStyleEditorInitial.closing
+    example !== writingStyleEditorInitial.example
   );
 
   const canSave = !!(requiredFilled && hasChanges);
@@ -10914,8 +10889,6 @@ function closeWritingStyleEditor() {
 async function saveWritingStyleEditor() {
   const label = (document.getElementById("writing-style-editor-label")?.value || "").trim();
   const example = (document.getElementById("writing-style-editor-example")?.value || "").trim();
-  const opening = (document.getElementById("writing-style-editor-opening")?.value || "").trim();
-  const closing = (document.getElementById("writing-style-editor-closing")?.value || "").trim();
 
   if (!label || !example) {
     showToast("Indiquez au moins un nom et un exemple", "error");
@@ -10934,9 +10907,10 @@ async function saveWritingStyleEditor() {
         id: editingWritingStyleId || undefined,
         key: editingWritingStyleKey || undefined,
         label,
-        example_message: example,
-        opening,
-        closing
+        // opening/closing retirés (voir Grok) : un seul champ
+        // "example_message" fait foi, ouverture et fin comprises,
+        // pour éviter toute contradiction avec des champs séparés.
+        example_message: example
       })
     });
     const data = await response.json();
