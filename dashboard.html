@@ -8744,22 +8744,22 @@ body[data-theme="light"]::after {
 
     <div class="field-group" style="margin-top:14px;">
       <div class="field-label">Nom</div>
-      <input class="field-input" type="text" id="writing-style-editor-label" placeholder="Ex : Cousin" autocomplete="off" />
+      <input class="field-input" type="text" id="writing-style-editor-label" placeholder="Ex : Cousin" autocomplete="off" oninput="toggleWritingStyleEditorSave()" />
     </div>
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label">Exemple d'un message écrit ainsi</div>
-      <textarea class="field-input" id="writing-style-editor-example" rows="3" placeholder="Ex : Hé cous', tu viens manger ce soir ?"></textarea>
+      <textarea class="field-input" id="writing-style-editor-example" rows="3" placeholder="Ex : Hé cous', tu viens manger ce soir ?" oninput="toggleWritingStyleEditorSave()"></textarea>
     </div>
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label">Formule d'ouverture (optionnel)</div>
-      <input class="field-input" type="text" id="writing-style-editor-opening" placeholder="Ex : Salut" autocomplete="off" />
+      <input class="field-input" type="text" id="writing-style-editor-opening" placeholder="Ex : Salut" autocomplete="off" oninput="toggleWritingStyleEditorSave()" />
     </div>
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label">Formule de fin (optionnel)</div>
-      <input class="field-input" type="text" id="writing-style-editor-closing" placeholder="Ex : À plus" autocomplete="off" />
+      <input class="field-input" type="text" id="writing-style-editor-closing" placeholder="Ex : À plus" autocomplete="off" oninput="toggleWritingStyleEditorSave()" />
     </div>
 
-    <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="saveWritingStyleEditor()">
+    <button class="save-btn" type="button" id="writing-style-editor-save-btn" style="width:100%;margin-top:14px;" onclick="saveWritingStyleEditor()" disabled>
       💾 Enregistrer
     </button>
     <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeWritingStyleEditor()">
@@ -10796,6 +10796,10 @@ async function submitNewStyle() {
 let writingStylesCache = [];
 let editingWritingStyleKey = null; // null = création d'un nouveau style
 let editingWritingStyleId = null; // id (uuid) du style en cours de modification, si connu
+// Valeurs de départ des champs à l'ouverture du popup (vides pour un
+// nouveau style) : sert à savoir si l'utilisateur a réellement modifié
+// quelque chose, pour activer/désactiver le bouton Enregistrer.
+let writingStyleEditorInitial = { label: "", example: "", opening: "", closing: "" };
 
 async function loadWritingStyles() {
   const list = document.getElementById("writing-styles-list");
@@ -10856,12 +10860,48 @@ function openWritingStyleEditor(key) {
   const titleEl = document.getElementById("writing-style-editor-title");
   if (titleEl) titleEl.textContent = style ? "Modifier ce style" : "Nouveau style";
 
-  document.getElementById("writing-style-editor-label").value = style ? (style.label || "") : "";
-  document.getElementById("writing-style-editor-example").value = style ? (style.example_message || "") : "";
-  document.getElementById("writing-style-editor-opening").value = style ? (style.opening || "") : "";
-  document.getElementById("writing-style-editor-closing").value = style ? (style.closing || "") : "";
+  const labelVal = style ? (style.label || "") : "";
+  const exampleVal = style ? (style.example_message || "") : "";
+  const openingVal = style ? (style.opening || "") : "";
+  const closingVal = style ? (style.closing || "") : "";
+
+  document.getElementById("writing-style-editor-label").value = labelVal;
+  document.getElementById("writing-style-editor-example").value = exampleVal;
+  document.getElementById("writing-style-editor-opening").value = openingVal;
+  document.getElementById("writing-style-editor-closing").value = closingVal;
+
+  // Mémorise l'état de départ pour détecter un vrai changement (voir
+  // toggleWritingStyleEditorSave) : le bouton Enregistrer doit rester
+  // grisé tant que rien n'a été modifié.
+  writingStyleEditorInitial = { label: labelVal, example: exampleVal, opening: openingVal, closing: closingVal };
 
   modal.style.display = "flex";
+  toggleWritingStyleEditorSave();
+}
+
+function toggleWritingStyleEditorSave() {
+  const btn = document.getElementById("writing-style-editor-save-btn");
+  if (!btn) return;
+
+  const label = document.getElementById("writing-style-editor-label")?.value || "";
+  const example = document.getElementById("writing-style-editor-example")?.value || "";
+  const opening = document.getElementById("writing-style-editor-opening")?.value || "";
+  const closing = document.getElementById("writing-style-editor-closing")?.value || "";
+
+  const requiredFilled = label.trim() && example.trim();
+  // Pour un nouveau style (rien à comparer), tout remplissage valide
+  // suffit. Pour une modification, il faut en plus que quelque chose
+  // ait réellement changé par rapport à l'état de départ.
+  const hasChanges = !editingWritingStyleKey || (
+    label !== writingStyleEditorInitial.label ||
+    example !== writingStyleEditorInitial.example ||
+    opening !== writingStyleEditorInitial.opening ||
+    closing !== writingStyleEditorInitial.closing
+  );
+
+  const canSave = !!(requiredFilled && hasChanges);
+  btn.disabled = !canSave;
+  btn.style.opacity = canSave ? "1" : ".5";
 }
 
 function closeWritingStyleEditor() {
