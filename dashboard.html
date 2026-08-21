@@ -5839,6 +5839,15 @@ body[data-theme="corail"] .loader-halo {
     margin-right: auto !important;
   }
 
+  #writing-styles-mobile-section .settings-subpage-intro,
+  #writing-styles-mobile-section .settings-subpage-tip,
+  #writing-styles-mobile-section #writing-styles-list,
+  #writing-styles-mobile-section > .sheet-btn {
+    max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   #main-settings .settings-topbar {
     position: relative !important;
     flex-direction: row !important;
@@ -7950,6 +7959,23 @@ body[data-theme="light"]::after {
   display: none !important;
 }
 
+/* Styles d'écriture (sous-page) : texte d'intro léger, sans encadré
+   ("bloc" trop lourd visuellement) — juste un paragraphe et une
+   astuce discrète au-dessus de la liste. */
+#writing-styles-mobile-section .settings-subpage-intro {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--clarity-text-secondary);
+  margin: 0 2px 10px;
+}
+
+#writing-styles-mobile-section .settings-subpage-tip {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--clarity-text-tertiary);
+  margin: 0 2px 18px;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -8194,15 +8220,15 @@ body[data-theme="light"]::after {
     <div class="section-title">Styles d'écriture</div>
   </div>
 
-  <div class="gmail-section" style="display:block;">
-    <div class="gmail-desc" style="margin-bottom:16px;">
-      Enregistrez à l'avance vos formules pour chaque type de personne (famille, collègue, patron...) : Clarity les réutilise en rédigeant, sans avoir à tout réexpliquer à chaque fois.
-      <br><br>
-      <strong>Astuce :</strong> pour que Clarity comprenne bien la différence de ton, écrivez le même type de message (par exemple confirmer un rendez-vous) à chaque fois, juste avec le ton propre à cette personne. Ex : « Bonjour, je vous confirme notre rendez-vous de demain à 14h. » pour un patron/client, et « Coucou, on se voit bien demain à 14h ? » pour un proche — même situation, ton différent.
-    </div>
-    <div id="writing-styles-list" style="display:flex;flex-direction:column;gap:10px;">
-      <div class="info-box">Chargement...</div>
-    </div>
+  <p class="settings-subpage-intro">
+    Enregistrez vos formules pour chaque type de personne (famille, collègue, patron...) : Clarity les réutilise en rédigeant, sans avoir à tout réexpliquer.
+  </p>
+  <p class="settings-subpage-tip">
+    💡 Gardez la même situation à chaque style (ex. confirmer un rendez-vous) — seul le ton doit changer d'une personne à l'autre.
+  </p>
+
+  <div id="writing-styles-list" style="display:flex;flex-direction:column;gap:10px;">
+    <div class="info-box">Chargement...</div>
   </div>
 
   <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="openWritingStyleEditor(null)">
