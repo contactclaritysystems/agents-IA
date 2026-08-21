@@ -876,7 +876,17 @@ select.field-input {
 }
 
 .mail-choice-box {
-  position: absolute;
+  /* position:fixed (pas absolute) : le verrou de scroll (voir JS,
+     recomputeClarityScrollLock) passe <body> en position:fixed pendant
+     qu'un popup est ouvert. Avec position:absolute, le popup se
+     centrait alors par rapport à CE body décalé (top:-scrollY) au lieu
+     de l'écran — d'où une position qui dépendait de l'endroit où on
+     avait scrollé avant d'ouvrir le popup, jamais vraiment centrée.
+     position:fixed ignore les ancêtres simplement position:fixed (il
+     ne regarde que transform/filter/perspective/will-change) et se
+     positionne donc directement par rapport à l'écran réel, quoi que
+     fasse <body>. */
+  position: fixed;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
