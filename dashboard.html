@@ -6631,9 +6631,20 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
+  /* #planning-detail retiré de cette liste : contrairement à
+     #history-detail et #contact-mobile-section (toujours des panneaux
+     plein écran position:fixed, qui échappent donc au padding de
+     #main-planning et ont besoin de leur propre marge de sécurité),
+     #planning-detail est redevenu un élément normal du flux DOM,
+     enfant de #main-planning — qui a DÉJÀ sa propre règle de marge de
+     sécurité juste au-dessus (body.is-standalone-ios #main-planning).
+     Cette règle ici doublait donc cette marge en haut de la page
+     Planning (uniquement en app installée), créant un grand vide sous
+     le titre — visible aussi bien en vue jour qu'en vue calendrier
+     (le "trop bas" du calendrier n'était donc pas un bug de centrage :
+     le point de départ (listTop) était simplement anormalement bas). */
   body.is-standalone-ios #history-detail.open,
-  body.is-standalone-ios #contact-mobile-section.open,
-  body.is-standalone-ios #planning-detail.open {
+  body.is-standalone-ios #contact-mobile-section.open {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
