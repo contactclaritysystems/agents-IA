@@ -9420,9 +9420,49 @@ function showHelpActionExample(index) {
   if (soonBadge) soonBadge.style.display = action.ready ? "none" : "inline-block";
 }
 
+// "Essayer maintenant" (popup d'aide) : doit ouvrir le MÊME popup que le
+// bouton "Actions rapides" correspondant sur l'accueil (au lieu d'activer
+// le micro du champ principal, qui renvoyait l'utilisateur à l'accueil
+// sans rien ouvrir de concret). Mail/Planning/Relance sont désormais des
+// formulaires structurés (voir openQuickPlanningModal) : rien à
+// pré-remplir, on ouvre juste le bon popup vide. Rédaction/Assistant
+// gardent un simple champ texte libre : on y pré-remplit l'exemple
+// affiché, pour vraiment "essayer" en un clic plutôt que de repartir
+// d'une page blanche.
 function tryHelpActionsExample() {
+  const action = HELP_ACTIONS[helpActionsCurrentIndex];
   closeHelpActionsModal();
-  startOrchestratorDictation();
+  if (!action) return;
+
+  switch (action.id) {
+    case "mail":
+      openQuickMailCompose();
+      break;
+    case "redaction":
+    case "assistant":
+      openQuickTextModal(action.id);
+      break;
+    case "planning":
+      openQuickPlanningModal();
+      break;
+    case "relance":
+      openQuickReminderModal();
+      break;
+    default:
+      startOrchestratorDictation();
+      return;
+  }
+
+  if (action.id === "redaction" || action.id === "assistant") {
+    const examples = Array.isArray(action.examples) ? action.examples : (action.example ? [action.example] : []);
+    const exampleText = examples[0] || "";
+    if (exampleText) {
+      setTimeout(() => {
+        const textarea = document.getElementById("quick-text-instruction");
+        if (textarea) textarea.value = exampleText;
+      }, 80);
+    }
+  }
 }
 
 // Boutons "Actions rapides" de l'accueil : un raccourci par agent connecté
