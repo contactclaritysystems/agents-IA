@@ -1964,11 +1964,13 @@ select.field-input {
     background: rgba(0,0,0,.045) !important;
   }
 
-  #profil-mobile-section {
+  #profil-mobile-section,
+  #writing-styles-mobile-section {
     display: none;
   }
 
-  #profil-mobile-section.open {
+  #profil-mobile-section.open,
+  #writing-styles-mobile-section.open {
     display: block;
     position: fixed;
     inset: 0;
@@ -1990,14 +1992,16 @@ select.field-input {
      (14px) empilé sous le bouton "← Retour" : trop petit, sans
      caractère. On reprend le même patron que Historique/Planning
      en mobile (bouton + titre en ligne, titre plus grand et marqué). */
-  #profil-mobile-section .mobile-subpage-header {
+  #profil-mobile-section .mobile-subpage-header,
+  #writing-styles-mobile-section .mobile-subpage-header {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 12px !important;
   }
 
-  #profil-mobile-section .mobile-subpage-header .sheet-btn {
+  #profil-mobile-section .mobile-subpage-header .sheet-btn,
+  #writing-styles-mobile-section .mobile-subpage-header .sheet-btn {
     width: auto !important;
     height: 34px !important;
     padding: 0 12px !important;
@@ -2006,14 +2010,16 @@ select.field-input {
     flex-shrink: 0 !important;
   }
 
-  #profil-mobile-section .mobile-subpage-header .section-title {
+  #profil-mobile-section .mobile-subpage-header .section-title,
+  #writing-styles-mobile-section .mobile-subpage-header .section-title {
     font-size: 20px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
     margin: 0 !important;
   }
 
-  #profil-mobile-section .gmail-section {
+  #profil-mobile-section .gmail-section,
+  #writing-styles-mobile-section .gmail-section {
     margin: 0 !important;
   }
 
@@ -5144,11 +5150,13 @@ body,
    icône du plan garantie visible
    ========================================================= */
 
-#profil-mobile-section {
+#profil-mobile-section,
+#writing-styles-mobile-section {
   display: none !important;
 }
 
-#profil-mobile-section.open {
+#profil-mobile-section.open,
+#writing-styles-mobile-section.open {
   display: block !important;
   position: fixed !important;
   inset: 0;
@@ -5315,7 +5323,8 @@ a:hover {
 }
 
 /* Pages plein écran (Profil) : contenu limité comme le reste du site */
-#profil-mobile-section.open {
+#profil-mobile-section.open,
+#writing-styles-mobile-section.open {
   padding-left: max(18px, calc((100% - 900px) / 2)) !important;
   padding-right: max(18px, calc((100% - 900px) / 2)) !important;
 }
@@ -5856,7 +5865,8 @@ body[data-theme="corail"] .loader-halo {
    ========================================================= */
 
 @media (min-width: 601px) {
-  #profil-mobile-section .mobile-subpage-header {
+  #profil-mobile-section .mobile-subpage-header,
+  #writing-styles-mobile-section .mobile-subpage-header {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -5866,7 +5876,8 @@ body[data-theme="corail"] .loader-halo {
     margin-right: auto !important;
   }
 
-  #profil-mobile-section .mobile-subpage-header .section-title {
+  #profil-mobile-section .mobile-subpage-header .section-title,
+  #writing-styles-mobile-section .mobile-subpage-header .section-title {
     font-size: 21px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
@@ -5876,7 +5887,8 @@ body[data-theme="corail"] .loader-halo {
 
 @media (min-width: 901px) {
   #profil-mobile-section .mobile-subpage-header .section-title,
-  #contact-mobile-section.open .mobile-subpage-header .section-title {
+  #contact-mobile-section.open .mobile-subpage-header .section-title,
+  #writing-styles-mobile-section .mobile-subpage-header .section-title {
     font-size: 26px !important;
   }
 }
@@ -5889,7 +5901,8 @@ body[data-theme="corail"] .loader-halo {
    ========================================================= */
 
 @media (min-width: 601px) {
-  #profil-mobile-section.open {
+  #profil-mobile-section.open,
+  #writing-styles-mobile-section.open {
     position: static !important;
     inset: auto !important;
     z-index: auto !important;
@@ -6658,7 +6671,8 @@ body[data-theme="dark"] .clarity-hero {
     padding-top: calc(18px + env(safe-area-inset-top)) !important;
   }
 
-  body.is-standalone-ios #profil-mobile-section.open {
+  body.is-standalone-ios #profil-mobile-section.open,
+  body.is-standalone-ios #writing-styles-mobile-section.open {
     padding-top: calc(24px + env(safe-area-inset-top)) !important;
   }
 
@@ -7763,6 +7777,173 @@ body[data-theme="light"]::after {
   }
 }
 
+/* =========================================================
+   CLARITY SYSTEMS — Réglages : refonte "premium" en groupes
+   compacts (rangées avec icône/titre/valeur/chevron) au lieu
+   de gros pavés séparés (.gmail-section) empilés verticalement.
+   Tout est scopé à #main-settings pour zéro impact sur les
+   autres pages. Les id historiques (gmail-status-label,
+   profil-status-label, subscription-status-label,
+   profil-stat-card, gmail-mobile-card, theme-settings-block,
+   voice-settings-block) sont conservés à l'identique sur les
+   nouvelles rangées pour que tout le JS existant continue de
+   fonctionner sans modification.
+   ========================================================= */
+
+#main-settings .settings-group-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--clarity-text-tertiary);
+  margin: 22px 4px 8px;
+}
+
+#main-settings .settings-group-label:first-of-type {
+  margin-top: 4px;
+}
+
+#main-settings .settings-group {
+  background: rgba(var(--clarity-glass-rgb),.78);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+#main-settings .settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  min-height: 52px;
+  position: relative;
+}
+
+#main-settings .settings-group .settings-row:last-child {
+  border-bottom: none;
+}
+
+#main-settings .settings-row[onclick] {
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+#main-settings .settings-row[onclick]:hover {
+  background: rgba(var(--clarity-glass-rgb),.5);
+}
+
+#main-settings .settings-row-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+#main-settings .settings-row-icon-blue { background: rgba(59,130,246,.16); }
+#main-settings .settings-row-icon-yellow { background: rgba(245,158,11,.18); }
+#main-settings .settings-row-icon-purple { background: var(--surface-soft); }
+#main-settings .settings-row-icon-violet { background: rgba(168,85,247,.16); }
+#main-settings .settings-row-icon-amber { background: rgba(245,158,11,.18); }
+#main-settings .settings-row-icon-green { background: var(--success-bg); }
+
+#main-settings .settings-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#main-settings .settings-row-value {
+  font-size: 12.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+  max-width: 140px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#main-settings .settings-row-chevron {
+  color: var(--clarity-text-tertiary);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+#main-settings #profil-stat-card.needs-attention .settings-row-value {
+  color: var(--warning);
+}
+
+#main-settings .settings-theme-dots {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#main-settings .settings-theme-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--line-strong) inset;
+}
+
+#main-settings .settings-theme-dot.active {
+  border-color: var(--clarity-tag-blue, #3b82f6);
+}
+
+#main-settings .settings-theme-dot-light { background: #ffffff; }
+#main-settings .settings-theme-dot-dark { background: #17181c; }
+#main-settings .settings-theme-dot-slate { background: #4d5560; }
+#main-settings .settings-theme-dot-corail { background: #e79aa6; }
+
+#main-settings .settings-toggle {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  padding: 3px;
+  background: var(--line-strong);
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background .18s ease;
+}
+
+#main-settings .settings-toggle-knob {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+  transition: transform .18s ease;
+}
+
+#main-settings .settings-toggle.active {
+  background: var(--clarity-tag-blue, #3b82f6);
+}
+
+#main-settings .settings-toggle.active .settings-toggle-knob {
+  transform: translateX(18px);
+}
+
+#main-settings .settings-page-block.is-hidden {
+  display: none !important;
+}
+
 </style>
 </head>
 <body data-theme="light">
@@ -7905,30 +8086,30 @@ body[data-theme="light"]::after {
 </div>
 </div>
   
- <div class="mobile-integrations">
- <div class="stat-card" id="gmail-mobile-card" onclick="handleGmailMobileCard()" style="cursor:pointer;">
-    <div class="stat-icon-wrap blue">📧</div>
-    <div>
-      <div class="stat-value">Messagerie</div>
-      <div class="stat-label" id="gmail-status-label">Non connecté</div>
+ <div class="settings-page-block">
+
+  <div class="settings-group-label">Compte</div>
+  <div class="settings-group">
+    <div class="settings-row" id="gmail-mobile-card" onclick="handleGmailMobileCard()">
+      <span class="settings-row-icon settings-row-icon-blue">📧</span>
+      <div class="settings-row-title">Messagerie</div>
+      <span class="settings-row-value" id="gmail-status-label">Non connecté</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="profil-stat-card" onclick="handleProfilMobileCard()">
+      <span class="settings-row-icon settings-row-icon-yellow">👤</span>
+      <div class="settings-row-title">Profil</div>
+      <span class="settings-row-value" id="profil-status-label">À compléter</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" onclick="openPricingPage()">
+      <span class="settings-row-icon settings-row-icon-purple">💳</span>
+      <div class="settings-row-title">Abonnement</div>
+      <span class="settings-row-value" id="subscription-status-label">Voir</span>
+      <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
-  <div class="stat-card needs-attention" id="profil-stat-card" onclick="handleProfilMobileCard()" style="cursor:pointer;">
-    <div class="stat-icon-wrap yellow">👤</div>
-    <div>
-      <div class="stat-value">Profil</div>
-      <div class="stat-label" id="profil-status-label">À compléter</div>
-    </div>
-  </div>
-
-    <div class="stat-card" onclick="openPricingPage()" style="cursor:pointer;">
-  <div class="stat-icon-wrap purple">💳</div>
-  <div>
-    <div class="stat-value">Abonnement</div>
-    <div class="stat-label" id="subscription-status-label">Voir</div>
-  </div>
-</div>
 </div>
 
   <!-- GMAIL -->
@@ -7957,57 +8138,57 @@ body[data-theme="light"]::after {
 </div>
 </div>
 
-      <!-- APPARENCE -->
-  <div class="gmail-section" id="theme-settings-block" style="margin-top:8px;">
-    <div class="gmail-title">
-      <span>🎨</span> Apparence
+      <!-- PRÉFÉRENCES -->
+<div class="settings-page-block">
+
+  <div class="settings-group-label">Préférences</div>
+  <div class="settings-group">
+    <div class="settings-row" id="theme-settings-block" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-violet">🎨</span>
+      <div class="settings-row-title">Apparence</div>
+      <div class="settings-theme-dots">
+        <button type="button" class="settings-theme-dot settings-theme-dot-light" data-theme-option="light" onclick="setTheme('light')" aria-label="Thème clair"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-dark" data-theme-option="dark" onclick="setTheme('dark')" aria-label="Thème sombre"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-slate" data-theme-option="slate" onclick="setTheme('slate')" aria-label="Thème ardoise"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-corail" data-theme-option="corail" onclick="setTheme('corail')" aria-label="Thème corail"></button>
+      </div>
     </div>
-    <div class="gmail-desc" style="margin-bottom:16px;">
-      Choisissez un thème, le changement est instantané.
-    </div>
-    <div class="theme-swatch-row">
-      <button type="button" class="theme-swatch-btn" data-theme-option="light" onclick="setTheme('light')">
-        <span class="theme-swatch-preview theme-swatch-light"></span>
-        Clair
-      </button>
-      <button type="button" class="theme-swatch-btn" data-theme-option="dark" onclick="setTheme('dark')">
-        <span class="theme-swatch-preview theme-swatch-dark"></span>
-        Sombre
-      </button>
-      <button type="button" class="theme-swatch-btn" data-theme-option="slate" onclick="setTheme('slate')">
-        <span class="theme-swatch-preview theme-swatch-slate"></span>
-        Ardoise
-      </button>
-      <button type="button" class="theme-swatch-btn" data-theme-option="corail" onclick="setTheme('corail')">
-        <span class="theme-swatch-preview theme-swatch-corail"></span>
-        Corail
+    <div class="settings-row" id="voice-settings-block" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-amber">🔊</span>
+      <div class="settings-row-title">Réponses vocales</div>
+      <button type="button" class="settings-toggle" id="voice-toggle-switch" onclick="setVoiceEnabled(!isVoiceEnabled())" aria-label="Activer les réponses vocales">
+        <span class="settings-toggle-knob"></span>
       </button>
     </div>
   </div>
 
-      <!-- RÉPONSES VOCALES -->
-  <div class="gmail-section" id="voice-settings-block" style="margin-top:8px;">
-    <div class="gmail-title">
-      <span>🔊</span> Réponses vocales
+  <div class="settings-group-label">Contenu</div>
+  <div class="settings-group">
+    <div class="settings-row" onclick="openWritingStylesSubpage()">
+      <span class="settings-row-icon settings-row-icon-green">✍️</span>
+      <div class="settings-row-title">Styles d'écriture</div>
+      <span class="settings-row-value" id="writing-styles-count-label">0</span>
+      <span class="settings-row-chevron">›</span>
     </div>
-    <div class="gmail-desc" style="margin-bottom:16px;">
-      Vos agents confirment certaines actions à voix haute.
-    </div>
-    <div class="theme-swatch-row">
-      <button type="button" class="theme-swatch-btn" data-voice-option="off" onclick="setVoiceEnabled(false)">
-        Désactivées
-      </button>
-      <button type="button" class="theme-swatch-btn" data-voice-option="on" onclick="setVoiceEnabled(true)">
-        Activées
-      </button>
+    <div class="settings-row" id="custom-agent-block" onclick="openSupportChoiceModal()">
+      <span class="settings-row-icon settings-row-icon-blue">✨</span>
+      <div class="settings-row-title">Une idée, un besoin ?</div>
+      <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
-      <!-- STYLES D'ÉCRITURE -->
-  <div class="gmail-section" id="writing-styles-settings-block" style="margin-top:8px;display:block;">
-    <div class="gmail-title">
-      <span>✍️</span> Styles d'écriture
-    </div>
+</div>
+
+  <!-- STYLES D'ÉCRITURE (sous-page, même patron que Profil : liste
+       potentiellement longue, ne doit jamais alourdir la page
+       Réglages elle-même) -->
+<div id="writing-styles-mobile-section">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closeWritingStylesSubpage()">← Retour</button>
+    <div class="section-title">Styles d'écriture</div>
+  </div>
+
+  <div class="gmail-section" style="display:block;">
     <div class="gmail-desc" style="margin-bottom:16px;">
       Enregistrez à l'avance vos formules pour chaque type de personne (famille, collègue, patron...) : Clarity les réutilise en rédigeant, sans avoir à tout réexpliquer à chaque fois.
       <br><br>
@@ -8016,22 +8197,14 @@ body[data-theme="light"]::after {
     <div id="writing-styles-list" style="display:flex;flex-direction:column;gap:10px;">
       <div class="info-box">Chargement...</div>
     </div>
-    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="openWritingStyleEditor(null)">
-      + Ajouter un style
-    </button>
   </div>
 
-      <!-- BLOC SUR MESURE -->
-  <div class="gmail-section" id="custom-agent-block" style="display:block; margin-top:8px; grid-column: 1 / -1;">
-    <div class="gmail-title">
-      <span>✨</span> Une idée, un besoin ?
-    </div>
-    <div class="gmail-desc" style="display:block;">
-      Une fonctionnalité qui vous manque ? Un besoin lié à votre métier ? Ou carrément envie d'un agent pensé pour vous ?
-      <br><br>
-      <a href="#" onclick="openSupportChoiceModal(); return false;"><strong>Contactez-nous</strong></a>, on regarde ça ensemble.
-    </div>
-  </div>
+  <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="openWritingStyleEditor(null)">
+    + Ajouter un style
+  </button>
+</div>
+
+</div>
 
 </div>
 
@@ -10814,6 +10987,9 @@ function renderWritingStylesList() {
   const list = document.getElementById("writing-styles-list");
   if (!list) return;
 
+  const countLabel = document.getElementById("writing-styles-count-label");
+  if (countLabel) countLabel.textContent = String(writingStylesCache.length);
+
   if (!writingStylesCache.length) {
     list.innerHTML = '<div class="info-box">Aucun style enregistré pour l\'instant.</div>';
     return;
@@ -13190,7 +13366,7 @@ function handleProfilMobileCard() {
   // elle s'affiche juste en haut de la page avec les autres cartes encore
   // visibles en dessous.
   document.querySelectorAll(
-    "#main-settings .mobile-integrations, #main-settings #theme-settings-block, #main-settings #custom-agent-block"
+    "#main-settings .settings-page-block"
   ).forEach(el => el.classList.add("is-hidden"));
 }
 
@@ -13223,7 +13399,29 @@ function closeProfileMobilePage() {
 
   // Réaffiche le reste de Réglages
   document.querySelectorAll(
-    "#main-settings .mobile-integrations, #main-settings #theme-settings-block, #main-settings #custom-agent-block"
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.remove("is-hidden"));
+}
+
+// Sous-page "Styles d'écriture" (Réglages) : même patron que Profil
+// ci-dessus, la liste étant potentiellement longue (voir discussion :
+// une simple rangée-résumé dans Réglages, qui ouvre cette sous-page
+// dédiée, pour ne jamais alourdir visuellement la page principale).
+function openWritingStylesSubpage() {
+  const section = document.getElementById("writing-styles-mobile-section");
+  if (!section) return;
+  section.classList.add("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.add("is-hidden"));
+}
+
+function closeWritingStylesSubpage() {
+  const section = document.getElementById("writing-styles-mobile-section");
+  if (!section) return;
+  section.classList.remove("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
   ).forEach(el => el.classList.remove("is-hidden"));
 }
 
@@ -13301,7 +13499,7 @@ if (section) section.classList.remove("open");
 // handleProfilMobileCard) : sinon la page reste vide/noire après
 // l'enregistrement, car seul le bouton "← Retour" restaurait ces cartes.
 document.querySelectorAll(
-  "#main-settings .mobile-integrations, #main-settings #theme-settings-block, #main-settings #custom-agent-block"
+  "#main-settings .settings-page-block"
 ).forEach(el => el.classList.remove("is-hidden"));
 
 try {
@@ -14344,6 +14542,8 @@ function syncVoiceButtons() {
     const isOn = btn.getAttribute("data-voice-option") === "on";
     btn.classList.toggle("active", isOn === enabled);
   });
+  const toggle = document.getElementById("voice-toggle-switch");
+  if (toggle) toggle.classList.toggle("active", enabled);
 }
 
 // Liste des phrases existantes : préchargées au chargement de la page
@@ -17725,6 +17925,15 @@ function showSection(section, btn) {
     mainPlanningElNav.classList.remove("planning-calendar-fit");
     mainPlanningElNav.style.minHeight = "";
   }
+  // Filet de sécurité : si on quitte Réglages directement via un onglet
+  // du menu du bas pendant que la sous-page "Styles d'écriture" était
+  // ouverte, on la referme et on réaffiche le reste de Réglages, sinon
+  // on la retrouve encore ouverte (plein écran) au prochain retour.
+  const writingStylesSubpageNav = document.getElementById("writing-styles-mobile-section");
+  if (writingStylesSubpageNav) writingStylesSubpageNav.classList.remove("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.remove("is-hidden"));
   closeAllAgentCards();
 
   document.querySelectorAll(".page-view").forEach(page => {
