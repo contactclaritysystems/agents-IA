@@ -14032,6 +14032,18 @@ function recomputeClarityScrollLock() {
     document.body.style.left = "0";
     document.body.style.right = "0";
     document.body.style.width = "100%";
+    // Sans hauteur explicite, body{position:fixed} se réduit à la
+    // hauteur de son contenu (pas celle de l'écran) : sur une page
+    // longue (ex. Réglages), cette hauteur peut être bien plus grande
+    // que l'écran. Or les popups (.mail-choice-box) se centrent avec
+    // position:absolute;top:50%, calculé par rapport à ce même body
+    // devenu la référence de positionnement dès qu'il passe en
+    // position:fixed — d'où des popups jamais centrées (calculées par
+    // rapport à la hauteur du contenu, pas de l'écran), remarqué
+    // surtout depuis les pages longues. height:100% d'un élément
+    // position:fixed se calcule par rapport à l'écran, pas au contenu :
+    // ça règle le problème à la racine.
+    document.body.style.height = "100%";
     document.documentElement.style.overflow = "hidden";
   } else if (!shouldLock && clarityScrollLocked) {
     clarityScrollLocked = false;
@@ -14040,6 +14052,7 @@ function recomputeClarityScrollLock() {
     document.body.style.left = "";
     document.body.style.right = "";
     document.body.style.width = "";
+    document.body.style.height = "";
     document.documentElement.style.overflow = "";
     window.scrollTo(0, clarityScrollLockY);
   }
