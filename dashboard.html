@@ -13302,8 +13302,8 @@ function renderPlanningCalendarWeek() {
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
-        <span class="planning-calendar-week-badge">S${weekNum}</span>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
+        <span class="planning-calendar-week-badge">S${weekNum}</span>
         <div class="planning-calendar-month-label" style="cursor:default;">${weekLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
         <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${weekNum}</span>
@@ -13351,16 +13351,20 @@ function openPlanningCalendarDay(iso) {
   const hasEvents = appts.length || relances.length;
   const [dy, dm, dd] = iso.split("-").map(Number);
   const dayDateObj = new Date(dy, dm - 1, dd);
-  const dayShortLabel = dayDateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
   const dayWeekNum = getISOWeekNumber(dayDateObj);
 
+  // Pas de date en toutes lettres ici : le titre au-dessus (en-tête de la
+  // page, "lun. 24 août 2026 · Saint Barthélémy") l'affiche déjà en entier
+  // — la répéter dans cette rangée aurait fait un doublon visible en
+  // permanence. Le label reste présent (vide) juste pour garder les 2
+  // flèches symétriques via flex:1, comme sur Semaine/Mois.
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
-        <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
-        <div class="planning-calendar-month-label" style="cursor:default;">${dayShortLabel}</div>
+        <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
+        <div class="planning-calendar-month-label" style="cursor:default;"></div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
         <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${dayWeekNum}</span>
       </div>
