@@ -7621,6 +7621,15 @@ body[data-theme="light"]::after {
   margin-bottom: 16px;
 }
 
+/* Vue Jour : pas de texte de date à caser au centre (déjà affiché dans
+   l'en-tête de la page au-dessus, voir openPlanningCalendarDay), donc pas
+   de label flex:1 à étirer sur toute la largeur — juste "‹ S35 ›" en petit
+   groupe compact et centré, au lieu d'un grand vide entre les flèches. */
+.planning-calendar-nav-compact {
+  justify-content: center;
+  gap: 10px;
+}
+
 /* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
    et Jour uniquement) : un vrai élément du flex (pas de position:absolute,
    qui se superposait à la flèche "‹" précédente au lieu de se placer à
@@ -13361,12 +13370,10 @@ function openPlanningCalendarDay(iso) {
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
-      <div class="planning-calendar-nav">
+      <div class="planning-calendar-nav planning-calendar-nav-compact">
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
         <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
-        <div class="planning-calendar-month-label" style="cursor:default;"></div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
-        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${dayWeekNum}</span>
       </div>
     </div>
     ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
