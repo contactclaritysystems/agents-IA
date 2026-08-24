@@ -7614,11 +7614,29 @@ body[data-theme="light"]::after {
 /* =========================================================
    CLARITY SYSTEMS — Vue calendrier mensuelle (Planning > Rendez-vous)
    ========================================================= */
+/* Grille à 3 colonnes (pas du flex + "élément miroir invisible", qui
+   s'est révélé peu fiable dès que le contenu de gauche/droite n'a pas
+   exactement la même largeur) : les 2 colonnes extérieures ont la même
+   largeur (1fr chacune), donc la colonne centrale (label) est TOUJOURS
+   géométriquement centrée dans la rangée, quel que soit ce qu'il y a
+   dans les côtés (juste une flèche pour Mois, flèche + badge semaine
+   pour Semaine/Jour). */
 .planning-calendar-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 6px;
   margin-bottom: 16px;
+}
+
+.planning-calendar-nav-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.planning-calendar-nav-side.right {
+  justify-self: end;
 }
 
 /* Vue Jour : le label central affiche jour + fête (plus long que la simple
@@ -7631,11 +7649,8 @@ body[data-theme="light"]::after {
 }
 
 /* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
-   et Jour uniquement) : un vrai élément du flex (pas de position:absolute,
-   qui se superposait à la flèche "‹" précédente au lieu de se placer à
-   côté). Le label central passe en flex:1 + contenu centré (voir plus
-   bas) pour que les deux flèches restent bien aux extrémités malgré ce
-   4e élément. */
+   et Jour uniquement), juste à côté de la flèche "‹" dans la colonne de
+   gauche de la grille ci-dessus. */
 .planning-calendar-week-badge {
   flex-shrink: 0;
   font-size: 11px;
@@ -7676,8 +7691,7 @@ body[data-theme="light"]::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  min-width: 0;
+  white-space: nowrap;
   gap: 5px;
   padding: 5px 10px;
   border-radius: 9px;
@@ -12886,9 +12900,13 @@ function renderPlanningCalendarMonth() {
     <div class="agent-card planning-calendar-card">
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
+        <div class="planning-calendar-nav-side">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
+        </div>
         <button type="button" class="planning-calendar-month-label" id="planning-calendar-month-btn" onclick="togglePlanningMonthPicker(event)">${monthLabel} <span class="planning-calendar-month-chevron">▾</span></button>
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(1)">›</button>
+        <div class="planning-calendar-nav-side right">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(1)">›</button>
+        </div>
       </div>
       <div class="planning-calendar-weekday-header">
         <div class="planning-calendar-weekday-spacer"></div>
@@ -13310,12 +13328,15 @@ function renderPlanningCalendarWeek() {
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
-      <div class="planning-calendar-nav">
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
-        <span class="planning-calendar-week-badge">S${weekNum}</span>
+      <div class="planning-calendar-nav" style="margin-bottom:0;">
+        <div class="planning-calendar-nav-side">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
+          <span class="planning-calendar-week-badge">S${weekNum}</span>
+        </div>
         <div class="planning-calendar-month-label" style="cursor:default;">${weekLabel}</div>
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
-        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${weekNum}</span>
+        <div class="planning-calendar-nav-side right">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
+        </div>
       </div>
     </div>
     <div class="planning-week-days">${daysHtml}</div>
@@ -13363,14 +13384,17 @@ function openPlanningCalendarDay(iso) {
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
-      <div class="planning-calendar-nav">
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
-        <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
+      <div class="planning-calendar-nav" style="margin-bottom:0;">
+        <div class="planning-calendar-nav-side">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
+          <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
+        </div>
         <div class="planning-calendar-month-label planning-calendar-month-label-sm" style="cursor:default;">
           ${dayShortLabel}${dayFeteLabel ? ` <span class="planning-day-fete">· ${dayFeteLabel.replace(/</g, "&lt;")}</span>` : ""}
         </div>
-        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
-        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${dayWeekNum}</span>
+        <div class="planning-calendar-nav-side right">
+          <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
+        </div>
       </div>
     </div>
     ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
