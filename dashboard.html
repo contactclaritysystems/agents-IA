@@ -7698,6 +7698,94 @@ body[data-theme="light"]::after {
   color: var(--clarity-primary-text, #fff);
 }
 
+/* Sélecteur "Jour · Semaine · Mois", affiché en haut des 3 vues du
+   calendrier Planning. */
+.planning-view-toggle {
+  display: flex;
+  background: var(--clarity-surface-soft);
+  border-radius: 11px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 14px;
+}
+
+.planning-view-toggle-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 7px 0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--clarity-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--clarity-duration) var(--clarity-ease), color var(--clarity-duration) var(--clarity-ease);
+}
+
+.planning-view-toggle-btn.active {
+  background: rgba(var(--clarity-glass-rgb), .95);
+  color: var(--clarity-text);
+  box-shadow: var(--clarity-shadow-sm);
+}
+
+/* Vue Semaine : une section par jour, chacune avec un en-tête cliquable
+   (ouvre la vue Jour) et la liste des cartes RDV/relances en dessous —
+   même moule de carte que la vue Jour (.agent-card), pas de grille à
+   cases comme la vue Mois. */
+.planning-week-days {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.planning-week-day-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 2px 2px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.planning-week-day-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--clarity-text);
+  text-transform: capitalize;
+}
+
+.planning-week-day-today-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--clarity-primary-text, #fff);
+  background: var(--clarity-primary, var(--dark, #141416));
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.planning-week-day-chevron {
+  margin-left: auto;
+  color: var(--clarity-text-tertiary);
+  font-size: 13px;
+}
+
+.planning-week-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planning-week-day-empty {
+  font-size: 12.5px;
+  color: var(--clarity-text-tertiary);
+  padding: 0 2px 2px;
+}
+
 /* Style "liste de semaines" (comme l'app Calendrier iOS) : une ligne par
    semaine, numéro de semaine ISO à gauche, jours en simples chiffres (pas
    de cases/cadres), aujourd'hui = rond plein couleur Clarity, événements
@@ -12631,6 +12719,7 @@ function getISOWeekNumber(date) {
 
 function renderPlanningCalendarMonth() {
   window.currentPlanningSubPage = "calendar-grid";
+  window.currentCalendarViewMode = "month";
   window.currentCalendarSelectedDay = null;
 
   const list = document.getElementById("planning-list");
@@ -12767,6 +12856,7 @@ function renderPlanningCalendarMonth() {
 
   list.innerHTML = `
     <div class="agent-card planning-calendar-card">
+      ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarMonth(-1)">‹</button>
         <button type="button" class="planning-calendar-month-label" id="planning-calendar-month-btn" onclick="togglePlanningMonthPicker(event)">${monthLabel} <span class="planning-calendar-month-chevron">▾</span></button>
@@ -12980,6 +13070,227 @@ function getJourFerie(iso) {
   return null;
 }
 
+// Rendu d'une carte RDV/relance : sorti de openPlanningCalendarDay (où il
+// était défini en interne) pour être réutilisable aussi par la vue Semaine,
+// qui affiche les mêmes cartes pour chacun des 7 jours.
+function planningRenderApptCard(a) {
+  const index = currentAppointments.findIndex(item => item.id === a.id);
+  const statusLabel = getItemStatusLabel(a.status);
+  const statusIcon = getItemStatusIcon(a.status);
+  const statusClass = getItemStatusClass(a.status);
+  return `
+    <div class="agent-card" onclick="openAppointmentDetail(${index})" style="cursor:pointer;">
+      <div class="agent-head">
+        <div class="agent-emoji">📅</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">${a.appointment_time?.slice(0,5) || ""}  ${a.contact_name || "Rendez-vous"}</div>
+          <div class="agent-desc">${a.title || "Sans motif"}</div>
+        </div>
+        <div class="agent-status ${statusClass}">${statusIcon} ${statusLabel}</div>
+      </div>
+    </div>
+  `;
+}
+
+function planningRenderRelanceCard(r) {
+  const index = currentFollowUps.findIndex(item => item.id === r.id);
+  const statusLabel = getItemStatusLabel(r.status);
+  const statusIcon = getItemStatusIcon(r.status);
+  const statusClass = getItemStatusClass(r.status);
+  return `
+    <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
+      <div class="agent-head">
+        <div class="agent-emoji">${statusIcon}</div>
+        <div class="agent-title-wrap">
+          <div class="agent-name">${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}</div>
+          <div class="agent-desc">${r.reason || "Sans motif"}</div>
+        </div>
+        <div class="agent-status ${statusClass}">${statusLabel}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ─── VUE JOUR / SEMAINE / MOIS — bascule commune ───────────────────────
+// Un seul sélecteur (segmented control "Jour · Semaine · Mois"), affiché
+// en haut des 3 vues, pour changer de granularité sans repasser par
+// "← Retour". En changeant de vue, on essaie de rester sur le jour/la
+// semaine/le mois déjà affiché (via planningCalendarRefIso), plutôt que
+// de toujours revenir à aujourd'hui.
+window.currentCalendarViewMode = "month"; // "day" | "week" | "month"
+window.currentCalendarWeekStart = null; // "YYYY-MM-DD" (lundi de la semaine affichée)
+
+function planningTodayIso() {
+  return isoFromDate(new Date());
+}
+
+function mondayOfIso(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const dow = (date.getDay() + 6) % 7; // 0 = lundi
+  date.setDate(date.getDate() - dow);
+  return isoFromDate(date);
+}
+
+// Renvoie une date de référence représentative de ce qui est affiché
+// actuellement (jour sélectionné, semaine en cours, ou mois en cours),
+// utilisée pour ne pas perdre le contexte en changeant de vue.
+function planningCalendarRefIso() {
+  if (window.currentCalendarSelectedDay) return window.currentCalendarSelectedDay;
+  if (window.currentCalendarViewMode === "week" && window.currentCalendarWeekStart) {
+    return window.currentCalendarWeekStart;
+  }
+  const year = window.currentCalendarYear;
+  const month = window.currentCalendarMonth;
+  if (year == null || month == null) return planningTodayIso();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const day = Math.min(new Date().getDate(), daysInMonth);
+  return year + "-" + String(month + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+}
+
+function setPlanningCalendarViewMode(mode) {
+  window.currentCalendarViewMode = mode;
+  const ref = planningCalendarRefIso();
+  if (mode === "day") {
+    openPlanningCalendarDay(ref);
+  } else if (mode === "week") {
+    window.currentCalendarWeekStart = mondayOfIso(ref);
+    renderPlanningCalendarWeek();
+  } else {
+    const [y, m] = ref.split("-").map(Number);
+    window.currentCalendarYear = y;
+    window.currentCalendarMonth = m - 1;
+    renderPlanningCalendarMonth();
+  }
+}
+
+// Dispatche vers la vue "grille" active (semaine ou mois) : utilisé
+// partout où le code revenait auparavant systématiquement à la grille du
+// mois (retour depuis un RDV/une relance, ou depuis la vue jour), pour ne
+// pas faire perdre la vue Semaine à l'utilisateur qui l'avait choisie.
+function renderPlanningCalendarGridView() {
+  if (window.currentCalendarViewMode === "week") {
+    renderPlanningCalendarWeek();
+  } else {
+    renderPlanningCalendarMonth();
+  }
+}
+
+function planningViewToggleHtml() {
+  const mode = window.currentCalendarViewMode;
+  return `
+    <div class="planning-view-toggle">
+      <button type="button" class="planning-view-toggle-btn${mode === "day" ? " active" : ""}" onclick="setPlanningCalendarViewMode('day')">Jour</button>
+      <button type="button" class="planning-view-toggle-btn${mode === "week" ? " active" : ""}" onclick="setPlanningCalendarViewMode('week')">Semaine</button>
+      <button type="button" class="planning-view-toggle-btn${mode === "month" ? " active" : ""}" onclick="setPlanningCalendarViewMode('month')">Mois</button>
+    </div>
+  `;
+}
+
+function navigatePlanningCalendarWeek(delta) {
+  const start = window.currentCalendarWeekStart || mondayOfIso(planningCalendarRefIso());
+  const [y, m, d] = start.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta * 7);
+  window.currentCalendarWeekStart = isoFromDate(date);
+  renderPlanningCalendarWeek();
+}
+
+function navigatePlanningCalendarDay(delta) {
+  const ref = window.currentCalendarSelectedDay || planningCalendarRefIso();
+  const [y, m, d] = ref.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + delta);
+  openPlanningCalendarDay(isoFromDate(date));
+}
+
+function formatPlanningWeekRangeLabel(mondayIso, sundayIso) {
+  const [y1, m1, d1] = mondayIso.split("-").map(Number);
+  const [y2, m2, d2] = sundayIso.split("-").map(Number);
+  const monday = new Date(y1, m1 - 1, d1);
+  const sunday = new Date(y2, m2 - 1, d2);
+  const sameMonth = m1 === m2 && y1 === y2;
+  const startLabel = monday.toLocaleDateString("fr-FR", sameMonth ? { day: "numeric" } : { day: "numeric", month: "short" });
+  const endLabel = sunday.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return startLabel + " – " + endLabel;
+}
+
+function renderPlanningCalendarWeek() {
+  window.currentPlanningSubPage = "calendar-week";
+  window.currentCalendarViewMode = "week";
+  window.currentCalendarSelectedDay = null;
+
+  const list = document.getElementById("planning-list");
+  const title = document.getElementById("planning-detail-title");
+  const header = document.getElementById("planning-detail-header");
+  if (!list) return;
+
+  if (header) header.style.setProperty("display", "none", "important");
+  if (title) title.textContent = "Rendez-vous";
+
+  // Contrairement à la grille du mois, la vue Semaine liste les cartes en
+  // détail (pas juste des pastilles) : elle défile normalement comme la
+  // vue Jour, pas de centrage/blocage de scroll de page à gérer ici.
+  const mainPlanningElWeek = document.getElementById("main-planning");
+  if (mainPlanningElWeek) {
+    mainPlanningElWeek.classList.remove("planning-calendar-fit");
+    mainPlanningElWeek.style.minHeight = "";
+  }
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+  document.body.style.touchAction = "";
+
+  const weekStart = window.currentCalendarWeekStart || mondayOfIso(planningCalendarRefIso());
+  window.currentCalendarWeekStart = weekStart;
+  const [y, m, d] = weekStart.split("-").map(Number);
+  const mondayDate = new Date(y, m - 1, d);
+  const sundayDate = new Date(mondayDate);
+  sundayDate.setDate(sundayDate.getDate() + 6);
+  const weekLabel = formatPlanningWeekRangeLabel(weekStart, isoFromDate(sundayDate));
+  const todayIso = planningTodayIso();
+
+  let daysHtml = "";
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(mondayDate);
+    dayDate.setDate(dayDate.getDate() + i);
+    const iso = isoFromDate(dayDate);
+    const isToday = iso === todayIso;
+    const { appts, relances } = planningCalendarEventsForDay(iso);
+    const hasEvents = appts.length || relances.length;
+    const ferie = getJourFerie(iso);
+    const label = ferie || getFeteDuJour(iso);
+    const dayName = dayDate.toLocaleDateString("fr-FR", { weekday: "long" });
+
+    daysHtml += `
+      <div class="planning-week-day">
+        <button type="button" class="planning-week-day-header" onclick="openPlanningCalendarDay('${iso}')">
+          <span class="planning-week-day-name">${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayDate.getDate()}</span>
+          ${isToday ? `<span class="planning-week-day-today-badge">Aujourd'hui</span>` : ""}
+          ${label ? `<span class="planning-day-fete">· ${label.replace(/</g, "&lt;")}</span>` : ""}
+          <span class="planning-week-day-chevron">›</span>
+        </button>
+        <div class="planning-week-day-events">
+          ${hasEvents
+            ? appts.map(planningRenderApptCard).join("") + relances.map(planningRenderRelanceCard).join("")
+            : `<div class="planning-week-day-empty">Rien de prévu</div>`}
+        </div>
+      </div>
+    `;
+  }
+
+  list.innerHTML = `
+    <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
+      ${planningViewToggleHtml()}
+      <div class="planning-calendar-nav">
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
+        <div class="planning-calendar-month-label" style="cursor:default;">${weekLabel}</div>
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
+      </div>
+    </div>
+    <div class="planning-week-days">${daysHtml}</div>
+  `;
+}
+
 function openPlanningCalendarDay(iso) {
   window.currentPlanningSubPage = "calendar-day";
   window.currentCalendarSelectedDay = iso;
@@ -13015,50 +13326,22 @@ function openPlanningCalendarDay(iso) {
       (label ? ' <span class="planning-day-fete">· ' + label.replace(/</g, "&lt;") + "</span>" : "");
   }
 
-  function renderApptCard(a) {
-    const index = currentAppointments.findIndex(item => item.id === a.id);
-    const statusLabel = getItemStatusLabel(a.status);
-    const statusIcon = getItemStatusIcon(a.status);
-    const statusClass = getItemStatusClass(a.status);
-    return `
-      <div class="agent-card" onclick="openAppointmentDetail(${index})" style="cursor:pointer;">
-        <div class="agent-head">
-          <div class="agent-emoji">📅</div>
-          <div class="agent-title-wrap">
-            <div class="agent-name">${a.appointment_time?.slice(0,5) || ""}  ${a.contact_name || "Rendez-vous"}</div>
-            <div class="agent-desc">${a.title || "Sans motif"}</div>
-          </div>
-          <div class="agent-status ${statusClass}">${statusIcon} ${statusLabel}</div>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderRelanceCard(r) {
-    const index = currentFollowUps.findIndex(item => item.id === r.id);
-    const statusLabel = getItemStatusLabel(r.status);
-    const statusIcon = getItemStatusIcon(r.status);
-    const statusClass = getItemStatusClass(r.status);
-    return `
-      <div class="agent-card" onclick="openFollowUpDetail(${index})" style="cursor:pointer;">
-        <div class="agent-head">
-          <div class="agent-emoji">${statusIcon}</div>
-          <div class="agent-title-wrap">
-            <div class="agent-name">${r.reminder_time?.slice(0,5) || ""}  ${r.contact_name || "Relance"}</div>
-            <div class="agent-desc">${r.reason || "Sans motif"}</div>
-          </div>
-          <div class="agent-status ${statusClass}">${statusLabel}</div>
-        </div>
-      </div>
-    `;
-  }
-
   const hasEvents = appts.length || relances.length;
+  const [dy, dm, dd] = iso.split("-").map(Number);
+  const dayShortLabel = new Date(dy, dm - 1, dd).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
 
   list.innerHTML = `
+    <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
+      ${planningViewToggleHtml()}
+      <div class="planning-calendar-nav">
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
+        <div class="planning-calendar-month-label" style="cursor:default;">${dayShortLabel}</div>
+        <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
+      </div>
+    </div>
     ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
-    ${appts.length ? `<div class="section-title" style="margin-bottom:10px;">Rendez-vous</div>${appts.map(renderApptCard).join("")}` : ""}
-    ${relances.length ? `<div class="section-title" style="margin:${appts.length ? "18px" : "0"} 0 10px;">Relances</div>${relances.map(renderRelanceCard).join("")}` : ""}
+    ${appts.length ? `<div class="section-title" style="margin-bottom:10px;">Rendez-vous</div>${appts.map(planningRenderApptCard).join("")}` : ""}
+    ${relances.length ? `<div class="section-title" style="margin:${appts.length ? "18px" : "0"} 0 10px;">Relances</div>${relances.map(planningRenderRelanceCard).join("")}` : ""}
   `;
 }
 
@@ -13072,7 +13355,7 @@ async function returnToPlanningAfterAction(listSubPage, listLoader) {
     if (window.currentCalendarSelectedDay) {
       openPlanningCalendarDay(window.currentCalendarSelectedDay);
     } else {
-      renderPlanningCalendarMonth();
+      renderPlanningCalendarGridView();
     }
     return;
   }
@@ -21264,7 +21547,7 @@ function closePlanningDetail() {
     if (window.currentCalendarSelectedDay) {
       openPlanningCalendarDay(window.currentCalendarSelectedDay);
     } else {
-      renderPlanningCalendarMonth();
+      renderPlanningCalendarGridView();
     }
     return;
   }
@@ -21298,7 +21581,7 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
     if (window.currentCalendarSelectedDay) {
       openPlanningCalendarDay(window.currentCalendarSelectedDay);
     } else {
-      renderPlanningCalendarMonth();
+      renderPlanningCalendarGridView();
     }
     return;
   }
@@ -21310,11 +21593,12 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
 
   // ↑↑↑ ICI
 
-  // Vue calendrier : "Retour" depuis un jour sélectionné revient à la
-  // grille du mois ; depuis la grille elle-même, referme le dossier
-  // (comportement normal ci-dessous, comme avant).
+  // Vue calendrier : "Retour" depuis un jour sélectionné revient à la vue
+  // grille active (semaine ou mois, selon ce qui était affiché avant) ;
+  // depuis la grille elle-même, referme le dossier (comportement normal
+  // ci-dessous, comme avant).
   if (window.currentPlanningSubPage === "calendar-day") {
-    renderPlanningCalendarMonth();
+    renderPlanningCalendarGridView();
     return;
   }
 
