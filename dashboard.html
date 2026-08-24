@@ -12012,46 +12012,41 @@ async function goToDictateMailStep() {
 
   const ONBOARDING_TIPS = [
   {
-    title: "⚡ Clarity s'occupe de tout",
-    text: "Décrivez simplement ce qu'il faut faire : Clarity choisit le bon agent pour vous."
-  },
-  {
     title: "📒 Enregistrez vos contacts",
-    text: "Ajoutez vos clients dans le Carnet Contacts pour que vos agents les retrouvent automatiquement."
+    text: "Ajoutez vos clients dans le Carnet Contacts : c'est ce qui me permet de retrouver leurs coordonnées quand vous dictez une action."
   },
   {
-    title: "📅 Suivez votre planning",
-    text: "Consultez vos rendez-vous et relances à venir dans Planning."
+    title: "📅 Le Planning fait le reste",
+    text: "Dites par exemple « Ajoute un rendez-vous avec [nom] demain à 14h » : ça apparaît automatiquement ici."
   },
   {
-    title: "🗂️ Retrouvez l'historique",
-    text: "Toutes les actions de vos agents sont enregistrées dans Historique."
+    title: "✍️ Adaptez le ton",
+    text: "Dans Réglages, réglez le style d'écriture selon la personne (client, ami...) — mais tout marche déjà très bien sans y toucher."
   },
   {
-    title: "🎙️ C'est tout !",
-    text: "Pour dicter une action, il suffit de donner le prénom (ou nom et prénom) du contact."
+    title: "❓ Un doute ?",
+    text: "Le bouton « ? » en bas de l'accueil vous montre un exemple pour chaque type de demande, à essayer en un clic."
   },
   {
     title: "🎁 Votre essai gratuit",
-    text: "Vous profitez de 7 jours d'essai gratuit ou 50 actions offertes, selon ce qui arrive en premier."
+    text: "7 jours d'essai ou 50 actions offertes, selon ce qui arrive en premier. Et chaque semaine, j'apprends de nouvelles choses."
   },
   {
-    title: "✨ Une idée d'agent ?",
-    text: "Dites-le-nous en bas de cette page : nous étudions chaque demande."
+    title: "✨ Une idée, un besoin ?",
+    text: "Dites-le-moi dans Réglages > Une idée, un besoin ? : j'étudie chaque demande."
   }
 ];
 
 const TIP_TARGET_SELECTORS = [
-  ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
   ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
   ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
-  ['.nav-item[onclick*="historique"]', '.bottom-tab[data-section="historique"]'],
-  ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
-  ['#subscription-stat-card'],
+  ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+  ['.clarity-help-btn'],
+  [],
   ['#custom-agent-block']
 ];
 
-const TIP_TARGET_SECTIONS = ["settings", "contacts", "planning", "historique", "agents", null, "settings"];
+const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null, "settings"];
 
 let onboardingTipsPositionInterval = null;
 
@@ -12176,25 +12171,26 @@ function getStepSelectors(step) {
   if (step === "goto_settings") {
     return ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'];
   }
-  
+
   if (step === "connect_gmail") {
-    return ['#gmail-mobile-card', '#gmail-ui .gmail-connect-btn'];
+    // "Messagerie" (redesign Réglages) : la carte Gmail elle-même
+    // (#gmail-ui) reste en permanence masquée (display:none !important),
+    // toute la connexion passe désormais par cette rangée.
+    return ['#gmail-mobile-card'];
   }
-  
+
   if (step === "goto_agents") {
     return ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'];
   }
-  if (step === "dictate_mail") {
-    return ['#mail-dictation-btn'];
-  }
-  if (step === "stop_dictation") {
-    return ['#mail-dictation-btn'];
+  // dictate_mail/stop_dictation/retry_dictation ciblent tous les 3 la même
+  // zone : le champ de dictée/saisie unique de l'accueil (Chef
+  // d'Orchestre), qui a remplacé l'ancien bouton dédié par agent
+  // (#mail-dictation-btn, qui n'existe plus).
+  if (step === "dictate_mail" || step === "stop_dictation" || step === "retry_dictation") {
+    return ['.clarity-input-row'];
   }
   if (step === "confirm_send") {
     return ['#mail-preview-modal .mail-choice-box'];
-  }
-  if (step === "retry_dictation") {
-    return ['#mail-dictation-btn'];
   }
   return [];
 }
@@ -12208,27 +12204,10 @@ function pickVisibleElement(selectors) {
 }
 
   function getOnboardingSpotlightTarget(step) {
-  if (step === "stop_dictation") {
-    const btn = document.querySelector('#mail-dictation-btn');
-    if (!btn || btn.offsetParent === null) return null;
-
-    const box = document.querySelector('.page-view.active #dictation-box');
-    const btnRect = btn.getBoundingClientRect();
-
-    let rect = btnRect;
-
-    if (box) {
-      const boxRect = box.getBoundingClientRect();
-      const left = Math.min(btnRect.left, boxRect.left);
-      const top = Math.min(btnRect.top, boxRect.top);
-      const right = Math.max(btnRect.right, boxRect.right);
-      const bottom = Math.max(btnRect.bottom, boxRect.bottom);
-      rect = { left, top, right, bottom, width: right - left, height: bottom - top };
-    }
-
-    return { getBoundingClientRect: () => rect };
-  }
-
+  // .clarity-input-row (voir getStepSelectors) englobe déjà le champ de
+  // saisie ET le bouton micro dans un seul conteneur : plus besoin de
+  // fusionner manuellement 2 rectangles comme à l'époque du bouton +
+  // boîte de dictée séparés par agent.
   return pickVisibleElement(getStepSelectors(step));
 }
 
@@ -12236,40 +12215,40 @@ function pickVisibleElement(selectors) {
 const ONBOARDING_MESSAGES = {
   goto_settings: {
     title: () => `Bienvenue ${getOnboardingFirstName()} !`,
-    text: "Pour activer vos agents, commencez par connecter votre compte mail dans Réglages."
+    text: "Avant tout, connectez votre compte mail : c'est la seule étape obligatoire pour que je puisse envoyer des messages à votre place."
   },
   connect_gmail: {
     title: "Connectez votre compte mail",
-    text: "Cliquez sur ce bouton pour connecter Gmail."
+    text: "Cliquez sur « Messagerie » et autorisez l'accès à votre boîte mail."
   },
   goto_agents: {
     title: "Parfait !",
-    text: "Retournons tester vos agents."
+    text: "Retournons à l'accueil pour un premier essai."
   },
   dictate_mail: {
-    title: "Dernière étape",
+    title: "Testons tout de suite",
     text: () => {
-      const base = `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue."`;
+      const base = `Dictez ou écrivez : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."`;
       if (onboardingMicAlreadyGranted) return base;
       return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
     }
   },
-  
+
   stop_dictation: {
     title: "Parlez maintenant",
-    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue."<br><br>Appuyez sur ce bouton dès que vous avez terminé de parler.`
+    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."<br><br>Appuyez de nouveau sur le micro une fois terminé.`
   },
   confirm_send: {
     title: "Vérifiez et envoyez",
-    text: "Relisez votre mail puis cliquez sur \"Envoyer le mail\"."
+    text: "Relisez l'aperçu puis cliquez sur \"Envoyer le mail\"."
   },
   retry_dictation: {
     title: "Pas de souci, réessayons",
-    text: () => `Cliquez ici puis dictez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui souhaiter la bienvenue."`
+    text: () => `Cliquez ici puis dictez ou écrivez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."`
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
-    text: "Vous venez d'envoyer votre premier mail."
+    text: "Vous venez d'envoyer votre 1er mail ! Vous pouvez me parler de la même façon pour tout le reste : planifier un rendez-vous, écrire un SMS, poser une question..."
   }
 };
   
@@ -16512,6 +16491,13 @@ function openMailPreview(data, instruction) {
 
   modal.style.display = "block";
 
+  // Fait avancer le tour d'onboarding ("dictate_mail"/"stop_dictation"/
+  // "retry_dictation" -> "confirm_send") dès que l'aperçu du mail est
+  // réellement affiché, quel que soit le chemin qui y a mené (dictée,
+  // saisie tapée, action rapide...) — onboardingOnEvent ignore l'appel
+  // si le tour n'est pas actif ou pas à une étape de dictée.
+  onboardingOnEvent("mail_prepared");
+
   requestAnimationFrame(() => {
     modal.scrollTop = 0;
 
@@ -17307,6 +17293,12 @@ console.log("MESSAGE =", message);
     };
 
     setListeningUI(true);
+    // Fait avancer le tour d'onboarding (étape "dictate_mail"/"retry_dictation"
+    // -> "stop_dictation") uniquement pour la dictée du Chef d'Orchestre sur
+    // l'accueil, pas pour un éventuel autre usage de ce moteur de dictée
+    // partagé (onboardingOnEvent ignore de toute façon l'appel si le tour
+    // n'est pas actif ou pas à cette étape précise).
+    if (config.agent === "orchestrator") onboardingOnEvent("dictation_started");
     // Sur mobile, le micro n'est pas encore réellement actif tant que le
     // délai de sécurité (voir delayBeforeMic()) n'est pas écoulé — si on
     // affiche "Je vous écoute…" trop tôt, l'utilisateur commence à parler
