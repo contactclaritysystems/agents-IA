@@ -7621,13 +7621,13 @@ body[data-theme="light"]::after {
   margin-bottom: 16px;
 }
 
-/* Vue Jour : pas de texte de date à caser au centre (déjà affiché dans
-   l'en-tête de la page au-dessus, voir openPlanningCalendarDay), donc pas
-   de label flex:1 à étirer sur toute la largeur — juste "‹ S35 ›" en petit
-   groupe compact et centré, au lieu d'un grand vide entre les flèches. */
-.planning-calendar-nav-compact {
-  justify-content: center;
-  gap: 10px;
+/* Vue Jour : le label central affiche jour + fête (plus long que la simple
+   plage de dates de Semaine), donc en plus petit pour bien tenir entre les
+   2 flèches sans écraser la mise en page. */
+.planning-calendar-month-label-sm {
+  font-size: 13px;
+  font-weight: 700;
+  gap: 4px;
 }
 
 /* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
@@ -13331,11 +13331,14 @@ function openPlanningCalendarDay(iso) {
   const header = document.getElementById("planning-detail-header");
   if (!list) return;
 
-  // On quitte la vue calendrier : le "← Retour" réapparaît (retour à la
-  // grille du mois), et on annule le centrage vertical de la grille (la
-  // liste des RDV/relances du jour doit s'aligner en haut, pas au centre)
-  // ainsi que le blocage du scroll de page réservé à la grille.
-  if (header) header.style.display = "";
+  // Jour est désormais une vue "pair" de Semaine/Mois (accessible
+  // directement via le sélecteur Jour·Semaine·Mois, plus seulement en
+  // creusant depuis un jour du mois) : plus de "← Retour" ni de titre en
+  // haut de page — la date + la fête vivent dans la bande de nav, comme
+  // pour Semaine, mais en plus petit vu qu'il y a plus de texte à caser
+  // (jour + fête) que pour Semaine (juste une plage de dates).
+  if (header) header.style.setProperty("display", "none", "important");
+  if (title) title.textContent = "Rendez-vous";
   list.style.justifyContent = "";
   list.style.minHeight = "";
   list.style.paddingTop = "";
@@ -13349,31 +13352,25 @@ function openPlanningCalendarDay(iso) {
   }
 
   const { appts, relances } = planningCalendarEventsForDay(iso);
-  if (title) {
-    const ferie = getJourFerie(iso);
-    const label = ferie || getFeteDuJour(iso);
-    title.innerHTML =
-      formatDateHuman(iso).replace(/</g, "&lt;") +
-      (label ? ' <span class="planning-day-fete">· ' + label.replace(/</g, "&lt;") + "</span>" : "");
-  }
-
   const hasEvents = appts.length || relances.length;
   const [dy, dm, dd] = iso.split("-").map(Number);
   const dayDateObj = new Date(dy, dm - 1, dd);
   const dayWeekNum = getISOWeekNumber(dayDateObj);
+  const dayShortLabel = dayDateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "long" });
+  const dayFerie = getJourFerie(iso);
+  const dayFeteLabel = dayFerie || getFeteDuJour(iso);
 
-  // Pas de date en toutes lettres ici : le titre au-dessus (en-tête de la
-  // page, "lun. 24 août 2026 · Saint Barthélémy") l'affiche déjà en entier
-  // — la répéter dans cette rangée aurait fait un doublon visible en
-  // permanence. Le label reste présent (vide) juste pour garder les 2
-  // flèches symétriques via flex:1, comme sur Semaine/Mois.
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
-      <div class="planning-calendar-nav planning-calendar-nav-compact">
+      <div class="planning-calendar-nav">
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
         <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
+        <div class="planning-calendar-month-label planning-calendar-month-label-sm" style="cursor:default;">
+          ${dayShortLabel}${dayFeteLabel ? ` <span class="planning-day-fete">· ${dayFeteLabel.replace(/</g, "&lt;")}</span>` : ""}
+        </div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
+        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${dayWeekNum}</span>
       </div>
     </div>
     ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
