@@ -7707,6 +7707,28 @@ body[data-theme="light"]::after {
   color: var(--clarity-text-tertiary);
 }
 
+/* Petit "‹ Retour" affiché en haut de la vue Jour, uniquement quand on y
+   est arrivé en creusant depuis un jour du Mois/de la Semaine (voir
+   openPlanningCalendarDay) — pas un gros bouton de page comme avant, juste
+   un lien discret au-dessus du sélecteur Jour·Semaine·Mois. */
+.planning-day-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--clarity-text-secondary);
+  cursor: pointer;
+  padding: 0 0 12px;
+}
+
+.planning-day-back-btn:hover {
+  color: var(--clarity-text);
+}
+
 /* Sous-page "aller à un mois" : réutilise le moule .custom-date-popover
    (même style flottant + même verrou de fermeture au clic extérieur /
    scroll / resize, déjà géré globalement pour cette classe) plutôt que
@@ -13250,6 +13272,85 @@ function navigatePlanningCalendarDay(delta) {
   openPlanningCalendarDay(isoFromDate(date));
 }
 
+// Sélecteur "aller à une date" (bande déroulante ouverte en cliquant sur
+// le jour affiché en vue Jour) : même moule .custom-date-popover que le
+// sélecteur de mois (voir togglePlanningMonthPicker) et que les champs de
+// date des formulaires (wireCustomDateInput) — grille de jours classique,
+// pas juste une liste de mois, puisqu'ici on choisit une date précise.
+function ensurePlanningDayPickerPopover() {
+  let popover = document.getElementById("planning-day-picker-popover");
+  if (!popover) {
+    popover = document.createElement("div");
+    popover.className = "custom-date-popover";
+    popover.id = "planning-day-picker-popover";
+    document.body.appendChild(popover);
+  }
+  return popover;
+}
+
+function renderPlanningDayPicker(viewYear, viewMonth) {
+  const popover = ensurePlanningDayPickerPopover();
+  const first = new Date(viewYear, viewMonth, 1);
+  const startDow = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const monthLabel = first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const selectedIso = window.currentCalendarSelectedDay;
+
+  let html = '<div class="custom-date-nav">'
+    + '<button type="button" class="custom-date-nav-btn" data-nav="-1">‹</button>'
+    + '<div class="custom-date-month-label">' + monthLabel + '</div>'
+    + '<button type="button" class="custom-date-nav-btn" data-nav="1">›</button>'
+    + '</div>'
+    + '<div class="custom-date-dow">' + ["L", "M", "M", "J", "V", "S", "D"].map(d => '<span>' + d + '</span>').join("") + '</div>'
+    + '<div class="custom-date-grid">';
+
+  for (let i = 0; i < startDow; i++) html += '<span></span>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = viewYear + "-" + String(viewMonth + 1).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    const selected = iso === selectedIso;
+    html += '<button type="button" class="custom-date-day' + (selected ? ' selected' : '') + '" data-date="' + iso + '">' + d + '</button>';
+  }
+  html += '</div>';
+  popover.innerHTML = html;
+
+  const anchor = document.getElementById("planning-day-label-btn");
+
+  popover.querySelectorAll(".custom-date-day").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      popover.classList.remove("open");
+      openPlanningCalendarDay(btn.dataset.date);
+    });
+  });
+  popover.querySelector('[data-nav="-1"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    let y = viewYear, m = viewMonth - 1;
+    if (m < 0) { m = 11; y--; }
+    renderPlanningDayPicker(y, m);
+    if (anchor) positionCustomPopover(popover, anchor);
+  });
+  popover.querySelector('[data-nav="1"]').addEventListener("click", (e) => {
+    e.stopPropagation();
+    let y = viewYear, m = viewMonth + 1;
+    if (m > 11) { m = 0; y++; }
+    renderPlanningDayPicker(y, m);
+    if (anchor) positionCustomPopover(popover, anchor);
+  });
+}
+
+function togglePlanningDayPicker(e) {
+  if (e) e.stopPropagation();
+  const popover = ensurePlanningDayPickerPopover();
+  const wasOpen = popover.classList.contains("open");
+  closeAllCustomPickers();
+  if (wasOpen) return;
+  const iso = window.currentCalendarSelectedDay || planningTodayIso();
+  const [y, m] = iso.split("-").map(Number);
+  renderPlanningDayPicker(y, m - 1);
+  const anchor = document.getElementById("planning-day-label-btn");
+  if (anchor) positionCustomPopover(popover, anchor);
+}
+
 function formatPlanningWeekRangeLabel(mondayIso, sundayIso) {
   const [y1, m1, d1] = mondayIso.split("-").map(Number);
   const [y2, m2, d2] = sundayIso.split("-").map(Number);
@@ -13381,17 +13482,27 @@ function openPlanningCalendarDay(iso) {
   const dayFerie = getJourFerie(iso);
   const dayFeteLabel = dayFerie || getFeteDuJour(iso);
 
+  // Petit "‹ Retour" seulement si on a creusé depuis un jour du calendrier
+  // Mois/Semaine (currentCalendarViewMode reste alors "month"/"week", pas
+  // touché par openPlanningCalendarDay lui-même) — pas affiché si on est
+  // arrivé sur Jour directement via le sélecteur Jour·Semaine·Mois
+  // (currentCalendarViewMode vaut alors "day", voir setPlanningCalendarViewMode),
+  // où il n'y a pas de "vue d'origine" à laquelle revenir.
+  const cameFromGrid = window.currentCalendarViewMode === "month" || window.currentCalendarViewMode === "week";
+  const backLabel = window.currentCalendarViewMode === "week" ? "Retour à la semaine" : "Retour au mois";
+
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
+      ${cameFromGrid ? `<button type="button" class="planning-day-back-btn" onclick="renderPlanningCalendarGridView()">‹ ${backLabel}</button>` : ""}
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav" style="margin-bottom:0;">
         <div class="planning-calendar-nav-side">
           <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
           <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
         </div>
-        <div class="planning-calendar-month-label planning-calendar-month-label-sm" style="cursor:default;">
+        <button type="button" id="planning-day-label-btn" class="planning-calendar-month-label planning-calendar-month-label-sm" onclick="togglePlanningDayPicker(event)">
           ${dayShortLabel}${dayFeteLabel ? ` <span class="planning-day-fete">· ${dayFeteLabel.replace(/</g, "&lt;")}</span>` : ""}
-        </div>
+        </button>
         <div class="planning-calendar-nav-side right">
           <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
         </div>
