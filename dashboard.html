@@ -7615,10 +7615,27 @@ body[data-theme="light"]::after {
    CLARITY SYSTEMS — Vue calendrier mensuelle (Planning > Rendez-vous)
    ========================================================= */
 .planning-calendar-nav {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+/* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
+   et Jour uniquement) : positionné en absolu pour ne pas perturber le
+   centrage ‹ label › du nav (qui reste un flex à 3 éléments comme avant). */
+.planning-calendar-week-badge {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--clarity-text-tertiary);
+  background: var(--clarity-surface-soft);
+  padding: 3px 7px;
+  border-radius: 7px;
 }
 
 .planning-calendar-nav-btn {
@@ -13247,6 +13264,7 @@ function renderPlanningCalendarWeek() {
   const sundayDate = new Date(mondayDate);
   sundayDate.setDate(sundayDate.getDate() + 6);
   const weekLabel = formatPlanningWeekRangeLabel(weekStart, isoFromDate(sundayDate));
+  const weekNum = getISOWeekNumber(mondayDate);
   const todayIso = planningTodayIso();
 
   let daysHtml = "";
@@ -13282,6 +13300,7 @@ function renderPlanningCalendarWeek() {
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
+        <span class="planning-calendar-week-badge">S${weekNum}</span>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
         <div class="planning-calendar-month-label" style="cursor:default;">${weekLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
@@ -13328,12 +13347,15 @@ function openPlanningCalendarDay(iso) {
 
   const hasEvents = appts.length || relances.length;
   const [dy, dm, dd] = iso.split("-").map(Number);
-  const dayShortLabel = new Date(dy, dm - 1, dd).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const dayDateObj = new Date(dy, dm - 1, dd);
+  const dayShortLabel = dayDateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const dayWeekNum = getISOWeekNumber(dayDateObj);
 
   list.innerHTML = `
     <div class="agent-card planning-calendar-card" style="margin-bottom:14px;">
       ${planningViewToggleHtml()}
       <div class="planning-calendar-nav">
+        <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
         <div class="planning-calendar-month-label" style="cursor:default;">${dayShortLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
