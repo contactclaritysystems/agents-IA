@@ -7615,21 +7615,20 @@ body[data-theme="light"]::after {
    CLARITY SYSTEMS — Vue calendrier mensuelle (Planning > Rendez-vous)
    ========================================================= */
 .planning-calendar-nav {
-  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 16px;
 }
 
 /* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
-   et Jour uniquement) : positionné en absolu pour ne pas perturber le
-   centrage ‹ label › du nav (qui reste un flex à 3 éléments comme avant). */
+   et Jour uniquement) : un vrai élément du flex (pas de position:absolute,
+   qui se superposait à la flèche "‹" précédente au lieu de se placer à
+   côté). Le label central passe en flex:1 + contenu centré (voir plus
+   bas) pour que les deux flèches restent bien aux extrémités malgré ce
+   4e élément. */
 .planning-calendar-week-badge {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
   font-size: 11px;
   font-weight: 700;
   color: var(--clarity-text-tertiary);
@@ -7667,6 +7666,9 @@ body[data-theme="light"]::after {
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
   gap: 5px;
   padding: 5px 10px;
   border-radius: 9px;
