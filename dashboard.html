@@ -13306,6 +13306,7 @@ function renderPlanningCalendarWeek() {
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(-1)">‹</button>
         <div class="planning-calendar-month-label" style="cursor:default;">${weekLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarWeek(1)">›</button>
+        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${weekNum}</span>
       </div>
     </div>
     <div class="planning-week-days">${daysHtml}</div>
@@ -13361,6 +13362,7 @@ function openPlanningCalendarDay(iso) {
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(-1)">‹</button>
         <div class="planning-calendar-month-label" style="cursor:default;">${dayShortLabel}</div>
         <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
+        <span class="planning-calendar-week-badge" style="visibility:hidden;" aria-hidden="true">S${dayWeekNum}</span>
       </div>
     </div>
     ${!hasEvents ? `<div class="info-box">Rien de prévu ce jour-là.</div>` : ""}
