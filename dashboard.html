@@ -400,6 +400,47 @@ body.loading-subscription #actions-count {
   white-space: nowrap;
 }
 
+/* "Bientôt" (popup "?") : liste discrète sous la grille des actions
+   disponibles, pas un gros bloc — juste de quoi montrer que ça avance. */
+.help-actions-soon-wrap {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.help-actions-soon-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--clarity-text-tertiary);
+  margin-bottom: 10px;
+}
+
+.help-actions-soon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.help-actions-soon-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.help-actions-soon-item strong {
+  font-weight: 700;
+  color: var(--clarity-text-secondary);
+  flex-shrink: 0;
+}
+
+.help-actions-soon-item span {
+  color: var(--clarity-text-tertiary);
+  font-size: 12px;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -8489,7 +8530,7 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="writing-styles-count-label">0</span>
       <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" id="custom-agent-block" onclick="openSupportChoiceModal()">
+    <div class="settings-row" id="custom-agent-block" onclick="openFeatureRequestModal()">
       <span class="settings-row-icon settings-row-icon-blue">✨</span>
       <div class="settings-row-title">Une idée, un besoin ?</div>
       <span class="settings-row-chevron">›</span>
@@ -9300,6 +9341,29 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+  <div id="feature-request-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeFeatureRequestModal()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Une idée, un besoin ?</div>
+    <div class="mail-choice-subtitle">Dites-moi ce qui vous simplifierait la vie — j'étudie chaque demande.</div>
+
+    <textarea
+      class="field-input"
+      id="feature-request-input"
+      rows="4"
+      placeholder="Ex : pouvoir envoyer un devis directement depuis un contact..."
+      style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;resize:vertical;min-height:100px;margin-top:14px;"
+    ></textarea>
+
+    <button class="save-btn" type="button" id="feature-request-submit-btn" style="margin-top:14px;" onclick="submitFeatureRequest()">
+      Envoyer
+    </button>
+
+    <button class="mail-choice-close" onclick="closeFeatureRequestModal()">Annuler</button>
+  </div>
+</div>
+
   <div id="onboarding-overlay"></div>
   <div id="onboarding-ring"></div>
   <div id="onboarding-bubble"></div>
@@ -9397,6 +9461,15 @@ const RELANCE_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/agent/rel
 // Styles d'écriture (formulaire "message" de Rédaction) : lister/créer un
 // style ("Cousin", "Patron"...) utilisé pour adapter le ton du message.
 const STYLES_API_URL = "https://clarity-backend-me14.onrender.com/styles";
+// Ce que Clarity sait déjà faire / ce qui arrive bientôt (bouton "?" +
+// Réglages > Une idée, un besoin ?) — vient du backend pour rester
+// synchronisé avec l'orchestrateur (qui connaît la même liste "bientôt").
+const CAPABILITIES_API_URL = "https://clarity-backend-me14.onrender.com/capabilities";
+// Boîte à idées de Réglages > "Une idée, un besoin ?" : enregistrée
+// directement en base côté backend (table feature_requests), sans passer
+// par l'envoi d'un mail — fonctionne même si le compte mail n'est pas
+// encore connecté.
+const FEATURE_REQUEST_API_URL = "https://clarity-backend-me14.onrender.com/feature-request";
      
 let currentUser = null;
   document.body.classList.add("loading-subscription");
@@ -9584,8 +9657,46 @@ let helpActionsCurrentIndex = null;
 
 function openHelpActionsModal() {
   showHelpActionsGrid();
+  loadCapabilitiesSoonList();
   const modal = document.getElementById("help-actions-modal");
   if (modal) modal.style.display = "block";
+}
+
+// Section "Bientôt" du popup "?" : vient du backend (GET /capabilities)
+// pour rester synchronisé avec ce que l'orchestrateur sait déjà (il ne
+// doit jamais promettre une action qui n'existe pas encore). Discret :
+// pas de grosse liste, juste de quoi montrer que ça avance. En cas
+// d'erreur réseau, on masque simplement la section (pas de toast/erreur
+// visible pour un contenu non essentiel).
+async function loadCapabilitiesSoonList() {
+  const wrap = document.getElementById("help-actions-soon-wrap");
+  const list = document.getElementById("help-actions-soon-list");
+  if (!wrap || !list) return;
+
+  try {
+    const response = await fetch(CAPABILITIES_API_URL);
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const data = await response.json();
+    const comingSoon = Array.isArray(data.coming_soon) ? data.coming_soon : [];
+
+    if (!comingSoon.length) {
+      wrap.style.display = "none";
+      return;
+    }
+
+    list.innerHTML = comingSoon.map(item =>
+      '<div class="help-actions-soon-item">' +
+        '<strong>' + (item.label || "") + '</strong>' +
+        (item.desc ? '<span>' + item.desc + '</span>' : "") +
+      '</div>'
+    ).join("");
+
+    wrap.style.display = "block";
+  } catch (e) {
+    console.error("Erreur loadCapabilitiesSoonList:", e);
+    wrap.style.display = "none";
+  }
 }
 
 function closeHelpActionsModal() {
@@ -11698,6 +11809,63 @@ function closeSupportChoiceModal() {
     subject: subject,
     body: body
   }, "Message envoyé à Clarity Systems");
+}
+
+// "Une idée, un besoin ?" (Réglages > Contenu) : enregistrée directement
+// côté backend (table feature_requests), sans passer par l'envoi d'un
+// mail — fonctionne même si le compte mail n'est pas encore connecté.
+function openFeatureRequestModal() {
+  const modal = document.getElementById("feature-request-modal");
+  const input = document.getElementById("feature-request-input");
+  if (input) input.value = "";
+  if (modal) modal.style.display = "block";
+}
+
+function closeFeatureRequestModal() {
+  const modal = document.getElementById("feature-request-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function submitFeatureRequest() {
+  const input = document.getElementById("feature-request-input");
+  const idea = input ? input.value.trim() : "";
+
+  if (!idea) {
+    showToast("Écrivez votre idée avant d'envoyer", "error");
+    return;
+  }
+
+  const btn = document.getElementById("feature-request-submit-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Envoi...";
+  }
+
+  try {
+    const response = await fetch(FEATURE_REQUEST_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser ? currentUser.id : null,
+        user_email: currentUser ? currentUser.email : null,
+        idea: idea,
+        source: "help"
+      })
+    });
+
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    closeFeatureRequestModal();
+    showToast("Merci — idée transmise à l'équipe Clarity.", "success");
+  } catch (e) {
+    console.error("Erreur submitFeatureRequest:", e);
+    showToast("Erreur d'envoi, réessayez plus tard", "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Envoyer";
+    }
+  }
 }
 
 function connectOutlook() {
@@ -15107,6 +15275,7 @@ const CLARITY_MODAL_IDS = [
   "mail-choice-modal", "smtp-config-modal", "mail-preview-modal",
   "notes-preview-modal", "simple-agent-preview-modal", "clarify-modal",
   "pricing-modal", "support-choice-modal", "help-actions-modal",
+  "feature-request-modal",
   "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
   "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal",
@@ -22497,6 +22666,11 @@ window.updateAppointmentStatus = updateAppointmentStatus;
       <div class="mail-choice-subtitle">C'est très simple : choisissez une action ci-dessous, puis dites-le comme dans l'exemple.</div>
 
       <div class="help-actions-grid" id="help-actions-grid"></div>
+
+      <div class="help-actions-soon-wrap" id="help-actions-soon-wrap" style="display:none;">
+        <div class="help-actions-soon-label">Bientôt</div>
+        <div class="help-actions-soon-list" id="help-actions-soon-list"></div>
+      </div>
 
       <button class="sheet-btn" onclick="closeHelpActionsModal()" type="button" style="width:100%;justify-content:center;margin-top:16px;">
         Fermer
