@@ -347,6 +347,53 @@ body.loading-subscription #actions-count {
   color: var(--clarity-text);
 }
 
+/* Carte d'alerte quota/essai — version compacte, override de .gmail-section */
+#limit-warning-card {
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border-radius: 16px;
+  gap: 14px;
+  background: rgba(183,121,31,.07);
+  border-color: rgba(183,121,31,.18);
+  box-shadow: none;
+}
+
+#limit-warning-card .gmail-title {
+  font-size: 14px;
+  margin-bottom: 3px;
+  gap: 8px;
+}
+
+#limit-warning-card .gmail-title > span:first-child {
+  font-size: 16px;
+}
+
+#limit-warning-card .gmail-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+#limit-warning-card .limit-warning-header {
+  margin-bottom: 3px;
+  gap: 8px;
+}
+
+#limit-warning-card .limit-warning-header span {
+  font-size: 16px;
+}
+
+#limit-warning-card .limit-warning-header strong {
+  font-size: 14px;
+}
+
+#limit-warning-card .warning-plan-btn {
+  width: max-content;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -14851,9 +14898,6 @@ if (contactFormPage) {
     contact.email || "Non renseigné";
 
   document.getElementById("contact-detail-page").classList.add("open");
-
-console.log("Classes :", document.getElementById("contact-detail-page").className);
-console.log("Élément :", document.getElementById("contact-detail-page"));
 }
 
   function formatPhone(phone) {
