@@ -11855,8 +11855,15 @@ async function submitFeatureRequest() {
 
     if (!response.ok) throw new Error("Réponse serveur invalide");
 
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (e) {
+      // Réponse non-JSON : on garde le message par défaut ci-dessous.
+    }
+
     closeFeatureRequestModal();
-    showToast("Merci — idée transmise à l'équipe Clarity.", "success");
+    showToast(data.message || "Merci — idée transmise à l'équipe Clarity.", "success");
   } catch (e) {
     console.error("Erreur submitFeatureRequest:", e);
     showToast("Erreur d'envoi, réessayez plus tard", "error");
