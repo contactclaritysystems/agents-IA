@@ -9688,7 +9688,10 @@ const QUICK_TEXT_MODAL_CONFIG = {
   }
 };
 
-function openQuickTextModal(kind, continuing = false) {
+async function openQuickTextModal(kind, continuing = false) {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
   const config = QUICK_TEXT_MODAL_CONFIG[kind] || QUICK_TEXT_MODAL_CONFIG.redaction;
 
   let modal = document.getElementById("quick-text-modal");
@@ -9783,6 +9786,9 @@ window.submitQuickText = submitQuickText;
 // (avec qui / motif / jour / heure) -> un seul appel à /agent/planning,
 // déjà complet.
 async function openQuickPlanningModal() {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
   if (!contactsCache || !contactsCache.length) {
     await loadContacts();
   }
@@ -10002,6 +10008,9 @@ async function confirmQuickPlanning() {
 // Même principe que ci-dessus pour Relance : un formulaire complet
 // (avec qui / motif / jour / heure) au lieu du texte libre + micro.
 async function openQuickReminderModal() {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
   if (!contactsCache || !contactsCache.length) {
     await loadContacts();
   }
@@ -17410,6 +17419,9 @@ let quickMailFlowActive = false;
 let currentMailContactLabel = "";
 
 async function openQuickMailCompose() {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
   if (!contactsCache || !contactsCache.length) {
     await loadContacts();
   }
