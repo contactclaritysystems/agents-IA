@@ -8545,7 +8545,7 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="writing-styles-count-label">0</span>
       <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" id="custom-agent-block" onclick="openFeatureRequestModal()">
+    <div class="settings-row" id="custom-agent-block" onclick="openSupportChoiceModal()">
       <span class="settings-row-icon settings-row-icon-blue">✨</span>
       <div class="settings-row-title">Une idée, un besoin ?</div>
       <span class="settings-row-chevron">›</span>
@@ -9320,7 +9320,7 @@ body[data-theme="light"]::after {
     <div class="mail-choice-title">Nous contacter</div>
     <div class="mail-choice-subtitle">Choisissez le sujet de votre message.</div>
 
-    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Idée d\'agent', 'Bonjour,\n\nJ\'ai une idée d\'agent :\n\n')">
+    <button class="mail-choice-btn" type="button" onclick="closeSupportChoiceModal(); openFeatureRequestModal();">
       <span>💡</span>
       <div>
         <strong>J'ai une idée d'agent</strong>
@@ -22694,7 +22694,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
         <div class="help-actions-soon-list" id="help-actions-soon-list"></div>
       </div>
 
-      <button type="button" class="help-actions-idea-link" onclick="closeHelpActionsModal(); openFeatureRequestModal();">
+      <button type="button" class="help-actions-idea-link" onclick="closeHelpActionsModal(); openSupportChoiceModal();">
         ✨ Une idée, un besoin ?
       </button>
 
