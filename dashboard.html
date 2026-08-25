@@ -441,6 +441,21 @@ body.loading-subscription #actions-count {
   font-size: 12px;
 }
 
+.help-actions-idea-link {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 14px;
+  padding: 10px 0;
+  border: none;
+  background: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clarity-accent);
+  cursor: pointer;
+}
+
 .stat-card:hover {
   transform: none;
   border-color: var(--line-strong);
@@ -22678,6 +22693,10 @@ window.updateAppointmentStatus = updateAppointmentStatus;
         <div class="help-actions-soon-label">Bientôt</div>
         <div class="help-actions-soon-list" id="help-actions-soon-list"></div>
       </div>
+
+      <button type="button" class="help-actions-idea-link" onclick="closeHelpActionsModal(); openFeatureRequestModal();">
+        ✨ Une idée, un besoin ?
+      </button>
 
       <button class="sheet-btn" onclick="closeHelpActionsModal()" type="button" style="width:100%;justify-content:center;margin-top:16px;">
         Fermer
