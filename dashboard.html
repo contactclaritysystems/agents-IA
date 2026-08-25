@@ -3165,8 +3165,12 @@ body[data-theme="dark"] #app-loader {
 }
 
  /* FICHE CONTACT — POPUP PC */
+ /* Seuil aligné sur 601px (comme .status-row/.clarity-hero, BLOC 43/44) :
+    entre 601 et 900px, ni cette règle ni la règle mobile (max-width:600px)
+    ne s'appliquaient, donc la carte retombait en flux normal tout en bas
+    de la page (bug visible fenêtre Safari réduite à moitié d'écran). */
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
 
   #contact-detail-page {
     display: none;
@@ -3999,8 +4003,9 @@ textarea.field-input {
 }
 
 /* ---------- FICHE CONTACT ---------- */
+/* Même seuil que le bloc "FICHE CONTACT — POPUP PC" ci-dessus (601px). */
 
-@media (min-width: 901px) {
+@media (min-width: 601px) {
   #contact-detail-page.open {
     background: rgba(15, 15, 18, 0.38);
     backdrop-filter: blur(10px);
