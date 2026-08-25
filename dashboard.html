@@ -1247,6 +1247,14 @@ select.field-input {
     grid-template-columns: 1fr;
   }
 
+  /* Bannière quota/essai : sur mobile le bouton doit rester à droite
+     du texte (pas passer en dessous), contrairement aux autres
+     .gmail-section qui s'empilent sur 1 colonne. */
+  #limit-warning-card {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
   .field-row {
     /* minmax(0, 1fr) et pas juste "1fr" : même piège que la version bureau
        (voir commentaire sur la règle .field-row de base) — sur mobile,
