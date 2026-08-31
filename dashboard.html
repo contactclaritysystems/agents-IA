@@ -2725,7 +2725,11 @@ body[data-theme="dark"] #app-loader {
   #onboarding-overlay {
   position: fixed;
   inset: 0;
-  z-index: 6000;
+  /* Doit rester au-dessus de TOUT, y compris les popups de l'appli
+     (ex: #mail-preview-modal, z-index 9999) : sinon la bulle
+     d'explication et le halo se retrouvent invisibles, cachés derrière
+     la popup ouverte pendant l'étape "confirm_send". */
+  z-index: 900000;
   background: rgba(15,15,17,.55);
   display: none;
 }
@@ -2736,11 +2740,25 @@ body[data-theme="dark"] #app-loader {
 
 #onboarding-ring {
   position: fixed;
-  z-index: 6001;
+  z-index: 900001;
   border-radius: 14px;
   box-shadow: 0 0 0 3px var(--clarity-surface), 0 0 0 6px var(--clarity-primary), 0 0 18px 4px rgba(0,0,0,.35);
   pointer-events: none;
   transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+  display: none;
+}
+
+/* Pendant la visite guidée (tips), le voile sombre est troué (clip-path)
+   pile à l'endroit mis en avant, pour que l'utilisateur le voie bien
+   éclairé — mais ce trou rendrait cette zone cliquable par défaut
+   (le voile n'y couvre plus rien). Ce calque transparent, positionné
+   exactement sur le même rectangle, absorbe les clics à cet endroit
+   sans rien assombrir : rien n'est cliquable pendant la visite, à part
+   Suivant/Précédent/Terminer. */
+#onboarding-click-blocker {
+  position: fixed;
+  z-index: 900001;
+  background: transparent;
   display: none;
 }
 
@@ -2749,7 +2767,7 @@ body[data-theme="dark"] #app-loader {
    normal — remplace l'idée d'un halo permanent, jugé pas assez sobre. */
 #onboarding-mic-tag {
   position: fixed;
-  z-index: 6003;
+  z-index: 900003;
   transform: translateX(-50%);
   background: var(--clarity-surface);
   color: var(--clarity-text);
@@ -2765,7 +2783,7 @@ body[data-theme="dark"] #app-loader {
 
 #onboarding-bubble {
   position: fixed;
-  z-index: 6002;
+  z-index: 900002;
   /* Légèrement au-dessus du centre plutôt qu'accroché tout en haut de
      l'écran (retour utilisateur : trop haut, pas beau). Le petit écart
      avec .onboarding-center (pile 50%, réservé à l'étape finale "Bravo")
@@ -2804,7 +2822,7 @@ body[data-theme="dark"] #app-loader {
 
   #onboarding-tips {
   position: fixed;
-  z-index: 6002;
+  z-index: 900002;
   left: 50%;
   bottom: 92px;
   transform: translateX(-50%);
@@ -9405,6 +9423,7 @@ body[data-theme="light"]::after {
 
   <div id="onboarding-overlay"></div>
   <div id="onboarding-ring"></div>
+  <div id="onboarding-click-blocker"></div>
   <div id="onboarding-mic-tag">🎙️ C'est le micro</div>
   <div id="onboarding-bubble"></div>
   <div id="onboarding-tips"></div>
@@ -12402,29 +12421,61 @@ const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null,
 let onboardingTipsPositionInterval = null;
 
 function showTipsRing(selectors) {
+  const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
+  const blocker = document.getElementById("onboarding-click-blocker");
   if (!ring) return;
 
   const target = pickVisibleElement(selectors || []);
 
   if (!target) {
     ring.style.display = "none";
+    if (blocker) blocker.style.display = "none";
+    if (overlay) overlay.style.clipPath = "none";
     return;
   }
 
   const rect = target.getBoundingClientRect();
-  const pad = 8;
+  // Halo plus généreux que pendant les étapes interactives (8px) : ici
+  // il est purement illustratif, donc on peut se permettre plus large
+  // pour mieux le voir.
+  const pad = 16;
+  const x = rect.left - pad;
+  const y = rect.top - pad;
+  const w = rect.width + pad * 2;
+  const h = rect.height + pad * 2;
 
   ring.style.display = "block";
-  ring.style.left = (rect.left - pad) + "px";
-  ring.style.top = (rect.top - pad) + "px";
-  ring.style.width = (rect.width + pad * 2) + "px";
-  ring.style.height = (rect.height + pad * 2) + "px";
+  ring.style.left = x + "px";
+  ring.style.top = y + "px";
+  ring.style.width = w + "px";
+  ring.style.height = h + "px";
+
+  // Le voile est troué ici pour que la zone visée reste bien éclairée...
+  if (overlay) {
+    overlay.style.clipPath =
+      "polygon(0% 0%, 0% 100%, " + x + "px 100%, " + x + "px " + y + "px, " +
+      (x + w) + "px " + y + "px, " + (x + w) + "px " + (y + h) + "px, " +
+      x + "px " + (y + h) + "px, " + x + "px 100%, 100% 100%, 100% 0%)";
+  }
+  // ...mais ce trou reste non-cliquable grâce à ce calque transparent
+  // posé exactement dessus.
+  if (blocker) {
+    blocker.style.display = "block";
+    blocker.style.left = x + "px";
+    blocker.style.top = y + "px";
+    blocker.style.width = w + "px";
+    blocker.style.height = h + "px";
+  }
 }
 
 function hideTipsRing() {
+  const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
+  const blocker = document.getElementById("onboarding-click-blocker");
   if (ring) ring.style.display = "none";
+  if (blocker) blocker.style.display = "none";
+  if (overlay) overlay.style.clipPath = "none";
 }
 
 function startTipsPositionLoop(selectors) {
@@ -12506,6 +12557,13 @@ function startOnboardingTips() {
 async function finishOnboardingTips() {
   stopTipsPositionLoop();
   hideTipsRing();
+
+  // Le voile sombre était resté actif tout le long de la visite guidée
+  // (voir transitionToTips) : il faut bien le retirer ici, sinon
+  // l'écran reste assombri et bloqué en permanence une fois le tour
+  // terminé.
+  const overlay = document.getElementById("onboarding-overlay");
+  if (overlay) overlay.classList.remove("active");
 
   const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
   showSection("agents", homeBtn);
@@ -12603,7 +12661,7 @@ const ONBOARDING_MESSAGES = {
   }
 };
   
-function renderOnboardingBubble(title, text, centered = false) {
+function renderOnboardingBubble(title, text, centered = false, showNextButton = false) {
   const overlay = document.getElementById("onboarding-overlay");
   const bubble = document.getElementById("onboarding-bubble");
   if (!overlay || !bubble) return;
@@ -12615,6 +12673,7 @@ function renderOnboardingBubble(title, text, centered = false) {
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
     <div class="onboarding-text">${text}</div>
+    ${showNextButton ? '<div style="margin-top:14px;"><button type="button" class="save-btn" style="width:100%;" onclick="transitionToTips()">Suivant</button></div>' : ""}
   `;
 }
 
@@ -12658,13 +12717,14 @@ function showOnboardingStep() {
   const title = typeof config.title === "function" ? config.title() : config.title;
   const text = typeof config.text === "function" ? config.text() : config.text;
 
-    renderOnboardingBubble(title, text, onboardingStep === "done");
+    renderOnboardingBubble(title, text, onboardingStep === "done", onboardingStep === "done");
 
   if (onboardingStep === "done") {
+    // Plus d'enchaînement automatique après 3,5s : l'utilisateur doit
+    // lire le message et cliquer lui-même sur "Suivant" pour passer à
+    // la visite guidée (retour utilisateur : ça enchaînait tout seul
+    // sur l'étape suivante sans lui laisser le temps de lire).
     positionOnboardingSpotlight(null);
-    setTimeout(() => {
-      transitionToTips();
-    }, 3500);
     return;
   }
 
@@ -12818,8 +12878,14 @@ async function startOnboardingIfNeeded() {
   const bubble = document.getElementById("onboarding-bubble");
   const micTag = document.getElementById("onboarding-mic-tag");
 
-  if (overlay) overlay.classList.remove("active");
-  if (ring) ring.style.display = "none";
+  // Le voile sombre reste actif pendant toute la visite guidée (tips) :
+  // on ne le masque plus. Son clip-path est déjà "none" (posé par
+  // positionOnboardingSpotlight(null) à l'étape "done" juste avant),
+  // donc il bloque tous les clics sur le fond — seuls les boutons
+  // Suivant/Précédent/Terminer de #onboarding-tips (z-index au-dessus)
+  // restent cliquables. Le halo (#onboarding-ring) reste purement
+  // visuel par-dessus, pour montrer où regarder.
+  if (overlay) overlay.classList.add("active");
   if (bubble) bubble.style.display = "none";
   if (micTag) micTag.style.display = "none";
 
@@ -15326,6 +15392,13 @@ function deleteSelectedContact() {
 // ─── UTILS ───────────────────────────────────────────────
 
 function showToast(msg, type = "success") {
+  // Pendant le tour de bienvenue, les toasts de succès ("compte
+  // connecté", "mail envoyé"...) font doublon avec la bulle
+  // d'explication et gênent la lecture de l'étape en cours. On les
+  // masque uniquement le temps du tour ; les erreurs restent visibles
+  // (l'utilisateur doit toujours savoir si quelque chose a échoué).
+  if (onboardingActive && type !== "error") return;
+
   const t = document.getElementById("toast");
   if (!t) return;
 
