@@ -12782,6 +12782,10 @@ function pickVisibleElement(selectors) {
 // l'union des rectangles de son titre (haut de la carte) et de ses deux
 // boutons (bas de la carte) : ça couvre forcément toute la carte, quel
 // que soit le souci avec son propre getBoundingClientRect().
+// Mémorise le dernier halo valide calculé pour "confirm_send", pour
+// pouvoir le garder figé pendant l'animation d'envoi (voir plus bas).
+let lastConfirmSendSpotlightRect = null;
+
 function getConfirmSendSpotlightRect() {
   // NB : on ne peut pas utiliser box.offsetParent pour vérifier la
   // visibilité ici — offsetParent vaut TOUJOURS null pour un élément en
@@ -12791,10 +12795,21 @@ function getConfirmSendSpotlightRect() {
   // laissait le halo figé sur la position de l'étape précédente. On
   // vérifie plutôt directement l'affichage de la popup elle-même.
   const modal = document.getElementById("mail-preview-modal");
-  if (!modal || modal.style.display !== "block") return null;
+  if (!modal || modal.style.display !== "block") { lastConfirmSendSpotlightRect = null; return null; }
 
   const box = modal.querySelector(".mail-choice-box");
-  if (!box) return null;
+  if (!box) { lastConfirmSendSpotlightRect = null; return null; }
+
+  // Pendant l'animation d'envoi ("sending"), la carte s'anime (translate
+  // + scale + rotate) pour s'envoler façon avion en papier. Si on
+  // continue à recalculer le halo sur ce rectangle en plein mouvement,
+  // le halo se met lui aussi à "voler" vers le coin — ça donne un effet
+  // de bug plutôt qu'une animation voulue. On garde donc le halo figé
+  // sur sa dernière position stable (juste avant l'envol) tant que
+  // cette classe est présente.
+  if (box.classList.contains("sending")) {
+    return lastConfirmSendSpotlightRect;
+  }
 
   const parts = [
     box,
@@ -12807,14 +12822,15 @@ function getConfirmSendSpotlightRect() {
     .map(el => el.getBoundingClientRect())
     .filter(r => r.width > 0 && r.height > 0);
 
-  if (!rects.length) return null;
+  if (!rects.length) return lastConfirmSendSpotlightRect;
 
   const left = Math.min(...rects.map(r => r.left));
   const top = Math.min(...rects.map(r => r.top));
   const right = Math.max(...rects.map(r => r.right));
   const bottom = Math.max(...rects.map(r => r.bottom));
 
-  return { left, top, width: right - left, height: bottom - top };
+  lastConfirmSendSpotlightRect = { left, top, width: right - left, height: bottom - top };
+  return lastConfirmSendSpotlightRect;
 }
 
 
