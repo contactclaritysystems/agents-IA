@@ -8396,17 +8396,77 @@ body[data-theme="light"]::after {
   flex-shrink: 0;
 }
 
-#main-settings .settings-time-input {
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
-  color: var(--clarity-text);
+/* ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─── */
+.time-wheel-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 180px;
+  margin-top: 16px;
+}
+
+.time-wheel-highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 40px;
   background: var(--clarity-surface-soft);
-  border: 1px solid var(--clarity-border);
-  border-radius: 8px;
-  padding: 6px 8px;
-  flex-shrink: 0;
-  width: 90px;
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.time-wheel-col {
+  position: relative;
+  width: 70px;
+  height: 180px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  z-index: 1;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
+}
+
+.time-wheel-col::-webkit-scrollbar { display: none; }
+
+.time-wheel-col::before,
+.time-wheel-col::after {
+  content: "";
+  display: block;
+  height: 70px;
+}
+
+.time-wheel-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--clarity-text-tertiary);
+  scroll-snap-align: center;
+  cursor: pointer;
+  transition: color .12s ease, font-size .12s ease;
+}
+
+.time-wheel-item.selected {
+  color: var(--clarity-text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.time-wheel-sep {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--clarity-text);
+  z-index: 1;
+  padding-bottom: 2px;
 }
 
 #main-settings #profil-stat-card.needs-attention .settings-row-value {
@@ -8672,10 +8732,11 @@ body[data-theme="light"]::after {
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
-    <div class="settings-row" id="digest-time-row">
+    <div class="settings-row" id="digest-time-row" onclick="openDigestTimeModal()">
       <span class="settings-row-icon settings-row-icon-amber">🕐</span>
       <div class="settings-row-title">Heure d'envoi</div>
-      <input type="time" class="settings-time-input" id="digest-time-input" value="07:30" step="300" onchange="onDigestTimeChange()" />
+      <span class="settings-row-value" id="digest-time-display">07:30</span>
+      <span class="settings-row-chevron">›</span>
     </div>
     <div class="settings-row" id="notify-test-row" onclick="sendNotifyTestEmail(this)">
       <span class="settings-row-icon settings-row-icon-purple">📨</span>
@@ -10295,8 +10356,8 @@ function syncDigestUI() {
   const toggle = document.getElementById("digest-toggle-switch");
   if (toggle) toggle.classList.toggle("active", digestEnabled);
 
-  const timeInput = document.getElementById("digest-time-input");
-  if (timeInput) timeInput.value = digestTime;
+  const timeDisplay = document.getElementById("digest-time-display");
+  if (timeDisplay) timeDisplay.textContent = digestTime;
 
   const timeRow = document.getElementById("digest-time-row");
   if (timeRow) timeRow.style.display = digestEnabled ? "flex" : "none";
@@ -10308,10 +10369,139 @@ async function setDigestEnabled(enabled) {
   await saveDigestSettings();
 }
 
-async function onDigestTimeChange() {
-  const timeInput = document.getElementById("digest-time-input");
-  if (!timeInput || !timeInput.value) return;
-  digestTime = timeInput.value;
+// ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─────
+// Popup avec 2 colonnes qui défilent (heures / minutes par pas de 5) + un
+// bouton "Valider" — au lieu du <input type="time"> natif, moins agréable à
+// manipuler pour ce réglage précis.
+let pendingDigestHour = 7;
+let pendingDigestMinute = 30;
+const digestTimeWheelScrollTimers = {};
+
+function openDigestTimeModal() {
+  const parts = (digestTime || "07:30").split(":");
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  pendingDigestHour = isNaN(h) ? 7 : h;
+  // Aligne sur le pas de 5 min le plus proche (au cas où la valeur stockée
+  // ne serait pas déjà un multiple de 5).
+  pendingDigestMinute = isNaN(m) ? 30 : (Math.round(m / 5) * 5) % 60;
+
+  let modal = document.getElementById("digest-time-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "digest-time-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeDigestTimeModal()"></div>
+      <div class="mail-choice-box" style="max-width:300px;">
+        <div class="mail-choice-title">Heure d'envoi</div>
+        <div class="mail-choice-subtitle">Choisissez l'heure du brief quotidien.</div>
+
+        <div class="time-wheel-wrap">
+          <div class="time-wheel-highlight"></div>
+          <div class="time-wheel-col" id="time-wheel-hours"></div>
+          <div class="time-wheel-sep">:</div>
+          <div class="time-wheel-col" id="time-wheel-minutes"></div>
+        </div>
+
+        <button class="save-btn" type="button" id="digest-time-validate-btn" style="margin-top:16px;">
+          Valider
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeDigestTimeModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("digest-time-validate-btn").onclick = confirmDigestTimeModal;
+
+    buildTimeWheelColumn(document.getElementById("time-wheel-hours"), 0, 23, 1, "hour");
+    buildTimeWheelColumn(document.getElementById("time-wheel-minutes"), 0, 55, 5, "minute");
+  }
+
+  modal.style.display = "flex";
+
+  // Le positionnement du scroll a besoin que le modal soit affiché (layout
+  // calculé) pour que les mesures (clientHeight, offsetTop...) soient justes.
+  requestAnimationFrame(() => {
+    scrollWheelColumnTo("time-wheel-hours", pendingDigestHour);
+    scrollWheelColumnTo("time-wheel-minutes", pendingDigestMinute);
+  });
+}
+
+function closeDigestTimeModal() {
+  const modal = document.getElementById("digest-time-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function buildTimeWheelColumn(col, min, max, step, kind) {
+  let html = "";
+  for (let v = min; v <= max; v += step) {
+    html += '<div class="time-wheel-item" data-value="' + v + '">' + String(v).padStart(2, "0") + "</div>";
+  }
+  col.innerHTML = html;
+
+  col.querySelectorAll(".time-wheel-item").forEach(item => {
+    item.addEventListener("click", () => {
+      scrollWheelColumnTo(col.id, parseInt(item.dataset.value, 10));
+    });
+  });
+
+  // Pas de scroll natif "snap end" fiable partout : on détecte la fin du
+  // défilement nous-mêmes (debounce) pour savoir quel item est au centre.
+  col.addEventListener("scroll", () => {
+    clearTimeout(digestTimeWheelScrollTimers[col.id]);
+    digestTimeWheelScrollTimers[col.id] = setTimeout(() => {
+      updateWheelSelection(col, kind);
+    }, 90);
+  });
+}
+
+function updateWheelSelection(col, kind) {
+  const items = col.querySelectorAll(".time-wheel-item");
+  const colRect = col.getBoundingClientRect();
+  const centerY = colRect.top + colRect.height / 2;
+
+  let closest = null;
+  let closestDist = Infinity;
+
+  items.forEach(item => {
+    const r = item.getBoundingClientRect();
+    const itemCenter = r.top + r.height / 2;
+    const dist = Math.abs(itemCenter - centerY);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = item;
+    }
+    item.classList.remove("selected");
+  });
+
+  if (closest) {
+    closest.classList.add("selected");
+    const value = parseInt(closest.dataset.value, 10);
+    if (kind === "hour") pendingDigestHour = value;
+    else pendingDigestMinute = value;
+  }
+}
+
+function scrollWheelColumnTo(colId, value) {
+  const col = document.getElementById(colId);
+  if (!col) return;
+  const item = col.querySelector('.time-wheel-item[data-value="' + value + '"]');
+  if (!item) return;
+
+  col.scrollTop = item.offsetTop - (col.clientHeight / 2) + (item.clientHeight / 2);
+  col.querySelectorAll(".time-wheel-item").forEach(i => i.classList.remove("selected"));
+  item.classList.add("selected");
+}
+
+async function confirmDigestTimeModal() {
+  const hh = String(pendingDigestHour).padStart(2, "0");
+  const mm = String(pendingDigestMinute).padStart(2, "0");
+  digestTime = hh + ":" + mm;
+  closeDigestTimeModal();
+  syncDigestUI();
   await saveDigestSettings();
 }
 
