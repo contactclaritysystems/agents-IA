@@ -12515,6 +12515,11 @@ const TIP_WALKTHROUGH = {
 
 const TIP_WALKTHROUGH_STEP_DELAY = 1100;
 
+// Temps de pause sur la cible finale de l'animation avant que le texte
+// n'apparaisse — assez long pour la voir, pas assez pour que ce soit
+// long à attendre.
+const TIP_TEXT_REVEAL_DELAY = 900;
+
 let onboardingTipsPositionInterval = null;
 let tipWalkthroughTimeouts = [];
 
@@ -12649,24 +12654,30 @@ function showOnboardingTip(index) {
   // qu'on montre.
   tipsBox.classList.toggle("onboarding-tips-top", index === 0);
 
-  tipsBox.style.display = "block";
-  tipsBox.innerHTML = `
-    <div class="onboarding-title">${tip.title}</div>
-    <div class="onboarding-text">${tip.text}</div>
-    <div id="onboarding-tips-actions">
-      ${index > 0 ? '<button type="button" class="sheet-btn" onclick="onboardingTipBack()">Précédent</button>' : ""}
-      <button type="button" class="save-btn" onclick="onboardingTipNext()">${isLast ? "Terminer" : "Suivant"}</button>
-    </div>
-  `;
+  const revealTipText = () => {
+    tipsBox.style.display = "block";
+    tipsBox.innerHTML = `
+      <div class="onboarding-title">${tip.title}</div>
+      <div class="onboarding-text">${tip.text}</div>
+      <div id="onboarding-tips-actions">
+        ${index > 0 ? '<button type="button" class="sheet-btn" onclick="onboardingTipBack()">Précédent</button>' : ""}
+        <button type="button" class="save-btn" onclick="onboardingTipNext()">${isLast ? "Terminer" : "Suivant"}</button>
+      </div>
+    `;
+  };
 
   if (walkthrough) {
-    // Petit parcours guidé, pour que l'utilisateur retienne où se
-    // trouve la chose : d'abord l'onglet du bas (déjà ciblé via
-    // "selectors" ci-dessus). Deux variantes ensuite :
-    // - avec rowSelectors/openFn (Adaptez le ton, Un doute ?) : 3 temps,
-    //   on montre la rangée/bouton précis puis on ouvre le contenu ;
-    // - sans (Contacts, Planning) : 2 temps, on va direct sur la zone
-    //   à retenir, rien à ouvrir.
+    // Regarder l'animation ET lire le texte en même temps porte à
+    // confusion (on ne sait plus où regarder) : on montre d'abord le
+    // parcours guidé tout seul (bulle cachée), et le texte + les
+    // boutons n'apparaissent qu'une fois l'animation terminée, avec un
+    // court temps de pause sur la cible finale pour la voir avant de
+    // lire. Parcours en 2 temps pour Contacts/Planning (onglet → zone à
+    // retenir) ou 3 temps pour Adaptez le ton/Un doute ? (onglet →
+    // rangée/bouton → contenu ouvert).
+    tipsBox.style.display = "none";
+    tipsBox.innerHTML = "";
+
     const selectorsRef = { current: walkthrough.navSelectors };
     startTipsPositionLoop(selectorsRef);
 
@@ -12687,6 +12698,11 @@ function showOnboardingTip(index) {
           finalTarget.scrollIntoView({ behavior: "instant", block: "center" });
         }
       }, TIP_WALKTHROUGH_STEP_DELAY * 2));
+
+      tipWalkthroughTimeouts.push(setTimeout(
+        revealTipText,
+        TIP_WALKTHROUGH_STEP_DELAY * 2 + TIP_TEXT_REVEAL_DELAY
+      ));
     } else {
       tipWalkthroughTimeouts.push(setTimeout(() => {
         selectorsRef.current = walkthrough.finalSelectors;
@@ -12695,10 +12711,19 @@ function showOnboardingTip(index) {
           finalTarget.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }, TIP_WALKTHROUGH_STEP_DELAY));
+
+      tipWalkthroughTimeouts.push(setTimeout(
+        revealTipText,
+        TIP_WALKTHROUGH_STEP_DELAY + TIP_TEXT_REVEAL_DELAY
+      ));
     }
 
     return;
   }
+
+  // Pas de parcours guidé ici (Essai gratuit, Idée/besoin) : rien à
+  // regarder avant de lire, donc texte affiché tout de suite.
+  revealTipText();
 
   const visibleTarget = pickVisibleElement(selectors);
   if (visibleTarget && visibleTarget.scrollIntoView) {
