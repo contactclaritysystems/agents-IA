@@ -12328,8 +12328,32 @@ function startOnboardingPositionLoop() {
     // défilent) — la bulle serait sinon affichée exactement par-dessus
     // et la cacherait entièrement.
     const overlay = document.getElementById("onboarding-overlay");
+    const ring = document.getElementById("onboarding-ring");
     const bubble = document.getElementById("onboarding-bubble");
     const micTag = document.getElementById("onboarding-mic-tag");
+
+    // Certaines étapes (ex: "connect_gmail") font apparaître au clic une
+    // popup de l'appli qui a déjà son propre fond assombri (choix du
+    // fournisseur mail, formulaire SMTP...). Notre propre voile/bulle
+    // n'a plus rien à faire par-dessus à ce moment-là — pire, il
+    // cachait la popup et bloquait les clics sur ses boutons puisqu'il
+    // n'a un "trou" que sur l'élément de l'étape, pas sur la popup. On
+    // s'efface entièrement tant qu'une de ces popups reste ouverte ;
+    // dès qu'elle se ferme, l'étape en cours (ou la suivante) reprend
+    // normalement au prochain passage de cette boucle.
+    const interruptingModalIds = ["mail-choice-modal", "smtp-config-modal"];
+    const interruptingModalOpen = interruptingModalIds.some((id) => {
+      const el = document.getElementById(id);
+      return el && el.style.display === "block";
+    });
+
+    if (interruptingModalOpen) {
+      if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+      if (ring) ring.style.display = "none";
+      if (bubble) bubble.style.display = "none";
+      if (micTag) micTag.style.display = "none";
+      return;
+    }
 
     if (overlay) overlay.classList.add("active");
 
