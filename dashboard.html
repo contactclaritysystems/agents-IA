@@ -2846,6 +2846,12 @@ body[data-theme="dark"] #app-loader {
   bottom: auto;
 }
 
+#onboarding-tips.onboarding-tips-center {
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+
 #onboarding-tips .onboarding-title {
   font-size: 15.5px;
   margin-bottom: 4px;
@@ -12459,12 +12465,12 @@ async function goToDictateMailStep() {
     text: "Cliquez sur le bouton « ? » : vous y verrez tout ce que je sais déjà faire, avec un exemple pour chaque demande."
   },
   {
-    title: "🎁 Votre essai gratuit",
-    text: "7 jours d'essai ou 50 actions offertes, selon ce qui arrive en premier. Et chaque semaine, j'apprends de nouvelles choses."
-  },
-  {
     title: "✨ Une idée, un besoin ?",
     text: "Dites-le-moi dans Réglages > Une idée, un besoin ? : j'étudie chaque demande."
+  },
+  {
+    title: "🎁 Votre essai gratuit",
+    text: "7 jours d'essai ou 50 actions offertes, selon ce qui arrive en premier. Et chaque semaine, j'apprends de nouvelles choses."
   }
 ];
 
@@ -12474,11 +12480,11 @@ const TIP_TARGET_SELECTORS = [
   null,
   null,
   null,
-  [],
-  ['#custom-agent-block']
+  ['#custom-agent-block'],
+  []
 ];
 
-const TIP_TARGET_SECTIONS = ["agents", "contacts", "planning", "settings", "agents", null, "settings"];
+const TIP_TARGET_SECTIONS = ["agents", "contacts", "planning", "settings", "agents", "settings", null];
 
 // Plutôt que de télétransporter l'utilisateur directement sur le
 // contenu (il ne retient pas où c'est), on raconte le trajet en
@@ -12489,7 +12495,12 @@ const TIP_TARGET_SECTIONS = ["agents", "contacts", "planning", "settings", "agen
 const TIP_WALKTHROUGH = {
   0: {
     navSelectors: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
-    finalSelectors: ['.clarity-quick-row']
+    finalSelectors: ['.clarity-quick-row'],
+    // Sa cible finale est tout en bas de l'écran, pile là où la bulle
+    // se met normalement : plutôt qu'une position fixe qui la fait soit
+    // cacher la cible, soit remonter trop haut et chevaucher l'en-tête,
+    // on la fait suivre la cible mise en avant et rester juste au-dessus.
+    anchorAboveTarget: true
   },
   1: {
     navSelectors: ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
@@ -12510,6 +12521,10 @@ const TIP_WALKTHROUGH = {
     rowSelectors: ['.clarity-help-btn'],
     openFn: () => { if (typeof openHelpActionsModal === "function") openHelpActionsModal(); },
     finalSelectors: ['#help-actions-grid']
+  },
+  5: {
+    navSelectors: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+    finalSelectors: ['#custom-agent-block']
   }
 };
 
@@ -12528,10 +12543,11 @@ function clearTipWalkthroughTimeouts() {
   tipWalkthroughTimeouts = [];
 }
 
-function showTipsRing(selectorsRef) {
+function showTipsRing(selectorsRef, anchorAboveTarget) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const blocker = document.getElementById("onboarding-click-blocker");
+  const tipsBox = document.getElementById("onboarding-tips");
   if (!ring) return;
 
   if (overlay) overlay.classList.add("active");
@@ -12582,6 +12598,16 @@ function showTipsRing(selectorsRef) {
     blocker.style.width = w + "px";
     blocker.style.height = h + "px";
   }
+
+  // Cas particulier "Actions rapides" : sa cible est tout en bas de
+  // l'écran, exactement là où la bulle de texte se met par défaut. Une
+  // position fixe (en bas ou tout en haut) soit la cache, soit finit
+  // trop haute et chevauche l'en-tête. On fait donc suivre la bulle
+  // juste au-dessus de la cible mise en avant, où qu'elle soit.
+  if (anchorAboveTarget && tipsBox) {
+    tipsBox.style.top = "auto";
+    tipsBox.style.bottom = (window.innerHeight - y + 12) + "px";
+  }
 }
 
 function hideTipsRing() {
@@ -12593,11 +12619,11 @@ function hideTipsRing() {
   if (overlay) overlay.style.clipPath = "none";
 }
 
-function startTipsPositionLoop(selectors) {
+function startTipsPositionLoop(selectors, anchorAboveTarget) {
   stopTipsPositionLoop();
-  showTipsRing(selectors);
+  showTipsRing(selectors, anchorAboveTarget);
   onboardingTipsPositionInterval = setInterval(() => {
-    showTipsRing(selectors);
+    showTipsRing(selectors, anchorAboveTarget);
   }, 300);
 }
 
@@ -12648,11 +12674,18 @@ function showOnboardingTip(index) {
     showSection(section, navBtn);
   }
 
-  // En bas par défaut, sauf pour "Actions rapides" : sa cible est tout
-  // en bas de l'écran (juste au-dessus du menu), pile là où se trouve
-  // normalement la bulle — on la remonte en haut pour ne pas cacher ce
-  // qu'on montre.
-  tipsBox.classList.toggle("onboarding-tips-top", index === 0);
+  // On repart d'une position propre à chaque étape : "Actions rapides"
+  // fixe sa position elle-même dynamiquement (voir anchorAboveTarget
+  // dans showTipsRing), et sans ce nettoyage elle resterait bloquée sur
+  // sa dernière position en cas de retour en arrière vers une autre
+  // étape.
+  tipsBox.style.top = "";
+  tipsBox.style.bottom = "";
+  tipsBox.classList.remove("onboarding-tips-top");
+  // Dernière étape ("Votre essai gratuit") : rien à mettre en évidence,
+  // c'est un message de conclusion — on le centre à l'écran plutôt que
+  // de le laisser en bas, où il fait "orphelin" juste avant la fin.
+  tipsBox.classList.toggle("onboarding-tips-center", isLast);
 
   const revealTipText = () => {
     tipsBox.style.display = "block";
@@ -12679,7 +12712,7 @@ function showOnboardingTip(index) {
     tipsBox.innerHTML = "";
 
     const selectorsRef = { current: walkthrough.navSelectors };
-    startTipsPositionLoop(selectorsRef);
+    startTipsPositionLoop(selectorsRef, walkthrough.anchorAboveTarget);
 
     if (walkthrough.rowSelectors && walkthrough.openFn) {
       tipWalkthroughTimeouts.push(setTimeout(() => {
