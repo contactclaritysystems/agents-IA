@@ -16562,48 +16562,145 @@ function wireCustomTimeInput(nativeInput) {
   popover.className = "custom-time-popover";
   if (nativeInput.id) popover.id = nativeInput.id + "-popover";
   document.body.appendChild(popover);
+  // Les clics à l'intérieur (item de la roue, espace vide entre les
+  // colonnes...) ne doivent jamais être vus comme un clic "en dehors" par
+  // l'écouteur global (voir closeAllCustomPickers) — sinon la popover se
+  // referme au moment même où on essaie de régler l'heure ou la minute.
+  popover.addEventListener("click", (e) => e.stopPropagation());
 
-  const step = parseInt(nativeInput.step, 10) || 900;
-  const stepMinutes = Math.max(1, Math.round(step / 60));
+  // Heures et minutes réglables indépendamment (2 bandes qui défilent, à la
+  // minute près chacune) — remplace l'ancienne liste plate "08:00, 08:01,
+  // 08:02..." (impraticable à la minute près : 1440 lignes à faire défiler).
+  let wheelHour = 8;
+  let wheelMinute = 0;
+  const wheelScrollTimers = {};
 
   function renderDisplay() {
     display.textContent = nativeInput.value || "Choisir une heure";
   }
 
-  function selectTime(val) {
+  function applyWheelValue() {
+    const val = String(wheelHour).padStart(2, "0") + ":" + String(wheelMinute).padStart(2, "0");
     nativeInput.value = val;
     nativeInput.dispatchEvent(new Event("input", { bubbles: true }));
     nativeInput.dispatchEvent(new Event("change", { bubbles: true }));
     renderDisplay();
-    popover.classList.remove("open");
   }
 
-  function renderList() {
+  // "min" (ex : heure déjà passée pour un RDV aujourd'hui) est réévalué à
+  // chaque ouverture, pas figé au moment du câblage : les appelants changent
+  // cet attribut dynamiquement selon la date choisie (voir
+  // updateQuickPlanningTimeMin() etc.).
+  function currentMinBounds() {
     const minTime = nativeInput.min || "";
-    let html = '<div class="custom-time-list">';
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += stepMinutes) {
-        const val = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-        if (minTime && val < minTime) continue;
-        const selected = val === nativeInput.value;
-        html += '<button type="button" class="custom-time-option' + (selected ? ' selected' : '')
-          + '" data-time="' + val + '">' + val + '</button>';
-      }
-    }
-    html += '</div>';
-    popover.innerHTML = html;
+    if (!minTime) return null;
+    const parts = minTime.split(":");
+    return { hour: parseInt(parts[0], 10), minute: parseInt(parts[1], 10) };
+  }
 
-    popover.querySelectorAll(".custom-time-option").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+  function scrollColumnTo(col, value) {
+    const item = col.querySelector('.time-wheel-item[data-value="' + value + '"]');
+    if (!item) return;
+    col.scrollTop = item.offsetTop - (col.clientHeight / 2) + (item.clientHeight / 2);
+    col.querySelectorAll(".time-wheel-item").forEach(i => i.classList.remove("selected"));
+    item.classList.add("selected");
+  }
+
+  function buildColumn(col, values, kind) {
+    col.innerHTML = values
+      .map(v => '<div class="time-wheel-item" data-value="' + v + '">' + String(v).padStart(2, "0") + "</div>")
+      .join("");
+
+    col.querySelectorAll(".time-wheel-item").forEach(item => {
+      item.addEventListener("click", (e) => {
         e.stopPropagation();
-        selectTime(btn.dataset.time);
+        scrollColumnTo(col, parseInt(item.dataset.value, 10));
       });
     });
 
-    const selectedBtn = popover.querySelector(".custom-time-option.selected");
-    if (selectedBtn) {
-      setTimeout(() => selectedBtn.scrollIntoView({ block: "center" }), 0);
+    // Pas de scroll natif "snap end" fiable partout : on détecte la fin du
+    // défilement nous-mêmes (debounce) pour savoir quel item est au centre.
+    col.addEventListener("scroll", () => {
+      clearTimeout(wheelScrollTimers[kind]);
+      wheelScrollTimers[kind] = setTimeout(() => onWheelScrollSettled(col, kind), 90);
+    });
+  }
+
+  // Reconstruit la colonne des minutes selon l'heure actuellement choisie :
+  // si cette heure est l'heure minimale autorisée ("min" du jour même), les
+  // minutes avant l'heure minimale sont retirées ; sinon les 60 sont dispos.
+  function renderMinutesColumn(rescroll) {
+    const minutesCol = popover.querySelector(".time-wheel-col-minutes");
+    if (!minutesCol) return;
+    const bounds = currentMinBounds();
+    const minMinute = (bounds && bounds.hour === wheelHour) ? bounds.minute : 0;
+
+    const values = [];
+    for (let m = 0; m < 60; m++) {
+      if (m >= minMinute) values.push(m);
     }
+    if (wheelMinute < minMinute) wheelMinute = minMinute;
+
+    buildColumn(minutesCol, values, "minute");
+    if (rescroll) scrollColumnTo(minutesCol, wheelMinute);
+  }
+
+  function onWheelScrollSettled(col, kind) {
+    const items = col.querySelectorAll(".time-wheel-item");
+    if (!items.length) return;
+    const colRect = col.getBoundingClientRect();
+    const centerY = colRect.top + colRect.height / 2;
+
+    let closest = null;
+    let closestDist = Infinity;
+    items.forEach(item => {
+      const r = item.getBoundingClientRect();
+      const dist = Math.abs((r.top + r.height / 2) - centerY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = item;
+      }
+      item.classList.remove("selected");
+    });
+    if (!closest) return;
+    closest.classList.add("selected");
+
+    const value = parseInt(closest.dataset.value, 10);
+    if (kind === "hour") {
+      wheelHour = value;
+      // L'heure change : la borne "min" ne s'applique peut-être plus (ou
+      // s'applique désormais) aux minutes -> on reconstruit cette colonne.
+      renderMinutesColumn(true);
+    } else {
+      wheelMinute = value;
+    }
+    applyWheelValue();
+  }
+
+  function renderWheels() {
+    popover.innerHTML =
+      '<div class="time-wheel-wrap" style="margin-top:0;">' +
+        '<div class="time-wheel-highlight"></div>' +
+        '<div class="time-wheel-col time-wheel-col-hours"></div>' +
+        '<div class="time-wheel-sep">:</div>' +
+        '<div class="time-wheel-col time-wheel-col-minutes"></div>' +
+      '</div>';
+
+    const bounds = currentMinBounds();
+    const parts = (nativeInput.value || "").split(":");
+    const vh = parseInt(parts[0], 10);
+    const vm = parseInt(parts[1], 10);
+    wheelHour = !isNaN(vh) ? vh : (bounds ? bounds.hour : 8);
+    wheelMinute = !isNaN(vm) ? vm : (bounds ? bounds.minute : 0);
+    if (bounds && wheelHour < bounds.hour) wheelHour = bounds.hour;
+
+    const hourValues = [];
+    for (let h = 0; h < 24; h++) {
+      if (!bounds || h >= bounds.hour) hourValues.push(h);
+    }
+
+    buildColumn(popover.querySelector(".time-wheel-col-hours"), hourValues, "hour");
+    renderMinutesColumn(false);
   }
 
   display.addEventListener("click", (e) => {
@@ -16611,8 +16708,17 @@ function wireCustomTimeInput(nativeInput) {
     const wasOpen = popover.classList.contains("open");
     closeAllCustomPickers();
     if (wasOpen) return;
-    renderList();
+    renderWheels();
     positionCustomPopover(popover, display);
+
+    // Le centrage du scroll a besoin que la popover soit affichée (layout
+    // calculé : clientHeight, offsetTop...) pour que les mesures soient justes.
+    requestAnimationFrame(() => {
+      const hoursCol = popover.querySelector(".time-wheel-col-hours");
+      const minutesCol = popover.querySelector(".time-wheel-col-minutes");
+      if (hoursCol) scrollColumnTo(hoursCol, wheelHour);
+      if (minutesCol) scrollColumnTo(minutesCol, wheelMinute);
+    });
   });
 
   nativeInput.addEventListener("change", renderDisplay);
