@@ -12619,9 +12619,11 @@ function showOnboardingTip(index) {
     showSection(section, navBtn);
   }
 
-  // Toujours en bas, comme toutes les autres étapes — pas de traitement
-  // à part pour la dernière.
-  tipsBox.classList.remove("onboarding-tips-top");
+  // En bas par défaut, sauf pour "Actions rapides" : sa cible est tout
+  // en bas de l'écran (juste au-dessus du menu), pile là où se trouve
+  // normalement la bulle — on la remonte en haut pour ne pas cacher ce
+  // qu'on montre.
+  tipsBox.classList.toggle("onboarding-tips-top", index === 0);
 
   tipsBox.style.display = "block";
   tipsBox.innerHTML = `
