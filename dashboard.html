@@ -8462,6 +8462,11 @@ body[data-theme="light"]::after {
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
+  /* Le fond de page est verrouillé (touch-action:none sur <body>) tant que
+     le popup est ouvert (voir CLARITY_MODAL_IDS) : sans ce pan-y explicite,
+     ce verrou empêcherait aussi de faire défiler la bande elle-même au
+     doigt sur mobile. */
+  touch-action: pan-y;
   z-index: 1;
   scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 75%, transparent 100%);
@@ -16372,7 +16377,8 @@ const CLARITY_MODAL_IDS = [
   "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
   "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal",
-  "writing-style-editor-modal"
+  "writing-style-editor-modal",
+  "first-schedule-notice-modal", "digest-time-modal"
 ];
 
 let clarityScrollLockY = 0;
