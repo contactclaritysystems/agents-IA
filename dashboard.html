@@ -2808,14 +2808,14 @@ body[data-theme="dark"] #app-loader {
 
 .onboarding-title {
   font-weight: 800;
-  font-size: 15.5px;
+  font-size: 17px;
   color: var(--clarity-text);
   margin-bottom: 6px;
   letter-spacing: -0.02em;
 }
 
 .onboarding-text {
-  font-size: 13.5px;
+  font-size: 15px;
   color: var(--clarity-text-secondary);
   line-height: 1.6;
 }
@@ -2826,7 +2826,7 @@ body[data-theme="dark"] #app-loader {
   left: 50%;
   bottom: 92px;
   transform: translateX(-50%);
-  width: min(270px, calc(100% - 32px));
+  width: min(320px, calc(100% - 32px));
   background: var(--clarity-surface);
   border-radius: 26px;
   padding: 14px 18px;
@@ -2842,13 +2842,13 @@ body[data-theme="dark"] #app-loader {
 }
 
 #onboarding-tips .onboarding-title {
-  font-size: 13.5px;
+  font-size: 15.5px;
   margin-bottom: 4px;
 }
 
 #onboarding-tips .onboarding-text {
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 @media (max-width: 900px) {
@@ -9669,7 +9669,6 @@ const HELP_ACTIONS = [
     icon: "📝",
     color: "purple",
     examples: [
-      'Écris un SMS pour dire à mon patron que je serai en retard.',
       'Rédige une publication Facebook pour annoncer notre nouvelle offre de printemps.',
       "Écris une description professionnelle de mes services pour mon site internet."
     ],
@@ -12355,6 +12354,26 @@ function startOnboardingPositionLoop() {
       return;
     }
 
+    // "confirm_send" cible toute la carte de l'aperçu du mail
+    // (#mail-preview-modal .mail-choice-box), qui change de taille en
+    // direct selon le contenu du mail (destinataire, objet, message) et
+    // défile (max-height + overflow-y:auto) : un halo/trou calé sur son
+    // rectangle est peu fiable (trop petit, mal calé...) et surtout
+    // inutile, puisque cette popup a déjà son propre fond assombri. On
+    // se contente ici d'afficher la bulle d'explication par-dessus,
+    // sans rien découper ni assombrir en plus — toute la carte (et son
+    // bouton "Envoyer le mail") reste normalement cliquable. Vérifié
+    // AVANT d'activer le voile (et non juste après puis annulé), pour
+    // ne jamais l'allumer ne serait-ce qu'un instant à chaque passage
+    // de cette boucle (ça clignotait).
+    if (onboardingStep === "confirm_send") {
+      if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+      if (ring) ring.style.display = "none";
+      if (bubble) bubble.style.display = "block";
+      if (micTag) micTag.style.display = "none";
+      return;
+    }
+
     if (overlay) overlay.classList.add("active");
 
     const progressPopup = document.querySelector(".agent-progress-popup");
@@ -12367,22 +12386,6 @@ function startOnboardingPositionLoop() {
     }
 
     if (bubble) bubble.style.display = "block";
-
-    // "confirm_send" cible toute la carte de l'aperçu du mail
-    // (#mail-preview-modal .mail-choice-box), qui change de taille en
-    // direct selon le contenu du mail (destinataire, objet, message) et
-    // défile (max-height + overflow-y:auto) : un halo/trou calé sur son
-    // rectangle est peu fiable (trop petit, mal calé...) et surtout
-    // inutile, puisque cette popup a déjà son propre fond assombri. On
-    // se contente ici d'afficher la bulle d'explication par-dessus,
-    // sans rien découper ni assombrir en plus — toute la carte (et son
-    // bouton "Envoyer le mail") reste normalement cliquable.
-    if (onboardingStep === "confirm_send") {
-      if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
-      if (ring) ring.style.display = "none";
-      if (micTag) micTag.style.display = "none";
-      return;
-    }
 
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
@@ -12450,47 +12453,41 @@ async function goToDictateMailStep() {
 const TIP_TARGET_SELECTORS = [
   ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
   ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
-  ['#writing-styles-row'],
-  ['.clarity-help-btn'],
+  ['#writing-styles-list'],
+  ['#help-actions-grid'],
   [],
   ['#custom-agent-block']
 ];
 
 const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null, "settings"];
 
-// Ces 2 tips demandent un vrai clic (pas juste "regardez là-bas") :
-// "Adaptez le ton" (cliquer sur Styles d'écriture) et "Un doute ?"
-// (cliquer sur le bouton "?"). Pour elles, le halo ne doit pas bloquer
-// les clics dessus comme pour les autres tips purement illustratives.
-const TIP_INTERACTIVE_INDEXES = [2, 3];
+// Pour les tips dont le halo cible un élément qui n'est pas l'onglet du
+// bas (Styles d'écriture, grille du "?"), on garde ici le vrai sélecteur
+// de l'onglet, uniquement pour que showSection() le marque bien
+// "actif" visuellement — indépendant de ce que le halo montre.
+const TIP_NAV_SELECTORS = {
+  2: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+  3: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']
+};
+
+// "Adaptez le ton" et "Un doute ?" montrent le CONTENU d'une sous-page/
+// popup plutôt qu'un simple bouton lointain : c'est nous qui l'ouvrons
+// automatiquement en arrivant sur ce tip (pas besoin que l'utilisateur
+// clique dessus), pour ensuite mettre un halo autour de ce qu'il y a
+// dedans. Comme pour tous les autres tips, rien n'est cliquable à part
+// Précédent/Suivant.
+const TIP_AUTO_OPEN = {
+  2: () => { if (typeof openWritingStylesSubpage === "function") openWritingStylesSubpage(); },
+  3: () => { if (typeof openHelpActionsModal === "function") openHelpActionsModal(); }
+};
 
 let onboardingTipsPositionInterval = null;
 
-// Une fois cliqués, "Styles d'écriture" et le bouton "?" ouvrent
-// respectivement une sous-page et une popup qui prennent presque tout
-// l'écran : notre propre voile (calé sur la toute petite rangée/bouton
-// d'origine) n'a plus rien à faire par-dessus à ce moment-là, sinon il
-// cache une bonne partie de ce qu'on vient d'ouvrir.
-function isTipOverlayOpen() {
-  const section = document.getElementById("writing-styles-mobile-section");
-  if (section && section.classList.contains("open")) return true;
-  const modal = document.getElementById("help-actions-modal");
-  if (modal && modal.style.display === "block") return true;
-  return false;
-}
-
-function showTipsRing(selectors, interactive) {
+function showTipsRing(selectors) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const blocker = document.getElementById("onboarding-click-blocker");
   if (!ring) return;
-
-  if (isTipOverlayOpen()) {
-    ring.style.display = "none";
-    if (blocker) blocker.style.display = "none";
-    if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
-    return;
-  }
 
   if (overlay) overlay.classList.add("active");
 
@@ -12527,18 +12524,14 @@ function showTipsRing(selectors, interactive) {
       x + "px " + (y + h) + "px, " + x + "px 100%, 100% 100%, 100% 0%)";
   }
   // ...mais ce trou reste non-cliquable grâce à ce calque transparent
-  // posé exactement dessus, SAUF pour les tips interactives : là, le
-  // clic doit passer jusqu'à l'élément réel (Styles d'écriture, "?").
+  // posé exactement dessus : rien n'est cliquable pendant la visite, à
+  // part Précédent/Suivant.
   if (blocker) {
-    if (interactive) {
-      blocker.style.display = "none";
-    } else {
-      blocker.style.display = "block";
-      blocker.style.left = x + "px";
-      blocker.style.top = y + "px";
-      blocker.style.width = w + "px";
-      blocker.style.height = h + "px";
-    }
+    blocker.style.display = "block";
+    blocker.style.left = x + "px";
+    blocker.style.top = y + "px";
+    blocker.style.width = w + "px";
+    blocker.style.height = h + "px";
   }
 }
 
@@ -12551,11 +12544,11 @@ function hideTipsRing() {
   if (overlay) overlay.style.clipPath = "none";
 }
 
-function startTipsPositionLoop(selectors, interactive) {
+function startTipsPositionLoop(selectors) {
   stopTipsPositionLoop();
-  showTipsRing(selectors, interactive);
+  showTipsRing(selectors);
   onboardingTipsPositionInterval = setInterval(() => {
-    showTipsRing(selectors, interactive);
+    showTipsRing(selectors);
   }, 300);
 }
 
@@ -12595,16 +12588,21 @@ function showOnboardingTip(index) {
   const isLast = index === ONBOARDING_TIPS.length - 1;
   const selectors = TIP_TARGET_SELECTORS[index];
   const section = TIP_TARGET_SECTIONS[index];
-  const interactive = TIP_INTERACTIVE_INDEXES.includes(index);
 
     if (section) {
-    const target = pickVisibleElement(selectors);
-    showSection(section, target);
+    const navSelectors = TIP_NAV_SELECTORS[index] || selectors;
+    const navBtn = pickVisibleElement(navSelectors);
+    showSection(section, navBtn);
+  }
 
-    const visibleTarget = pickVisibleElement(selectors);
-    if (visibleTarget && visibleTarget.scrollIntoView) {
-      visibleTarget.scrollIntoView({ behavior: "instant", block: "center" });
-    }
+  // Ouvre nous-mêmes la sous-page/popup concernée (Styles d'écriture,
+  // "?") avant de chercher le halo à mettre autour de son contenu —
+  // l'utilisateur n'a rien à cliquer pour ça pendant la visite.
+  if (TIP_AUTO_OPEN[index]) TIP_AUTO_OPEN[index]();
+
+  const visibleTarget = pickVisibleElement(selectors);
+  if (visibleTarget && visibleTarget.scrollIntoView) {
+    visibleTarget.scrollIntoView({ behavior: "instant", block: "center" });
   }
 
   // Toujours en bas, comme toutes les autres étapes — pas de traitement
@@ -12621,7 +12619,7 @@ function showOnboardingTip(index) {
     </div>
   `;
 
-  startTipsPositionLoop(selectors, interactive);
+  startTipsPositionLoop(selectors);
 }
 
 
@@ -12747,7 +12745,7 @@ const ONBOARDING_MESSAGES = {
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
-    text: "Vous venez d'envoyer votre 1er mail ! Vous pouvez me parler de la même façon pour tout le reste : planifier un rendez-vous, écrire un SMS, poser une question..."
+    text: "Vous venez d'envoyer votre 1er mail ! Vous pouvez me parler de la même façon pour tout le reste : planifier un rendez-vous, créer un rappel, poser une question..."
   }
 };
   
