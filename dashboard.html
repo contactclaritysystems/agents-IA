@@ -2779,6 +2779,8 @@ body[data-theme="dark"] #app-loader {
   white-space: nowrap;
   pointer-events: none;
   display: none;
+  opacity: 0;
+  transition: opacity .3s ease;
 }
 
 #onboarding-bubble {
@@ -12299,16 +12301,21 @@ let onboardingActive = false;
 let onboardingStep = null;
 let onboardingPositionInterval = null;
 
-// Étapes où l'utilisateur doit dicter ou écrire : c'est là qu'on montre
-// l'étiquette "C'est le micro", jamais en usage normal de l'app.
-const ONBOARDING_MIC_TAG_STEPS = ["dictate_mail", "stop_dictation", "retry_dictation"];
+// Étapes où l'utilisateur doit encore appuyer sur le micro pour
+// démarrer : c'est là qu'on montre l'étiquette "C'est le micro", jamais
+// en usage normal de l'app. Volontairement absente de "stop_dictation" :
+// une fois la dictée lancée, le bouton devient lui-même un gros carré
+// rouge — évident sans texte — et garder l'étiquette affichée à ce
+// moment-là (qui parle encore du micro, pas de l'arrêt) est à la fois
+// redondant avec la bulle et un peu confus.
+const ONBOARDING_MIC_TAG_STEPS = ["dictate_mail", "retry_dictation"];
 
 function updateOnboardingMicTag() {
   const tag = document.getElementById("onboarding-mic-tag");
   if (!tag) return;
 
   if (!ONBOARDING_MIC_TAG_STEPS.includes(onboardingStep)) {
-    tag.style.display = "none";
+    tag.style.opacity = "0";
     return;
   }
 
@@ -12316,13 +12323,14 @@ function updateOnboardingMicTag() {
   const rect = micBtn ? micBtn.getBoundingClientRect() : null;
 
   if (!rect || !rect.width) {
-    tag.style.display = "none";
+    tag.style.opacity = "0";
     return;
   }
 
   tag.style.display = "block";
   tag.style.left = (rect.left + rect.width / 2) + "px";
   tag.style.top = (rect.bottom + 8) + "px";
+  tag.style.opacity = "1";
 }
 
 function startOnboardingPositionLoop() {
