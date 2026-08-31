@@ -2747,9 +2747,14 @@ body[data-theme="dark"] #app-loader {
 #onboarding-bubble {
   position: fixed;
   z-index: 6002;
-  top: max(16px, env(safe-area-inset-top));
+  /* Légèrement au-dessus du centre plutôt qu'accroché tout en haut de
+     l'écran (retour utilisateur : trop haut, pas beau). Le petit écart
+     avec .onboarding-center (pile 50%, réservé à l'étape finale "Bravo")
+     suffit à distinguer visuellement les étapes de transition du
+     moment de conclusion. */
+  top: 42%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   width: min(320px, calc(100% - 32px));
   background: var(--clarity-surface);
   border-radius: 18px;
