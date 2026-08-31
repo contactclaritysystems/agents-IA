@@ -3659,6 +3659,14 @@ select:focus-visible {
   color: var(--clarity-text-tertiary);
   letter-spacing: 0;
   white-space: nowrap;
+  /* Nom de fête parfois long ("Sainte Thérèse De L'Enfant Jésus") : c'est
+     LUI qui doit se raccourcir (avec "..."), jamais les flèches de
+     navigation à côté (voir .planning-calendar-nav-side / -chevron
+     flex-shrink:0) ni le nom du jour (.planning-day-name flex-shrink:0). */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .gmail-desc,
@@ -7912,7 +7920,11 @@ body[data-theme="light"]::after {
    pour Semaine/Jour). */
 .planning-calendar-nav {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0, auto) plutôt qu'un simple "auto" : la colonne centrale garde
+     sa taille naturelle quand elle tient, mais PEUT rétrécir (jusqu'à 0) au
+     lieu de déborder quand son contenu est trop long (vue Jour + fête). Les
+     flèches (colonnes 1fr) ne bougent jamais. */
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
   align-items: center;
   gap: 6px;
   margin-bottom: 16px;
@@ -7922,6 +7934,9 @@ body[data-theme="light"]::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  /* Les flèches de navigation ne doivent jamais être compressées ni
+     disparaître, quelle que soit la longueur du label central. */
+  flex-shrink: 0;
 }
 
 .planning-calendar-nav-side.right {
@@ -7930,11 +7945,22 @@ body[data-theme="light"]::after {
 
 /* Vue Jour : le label central affiche jour + fête (plus long que la simple
    plage de dates de Semaine), donc en plus petit pour bien tenir entre les
-   2 flèches sans écraser la mise en page. */
+   2 flèches sans écraser la mise en page. min-width:0 : nécessaire pour que
+   ce bouton (flex) puisse rétrécir sous sa taille naturelle et laisser
+   .planning-day-fete tronquer avec "..." au lieu de pousser les flèches
+   hors de l'écran. */
 .planning-calendar-month-label-sm {
   font-size: 13px;
   font-weight: 700;
   gap: 4px;
+  min-width: 0;
+}
+
+/* Le nom du jour ("Jeu. 1 Octobre") reste toujours entier : seul le nom de
+   la fête à côté (.planning-day-fete) se raccourcit si besoin. */
+.planning-day-name {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Numéro de semaine ISO, affiché en petit à gauche du nav (vues Semaine
@@ -8110,6 +8136,10 @@ body[data-theme="light"]::after {
   font-weight: 800;
   color: var(--clarity-text);
   text-transform: capitalize;
+  /* Ne rétrécit jamais : seul .planning-day-fete (nom de la fête, à côté)
+     doit se raccourcir si la ligne est trop étroite. */
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .planning-week-day-today-badge {
@@ -8119,12 +8149,17 @@ body[data-theme="light"]::after {
   background: var(--clarity-primary, var(--dark, #141416));
   padding: 2px 7px;
   border-radius: 20px;
+  flex-shrink: 0;
 }
 
 .planning-week-day-chevron {
   margin-left: auto;
   color: var(--clarity-text-tertiary);
   font-size: 13px;
+  /* Le chevron ne doit jamais disparaître, même si le nom de la fête à
+     gauche est très long (voir .planning-day-fete, qui absorbe le
+     rétrécissement à sa place). */
+  flex-shrink: 0;
 }
 
 .planning-week-day-events {
@@ -14783,7 +14818,7 @@ function openPlanningCalendarDay(iso) {
           <span class="planning-calendar-week-badge">S${dayWeekNum}</span>
         </div>
         <button type="button" id="planning-day-label-btn" class="planning-calendar-month-label planning-calendar-month-label-sm" onclick="togglePlanningDayPicker(event)">
-          ${dayShortLabel}${dayFeteLabel ? ` <span class="planning-day-fete">· ${dayFeteLabel.replace(/</g, "&lt;")}</span>` : ""}
+          <span class="planning-day-name">${dayShortLabel}</span>${dayFeteLabel ? ` <span class="planning-day-fete">· ${dayFeteLabel.replace(/</g, "&lt;")}</span>` : ""}
         </button>
         <div class="planning-calendar-nav-side right">
           <button type="button" class="planning-calendar-nav-btn" onclick="navigatePlanningCalendarDay(1)">›</button>
