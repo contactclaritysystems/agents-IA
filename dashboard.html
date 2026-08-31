@@ -12370,6 +12370,21 @@ function startOnboardingPositionLoop() {
       return;
     }
 
+    // Dès le clic sur "Envoyer", la carte de l'aperçu s'anime pour
+    // disparaître ("sending") : le message "Relisez l'aperçu... Envoyer
+    // le mail" n'a plus lieu d'être à ce moment précis (c'est déjà fait),
+    // donc on cache aussi la bulle en même temps que le halo, le temps
+    // que l'envoi se termine et que le message "Bravo" prenne le relais.
+    if (onboardingStep === "confirm_send") {
+      const sendingBox = document.querySelector("#mail-preview-modal .mail-choice-box.sending");
+      if (sendingBox) {
+        if (bubble) bubble.style.display = "none";
+        if (micTag) micTag.style.display = "none";
+        positionOnboardingSpotlight(null);
+        return;
+      }
+    }
+
     if (bubble) bubble.style.display = "block";
 
     // Toujours appelé, même si target est null (positionOnboardingSpotlight
