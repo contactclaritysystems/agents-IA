@@ -8581,7 +8581,7 @@ body[data-theme="light"]::after {
 
   <div class="settings-group-label">Contenu</div>
   <div class="settings-group">
-    <div class="settings-row" onclick="openWritingStylesSubpage()">
+    <div class="settings-row" id="writing-styles-row" onclick="openWritingStylesSubpage()">
       <span class="settings-row-icon settings-row-icon-green">✍️</span>
       <div class="settings-row-title">Styles d'écriture</div>
       <span class="settings-row-value" id="writing-styles-count-label">0</span>
@@ -12368,6 +12368,22 @@ function startOnboardingPositionLoop() {
 
     if (bubble) bubble.style.display = "block";
 
+    // "confirm_send" cible toute la carte de l'aperçu du mail
+    // (#mail-preview-modal .mail-choice-box), qui change de taille en
+    // direct selon le contenu du mail (destinataire, objet, message) et
+    // défile (max-height + overflow-y:auto) : un halo/trou calé sur son
+    // rectangle est peu fiable (trop petit, mal calé...) et surtout
+    // inutile, puisque cette popup a déjà son propre fond assombri. On
+    // se contente ici d'afficher la bulle d'explication par-dessus,
+    // sans rien découper ni assombrir en plus — toute la carte (et son
+    // bouton "Envoyer le mail") reste normalement cliquable.
+    if (onboardingStep === "confirm_send") {
+      if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+      if (ring) ring.style.display = "none";
+      if (micTag) micTag.style.display = "none";
+      return;
+    }
+
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
     updateOnboardingMicTag();
@@ -12415,11 +12431,11 @@ async function goToDictateMailStep() {
   },
   {
     title: "✍️ Adaptez le ton",
-    text: "Dans Réglages, réglez le style d'écriture selon la personne (client, ami...) — mais tout marche déjà très bien sans y toucher."
+    text: "Cliquez sur « Styles d'écriture » : c'est là que vous réglez comment j'écris selon la personne (client, ami...). Utile si un mail ne vous a pas plu exactement — vous savez que ça se règle ici."
   },
   {
     title: "❓ Un doute ?",
-    text: "Le bouton « ? » en bas de l'accueil vous montre un exemple pour chaque type de demande, à essayer en un clic."
+    text: "Cliquez sur le bouton « ? » : vous y verrez tout ce que je sais déjà faire, avec un exemple pour chaque demande."
   },
   {
     title: "🎁 Votre essai gratuit",
@@ -12434,7 +12450,7 @@ async function goToDictateMailStep() {
 const TIP_TARGET_SELECTORS = [
   ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
   ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
-  ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+  ['#writing-styles-row'],
   ['.clarity-help-btn'],
   [],
   ['#custom-agent-block']
@@ -12442,13 +12458,41 @@ const TIP_TARGET_SELECTORS = [
 
 const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null, "settings"];
 
+// Ces 2 tips demandent un vrai clic (pas juste "regardez là-bas") :
+// "Adaptez le ton" (cliquer sur Styles d'écriture) et "Un doute ?"
+// (cliquer sur le bouton "?"). Pour elles, le halo ne doit pas bloquer
+// les clics dessus comme pour les autres tips purement illustratives.
+const TIP_INTERACTIVE_INDEXES = [2, 3];
+
 let onboardingTipsPositionInterval = null;
 
-function showTipsRing(selectors) {
+// Une fois cliqués, "Styles d'écriture" et le bouton "?" ouvrent
+// respectivement une sous-page et une popup qui prennent presque tout
+// l'écran : notre propre voile (calé sur la toute petite rangée/bouton
+// d'origine) n'a plus rien à faire par-dessus à ce moment-là, sinon il
+// cache une bonne partie de ce qu'on vient d'ouvrir.
+function isTipOverlayOpen() {
+  const section = document.getElementById("writing-styles-mobile-section");
+  if (section && section.classList.contains("open")) return true;
+  const modal = document.getElementById("help-actions-modal");
+  if (modal && modal.style.display === "block") return true;
+  return false;
+}
+
+function showTipsRing(selectors, interactive) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const blocker = document.getElementById("onboarding-click-blocker");
   if (!ring) return;
+
+  if (isTipOverlayOpen()) {
+    ring.style.display = "none";
+    if (blocker) blocker.style.display = "none";
+    if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+    return;
+  }
+
+  if (overlay) overlay.classList.add("active");
 
   const target = pickVisibleElement(selectors || []);
 
@@ -12483,13 +12527,18 @@ function showTipsRing(selectors) {
       x + "px " + (y + h) + "px, " + x + "px 100%, 100% 100%, 100% 0%)";
   }
   // ...mais ce trou reste non-cliquable grâce à ce calque transparent
-  // posé exactement dessus.
+  // posé exactement dessus, SAUF pour les tips interactives : là, le
+  // clic doit passer jusqu'à l'élément réel (Styles d'écriture, "?").
   if (blocker) {
-    blocker.style.display = "block";
-    blocker.style.left = x + "px";
-    blocker.style.top = y + "px";
-    blocker.style.width = w + "px";
-    blocker.style.height = h + "px";
+    if (interactive) {
+      blocker.style.display = "none";
+    } else {
+      blocker.style.display = "block";
+      blocker.style.left = x + "px";
+      blocker.style.top = y + "px";
+      blocker.style.width = w + "px";
+      blocker.style.height = h + "px";
+    }
   }
 }
 
@@ -12502,11 +12551,11 @@ function hideTipsRing() {
   if (overlay) overlay.style.clipPath = "none";
 }
 
-function startTipsPositionLoop(selectors) {
+function startTipsPositionLoop(selectors, interactive) {
   stopTipsPositionLoop();
-  showTipsRing(selectors);
+  showTipsRing(selectors, interactive);
   onboardingTipsPositionInterval = setInterval(() => {
-    showTipsRing(selectors);
+    showTipsRing(selectors, interactive);
   }, 300);
 }
 
@@ -12523,6 +12572,20 @@ function showOnboardingTip(index) {
   const tipsBox = document.getElementById("onboarding-tips");
   if (!tipsBox) return;
 
+  // Repart d'un état propre : si l'étape précédente ("Adaptez le ton"
+  // ou "Un doute ?") a été suivie en cliquant réellement sur Styles
+  // d'écriture / le bouton "?", on referme cette sous-page/popup avant
+  // de continuer la visite — sinon elle reste ouverte par-dessus les
+  // étapes suivantes.
+  const writingStylesSection = document.getElementById("writing-styles-mobile-section");
+  if (writingStylesSection && writingStylesSection.classList.contains("open")) {
+    closeWritingStylesSubpage();
+  }
+  const helpModal = document.getElementById("help-actions-modal");
+  if (helpModal && helpModal.style.display === "block") {
+    closeHelpActionsModal();
+  }
+
   const tip = ONBOARDING_TIPS[index];
   if (!tip) {
     finishOnboardingTips();
@@ -12532,6 +12595,7 @@ function showOnboardingTip(index) {
   const isLast = index === ONBOARDING_TIPS.length - 1;
   const selectors = TIP_TARGET_SELECTORS[index];
   const section = TIP_TARGET_SECTIONS[index];
+  const interactive = TIP_INTERACTIVE_INDEXES.includes(index);
 
     if (section) {
     const target = pickVisibleElement(selectors);
@@ -12543,7 +12607,9 @@ function showOnboardingTip(index) {
     }
   }
 
-  tipsBox.classList.toggle("onboarding-tips-top", isLast);
+  // Toujours en bas, comme toutes les autres étapes — pas de traitement
+  // à part pour la dernière.
+  tipsBox.classList.remove("onboarding-tips-top");
 
   tipsBox.style.display = "block";
   tipsBox.innerHTML = `
@@ -12555,7 +12621,7 @@ function showOnboardingTip(index) {
     </div>
   `;
 
-  startTipsPositionLoop(selectors);
+  startTipsPositionLoop(selectors, interactive);
 }
 
 
