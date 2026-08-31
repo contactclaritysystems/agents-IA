@@ -12301,26 +12301,28 @@ function startOnboardingPositionLoop() {
     onboardingPositionInterval = setInterval(() => {
     if (!onboardingActive || !onboardingStep || onboardingStep === "done") return;
 
-    // Pendant qu'un agent travaille (dictée envoyée, mail en préparation...),
-    // les phrases de progression (.agent-progress-popup) s'affichent au même
-    // endroit que la bulle d'explication — et la bulle, plus haute en
-    // z-index, les cachait entièrement. On la masque le temps du
-    // traitement ; elle réapparaît d'elle-même dès le prochain événement
-    // d'onboarding (ex: mail_prepared -> confirm_send).
+    // Le voile sombre doit rester visible tout du long du tour — dictée,
+    // traitement, aperçu du mail — jamais un écran qui redevient "tout
+    // blanc". Ce qui change, c'est seulement ce qu'il éclaire : soit
+    // l'étape en cours (bulle + halo sur le champ), soit, pendant qu'un
+    // agent travaille, la popup de progression elle-même (phrases qui
+    // défilent) — la bulle serait sinon affichée exactement par-dessus
+    // et la cacherait entièrement.
     const overlay = document.getElementById("onboarding-overlay");
-    const ring = document.getElementById("onboarding-ring");
     const bubble = document.getElementById("onboarding-bubble");
+    const micTag = document.getElementById("onboarding-mic-tag");
 
-    if (agentIsWorking) {
-      if (overlay) overlay.classList.remove("active");
-      if (ring) ring.style.display = "none";
+    if (overlay) overlay.classList.add("active");
+
+    const progressPopup = document.querySelector(".agent-progress-popup");
+
+    if (progressPopup) {
       if (bubble) bubble.style.display = "none";
-      const micTag = document.getElementById("onboarding-mic-tag");
       if (micTag) micTag.style.display = "none";
+      positionOnboardingSpotlight(progressPopup);
       return;
     }
 
-    if (overlay) overlay.classList.add("active");
     if (bubble) bubble.style.display = "block";
 
     const target = getOnboardingSpotlightTarget(onboardingStep);
@@ -12780,8 +12782,29 @@ async function startOnboardingIfNeeded() {
   startOnboardingPositionLoop();
 
   const gmailConnected = !!localStorage.getItem("gmail_" + currentUser.email);
-  onboardingStep = gmailConnected ? "goto_agents" : "goto_settings";
 
+  // Cas Gmail/Outlook (OAuth) : la connexion mail vient de se faire via
+  // une redirection qui recharge toute la page — onboardingOnEvent()
+  // n'a donc jamais vu passer l'événement "gmail_connected" (onboardingActive
+  // repart à false à chaque chargement). C'est ici, au tout premier
+  // démarrage du tour après ce rechargement, qu'il faut refaire le même
+  // arbitrage : si on est déjà sur l'accueil (Agents), pas besoin de
+  // l'étape "Retournons à l'accueil", on va direct à la dictée.
+  if (gmailConnected) {
+    const alreadyOnAgentsPage =
+      document.getElementById("main-agents")?.classList.contains("active");
+
+    if (alreadyOnAgentsPage) {
+      await goToDictateMailStep();
+      return;
+    }
+
+    onboardingStep = "goto_agents";
+    showOnboardingStep();
+    return;
+  }
+
+  onboardingStep = "goto_settings";
   showOnboardingStep();
 }
 
