@@ -2744,6 +2744,25 @@ body[data-theme="dark"] #app-loader {
   display: none;
 }
 
+/* Étiquette "C'est le micro" : uniquement pendant les étapes de dictée
+   du tour de bienvenue (affichée/positionnée en JS), jamais en usage
+   normal — remplace l'idée d'un halo permanent, jugé pas assez sobre. */
+#onboarding-mic-tag {
+  position: fixed;
+  z-index: 6003;
+  transform: translateX(-50%);
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+
 #onboarding-bubble {
   position: fixed;
   z-index: 6002;
@@ -4730,41 +4749,6 @@ body,
   animation: micBreathe 2.6s ease-in-out infinite;
   position: relative;
   border-radius: 50%;
-}
-
-/* Halo qui "ping" en continu autour du bouton micro : signal discret
-   "objet interactif" pour qu'on comprenne au premier coup d'œil que ce
-   logo est cliquable (pas juste une image), sans texte ni flèche.
-   ::after (et pas ::before, déjà utilisé par le halo statique du thème
-   clair juste plus bas) pour ne pas entrer en conflit avec lui.
-   Désactivé pendant l'enregistrement, qui a déjà sa propre animation. */
-.clarity-input-mic::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid var(--clarity-accent);
-  opacity: 0;
-  animation: micHaloPulse 2.6s ease-out infinite;
-  pointer-events: none;
-}
-
-.clarity-input-mic.is-recording::after {
-  display: none;
-}
-
-@keyframes micHaloPulse {
-  0% {
-    transform: scale(0.86);
-    opacity: 0.5;
-  }
-  70% {
-    transform: scale(1.32);
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 .clarity-input-mic img {
@@ -9421,6 +9405,7 @@ body[data-theme="light"]::after {
 
   <div id="onboarding-overlay"></div>
   <div id="onboarding-ring"></div>
+  <div id="onboarding-mic-tag">🎙️ C'est le micro</div>
   <div id="onboarding-bubble"></div>
   <div id="onboarding-tips"></div>
 
@@ -12285,6 +12270,32 @@ let onboardingActive = false;
 let onboardingStep = null;
 let onboardingPositionInterval = null;
 
+// Étapes où l'utilisateur doit dicter ou écrire : c'est là qu'on montre
+// l'étiquette "C'est le micro", jamais en usage normal de l'app.
+const ONBOARDING_MIC_TAG_STEPS = ["dictate_mail", "stop_dictation", "retry_dictation"];
+
+function updateOnboardingMicTag() {
+  const tag = document.getElementById("onboarding-mic-tag");
+  if (!tag) return;
+
+  if (!ONBOARDING_MIC_TAG_STEPS.includes(onboardingStep)) {
+    tag.style.display = "none";
+    return;
+  }
+
+  const micBtn = document.getElementById("orchestrator-dictation-btn");
+  const rect = micBtn ? micBtn.getBoundingClientRect() : null;
+
+  if (!rect || !rect.width) {
+    tag.style.display = "none";
+    return;
+  }
+
+  tag.style.display = "block";
+  tag.style.left = (rect.left + rect.width / 2) + "px";
+  tag.style.top = (rect.bottom + 8) + "px";
+}
+
 function startOnboardingPositionLoop() {
   stopOnboardingPositionLoop();
     onboardingPositionInterval = setInterval(() => {
@@ -12304,6 +12315,8 @@ function startOnboardingPositionLoop() {
       if (overlay) overlay.classList.remove("active");
       if (ring) ring.style.display = "none";
       if (bubble) bubble.style.display = "none";
+      const micTag = document.getElementById("onboarding-mic-tag");
+      if (micTag) micTag.style.display = "none";
       return;
     }
 
@@ -12312,6 +12325,7 @@ function startOnboardingPositionLoop() {
 
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
+    updateOnboardingMicTag();
   }, 300);
 
 }
@@ -12779,10 +12793,12 @@ async function startOnboardingIfNeeded() {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const bubble = document.getElementById("onboarding-bubble");
+  const micTag = document.getElementById("onboarding-mic-tag");
 
   if (overlay) overlay.classList.remove("active");
   if (ring) ring.style.display = "none";
   if (bubble) bubble.style.display = "none";
+  if (micTag) micTag.style.display = "none";
 
   startOnboardingTips();
 }
