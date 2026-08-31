@@ -2796,6 +2796,11 @@ body[data-theme="dark"] #app-loader {
   background: var(--clarity-surface);
   border-radius: 18px;
   padding: 16px 18px;
+  /* Bordure ajoutée en plus de l'ombre : sans elle, la bulle (blanche)
+     devenait quasi invisible posée sur un fond lui aussi clair (ex: la
+     popup d'aperçu du mail en thème clair) — l'ombre seule ne suffisait
+     pas à la distinguer. */
+  border: 2px solid var(--clarity-primary);
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
   font-family: 'Inter', sans-serif;
   display: none;
@@ -12438,37 +12443,47 @@ async function goToDictateMailStep() {
 const TIP_TARGET_SELECTORS = [
   ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
   ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
-  ['#writing-styles-list'],
-  ['#help-actions-grid'],
+  null,
+  null,
   [],
   ['#custom-agent-block']
 ];
 
 const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null, "settings"];
 
-// Pour les tips dont le halo cible un élément qui n'est pas l'onglet du
-// bas (Styles d'écriture, grille du "?"), on garde ici le vrai sélecteur
-// de l'onglet, uniquement pour que showSection() le marque bien
-// "actif" visuellement — indépendant de ce que le halo montre.
-const TIP_NAV_SELECTORS = {
-  2: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
-  3: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']
+// "Adaptez le ton" et "Un doute ?" montrent le CONTENU d'une sous-page/
+// popup plutôt qu'un simple bouton lointain — mais y aller d'un coup
+// (sans que l'utilisateur voie le chemin) ne lui apprend pas où
+// retrouver ça tout seul ensuite. On raconte donc le trajet en 3 temps
+// avant d'ouvrir : d'abord l'onglet du bas, puis la rangée/bouton
+// précis, puis (nous-mêmes, pas besoin de cliquer) le contenu ouvert —
+// comme une petite vidéo qui montre le chemin plutôt qu'un télétransport.
+const TIP_WALKTHROUGH = {
+  2: {
+    navSelectors: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
+    rowSelectors: ['#writing-styles-row'],
+    openFn: () => { if (typeof openWritingStylesSubpage === "function") openWritingStylesSubpage(); },
+    finalSelectors: ['#writing-styles-list']
+  },
+  3: {
+    navSelectors: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
+    rowSelectors: ['.clarity-help-btn'],
+    openFn: () => { if (typeof openHelpActionsModal === "function") openHelpActionsModal(); },
+    finalSelectors: ['#help-actions-grid']
+  }
 };
 
-// "Adaptez le ton" et "Un doute ?" montrent le CONTENU d'une sous-page/
-// popup plutôt qu'un simple bouton lointain : c'est nous qui l'ouvrons
-// automatiquement en arrivant sur ce tip (pas besoin que l'utilisateur
-// clique dessus), pour ensuite mettre un halo autour de ce qu'il y a
-// dedans. Comme pour tous les autres tips, rien n'est cliquable à part
-// Précédent/Suivant.
-const TIP_AUTO_OPEN = {
-  2: () => { if (typeof openWritingStylesSubpage === "function") openWritingStylesSubpage(); },
-  3: () => { if (typeof openHelpActionsModal === "function") openHelpActionsModal(); }
-};
+const TIP_WALKTHROUGH_STEP_DELAY = 1100;
 
 let onboardingTipsPositionInterval = null;
+let tipWalkthroughTimeouts = [];
 
-function showTipsRing(selectors) {
+function clearTipWalkthroughTimeouts() {
+  tipWalkthroughTimeouts.forEach(id => clearTimeout(id));
+  tipWalkthroughTimeouts = [];
+}
+
+function showTipsRing(selectorsRef) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const blocker = document.getElementById("onboarding-click-blocker");
@@ -12476,6 +12491,10 @@ function showTipsRing(selectors) {
 
   if (overlay) overlay.classList.add("active");
 
+  // selectorsRef est soit un tableau classique (tips illustratives, fixe
+  // pour toute la durée du tip), soit un objet {current: [...]} dont le
+  // contenu change au fil du petit parcours guidé (voir TIP_WALKTHROUGH).
+  const selectors = Array.isArray(selectorsRef) ? selectorsRef : (selectorsRef && selectorsRef.current);
   const target = pickVisibleElement(selectors || []);
 
   if (!target) {
@@ -12550,11 +12569,15 @@ function showOnboardingTip(index) {
   const tipsBox = document.getElementById("onboarding-tips");
   if (!tipsBox) return;
 
+  // Annule tout parcours guidé (Adaptez le ton / Un doute ?) resté en
+  // attente d'une étape précédente — sinon un setTimeout en retard
+  // pourrait ouvrir la mauvaise popup pendant qu'on est déjà ailleurs.
+  clearTipWalkthroughTimeouts();
+
   // Repart d'un état propre : si l'étape précédente ("Adaptez le ton"
-  // ou "Un doute ?") a été suivie en cliquant réellement sur Styles
-  // d'écriture / le bouton "?", on referme cette sous-page/popup avant
-  // de continuer la visite — sinon elle reste ouverte par-dessus les
-  // étapes suivantes.
+  // ou "Un doute ?") a été suivie jusqu'au bout, on referme cette
+  // sous-page/popup avant de continuer la visite — sinon elle reste
+  // ouverte par-dessus les étapes suivantes.
   const writingStylesSection = document.getElementById("writing-styles-mobile-section");
   if (writingStylesSection && writingStylesSection.classList.contains("open")) {
     closeWritingStylesSubpage();
@@ -12571,23 +12594,13 @@ function showOnboardingTip(index) {
   }
 
   const isLast = index === ONBOARDING_TIPS.length - 1;
-  const selectors = TIP_TARGET_SELECTORS[index];
+  const walkthrough = TIP_WALKTHROUGH[index];
+  const selectors = walkthrough ? walkthrough.navSelectors : TIP_TARGET_SELECTORS[index];
   const section = TIP_TARGET_SECTIONS[index];
 
     if (section) {
-    const navSelectors = TIP_NAV_SELECTORS[index] || selectors;
-    const navBtn = pickVisibleElement(navSelectors);
+    const navBtn = pickVisibleElement(selectors);
     showSection(section, navBtn);
-  }
-
-  // Ouvre nous-mêmes la sous-page/popup concernée (Styles d'écriture,
-  // "?") avant de chercher le halo à mettre autour de son contenu —
-  // l'utilisateur n'a rien à cliquer pour ça pendant la visite.
-  if (TIP_AUTO_OPEN[index]) TIP_AUTO_OPEN[index]();
-
-  const visibleTarget = pickVisibleElement(selectors);
-  if (visibleTarget && visibleTarget.scrollIntoView) {
-    visibleTarget.scrollIntoView({ behavior: "instant", block: "center" });
   }
 
   // Toujours en bas, comme toutes les autres étapes — pas de traitement
@@ -12603,6 +12616,39 @@ function showOnboardingTip(index) {
       <button type="button" class="save-btn" onclick="onboardingTipNext()">${isLast ? "Terminer" : "Suivant"}</button>
     </div>
   `;
+
+  if (walkthrough) {
+    // Petit parcours guidé en 3 temps, pour que l'utilisateur retienne
+    // où se trouve la chose : d'abord l'onglet du bas (déjà ciblé via
+    // "selectors" ci-dessus), puis la rangée/bouton précis, puis enfin
+    // le contenu une fois ouvert (nous-mêmes, pas de clic requis).
+    const selectorsRef = { current: walkthrough.navSelectors };
+    startTipsPositionLoop(selectorsRef);
+
+    tipWalkthroughTimeouts.push(setTimeout(() => {
+      selectorsRef.current = walkthrough.rowSelectors;
+      const rowTarget = pickVisibleElement(walkthrough.rowSelectors);
+      if (rowTarget && rowTarget.scrollIntoView) {
+        rowTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, TIP_WALKTHROUGH_STEP_DELAY));
+
+    tipWalkthroughTimeouts.push(setTimeout(() => {
+      walkthrough.openFn();
+      selectorsRef.current = walkthrough.finalSelectors;
+      const finalTarget = pickVisibleElement(walkthrough.finalSelectors);
+      if (finalTarget && finalTarget.scrollIntoView) {
+        finalTarget.scrollIntoView({ behavior: "instant", block: "center" });
+      }
+    }, TIP_WALKTHROUGH_STEP_DELAY * 2));
+
+    return;
+  }
+
+  const visibleTarget = pickVisibleElement(selectors);
+  if (visibleTarget && visibleTarget.scrollIntoView) {
+    visibleTarget.scrollIntoView({ behavior: "instant", block: "center" });
+  }
 
   startTipsPositionLoop(selectors);
 }
@@ -12628,6 +12674,7 @@ function startOnboardingTips() {
 }
 
 async function finishOnboardingTips() {
+  clearTipWalkthroughTimeouts();
   stopTipsPositionLoop();
   hideTipsRing();
 
