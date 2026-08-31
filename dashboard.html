@@ -10323,6 +10323,7 @@ async function saveDigestSettings() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         user_id: currentUser.id,
+        user_email: currentUser.email,
         digest_enabled: digestEnabled,
         digest_time: digestTime
       })
@@ -12824,7 +12825,7 @@ async function goToDictateMailStep() {
   },
   {
     title: "🎁 Votre essai gratuit",
-    text: "Vous avez 7 jours (ou 50 actions offertes, selon ce qui arrive en premier) pour me tester à fond.<br><br>Et ce n'est que le début : chaque semaine, j'apprends de nouvelles choses pour vous faire gagner encore plus de temps."
+    text: "Vous avez 7 jours (ou 100 actions offertes, selon ce qui arrive en premier) pour me tester à fond.<br><br>Et ce n'est que le début : chaque semaine, j'apprends de nouvelles choses pour vous faire gagner encore plus de temps."
   }
 ];
 
