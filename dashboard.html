@@ -12289,6 +12289,27 @@ function startOnboardingPositionLoop() {
   stopOnboardingPositionLoop();
     onboardingPositionInterval = setInterval(() => {
     if (!onboardingActive || !onboardingStep || onboardingStep === "done") return;
+
+    // Pendant qu'un agent travaille (dictée envoyée, mail en préparation...),
+    // les phrases de progression (.agent-progress-popup) s'affichent au même
+    // endroit que la bulle d'explication — et la bulle, plus haute en
+    // z-index, les cachait entièrement. On la masque le temps du
+    // traitement ; elle réapparaît d'elle-même dès le prochain événement
+    // d'onboarding (ex: mail_prepared -> confirm_send).
+    const overlay = document.getElementById("onboarding-overlay");
+    const ring = document.getElementById("onboarding-ring");
+    const bubble = document.getElementById("onboarding-bubble");
+
+    if (agentIsWorking) {
+      if (overlay) overlay.classList.remove("active");
+      if (ring) ring.style.display = "none";
+      if (bubble) bubble.style.display = "none";
+      return;
+    }
+
+    if (overlay) overlay.classList.add("active");
+    if (bubble) bubble.style.display = "block";
+
     const target = getOnboardingSpotlightTarget(onboardingStep);
     if (target) positionOnboardingSpotlight(target);
   }, 300);
