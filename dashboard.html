@@ -12489,7 +12489,7 @@ async function goToDictateMailStep() {
   },
   {
     title: "🎁 Votre essai gratuit",
-    text: "Vous avez 7 jours (ou 50 actions offertes, selon ce qui arrive en premier) pour me tester à fond. Et ce n'est que le début : chaque semaine, j'apprends de nouvelles choses pour vous faire gagner encore plus de temps."
+    text: "Vous avez 7 jours (ou 50 actions offertes, selon ce qui arrive en premier) pour me tester à fond.<br><br>Et ce n'est que le début : chaque semaine, j'apprends de nouvelles choses pour vous faire gagner encore plus de temps."
   }
 ];
 
@@ -12527,7 +12527,11 @@ const TIP_WALKTHROUGH = {
   },
   2: {
     navSelectors: ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
-    finalSelectors: ['#planning-detail']
+    // #planning-detail englobe aussi le sélecteur Jour/Semaine/Mois
+    // au-dessus du calendrier : halo trop large. .planning-calendar-card
+    // est la carte du calendrier lui-même (présente dans les 3 vues),
+    // donc juste la bonne taille.
+    finalSelectors: ['.planning-calendar-card']
   },
   3: {
     navSelectors: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
@@ -19366,6 +19370,7 @@ stopAgentProgressPolling();
 let agentProgressBox = null;
 let lastAgentProgressStatus = null;
 let lastAgentProgressMessage = null;
+let agentProgressProcessedCount = 0;
 
 function stopAgentProgressPolling() {
   if (agentProgressInterval) {
@@ -19376,6 +19381,7 @@ function stopAgentProgressPolling() {
   agentProgressBox = null;
   lastAgentProgressStatus = null;
   lastAgentProgressMessage = null;
+  agentProgressProcessedCount = 0;
 }
 
 function startAgentProgressPolling(requestId, box) {
@@ -19400,8 +19406,7 @@ async function loadAgentProgress(requestId) {
     .from("agent_progress")
     .select("status,message")
     .eq("request_id", requestId)
-    .order("created_at", { ascending: false })
-    .limit(1);
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error("Erreur progression agent :", error);
@@ -19410,99 +19415,109 @@ async function loadAgentProgress(requestId) {
 
   if (!data?.length) return;
 
-  const progress = data[0];
+  // On ne regardait auparavant que la toute dernière ligne à chaque
+  // sondage (limit(1)) : si Make écrivait deux statuts très rapprochés
+  // (ex: "contact_found" avec le nom, suivi presque aussitôt de
+  // "generating_mail"), le sondage suivant (500ms plus tard) ne voyait
+  // plus que "generating_mail" — la ligne "contact_found" qui contenait
+  // justement le nom du contact était sautée, jamais vue par le front.
+  // C'est ça qui faisait apparaître le nom "de temps en temps" seulement.
+  // On récupère donc TOUTES les lignes de cette demande et on ne
+  // retraite que celles pas encore vues, dans l'ordre d'arrivée, pour
+  // qu'aucune étape (et surtout pas celle avec le nom) ne soit sautée.
+  const newRows = data.slice(agentProgressProcessedCount);
+  agentProgressProcessedCount = data.length;
 
-  // Évite de réafficher la même étape toutes les 500 ms — MAIS seulement
-  // si rien n'a changé. Il arrive que Make écrive deux lignes de suite
-  // avec le même statut "contact_found" : une première fois avant même
-  // d'avoir fini de résoudre le contact (message vide), puis une seconde
-  // avec le nom une fois trouvé. Si on ne comparait que le statut, cette
-  // seconde ligne (celle qui a enfin le nom) était ignorée car "déjà vu
-  // ce statut" — et le nom du contact n'apparaissait plus jamais pour
-  // cette demande. On compare donc aussi le message : un statut identique
-  // mais un contenu différent doit quand même déclencher un réaffichage.
-  if (
-    progress.status === lastAgentProgressStatus &&
-    progress.message === lastAgentProgressMessage
-  ) return;
+  if (!newRows.length) return;
 
-  lastAgentProgressStatus = progress.status;
-  lastAgentProgressMessage = progress.message;
+  for (const progress of newRows) {
+    if (!agentProgressBox) break;
 
-  switch (progress.status) {
-    case "contact_found":
-  setAgentProgress(
-    agentProgressBox,
-    "Clarity",
-    "✨",
-    [
-      // "Demande comprise" doit toujours rester affiché ici, même quand le
-      // contact était déjà choisi avant l'appel (quickMailFlowActive) :
-      // sinon cette étape apparaît un instant (rendu initial), puis
-      // disparaît dès que ce polling reçoit sa première mise à jour depuis
-      // Make, ce qui donnait l'impression que l'étape "saute".
-      { text: "Demande comprise", status: "done" },
-      {
-        text: progress.message
-          ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
-          : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné")),
-        status: "done"
-      },
-      { text: "Préparation du mail...", status: "loading" }
-    ]
-  );
-  // On garde en mémoire le libellé le plus complet reçu jusqu'ici (avec le
-  // nom), pour les étapes suivantes qui n'auront pas ce message.
-  if (progress.message) {
-    currentMailContactLabel =
-      `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`;
-  }
-  break;
+    // Évite de réafficher une ligne strictement identique à la
+    // précédente déjà traitée (même statut ET même message).
+    if (
+      progress.status === lastAgentProgressStatus &&
+      progress.message === lastAgentProgressMessage
+    ) continue;
 
-    case "generating_mail":
-      setAgentProgress(
-        agentProgressBox,
-        "Clarity",
-    "✨",
-        [
-          { text: "Demande comprise", status: "done" },
-          {
-  text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
-  status: "done"
-},
-          { text: "Rédaction du mail...", status: "loading" }
-        ]
-      );
-      break;
+    lastAgentProgressStatus = progress.status;
+    lastAgentProgressMessage = progress.message;
 
-    case "ready":
-      setAgentProgress(
-        agentProgressBox,
-        "Clarity",
-    "✨",
-        [
-          { text: "Demande comprise", status: "done" },
-          {
-  text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
-  status: "done"
-},
-          { text: "Mail rédigé", status: "done" }
-        ],
-        "Prêt à valider"
-      );
+    switch (progress.status) {
+      case "contact_found":
+    setAgentProgress(
+      agentProgressBox,
+      "Clarity",
+      "✨",
+      [
+        // "Demande comprise" doit toujours rester affiché ici, même quand le
+        // contact était déjà choisi avant l'appel (quickMailFlowActive) :
+        // sinon cette étape apparaît un instant (rendu initial), puis
+        // disparaît dès que ce polling reçoit sa première mise à jour depuis
+        // Make, ce qui donnait l'impression que l'étape "saute".
+        { text: "Demande comprise", status: "done" },
+        {
+          text: progress.message
+            ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
+            : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné")),
+          status: "done"
+        },
+        { text: "Préparation du mail...", status: "loading" }
+      ]
+    );
+    // On garde en mémoire le libellé le plus complet reçu jusqu'ici (avec le
+    // nom), pour les étapes suivantes qui n'auront pas ce message.
+    if (progress.message) {
+      currentMailContactLabel =
+        `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`;
+    }
+    break;
 
-      contactJustCreated = false;
-      
-      stopAgentProgressPolling();
-      break;
+      case "generating_mail":
+        setAgentProgress(
+          agentProgressBox,
+          "Clarity",
+      "✨",
+          [
+            { text: "Demande comprise", status: "done" },
+            {
+    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
+    status: "done"
+  },
+            { text: "Rédaction du mail...", status: "loading" }
+          ]
+        );
+        break;
 
-    case "error":
-      setDictationBoxState(agentProgressBox, "error");
-      agentProgressBox.innerHTML =
-        "✕ Une erreur est survenue pendant la préparation du mail.";
+      case "ready":
+        setAgentProgress(
+          agentProgressBox,
+          "Clarity",
+      "✨",
+          [
+            { text: "Demande comprise", status: "done" },
+            {
+    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
+    status: "done"
+  },
+            { text: "Mail rédigé", status: "done" }
+          ],
+          "Prêt à valider"
+        );
 
-      stopAgentProgressPolling();
-      break;
+        contactJustCreated = false;
+
+        stopAgentProgressPolling();
+        break;
+
+      case "error":
+        setDictationBoxState(agentProgressBox, "error");
+        agentProgressBox.innerHTML =
+          "✕ Une erreur est survenue pendant la préparation du mail.";
+
+        stopAgentProgressPolling();
+        break;
+    }
   }
 }
 
