@@ -12681,11 +12681,47 @@ function pickVisibleElement(selectors) {
 }
 
   function getOnboardingSpotlightTarget(step) {
+  if (step === "confirm_send") {
+    return getConfirmSendSpotlightRect();
+  }
   // .clarity-input-row (voir getStepSelectors) englobe déjà le champ de
   // saisie ET le bouton micro dans un seul conteneur : plus besoin de
   // fusionner manuellement 2 rectangles comme à l'époque du bouton +
   // boîte de dictée séparés par agent.
   return pickVisibleElement(getStepSelectors(step));
+}
+
+// La carte de l'aperçu du mail (#mail-preview-modal .mail-choice-box)
+// a donné un halo trop petit/mal calé à plusieurs reprises en pratique
+// (rectangle de la carte visiblement pas fiable ici, cause exacte non
+// reproductible en dehors du navigateur réel). Plutôt que de se fier au
+// rectangle de la carte elle-même, on construit ici le halo à partir de
+// l'union des rectangles de son titre (haut de la carte) et de ses deux
+// boutons (bas de la carte) : ça couvre forcément toute la carte, quel
+// que soit le souci avec son propre getBoundingClientRect().
+function getConfirmSendSpotlightRect() {
+  const box = document.querySelector("#mail-preview-modal .mail-choice-box");
+  if (!box || box.offsetParent === null) return null;
+
+  const parts = [
+    box,
+    box.querySelector(".mail-choice-title"),
+    box.querySelector(".save-btn"),
+    box.querySelector(".sheet-btn")
+  ].filter(Boolean);
+
+  const rects = parts
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+
+  if (!rects.length) return null;
+
+  const left = Math.min(...rects.map(r => r.left));
+  const top = Math.min(...rects.map(r => r.top));
+  const right = Math.max(...rects.map(r => r.right));
+  const bottom = Math.max(...rects.map(r => r.bottom));
+
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 
@@ -12757,7 +12793,12 @@ function positionOnboardingSpotlight(target) {
     return;
   }
 
-  const rect = target.getBoundingClientRect();
+  // "target" est soit un élément DOM (cas normal), soit déjà un
+  // rectangle tout calculé {left, top, width, height} (cas
+  // "confirm_send", voir getConfirmSendSpotlightRect ci-dessus).
+  const rect = typeof target.getBoundingClientRect === "function"
+    ? target.getBoundingClientRect()
+    : target;
   const pad = 8;
 
   const x = rect.left - pad;
