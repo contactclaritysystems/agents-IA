@@ -12354,26 +12354,6 @@ function startOnboardingPositionLoop() {
       return;
     }
 
-    // "confirm_send" cible toute la carte de l'aperçu du mail
-    // (#mail-preview-modal .mail-choice-box), qui change de taille en
-    // direct selon le contenu du mail (destinataire, objet, message) et
-    // défile (max-height + overflow-y:auto) : un halo/trou calé sur son
-    // rectangle est peu fiable (trop petit, mal calé...) et surtout
-    // inutile, puisque cette popup a déjà son propre fond assombri. On
-    // se contente ici d'afficher la bulle d'explication par-dessus,
-    // sans rien découper ni assombrir en plus — toute la carte (et son
-    // bouton "Envoyer le mail") reste normalement cliquable. Vérifié
-    // AVANT d'activer le voile (et non juste après puis annulé), pour
-    // ne jamais l'allumer ne serait-ce qu'un instant à chaque passage
-    // de cette boucle (ça clignotait).
-    if (onboardingStep === "confirm_send") {
-      if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
-      if (ring) ring.style.display = "none";
-      if (bubble) bubble.style.display = "block";
-      if (micTag) micTag.style.display = "none";
-      return;
-    }
-
     if (overlay) overlay.classList.add("active");
 
     const progressPopup = document.querySelector(".agent-progress-popup");
@@ -12870,6 +12850,13 @@ const DICTATION_STEPS = ["dictate_mail", "stop_dictation", "confirm_send", "retr
   }
 
   if (event === "mail_prepared" && DICTATION_STEPS.includes(onboardingStep)) {
+    // "confirm_send" fait partie de DICTATION_STEPS (pour pouvoir revenir
+    // en arrière depuis "retry_dictation"), donc si l'aperçu du mail est
+    // ré-affiché plusieurs fois pendant qu'on y est déjà (ex: on revient
+    // choisir un autre contact), cet événement peut refeu plusieurs fois
+    // de suite. Sans ce garde-fou, chaque appel relance showOnboardingStep
+    // -> repositionne le halo depuis zéro -> clignotement visible.
+    if (onboardingStep === "confirm_send") return;
     onboardingStep = "confirm_send";
     showOnboardingStep();
     return;
