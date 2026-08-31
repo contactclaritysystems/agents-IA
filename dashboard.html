@@ -10149,7 +10149,7 @@ async function openQuickPlanningModal() {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="quick-planning-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="quick-planning-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="quick-planning-confirm" style="margin-top:16px;">
@@ -10371,7 +10371,7 @@ async function openQuickReminderModal() {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="quick-reminder-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="quick-reminder-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="quick-reminder-confirm" style="margin-top:16px;">
@@ -10590,7 +10590,7 @@ function openReminderScheduleSheet(data) {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="reminder-sheet-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="reminder-sheet-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="reminder-sheet-confirm" style="margin-top:16px;">
@@ -10863,7 +10863,7 @@ function openPlanningScheduleSheet(data, instruction) {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="planning-sheet-time" step="900" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="planning-sheet-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="planning-sheet-confirm" style="margin-top:16px;">
@@ -14579,7 +14579,7 @@ function renderAppointment(a) {
 
         <div class="field-group">
           <div class="field-label">Heure</div>
-          <input class="field-input" id="appointment-time-input" type="time" value="${a.appointment_time?.slice(0,5) || ""}" oninput="toggleAppointmentSave()">
+          <input class="field-input" id="appointment-time-input" type="time" step="300" value="${a.appointment_time?.slice(0,5) || ""}" oninput="toggleAppointmentSave()">
         </div>
       </div>
 
@@ -22952,6 +22952,7 @@ async function loadFollowUps() {
             class="field-input"
             id="followup-time-input"
             type="time"
+            step="300"
             value="${r.reminder_time?.slice(0, 5) || ""}"
             oninput="toggleFollowUpSave()"
           >
