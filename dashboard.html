@@ -22230,7 +22230,14 @@ const payload = {
   to,
   cc,
   subject,
-  body: body.replace(/\n/g, "<br>\n")
+  // Confirmé avec Grok : Make transmet ce champ tel quel, et l'envoi
+  // réel (Gmail API) est en texte brut, pas en HTML — convertir les
+  // retours à la ligne en "<br>" ici faisait donc apparaître ce tag en
+  // clair dans le mail reçu au lieu d'un vrai saut de ligne. On envoie
+  // les \n bruts, qu'un mail en texte brut affiche nativement comme des
+  // retours à la ligne. À ne repasser en "<br>" que si l'envoi bascule
+  // un jour en MIME text/html côté backend.
+  body
 };
 
   try {
