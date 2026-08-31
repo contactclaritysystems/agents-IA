@@ -4365,7 +4365,7 @@ body[data-theme="dark"] {
 /* ---------- THÈME "Ardoise" ---------- */
 
 body[data-theme="slate"] {
-  --clarity-page: #c9ced6;
+  --clarity-page: #d3d8e0;
   --clarity-surface: #f6f7f8;
   --clarity-surface-soft: #ffffff;
   --clarity-surface-hover: #eef0f2;
@@ -4545,7 +4545,7 @@ body,
   background: #15171e;
 }
 
-.theme-swatch-slate { background: #c9ced6; }
+.theme-swatch-slate { background: #d3d8e0; }
 .theme-swatch-slate::before {
   content: "";
   position: absolute;
@@ -5601,16 +5601,19 @@ body[data-theme="light"] .loader-halo {
   filter: none;
 }
 
-/* Thème ardoise : halo graphite/anthracite, assorti à l'accent du thème. */
+/* Thème ardoise (gris) : même retour que le thème rose — le halo
+   graphite/anthracite d'origine restait sombre sur un fond déjà
+   grisâtre, donc peu "lumineux". Remplacé par un halo blanc, comme
+   pour le thème rose. */
 body[data-theme="slate"] #main-agents::before {
   background: radial-gradient(ellipse,
-    rgba(27, 32, 40, 0.18) 0%,
-    rgba(27, 32, 40, 0.06) 45%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.55) 45%,
     transparent 70%);
 }
 
 body[data-theme="slate"] .loader-halo {
-  filter: grayscale(.6) saturate(1.1) brightness(.45);
+  filter: grayscale(1) brightness(2.6);
 }
 
 /* Thème corail (rose) : la teinte vin/corail sombre se fondait dans le
@@ -7015,7 +7018,7 @@ body[data-theme="dark"] .clarity-hero {
    ========================================================= */
 html:has(body[data-theme="dark"]) { background: #000000; }
 html:has(body[data-theme="light"]) { background: #f7f7f8; }
-html:has(body[data-theme="slate"]) { background: #c9ced6; }
+html:has(body[data-theme="slate"]) { background: #d3d8e0; }
 html:has(body[data-theme="corail"]) { background: #f9e7ea; }
 
 /* =========================================================
@@ -8417,7 +8420,7 @@ body[data-theme="light"]::after {
       var themeBg = {
         dark: "#000000",
         light: "#f7f7f8",
-        slate: "#c9ced6",
+        slate: "#d3d8e0",
         corail: "#f9e7ea",
       };
       var currentTheme = document.body.getAttribute("data-theme") || "light";
@@ -9480,7 +9483,7 @@ const CLARITY_THEMES = ["light", "dark", "slate", "corail"];
 const CLARITY_THEME_BG = {
   dark: "#000000",
   light: "#f7f7f8",
-  slate: "#c9ced6",
+  slate: "#d3d8e0",
   corail: "#f9e7ea",
 };
 
