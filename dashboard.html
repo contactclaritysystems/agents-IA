@@ -10370,7 +10370,7 @@ async function setDigestEnabled(enabled) {
 }
 
 // ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─────
-// Popup avec 2 colonnes qui défilent (heures / minutes par pas de 5) + un
+// Popup avec 2 colonnes qui défilent (heures / minutes, à la minute près) + un
 // bouton "Valider" — au lieu du <input type="time"> natif, moins agréable à
 // manipuler pour ce réglage précis.
 let pendingDigestHour = 7;
@@ -10382,9 +10382,7 @@ function openDigestTimeModal() {
   const h = parseInt(parts[0], 10);
   const m = parseInt(parts[1], 10);
   pendingDigestHour = isNaN(h) ? 7 : h;
-  // Aligne sur le pas de 5 min le plus proche (au cas où la valeur stockée
-  // ne serait pas déjà un multiple de 5).
-  pendingDigestMinute = isNaN(m) ? 30 : (Math.round(m / 5) * 5) % 60;
+  pendingDigestMinute = isNaN(m) ? 30 : m;
 
   let modal = document.getElementById("digest-time-modal");
   if (!modal) {
@@ -10417,7 +10415,7 @@ function openDigestTimeModal() {
     document.getElementById("digest-time-validate-btn").onclick = confirmDigestTimeModal;
 
     buildTimeWheelColumn(document.getElementById("time-wheel-hours"), 0, 23, 1, "hour");
-    buildTimeWheelColumn(document.getElementById("time-wheel-minutes"), 0, 55, 5, "minute");
+    buildTimeWheelColumn(document.getElementById("time-wheel-minutes"), 0, 59, 1, "minute");
   }
 
   modal.style.display = "flex";
@@ -10574,7 +10572,7 @@ async function openQuickPlanningModal() {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="quick-planning-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="quick-planning-time" step="60" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="quick-planning-confirm" style="margin-top:16px;">
@@ -10797,7 +10795,7 @@ async function openQuickReminderModal() {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="quick-reminder-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="quick-reminder-time" step="60" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="quick-reminder-confirm" style="margin-top:16px;">
@@ -11017,7 +11015,7 @@ function openReminderScheduleSheet(data) {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="reminder-sheet-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="reminder-sheet-time" step="60" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="reminder-sheet-confirm" style="margin-top:16px;">
@@ -11291,7 +11289,7 @@ function openPlanningScheduleSheet(data, instruction) {
 
         <div class="field-group" style="margin-top:12px;min-width:0;">
           <div class="field-label">Heure</div>
-          <input class="field-input" type="time" id="planning-sheet-time" step="300" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <input class="field-input" type="time" id="planning-sheet-time" step="60" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
         </div>
 
         <button class="save-btn" type="button" id="planning-sheet-confirm" style="margin-top:16px;">
@@ -15010,7 +15008,7 @@ function renderAppointment(a) {
 
         <div class="field-group">
           <div class="field-label">Heure</div>
-          <input class="field-input" id="appointment-time-input" type="time" step="300" value="${a.appointment_time?.slice(0,5) || ""}" oninput="toggleAppointmentSave()">
+          <input class="field-input" id="appointment-time-input" type="time" step="60" value="${a.appointment_time?.slice(0,5) || ""}" oninput="toggleAppointmentSave()">
         </div>
       </div>
 
@@ -16566,7 +16564,7 @@ function wireCustomTimeInput(nativeInput) {
   document.body.appendChild(popover);
 
   const step = parseInt(nativeInput.step, 10) || 900;
-  const stepMinutes = Math.max(5, Math.round(step / 60));
+  const stepMinutes = Math.max(1, Math.round(step / 60));
 
   function renderDisplay() {
     display.textContent = nativeInput.value || "Choisir une heure";
@@ -23384,7 +23382,7 @@ async function loadFollowUps() {
             class="field-input"
             id="followup-time-input"
             type="time"
-            step="300"
+            step="60"
             value="${r.reminder_time?.slice(0, 5) || ""}"
             oninput="toggleFollowUpSave()"
           >
