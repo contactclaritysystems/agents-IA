@@ -12373,11 +12373,20 @@ function startOnboardingPositionLoop() {
     // Dès le clic sur "Envoyer", la carte de l'aperçu s'anime pour
     // disparaître ("sending") : le message "Relisez l'aperçu... Envoyer
     // le mail" n'a plus lieu d'être à ce moment précis (c'est déjà fait),
-    // donc on cache aussi la bulle en même temps que le halo, le temps
-    // que l'envoi se termine et que le message "Bravo" prenne le relais.
+    // donc on cache aussi la bulle en même temps que le halo. On garde
+    // ça caché jusqu'à ce que onboardingStep passe réellement à "done" —
+    // pas seulement pendant l'animation "sending" : entre la fermeture
+    // de la popup (closeMailPreview, qui retire "sending" au passage) et
+    // le vrai passage à "done", il y a encore quelques appels réseau
+    // (contacts, historique...) qui peuvent prendre plus d'un tour de
+    // cette boucle de 300ms — sans ce filtre plus large, la bulle
+    // "Relisez l'aperçu" réapparaissait brièvement dans cet intervalle,
+    // juste avant "Bravo".
     if (onboardingStep === "confirm_send") {
+      const previewModal = document.getElementById("mail-preview-modal");
+      const previewModalOpen = previewModal && previewModal.style.display === "block";
       const sendingBox = document.querySelector("#mail-preview-modal .mail-choice-box.sending");
-      if (sendingBox) {
+      if (sendingBox || !previewModalOpen) {
         if (bubble) bubble.style.display = "none";
         if (micTag) micTag.style.display = "none";
         positionOnboardingSpotlight(null);
