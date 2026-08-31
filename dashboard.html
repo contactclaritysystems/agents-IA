@@ -12415,6 +12415,10 @@ async function goToDictateMailStep() {
 
   const ONBOARDING_TIPS = [
   {
+    title: "⚡ Les actions rapides",
+    text: "En bas de l'accueil, ces raccourcis lancent directement un mail, un texte, une question, un RDV ou un rappel — sans avoir à tout dicter."
+  },
+  {
     title: "📒 Enregistrez vos contacts",
     text: "Ajoutez vos clients dans le Carnet Contacts : c'est ce qui me permet de retrouver leurs coordonnées quand vous dictez une action."
   },
@@ -12441,31 +12445,43 @@ async function goToDictateMailStep() {
 ];
 
 const TIP_TARGET_SELECTORS = [
-  ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
-  ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
+  ['.clarity-quick-row'],
+  null,
+  null,
   null,
   null,
   [],
   ['#custom-agent-block']
 ];
 
-const TIP_TARGET_SECTIONS = ["contacts", "planning", "settings", "agents", null, "settings"];
+const TIP_TARGET_SECTIONS = ["agents", "contacts", "planning", "settings", "agents", null, "settings"];
 
-// "Adaptez le ton" et "Un doute ?" montrent le CONTENU d'une sous-page/
-// popup plutôt qu'un simple bouton lointain — mais y aller d'un coup
-// (sans que l'utilisateur voie le chemin) ne lui apprend pas où
-// retrouver ça tout seul ensuite. On raconte donc le trajet en 3 temps
-// avant d'ouvrir : d'abord l'onglet du bas, puis la rangée/bouton
-// précis, puis (nous-mêmes, pas besoin de cliquer) le contenu ouvert —
-// comme une petite vidéo qui montre le chemin plutôt qu'un télétransport.
+// Plutôt que de télétransporter l'utilisateur directement sur le
+// contenu (il ne retient pas où c'est), on raconte le trajet en
+// plusieurs temps avec des pauses : d'abord l'onglet du bas, puis (pour
+// "Adaptez le ton"/"Un doute ?" qui ouvrent une sous-page/popup) la
+// rangée/bouton précis, puis enfin le contenu — comme une petite vidéo
+// qui montre le chemin plutôt qu'un télétransport.
 const TIP_WALKTHROUGH = {
+  0: {
+    navSelectors: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
+    finalSelectors: ['.clarity-quick-row']
+  },
+  1: {
+    navSelectors: ['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]'],
+    finalSelectors: ['#contact-submit-btn']
+  },
   2: {
+    navSelectors: ['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]'],
+    finalSelectors: ['#planning-detail']
+  },
+  3: {
     navSelectors: ['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]'],
     rowSelectors: ['#writing-styles-row'],
     openFn: () => { if (typeof openWritingStylesSubpage === "function") openWritingStylesSubpage(); },
     finalSelectors: ['#writing-styles-list']
   },
-  3: {
+  4: {
     navSelectors: ['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]'],
     rowSelectors: ['.clarity-help-btn'],
     openFn: () => { if (typeof openHelpActionsModal === "function") openHelpActionsModal(); },
@@ -12618,29 +12634,42 @@ function showOnboardingTip(index) {
   `;
 
   if (walkthrough) {
-    // Petit parcours guidé en 3 temps, pour que l'utilisateur retienne
-    // où se trouve la chose : d'abord l'onglet du bas (déjà ciblé via
-    // "selectors" ci-dessus), puis la rangée/bouton précis, puis enfin
-    // le contenu une fois ouvert (nous-mêmes, pas de clic requis).
+    // Petit parcours guidé, pour que l'utilisateur retienne où se
+    // trouve la chose : d'abord l'onglet du bas (déjà ciblé via
+    // "selectors" ci-dessus). Deux variantes ensuite :
+    // - avec rowSelectors/openFn (Adaptez le ton, Un doute ?) : 3 temps,
+    //   on montre la rangée/bouton précis puis on ouvre le contenu ;
+    // - sans (Contacts, Planning) : 2 temps, on va direct sur la zone
+    //   à retenir, rien à ouvrir.
     const selectorsRef = { current: walkthrough.navSelectors };
     startTipsPositionLoop(selectorsRef);
 
-    tipWalkthroughTimeouts.push(setTimeout(() => {
-      selectorsRef.current = walkthrough.rowSelectors;
-      const rowTarget = pickVisibleElement(walkthrough.rowSelectors);
-      if (rowTarget && rowTarget.scrollIntoView) {
-        rowTarget.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, TIP_WALKTHROUGH_STEP_DELAY));
+    if (walkthrough.rowSelectors && walkthrough.openFn) {
+      tipWalkthroughTimeouts.push(setTimeout(() => {
+        selectorsRef.current = walkthrough.rowSelectors;
+        const rowTarget = pickVisibleElement(walkthrough.rowSelectors);
+        if (rowTarget && rowTarget.scrollIntoView) {
+          rowTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, TIP_WALKTHROUGH_STEP_DELAY));
 
-    tipWalkthroughTimeouts.push(setTimeout(() => {
-      walkthrough.openFn();
-      selectorsRef.current = walkthrough.finalSelectors;
-      const finalTarget = pickVisibleElement(walkthrough.finalSelectors);
-      if (finalTarget && finalTarget.scrollIntoView) {
-        finalTarget.scrollIntoView({ behavior: "instant", block: "center" });
-      }
-    }, TIP_WALKTHROUGH_STEP_DELAY * 2));
+      tipWalkthroughTimeouts.push(setTimeout(() => {
+        walkthrough.openFn();
+        selectorsRef.current = walkthrough.finalSelectors;
+        const finalTarget = pickVisibleElement(walkthrough.finalSelectors);
+        if (finalTarget && finalTarget.scrollIntoView) {
+          finalTarget.scrollIntoView({ behavior: "instant", block: "center" });
+        }
+      }, TIP_WALKTHROUGH_STEP_DELAY * 2));
+    } else {
+      tipWalkthroughTimeouts.push(setTimeout(() => {
+        selectorsRef.current = walkthrough.finalSelectors;
+        const finalTarget = pickVisibleElement(walkthrough.finalSelectors);
+        if (finalTarget && finalTarget.scrollIntoView) {
+          finalTarget.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, TIP_WALKTHROUGH_STEP_DELAY));
+    }
 
     return;
   }
