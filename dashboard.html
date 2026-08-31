@@ -5613,16 +5613,20 @@ body[data-theme="slate"] .loader-halo {
   filter: grayscale(.6) saturate(1.1) brightness(.45);
 }
 
-/* Thème corail : halo teinte vin/corail, assorti à l'accent du thème. */
+/* Thème corail (rose) : la teinte vin/corail sombre se fondait dans le
+   fond rose pâle du thème et devenait quasi invisible — remplacée par
+   un halo blanc lumineux, qui ressort au contraire bien sur ce fond. */
 body[data-theme="corail"] #main-agents::before {
   background: radial-gradient(ellipse,
-    rgba(58, 20, 32, 0.16) 0%,
-    rgba(58, 20, 32, 0.05) 45%,
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(255, 255, 255, 0.28) 45%,
     transparent 70%);
 }
 
 body[data-theme="corail"] .loader-halo {
-  filter: hue-rotate(150deg) saturate(1.4) brightness(.65);
+  /* .loader-halo est une image (pas un dégradé CSS) : grayscale retire
+     sa teinte bleue d'origine, brightness la pousse vers le blanc. */
+  filter: grayscale(1) brightness(2.6);
 }
 
 @media (prefers-reduced-motion: reduce) {
