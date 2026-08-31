@@ -10276,9 +10276,13 @@ async function loadDigestSettings() {
     );
     const data = await response.json().catch(() => ({}));
     if (response.ok && data) {
+      // Le backend renvoie les valeurs à la fois à la racine et dans
+      // "settings" (voir confirmation Grok) : on lit l'un ou l'autre pour
+      // rester compatible si l'un des deux disparaît un jour.
+      const s = data.settings || data;
       // Absent côté serveur (compte jamais configuré) -> défauts : ON, 07:30.
-      digestEnabled = data.digest_enabled !== false;
-      digestTime = data.digest_time || "07:30";
+      digestEnabled = s.digest_enabled !== false;
+      digestTime = s.digest_time || "07:30";
     }
   } catch (e) {
     // Pas de réseau : on garde les défauts plutôt que de bloquer le
