@@ -12466,11 +12466,11 @@ async function goToDictateMailStep() {
   },
   {
     title: "✨ Une idée, un besoin ?",
-    text: "Dites-le-moi dans Réglages > Une idée, un besoin ? : j'étudie chaque demande."
+    text: "Une fonctionnalité qui vous manque, un agent que vous aimeriez voir arriver ? Dites-le-moi ici : chaque demande compte et m'aide à m'améliorer pour vous."
   },
   {
     title: "🎁 Votre essai gratuit",
-    text: "7 jours d'essai ou 50 actions offertes, selon ce qui arrive en premier. Et chaque semaine, j'apprends de nouvelles choses."
+    text: "Vous avez 7 jours (ou 50 actions offertes, selon ce qui arrive en premier) pour me tester à fond. Et ce n'est que le début : chaque semaine, j'apprends de nouvelles choses pour vous faire gagner encore plus de temps."
   }
 ];
 
@@ -19346,6 +19346,7 @@ stopAgentProgressPolling();
   let agentProgressInterval = null;
 let agentProgressBox = null;
 let lastAgentProgressStatus = null;
+let lastAgentProgressMessage = null;
 
 function stopAgentProgressPolling() {
   if (agentProgressInterval) {
@@ -19355,6 +19356,7 @@ function stopAgentProgressPolling() {
 
   agentProgressBox = null;
   lastAgentProgressStatus = null;
+  lastAgentProgressMessage = null;
 }
 
 function startAgentProgressPolling(requestId, box) {
@@ -19391,10 +19393,22 @@ async function loadAgentProgress(requestId) {
 
   const progress = data[0];
 
-  // Évite de réafficher la même étape toutes les 500 ms
-  if (progress.status === lastAgentProgressStatus) return;
+  // Évite de réafficher la même étape toutes les 500 ms — MAIS seulement
+  // si rien n'a changé. Il arrive que Make écrive deux lignes de suite
+  // avec le même statut "contact_found" : une première fois avant même
+  // d'avoir fini de résoudre le contact (message vide), puis une seconde
+  // avec le nom une fois trouvé. Si on ne comparait que le statut, cette
+  // seconde ligne (celle qui a enfin le nom) était ignorée car "déjà vu
+  // ce statut" — et le nom du contact n'apparaissait plus jamais pour
+  // cette demande. On compare donc aussi le message : un statut identique
+  // mais un contenu différent doit quand même déclencher un réaffichage.
+  if (
+    progress.status === lastAgentProgressStatus &&
+    progress.message === lastAgentProgressMessage
+  ) return;
 
   lastAgentProgressStatus = progress.status;
+  lastAgentProgressMessage = progress.message;
 
   switch (progress.status) {
     case "contact_found":
