@@ -12367,8 +12367,13 @@ function startOnboardingPositionLoop() {
 
     if (bubble) bubble.style.display = "block";
 
+    // Toujours appelé, même si target est null (positionOnboardingSpotlight
+    // gère déjà ce cas en masquant le halo) : sinon, si le calcul du
+    // target échoue ne serait-ce qu'une fois, le halo reste figé sur sa
+    // dernière position valide au lieu de se mettre à jour ou de
+    // disparaître proprement.
     const target = getOnboardingSpotlightTarget(onboardingStep);
-    if (target) positionOnboardingSpotlight(target);
+    positionOnboardingSpotlight(target);
     updateOnboardingMicTag();
   }, 300);
 
@@ -12700,8 +12705,18 @@ function pickVisibleElement(selectors) {
 // boutons (bas de la carte) : ça couvre forcément toute la carte, quel
 // que soit le souci avec son propre getBoundingClientRect().
 function getConfirmSendSpotlightRect() {
-  const box = document.querySelector("#mail-preview-modal .mail-choice-box");
-  if (!box || box.offsetParent === null) return null;
+  // NB : on ne peut pas utiliser box.offsetParent pour vérifier la
+  // visibilité ici — offsetParent vaut TOUJOURS null pour un élément en
+  // position:fixed (ce qui est le cas de .mail-choice-box), même quand
+  // il est parfaitement affiché. C'est ce qui faisait échouer cette
+  // fonction en permanence (elle renvoyait null à chaque appel), et
+  // laissait le halo figé sur la position de l'étape précédente. On
+  // vérifie plutôt directement l'affichage de la popup elle-même.
+  const modal = document.getElementById("mail-preview-modal");
+  if (!modal || modal.style.display !== "block") return null;
+
+  const box = modal.querySelector(".mail-choice-box");
+  if (!box) return null;
 
   const parts = [
     box,
