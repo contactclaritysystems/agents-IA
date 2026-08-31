@@ -8637,6 +8637,12 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="profil-status-label">À compléter</span>
       <span class="settings-row-chevron">›</span>
     </div>
+    <div class="settings-row" id="notify-test-row" onclick="sendNotifyTestEmail(this)">
+      <span class="settings-row-icon settings-row-icon-blue">📨</span>
+      <div class="settings-row-title">Notifications</div>
+      <span class="settings-row-value">Envoyer un e-mail test</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
     <div class="settings-row" onclick="openPricingPage()">
       <span class="settings-row-icon settings-row-icon-purple">💳</span>
       <div class="settings-row-title">Abonnement</div>
@@ -10104,16 +10110,22 @@ window.submitQuickText = submitQuickText;
 // (avec qui / motif / jour / heure) -> un seul appel à /agent/planning,
 // déjà complet.
 // ─── POPUP "1er RDV/RAPPEL CRÉÉ" — proposer un e-mail de test ───
-// Au tout premier RDV ou rappel créé sur ce compte (tous chemins confondus :
-// actions rapides, dictée, clarifications), on propose une fois d'envoyer un
-// e-mail de test pour vérifier que les notifications arrivent bien. Flag
-// localStorage par compte : ne s'affiche plus jamais ensuite, et pas de
-// bandeau spam à chaque création suivante.
+// Au 1er RDV/rappel créé sur ce compte (tous chemins confondus : actions
+// rapides, dictée, clarifications), on propose d'envoyer un e-mail de test.
+// Logique du flag localStorage (par compte) :
+//   - absent          -> 1er passage : on affiche la popup.
+//   - "skipOnce"       -> "Plus tard" a été cliqué au 1er passage : on
+//                          réaffiche UNE fois au prochain RDV/rappel créé.
+//   - "done"           -> soit le test a été envoyé, soit "Plus tard" a été
+//                          cliqué une 2e fois : on n'affiche plus jamais.
+function firstScheduleNoticeFlagKey() {
+  return currentUser && currentUser.id ? "clarity_first_schedule_notice_" + currentUser.id : null;
+}
+
 function maybeShowFirstScheduleNotice() {
-  if (!currentUser || !currentUser.id) return;
-  const flagKey = "clarity_first_schedule_notice_" + currentUser.id;
-  if (localStorage.getItem(flagKey)) return;
-  localStorage.setItem(flagKey, "1");
+  const flagKey = firstScheduleNoticeFlagKey();
+  if (!flagKey) return;
+  if (localStorage.getItem(flagKey) === "done") return;
 
   let modal = document.getElementById("first-schedule-notice-modal");
   if (!modal) {
@@ -10142,16 +10154,26 @@ function maybeShowFirstScheduleNotice() {
   modal.style.display = "flex";
 }
 
+// Fermeture SANS avoir envoyé le test (clic sur "Plus tard" ou sur le fond) :
+// fait avancer l'état d'un cran vers "done" (voir logique ci-dessus).
 function closeFirstScheduleNoticeModal() {
   const modal = document.getElementById("first-schedule-notice-modal");
   if (modal) modal.style.display = "none";
+
+  const flagKey = firstScheduleNoticeFlagKey();
+  if (!flagKey) return;
+  const state = localStorage.getItem(flagKey);
+  localStorage.setItem(flagKey, state === "skipOnce" ? "done" : "skipOnce");
 }
 
-async function sendFirstScheduleTestEmail() {
-  const btn = document.getElementById("first-schedule-notice-send-btn");
-  if (btn) {
-    btn.disabled = true;
-    btn.style.opacity = ".6";
+// POST partagé vers /notify/test, utilisé à la fois par la popup "1er
+// RDV/rappel" et par le bouton "Notifications" des Réglages. `el` (bouton ou
+// ligne de Réglages) est juste visuellement désactivé pendant l'envoi.
+async function sendNotifyTestEmail(el) {
+  if (!currentUser) return { success: false };
+  if (el) {
+    el.style.pointerEvents = "none";
+    el.style.opacity = ".6";
   }
 
   try {
@@ -10164,23 +10186,39 @@ async function sendFirstScheduleTestEmail() {
       })
     });
     const data = await response.json().catch(() => ({}));
+    const ok = response.ok && data.success !== false;
 
-    closeFirstScheduleNoticeModal();
-
-    if (response.ok && data.success !== false) {
+    if (ok) {
       showToast("E-mail test envoyé. Pensez aux indésirables si besoin.", "success");
     } else {
       showToast(data.message || "Erreur envoi e-mail test", "error");
     }
+    return { success: ok };
   } catch (e) {
-    closeFirstScheduleNoticeModal();
     showToast("Erreur réseau", "error");
+    return { success: false };
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.style.opacity = "1";
+    if (el) {
+      el.style.pointerEvents = "";
+      el.style.opacity = "1";
     }
   }
+}
+
+// Bouton "Envoyer un e-mail test" DE LA POPUP uniquement : en cas de succès,
+// on ferme la popup et on passe directement à "done" (pas de "skipOnce"
+// intermédiaire, contrairement à un "Plus tard"). En cas d'échec, la popup
+// reste ouverte pour permettre de réessayer.
+async function sendFirstScheduleTestEmail() {
+  const btn = document.getElementById("first-schedule-notice-send-btn");
+  const result = await sendNotifyTestEmail(btn);
+  if (!result.success) return;
+
+  const modal = document.getElementById("first-schedule-notice-modal");
+  if (modal) modal.style.display = "none";
+
+  const flagKey = firstScheduleNoticeFlagKey();
+  if (flagKey) localStorage.setItem(flagKey, "done");
 }
 
 async function openQuickPlanningModal() {
