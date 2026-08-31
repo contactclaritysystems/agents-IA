@@ -2872,6 +2872,7 @@ body[data-theme="dark"] #app-loader {
 
 #onboarding-tips-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 14px;
@@ -2880,6 +2881,12 @@ body[data-theme="dark"] #app-loader {
 #onboarding-tips-actions .sheet-btn,
 #onboarding-tips-actions .save-btn {
   width: auto;
+  /* .save-btn a min-height:48px et .sheet-btn min-height:42px par
+     défaut — sans les écraser ici aussi, min-height l'emportait sur ce
+     height:34px (min-height prime sur height quand il est plus grand),
+     donc les deux boutons rendaient à des hauteurs différentes et ne
+     s'alignaient pas. */
+  min-height: 34px;
   height: 34px;
   padding: 0 14px;
   font-size: 12px;
