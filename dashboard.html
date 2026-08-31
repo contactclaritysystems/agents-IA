@@ -4400,7 +4400,7 @@ body[data-theme="slate"] {
 /* ---------- THÈME "Corail" ---------- */
 
 body[data-theme="corail"] {
-  --clarity-page: #f6dfe3;
+  --clarity-page: #f9e7ea;
   --clarity-surface: #ffffff;
   --clarity-surface-soft: #fbeef0;
   --clarity-surface-hover: #fdf5f6;
@@ -4555,7 +4555,7 @@ body,
   background: #f6f7f8;
 }
 
-.theme-swatch-corail { background: #f6dfe3; }
+.theme-swatch-corail { background: #f9e7ea; }
 .theme-swatch-corail::before {
   content: "";
   position: absolute;
@@ -5615,11 +5615,14 @@ body[data-theme="slate"] .loader-halo {
 
 /* Thème corail (rose) : la teinte vin/corail sombre se fondait dans le
    fond rose pâle du thème et devenait quasi invisible — remplacée par
-   un halo blanc lumineux, qui ressort au contraire bien sur ce fond. */
+   un halo blanc lumineux. Le fond du thème étant lui-même très clair,
+   du blanc à faible opacité ne ressortait presque pas dessus (deux
+   teintes déjà proches du blanc) : opacité montée nettement plus haut
+   qu'un halo coloré classique pour qu'il se voie vraiment. */
 body[data-theme="corail"] #main-agents::before {
   background: radial-gradient(ellipse,
-    rgba(255, 255, 255, 0.65) 0%,
-    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.55) 45%,
     transparent 70%);
 }
 
@@ -7013,7 +7016,7 @@ body[data-theme="dark"] .clarity-hero {
 html:has(body[data-theme="dark"]) { background: #000000; }
 html:has(body[data-theme="light"]) { background: #f7f7f8; }
 html:has(body[data-theme="slate"]) { background: #c9ced6; }
-html:has(body[data-theme="corail"]) { background: #f6dfe3; }
+html:has(body[data-theme="corail"]) { background: #f9e7ea; }
 
 /* =========================================================
    CLARITY SYSTEMS — Parité "premium" pour Clair / Ardoise / Corail
@@ -8415,7 +8418,7 @@ body[data-theme="light"]::after {
         dark: "#000000",
         light: "#f7f7f8",
         slate: "#c9ced6",
-        corail: "#f6dfe3",
+        corail: "#f9e7ea",
       };
       var currentTheme = document.body.getAttribute("data-theme") || "light";
       var meta = document.getElementById("clarity-theme-color-meta");
@@ -9478,7 +9481,7 @@ const CLARITY_THEME_BG = {
   dark: "#000000",
   light: "#f7f7f8",
   slate: "#c9ced6",
-  corail: "#f6dfe3",
+  corail: "#f9e7ea",
 };
 
 function updateThemeColorMeta(theme) {
