@@ -8396,6 +8396,19 @@ body[data-theme="light"]::after {
   flex-shrink: 0;
 }
 
+#main-settings .settings-time-input {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--clarity-text);
+  background: var(--clarity-surface-soft);
+  border: 1px solid var(--clarity-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  flex-shrink: 0;
+  width: 90px;
+}
+
 #main-settings #profil-stat-card.needs-attention .settings-row-value {
   color: var(--clarity-warning);
 }
@@ -8637,16 +8650,37 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="profil-status-label">À compléter</span>
       <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" id="notify-test-row" onclick="sendNotifyTestEmail(this)">
-      <span class="settings-row-icon settings-row-icon-blue">📨</span>
-      <div class="settings-row-title">Notifications</div>
-      <span class="settings-row-value">Envoyer un e-mail test</span>
-      <span class="settings-row-chevron">›</span>
-    </div>
     <div class="settings-row" onclick="openPricingPage()">
       <span class="settings-row-icon settings-row-icon-purple">💳</span>
       <div class="settings-row-title">Abonnement</div>
       <span class="settings-row-value" id="subscription-status-label">Voir</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- NOTIFICATIONS -->
+<div class="settings-page-block">
+
+  <div class="settings-group-label">Notifications</div>
+  <div class="settings-group">
+    <div class="settings-row" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-blue">🔔</span>
+      <div class="settings-row-title">Brief du jour</div>
+      <button type="button" class="settings-toggle active" id="digest-toggle-switch" onclick="setDigestEnabled(!isDigestEnabled())" aria-label="Activer le brief du jour">
+        <span class="settings-toggle-knob"></span>
+      </button>
+    </div>
+    <div class="settings-row" id="digest-time-row">
+      <span class="settings-row-icon settings-row-icon-amber">🕐</span>
+      <div class="settings-row-title">Heure d'envoi</div>
+      <input type="time" class="settings-time-input" id="digest-time-input" value="07:30" step="300" onchange="onDigestTimeChange()" />
+    </div>
+    <div class="settings-row" id="notify-test-row" onclick="sendNotifyTestEmail(this)">
+      <span class="settings-row-icon settings-row-icon-purple">📨</span>
+      <div class="settings-row-title">E-mail test</div>
+      <span class="settings-row-value">Envoyer</span>
       <span class="settings-row-chevron">›</span>
     </div>
   </div>
@@ -9644,6 +9678,7 @@ const CLARITY_THINKING_LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA
 const PLANNING_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/agent/planning";
 const RELANCE_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/agent/relance";
 const NOTIFY_TEST_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/notify/test";
+const NOTIFY_SETTINGS_URL = "https://clarity-backend-me14.onrender.com/notify/settings";
 // Styles d'écriture (formulaire "message" de Rédaction) : lister/créer un
 // style ("Cousin", "Patron"...) utilisé pour adapter le ton du message.
 const STYLES_API_URL = "https://clarity-backend-me14.onrender.com/styles";
@@ -10219,6 +10254,82 @@ async function sendFirstScheduleTestEmail() {
 
   const flagKey = firstScheduleNoticeFlagKey();
   if (flagKey) localStorage.setItem(flagKey, "done");
+}
+
+// ─── RÉGLAGES > NOTIFICATIONS — "Brief du jour" ─────────────
+// Un seul mail récapitulatif ("Votre journée Clarity") envoyé par le cron
+// backend à l'heure choisie (fuseau Paris), avec les RDV + rappels du jour.
+// Réglage persisté côté serveur (pas juste localStorage) puisque le cron
+// tourne indépendamment de l'appareil utilisé pour le configurer.
+let digestEnabled = true;
+let digestTime = "07:30";
+
+function isDigestEnabled() {
+  return digestEnabled;
+}
+
+async function loadDigestSettings() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const response = await fetch(
+      NOTIFY_SETTINGS_URL + "?user_id=" + encodeURIComponent(currentUser.id)
+    );
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && data) {
+      // Absent côté serveur (compte jamais configuré) -> défauts : ON, 07:30.
+      digestEnabled = data.digest_enabled !== false;
+      digestTime = data.digest_time || "07:30";
+    }
+  } catch (e) {
+    // Pas de réseau : on garde les défauts plutôt que de bloquer le
+    // chargement de l'app pour un réglage secondaire.
+  }
+  syncDigestUI();
+}
+
+function syncDigestUI() {
+  const toggle = document.getElementById("digest-toggle-switch");
+  if (toggle) toggle.classList.toggle("active", digestEnabled);
+
+  const timeInput = document.getElementById("digest-time-input");
+  if (timeInput) timeInput.value = digestTime;
+
+  const timeRow = document.getElementById("digest-time-row");
+  if (timeRow) timeRow.style.display = digestEnabled ? "flex" : "none";
+}
+
+async function setDigestEnabled(enabled) {
+  digestEnabled = enabled;
+  syncDigestUI();
+  await saveDigestSettings();
+}
+
+async function onDigestTimeChange() {
+  const timeInput = document.getElementById("digest-time-input");
+  if (!timeInput || !timeInput.value) return;
+  digestTime = timeInput.value;
+  await saveDigestSettings();
+}
+
+async function saveDigestSettings() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const response = await fetch(NOTIFY_SETTINGS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        digest_enabled: digestEnabled,
+        digest_time: digestTime
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) {
+      showToast(data.message || "Erreur sauvegarde des notifications", "error");
+    }
+  } catch (e) {
+    showToast("Erreur réseau", "error");
+  }
 }
 
 async function openQuickPlanningModal() {
@@ -13534,6 +13645,7 @@ async function handleUser(user) {
   await ensureSelfContact();
   await loadActionCounter();
   await loadSubscription();
+  await loadDigestSettings();
   await startOnboardingIfNeeded();
 
   // Chargé ici (et pas seulement à la demande, ex: en ouvrant la page
