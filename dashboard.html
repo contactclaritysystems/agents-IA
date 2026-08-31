@@ -12616,6 +12616,21 @@ function onboardingOnEvent(event) {
   }
 
   if (event === "gmail_connected" && onboardingStep === "connect_gmail") {
+    // Connexion via Google/Outlook (OAuth) : la page recharge et
+    // retombe déjà sur l'accueil (Agents) par défaut — pas besoin de
+    // l'étape transitoire "Retournons à l'accueil", on enchaîne
+    // directement sur la dictée. Seule la connexion SMTP (formulaire,
+    // pas de rechargement de page) laisse encore l'utilisateur sur
+    // Réglages : dans ce cas seulement, on garde l'étape "goto_agents"
+    // pour lui dire de revenir à l'accueil.
+    const alreadyOnAgentsPage =
+      document.getElementById("main-agents")?.classList.contains("active");
+
+    if (alreadyOnAgentsPage) {
+      goToDictateMailStep();
+      return;
+    }
+
     onboardingStep = "goto_agents";
     showOnboardingStep();
     return;
