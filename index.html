@@ -282,13 +282,13 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
 }
 .proof-check { color: var(--success); font-weight: 800; flex-shrink: 0; margin-top: 1px; }
 /* SECTIONS */
-.sec { padding: 104px 24px; max-width: 1120px; margin: 0 auto; }
+.sec { padding: 104px 24px; max-width: 1120px; margin: 0 auto; text-align: center; }
 .eye {
   display: inline-block; font-size: .68rem; font-weight: 750;
   letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
 }
 .stitle { font-size: clamp(2.15rem, 4vw, 3.45rem); font-weight: 760; letter-spacing: -.055em; line-height: 1.02; margin-bottom: 16px; }
-.ssub { font-size: 1rem; color: var(--muted); font-weight: 380; max-width: 500px; line-height: 1.72; margin-bottom: 52px; }
+.ssub { font-size: 1rem; color: var(--muted); font-weight: 380; max-width: 500px; line-height: 1.72; margin: 0 auto 52px; }
 /* AGENTS GRID */
 .agents-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
 .atile {
@@ -318,10 +318,10 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
 .pourqui-in { max-width: 720px; margin: 0 auto; }
 .pourqui-text { font-size: clamp(1.15rem, 2.4vw, 1.5rem); font-weight: 560; letter-spacing: -.015em; line-height: 1.5; color: var(--text); }
 /* HOW */
-.how-bg { padding: 104px 24px; }
+.how-bg { padding: 104px 24px; text-align: center; }
 .how-in { max-width: 1120px; margin: 0 auto; }
 .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 56px; }
-.step { background: rgba(255,255,255,.66); border: 1px solid var(--line); border-radius: 22px; padding: 24px; }
+.step { background: rgba(255,255,255,.66); border: 1px solid var(--line); border-radius: 22px; padding: 24px; text-align: left; }
 .step-n { font-size: .68rem; font-weight: 800; color: var(--muted-2); letter-spacing: .12em; margin-bottom: 28px; }
 .step-t { font-size: .96rem; font-weight: 720; margin-bottom: 8px; letter-spacing: -.018em; }
 .step-b { font-size: .83rem; color: var(--muted); font-weight: 380; line-height: 1.72; }
@@ -329,7 +329,7 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
 .pgrid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin-top: 52px; align-items: stretch; }
 .pcard {
   border: 1px solid var(--line); border-radius: 26px; padding: 36px 30px;
-  background: rgba(255,255,255,.74);
+  background: rgba(255,255,255,.74); text-align: left;
   transition: box-shadow .28s, transform .28s, border-color .28s;
   position: relative; box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
 }
@@ -809,7 +809,7 @@ header {
 <!-- HERO -->
 <section class="hero">
   <p class="hero-tagline">Elle ne dort jamais — vous, si.</p>
-  <h1>Dictez.<br/><em>Clarity s'occupe du reste.</em></h1>
+  <h1>Dictez.<br/>Clarity <em>s'occupe du reste.</em></h1>
   <p class="hero-sub">Mails, textes, rendez-vous et rappels<br/>depuis votre voix. 7 jours pour essayer.</p>
   <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-btns">
