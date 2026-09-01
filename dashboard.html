@@ -12886,19 +12886,29 @@ async function handleAddToHomeScreen() {
 // suivre DIFFÉRENTES (ex. Mac : Safari et Chrome n'ont pas le même menu).
 // On les liste comme "variants" séparés, chacun sur sa propre ligne, au
 // lieu de les mélanger dans une seule phrase.
+//
+// Les boutons cités sont montrés en icône (pas décrits en mots) : on
+// reproduit leur forme réelle en petit SVG inline, insérée directement
+// dans la phrase.
+const ADD_TO_HOME_ICONS = {
+  share: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;display:inline-block;"><path d="M12 3v11" stroke-linecap="round"/><path d="M7.5 7.5L12 3l4.5 4.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12.5v6a2 2 0 002 2h10a2 2 0 002-2v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  dots: '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;display:inline-block;"><circle cx="12" cy="5" r="2.2"/><circle cx="12" cy="12" r="2.2"/><circle cx="12" cy="19" r="2.2"/></svg>',
+  install: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-3px;display:inline-block;"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M12 8v5" stroke-linecap="round"/><path d="M9.5 11L12 13.5L14.5 11" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 20h8" stroke-linecap="round"/></svg>'
+};
+
 const ADD_TO_HOME_DEVICES = [
   {
     key: "iphone",
     label: "iPhone / iPad",
     variants: [
-      { name: "Safari", instructions: "Appuyez sur Partager (le carré avec la flèche vers le haut), en bas de l'écran, puis choisissez « Sur l'écran d'accueil »." }
+      { name: "Safari", instructions: "Appuyez sur " + ADD_TO_HOME_ICONS.share + " en bas de l'écran, puis choisissez « Sur l'écran d'accueil »." }
     ]
   },
   {
     key: "android",
     label: "Android",
     variants: [
-      { name: "Chrome", instructions: "Appuyez sur le menu (⋮) en haut à droite, puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »." }
+      { name: "Chrome", instructions: "Appuyez sur " + ADD_TO_HOME_ICONS.dots + " en haut à droite, puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »." }
     ]
   },
   {
@@ -12906,14 +12916,14 @@ const ADD_TO_HOME_DEVICES = [
     label: "Mac",
     variants: [
       { name: "Safari", instructions: "Menu Fichier → « Ajouter au Dock »." },
-      { name: "Chrome", instructions: "Cliquez sur l'icône d'installation dans la barre d'adresse, à droite." }
+      { name: "Chrome", instructions: "Cliquez sur " + ADD_TO_HOME_ICONS.install + " dans la barre d'adresse, à droite." }
     ]
   },
   {
     key: "windows",
     label: "PC Windows",
     variants: [
-      { name: "Chrome / Edge", instructions: "Cliquez sur l'icône d'installation (⊕) dans la barre d'adresse, à droite, puis « Installer »." }
+      { name: "Chrome / Edge", instructions: "Cliquez sur " + ADD_TO_HOME_ICONS.install + " dans la barre d'adresse, à droite, puis « Installer »." }
     ]
   }
 ];
