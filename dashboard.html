@@ -15621,6 +15621,7 @@ function closeWritingStylesSubpage() {
     }
 
     currentProfile = profile;
+updateProfilBadge(profile);
 
 showToast("Informations enregistrées");
 lockProfileFields();
@@ -15843,6 +15844,15 @@ function unlockProfileFields() {
   });
 }
 
+function updateProfilBadge(profile) {
+  const profilLbl = document.getElementById("profil-status-label");
+  const profilCard = document.getElementById("profil-stat-card");
+  if (!profilLbl) return;
+  const isComplete = !!(profile && profile.firstname && profile.lastname && profile.phone && profile.company);
+  profilLbl.textContent = isComplete ? "Complété ✓" : "À compléter";
+  if (profilCard) profilCard.classList.toggle("needs-attention", !isComplete);
+}
+
 async function loadProfile() {
   console.log("=== LOAD PROFILE ===");
   console.log("currentUser:", currentUser?.id);
@@ -15905,13 +15915,7 @@ if (firstnameSpan) {
 }
 
    
-const profilLbl = document.getElementById("profil-status-label");
-const profilCard = document.getElementById("profil-stat-card");
-if (profilLbl) {
-  const isComplete = profile.firstname && profile.lastname && profile.phone && profile.company;
-  profilLbl.textContent = isComplete ? "Complété ✓" : "À compléter";
-  if (profilCard) profilCard.classList.toggle("needs-attention", !isComplete);
-}
+updateProfilBadge(profile);
     
     document.getElementById("profile-firstname").value = profile.firstname || "";
     document.getElementById("profile-lastname").value = profile.lastname || "";
