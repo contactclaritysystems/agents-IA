@@ -313,8 +313,11 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
   font-size: .78rem; font-style: italic; color: var(--muted-2); line-height: 1.55;
 }
 .agents-evolve-note {
-  margin-top: 28px; text-align: center; font-size: .84rem;
-  color: var(--muted); font-weight: 500;
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 32px; padding: 10px 22px;
+  background: rgba(0,145,199,.08); border: 1px solid rgba(0,145,199,.28);
+  border-radius: 100px; font-size: .86rem; font-weight: 700;
+  color: #00688f; letter-spacing: -.005em;
 }
 /* POUR QUI */
 .pourqui { background: rgba(255,255,255,.54); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 76px 24px; text-align: center; }
@@ -512,7 +515,7 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
 }
 @media(max-width: 600px) {
   .logo-img {
-    height: 46px;
+    height: 48px;
   }
   .mobile-login {
   display: block;
@@ -724,7 +727,7 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   transform: translateY(0);
 }
 .logo-img {
-  height: 54px;
+  height: 62px;
   width: auto;
   display: block;
   object-fit: contain;
@@ -892,7 +895,7 @@ Bonne journée
       <p class="atile-example">« Fais-moi penser à rappeler Julie demain matin. »</p>
     </div>
   </div>
-  <p class="agents-evolve-note rv">Et ce n'est que le début : Clarity apprend de nouvelles choses chaque semaine.</p>
+  <p class="agents-evolve-note rv">✨ Et ce n'est que le début : Clarity apprend de nouvelles choses chaque semaine.</p>
 </section>
 <!-- POUR QUI -->
 <div class="pourqui">
