@@ -12882,26 +12882,39 @@ async function handleAddToHomeScreen() {
 // PC Windows) : plutôt que de deviner ou de supposer iOS par défaut, on
 // demande d'abord l'appareil (liste), puis on affiche l'instruction avec
 // un bouton "← Retour" vers la liste — même patron que les autres popups.
+// Chaque appareil peut avoir plusieurs navigateurs avec des marches à
+// suivre DIFFÉRENTES (ex. Mac : Safari et Chrome n'ont pas le même menu).
+// On les liste comme "variants" séparés, chacun sur sa propre ligne, au
+// lieu de les mélanger dans une seule phrase.
 const ADD_TO_HOME_DEVICES = [
   {
     key: "iphone",
     label: "iPhone / iPad",
-    instructions: "Appuyez sur Partager (le carré avec la flèche vers le haut), en bas de l'écran dans Safari, puis choisissez « Sur l'écran d'accueil »."
+    variants: [
+      { name: "Safari", instructions: "Appuyez sur Partager (le carré avec la flèche vers le haut), en bas de l'écran, puis choisissez « Sur l'écran d'accueil »." }
+    ]
   },
   {
     key: "android",
     label: "Android",
-    instructions: "Appuyez sur le menu (⋮) en haut à droite de Chrome, puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »."
+    variants: [
+      { name: "Chrome", instructions: "Appuyez sur le menu (⋮) en haut à droite, puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »." }
+    ]
   },
   {
     key: "mac",
     label: "Mac",
-    instructions: "Sur Safari : menu Fichier → « Ajouter au Dock ». Sur Chrome : cliquez sur l'icône d'installation dans la barre d'adresse, à droite."
+    variants: [
+      { name: "Safari", instructions: "Menu Fichier → « Ajouter au Dock »." },
+      { name: "Chrome", instructions: "Cliquez sur l'icône d'installation dans la barre d'adresse, à droite." }
+    ]
   },
   {
     key: "windows",
     label: "PC Windows",
-    instructions: "Dans Chrome ou Edge, cliquez sur l'icône d'installation (⊕) dans la barre d'adresse, à droite, puis « Installer »."
+    variants: [
+      { name: "Chrome / Edge", instructions: "Cliquez sur l'icône d'installation (⊕) dans la barre d'adresse, à droite, puis « Installer »." }
+    ]
   }
 ];
 
@@ -12934,10 +12947,18 @@ function renderAddToHomeDeviceDetail(key) {
   if (!device) return;
   const box = document.getElementById("add-to-home-content");
   if (!box) return;
+  // Un navigateur = un bloc à lui, jamais deux instructions différentes
+  // mélangées dans la même phrase (ex. Safari vs Chrome sur Mac).
+  const variantsHtml = device.variants.map((v, i) =>
+    '<div style="' + (i > 0 ? 'margin-top:14px;padding-top:14px;border-top:1px solid var(--clarity-border);' : 'margin-top:4px;') + '">' +
+      '<div style="font-size:12.5px;font-weight:700;color:var(--clarity-text);margin-bottom:3px;">' + v.name + '</div>' +
+      '<div class="mail-choice-subtitle" style="margin:0;">' + v.instructions + '</div>' +
+    '</div>'
+  ).join("");
   box.innerHTML =
     '<button class="sheet-btn" type="button" onclick="renderAddToHomeDeviceList()" style="margin-bottom:12px;">← Retour</button>' +
     '<div class="mail-choice-title">' + device.label + '</div>' +
-    '<div class="mail-choice-subtitle">' + device.instructions + '</div>' +
+    variantsHtml +
     '<button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeAddToHomeScreenSheet()">Compris</button>';
 }
 
