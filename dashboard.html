@@ -19676,12 +19676,21 @@ function formatContactLabel(message, justCreated) {
   return alreadyPrefixed ? text : `${prefix} : ${text}`;
 }
 
+// Vrai seulement entre le moment où l'appel principal (callMailAgent) est
+// lancé et celui où il obtient une réponse définitive (succès, reprise
+// choose_contact/no_recipient/contact_not_found/missing_content, ou échec
+// réel réseau/timeout). Sert à faire taire le statut "error" du polling
+// Supabase (loadAgentProgress) quand ce n'est qu'un signal intermédiaire du
+// backend pendant une résolution de contact encore en cours — voir plus bas.
+let mailFlowSettled = true;
+
 async function callMailAgent(
   instruction,
   box = null,
   requestId = window.currentRequestId,
   contactId = null
 ) {
+  mailFlowSettled = false;
   try {
     if (!box) {
       box = document.getElementById("orchestrator-dictation-box");
@@ -19812,6 +19821,11 @@ if (typeof data === "string") {
 }
 
     stopAgentProgressPolling();
+    // L'appel principal a maintenant une réponse définitive (succès, ou l'un
+    // des cas "reprise" ci-dessous) : tout statut "error" que le polling
+    // recevrait encore après ce point (ex : ligne restée en attente côté
+    // Supabase) ne doit plus déclencher le toast rouge.
+    mailFlowSettled = true;
 
     console.log("Réponse Agent Mail :", data);
 
@@ -19942,6 +19956,7 @@ if (box) {
 
   } catch (error) {
 stopAgentProgressPolling();
+    mailFlowSettled = true;
 
     console.error("Erreur Agent Mail :", error);
 
@@ -20103,13 +20118,27 @@ async function loadAgentProgress(requestId) {
         stopAgentProgressPolling();
         break;
 
-      case "error":
-        setDictationBoxState(agentProgressBox, "error");
-        agentProgressBox.innerHTML =
-          "✕ Une erreur est survenue pendant la préparation du mail.";
-
+      case "error": {
+        // Ce statut "error" peut n'être qu'un signal intermédiaire du
+        // backend pendant une résolution de contact encore en cours (choix
+        // parmi plusieurs contacts, contact introuvable, contenu manquant...) :
+        // l'appel principal (callMailAgent) peut très bien aboutir juste
+        // après à une reprise normale (popup de choix, aperçu du mail...),
+        // sans qu'aucune vraie erreur ne se soit produite. Sans cette garde,
+        // ce "faux positif" affichait un toast rouge fantôme juste avant que
+        // l'aperçu ne s'ouvre normalement. On ne l'affiche donc que si,
+        // passé un court délai, l'appel principal n'a toujours rien réglé.
+        const errBox = agentProgressBox;
         stopAgentProgressPolling();
+        setTimeout(() => {
+          if (!mailFlowSettled && errBox && document.body.contains(errBox)) {
+            setDictationBoxState(errBox, "error");
+            errBox.innerHTML =
+              "✕ Une erreur est survenue pendant la préparation du mail.";
+          }
+        }, 1200);
         break;
+      }
     }
   }
 }
