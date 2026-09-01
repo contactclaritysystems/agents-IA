@@ -3344,21 +3344,6 @@ body[data-theme="dark"] #app-loader {
     color: var(--text);
   }
 
-  #contact-detail-company {
-    margin: 0 0 27px !important;
-    font-size: 14px !important;
-    font-weight: 500;
-    color: var(--muted) !important;
-  }
-
-  #contact-detail-company:empty {
-    display: none;
-  }
-
-  #contact-detail-company:empty + .detail-line {
-    margin-top: 27px;
-  }
-
   #contact-detail-page .detail-line {
     display: flex;
     flex-direction: column;
@@ -5615,7 +5600,6 @@ a:hover {
 }
 
 .mail-choice-subtitle,
-#contact-detail-company,
 #contact-detail-page .detail-line span {
   color: var(--clarity-text-secondary) !important;
 }
@@ -9426,9 +9410,10 @@ body[data-theme="light"]::after {
       </div>
 
       <div class="field-group" style="margin-top:14px;">
-        <div class="field-label">Style d'écriture (optionnel)</div>
-        <select class="field-input" id="contact-writing-style" oninput="toggleContactSave()">
-          <option value="">Aucun style particulier</option>
+        <div class="field-label">Style d'écriture <span style="color:var(--clarity-danger);">*</span></div>
+        <select class="field-input" id="contact-writing-style" required oninput="toggleContactSave()">
+          <option value="" disabled hidden>Choisissez un style…</option>
+          <option value="none">Aucun style particulier</option>
         </select>
         <div class="field-hint" style="margin-top:6px;font-size:12px;color:var(--clarity-text-tertiary);">Clarity l'utilisera automatiquement pour tous les mails envoyés à ce contact — rien à choisir à chaque fois.</div>
       </div>
@@ -9456,13 +9441,15 @@ body[data-theme="light"]::after {
 </button>
       
       <h1 id="contact-detail-name"
-    style="font-size:30px; font-weight:700; letter-spacing:-0.04em; margin-bottom:6px;">
+    style="font-size:30px; font-weight:700; letter-spacing:-0.04em; margin-bottom:20px;">
     </h1>
-      <p id="contact-detail-company"
-   style="font-size:16px; color:var(--muted); margin-bottom:26px;">
-</p>
 
-      <div class="detail-line">
+      <div class="detail-line" id="contact-detail-company-row" style="display:none;">
+        <span>Société</span>
+        <strong id="contact-detail-company"></strong>
+      </div>
+
+      <div class="detail-line" id="contact-detail-phone-row" style="display:none;">
         <span>Téléphone</span>
         <strong id="contact-detail-phone"></strong>
       </div>
@@ -9470,6 +9457,11 @@ body[data-theme="light"]::after {
       <div class="detail-line">
         <span>Email</span>
         <strong id="contact-detail-email"></strong>
+      </div>
+
+      <div class="detail-line" id="contact-detail-style-row" style="display:none;">
+        <span>Style d'écriture</span>
+        <strong id="contact-detail-style"></strong>
       </div>
 
       <button class="save-btn" onclick="editSelectedContact()" type="button">
@@ -16788,14 +16780,14 @@ function alignContactsAlphabet() {
   });
 }
 
-  function openContactDetail(contactId) {
+  async function openContactDetail(contactId) {
 
     const contactFormPage = document.getElementById("contact-mobile-section");
 
 if (contactFormPage) {
   contactFormPage.classList.remove("open");
 }
-    
+
   const contact = contactsCache.find(c => c.id === contactId);
   if (!contact) return;
 
@@ -16804,16 +16796,59 @@ if (contactFormPage) {
   document.getElementById("contact-detail-name").textContent =
     contact.full_name || "Sans nom";
 
-  document.getElementById("contact-detail-company").textContent =
-    contact.company || "";
+  // Société, Téléphone et Style d'écriture : trop peu d'infos si on les
+  // affiche toujours (ex. "Téléphone : Non renseigné") — chaque ligne n'est
+  // désormais montrée que si la donnée existe réellement pour ce contact.
+  const companyRow = document.getElementById("contact-detail-company-row");
+  if (contact.company) {
+    document.getElementById("contact-detail-company").textContent = contact.company;
+    companyRow.style.display = "";
+  } else {
+    companyRow.style.display = "none";
+  }
 
-  document.getElementById("contact-detail-phone").textContent =
-    formatPhone(contact.phone);
+  const phoneRow = document.getElementById("contact-detail-phone-row");
+  if (contact.phone) {
+    document.getElementById("contact-detail-phone").textContent = formatPhone(contact.phone);
+    phoneRow.style.display = "";
+  } else {
+    phoneRow.style.display = "none";
+  }
 
   document.getElementById("contact-detail-email").textContent =
     contact.email || "Non renseigné";
 
+  const styleRow = document.getElementById("contact-detail-style-row");
+  const styleLabel = await getWritingStyleLabelForContact(contact.writing_style_key);
+  if (styleLabel) {
+    document.getElementById("contact-detail-style").textContent = styleLabel;
+    styleRow.style.display = "";
+  } else {
+    styleRow.style.display = "none";
+  }
+
   document.getElementById("contact-detail-page").classList.add("open");
+}
+
+// Résout le libellé lisible ("Formel", "Décontracté"...) correspondant à la
+// clé de style enregistrée sur le contact, pour l'aperçu #contact-detail-page.
+// Recharge writingStylesCache si besoin (ex: aperçu ouvert avant tout passage
+// par Réglages ou le formulaire contact, qui le remplissent normalement).
+async function getWritingStyleLabelForContact(key) {
+  if (!key || !currentUser) return "";
+
+  if (!writingStylesCache.length) {
+    try {
+      const response = await fetch(STYLES_API_URL + "/" + currentUser.id + "?t=" + Date.now(), { cache: "no-store" });
+      const data = await response.json();
+      writingStylesCache = (data && data.success && Array.isArray(data.styles)) ? data.styles : [];
+    } catch (e) {
+      // Pas grave si ça échoue : la ligne "Style d'écriture" reste simplement masquée.
+    }
+  }
+
+  const style = writingStylesCache.find(function (s) { return s.key === key; });
+  return style ? (style.label || style.key) : "";
 }
 
   function formatPhone(phone) {
@@ -22152,6 +22187,12 @@ async function updateContact(id) {
     return false;
   }
 
+  const writingStyleKey = document.getElementById("contact-writing-style")?.value || "";
+  if (!writingStyleKey) {
+    showToast("Choisissez un style d'écriture pour ce contact");
+    return false;
+  }
+
   // Normalisation : majuscule à chaque mot, sans tirets
   const fullName = rawName
     .toLowerCase()
@@ -22180,7 +22221,7 @@ async function updateContact(id) {
         company,
         email,
         phone,
-        writing_style_key: document.getElementById("contact-writing-style")?.value || null,
+        writing_style_key: writingStyleKey === "none" ? null : writingStyleKey,
         updated_at: new Date().toISOString()
       })
     }
@@ -22276,8 +22317,14 @@ async function populateContactWritingStyleSelect(selectedKey) {
     }
   }
 
+  // Style d'écriture désormais obligatoire : le placeholder (value="") n'est
+  // jamais une valeur valide à l'enregistrement — il force l'utilisateur à
+  // faire un choix actif, y compris "Aucun style particulier" qui reste un
+  // choix normal et valide (value="none", enregistré comme writing_style_key
+  // = null), simplement plus par défaut silencieux.
   select.innerHTML =
-    '<option value="">Aucun style particulier</option>' +
+    '<option value="" disabled hidden>Choisissez un style…</option>' +
+    '<option value="none">Aucun style particulier</option>' +
     writingStylesCache.map(function (s) {
       return '<option value="' + s.key + '">' + (s.label || s.key).replace(/</g, "&lt;") + "</option>";
     }).join("");
@@ -22623,6 +22670,12 @@ async function addContact() {
   return false;
 }
 
+  const writingStyleKey = document.getElementById("contact-writing-style")?.value || "";
+  if (!writingStyleKey) {
+    showToast("Choisissez un style d'écriture pour ce contact", "error");
+    return false;
+  }
+
   // Normalisation : majuscule à chaque mot, sans tirets
   const fullName = rawName
     .toLowerCase()
@@ -22656,7 +22709,7 @@ async function addContact() {
         company,
         email,
         phone,
-        writing_style_key: document.getElementById("contact-writing-style")?.value || null
+        writing_style_key: writingStyleKey === "none" ? null : writingStyleKey
       })
     }
   );
