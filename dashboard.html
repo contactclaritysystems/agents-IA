@@ -4653,6 +4653,21 @@ body,
   padding: 0;
 }
 
+/* Croix de fermeture des fiches RDV/rappel (#planning-detail) : ces fiches
+   n'avaient auparavant aucun moyen de se fermer (le header avec "← Retour"
+   reste display:none dans ce flux) — bouton rond ajouté en haut de la
+   fiche, identique visuellement à #contact-popup-close. */
+.fiche-close-row { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.fiche-close-btn {
+  width: 36px; height: 36px; border: none; border-radius: 50%;
+  background: var(--clarity-surface-soft); color: var(--clarity-text-secondary);
+  font-family: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  transition: background .18s ease, color .18s ease;
+}
+.fiche-close-btn:hover { background: var(--clarity-border-hover, #e9e9ec); color: var(--clarity-text); }
+.fiche-close-btn:active { transform: scale(.94); }
+
 /* ---------- CARTES DE CONTENU (agents, stats, dossiers) ---------- */
 
 .agent-card,
@@ -11305,6 +11320,17 @@ function openPlanningScheduleSheet(data, instruction) {
         <div class="mail-choice-title">Rendez-vous</div>
         <div class="mail-choice-subtitle" id="planning-sheet-reason"></div>
 
+        <div class="field-group" style="margin-top:14px;min-width:0;">
+          <div class="field-label">Avec qui ?</div>
+          <input class="field-input" type="text" id="planning-sheet-contact" list="planning-sheet-contacts-list" placeholder="Nom du contact" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+          <datalist id="planning-sheet-contacts-list"></datalist>
+        </div>
+
+        <div class="field-group" style="margin-top:12px;min-width:0;">
+          <div class="field-label">Motif</div>
+          <input class="field-input" type="text" id="planning-sheet-title" placeholder="Ex : point projet" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+        </div>
+
         <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
           <button type="button" class="mail-choice-btn" id="planning-quick-today" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aujourd'hui</button>
           <button type="button" class="mail-choice-btn" id="planning-quick-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
@@ -11377,6 +11403,16 @@ function openPlanningScheduleSheet(data, instruction) {
   modal.dataset.today = today;
   modal.dataset.tomorrow = tomorrow;
   document.getElementById("planning-sheet-reason").textContent = subtitleText;
+
+  const contactsListEl = document.getElementById("planning-sheet-contacts-list");
+  if (contactsListEl) {
+    contactsListEl.innerHTML = (contactsCache || [])
+      .map(c => '<option value="' + (c.full_name || "").replace(/"/g, "&quot;") + '"></option>')
+      .join("");
+  }
+  document.getElementById("planning-sheet-contact").value = pendingPlanningPartial.contact_name || "";
+  document.getElementById("planning-sheet-title").value = pendingPlanningPartial.title || "";
+
   const dateInputEl = document.getElementById("planning-sheet-date");
   const timeInputEl = document.getElementById("planning-sheet-time");
   dateInputEl.value = defaultDate;
@@ -11395,6 +11431,7 @@ function openPlanningScheduleSheet(data, instruction) {
   updatePlanningTimeMin();
 
   modal.style.display = "flex";
+  setTimeout(() => document.getElementById("planning-sheet-contact").focus(), 60);
 }
 
 function updatePlanningTimeMin() {
@@ -11447,8 +11484,17 @@ function closePlanningScheduleSheet(isCancel = true) {
 }
 
 async function confirmPlanningSchedule() {
+  const contact = document.getElementById("planning-sheet-contact").value.trim();
+  const title = document.getElementById("planning-sheet-title").value.trim();
   const date = document.getElementById("planning-sheet-date").value;
   const time = document.getElementById("planning-sheet-time").value;
+
+  // "Avec qui" et "motif" ne sont pas tous les deux obligatoires : l'un ou
+  // l'autre suffit (même règle que la popup RDV rapide "+").
+  if (!contact && !title) {
+    showToast("Indiquez avec qui est le rendez-vous, ou son motif", "error");
+    return;
+  }
   if (!date || !time) {
     showToast("Choisissez une date et une heure", "error");
     return;
@@ -11481,11 +11527,11 @@ async function confirmPlanningSchedule() {
     user_id: currentUser.id,
     user_email: currentUser.email,
     user_name: getUserDisplayName(),
-    instruction: pendingPlanningInstruction || partial.title || "Rendez-vous",
+    instruction: pendingPlanningInstruction || title || (contact ? "Rendez-vous avec " + contact : partial.title || "Rendez-vous"),
     request_id: window.currentRequestId,
     conversation_history: formatConversationHistory(simpleAgentConversationHistory),
-    contact_name: partial.contact_name || null,
-    title: partial.title || null,
+    contact_name: contact || partial.contact_name || null,
+    title: title || partial.title || null,
     appointment_date: date,
     appointment_time: time
   };
@@ -11531,162 +11577,15 @@ async function confirmPlanningSchedule() {
 }
 
 // ─── POPUP CONTACT + MOTIF — RENDEZ-VOUS (Planning) ─────
-// Avant : "avec qui ?" (popup 1, champ texte générique) puis, une fois
-// répondu, "pour quel motif ?" (popup 2) — deux allers-retours réseau
-// perçus comme lents. Ici, quand le motif n'est pas non plus connu, les
-// deux infos sont demandées d'un coup dans UNE seule popup, puis envoyées
-// ensemble à /agent/planning (contact_name + title explicites), qui n'a
-// alors plus besoin de redemander le motif séparément.
-let pendingPlanningContactNeedsTitle = false;
-
+// Avant : deux feuilles séparées et séquentielles ("date + heure" d'un
+// côté, "avec qui + motif" de l'autre, chacune avec ses propres champs
+// obligatoires). Désormais une seule feuille (openPlanningScheduleSheet,
+// voir plus haut) réunit contact + motif + date + heure, avec la même
+// règle "l'un ou l'autre suffit" que la popup RDV rapide "+". Cette
+// fonction ne fait plus que rediriger vers cette feuille unique, pour ne
+// pas casser les appels existants (missing_contact).
 function openPlanningContactModal(data, instruction) {
-  pendingPlanningPartial = data.partial || {};
-  pendingPlanningInstruction = instruction || pendingPlanningInstruction || "";
-
-  const needsTitle = !pendingPlanningPartial.title;
-  pendingPlanningContactNeedsTitle = needsTitle;
-
-  let modal = document.getElementById("planning-contact-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "planning-contact-modal";
-    modal.style.display = "none";
-    modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closePlanningContactModal()"></div>
-      <div class="mail-choice-box">
-        <div class="mail-choice-title">Rendez-vous</div>
-        <div class="mail-choice-subtitle" id="planning-contact-sheet-message"></div>
-
-        <div class="field-group" style="margin-top:14px;">
-          <div class="field-label">Avec qui ?</div>
-          <input class="field-input" type="text" id="planning-contact-sheet-contact" placeholder="Nom du contact" />
-        </div>
-
-        <div class="field-group" id="planning-contact-sheet-title-group" style="margin-top:12px;">
-          <div class="field-label">Motif du rendez-vous</div>
-          <input class="field-input" type="text" id="planning-contact-sheet-title" placeholder="Ex : point projet" />
-        </div>
-
-        <button class="save-btn" type="button" id="planning-contact-sheet-confirm" style="margin-top:16px;">
-          ✓ Continuer
-        </button>
-
-        <button class="sheet-btn" type="button" onclick="closePlanningContactModal()" style="width:100%;justify-content:center;margin-top:10px;">
-          Annuler
-        </button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById("planning-contact-sheet-confirm").onclick = confirmPlanningContact;
-  }
-
-  const messageEl = document.getElementById("planning-contact-sheet-message");
-  const contactInput = document.getElementById("planning-contact-sheet-contact");
-  const titleGroup = document.getElementById("planning-contact-sheet-title-group");
-  const titleInput = document.getElementById("planning-contact-sheet-title");
-
-  messageEl.textContent = data.message || "";
-  contactInput.value = pendingPlanningPartial.contact_name || "";
-  titleInput.value = pendingPlanningPartial.title || "";
-  // "Manque seulement le contact" -> un seul champ visible ; "manque
-  // contact et motif" -> les deux champs d'un coup (voir tableau ci-dessus).
-  titleGroup.style.display = needsTitle ? "" : "none";
-
-  modal.style.display = "flex";
-  setTimeout(() => contactInput.focus(), 60);
-}
-
-// isCancel=true (défaut) : vraie annulation -> toast "Demande annulée".
-// isCancel=false : fermeture interne avant l'envoi (confirmPlanningContact).
-function closePlanningContactModal(isCancel = true) {
-  const modal = document.getElementById("planning-contact-modal");
-  if (modal) modal.style.display = "none";
-  if (isCancel) {
-    pendingClarifyAgent = null;
-    showToast("Demande annulée", "error");
-  }
-}
-
-async function confirmPlanningContact() {
-  const contact = document.getElementById("planning-contact-sheet-contact").value.trim();
-  if (!contact) {
-    showToast("Indiquez avec qui est le rendez-vous", "error");
-    return;
-  }
-
-  const titleGroup = document.getElementById("planning-contact-sheet-title-group");
-  const titleInput = document.getElementById("planning-contact-sheet-title");
-  const titleGroupVisible = titleGroup.style.display !== "none";
-  const titleText = titleInput.value.trim();
-
-  if (titleGroupVisible && !titleText) {
-    showToast("Indiquez le motif du rendez-vous", "error");
-    return;
-  }
-
-  closePlanningContactModal(false);
-
-  let box = document.getElementById("orchestrator-dictation-box");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "orchestrator-dictation-box";
-    box.classList.add("agent-progress-popup");
-    document.body.appendChild(box);
-  }
-  box.style.display = "";
-  box.style.opacity = "1";
-  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
-  box.innerHTML = "⏳ Enregistrement du rendez-vous…";
-
-  const partial = pendingPlanningPartial || {};
-  const payload = {
-    user_id: currentUser.id,
-    user_email: currentUser.email,
-    user_name: getUserDisplayName(),
-    instruction: pendingPlanningInstruction || titleText || partial.title || "Rendez-vous",
-    request_id: window.currentRequestId,
-    conversation_history: formatConversationHistory(simpleAgentConversationHistory),
-    contact_name: contact,
-    title: titleText || partial.title || null,
-    appointment_date: partial.appointment_date || null,
-    appointment_time: partial.appointment_time || null
-  };
-
-  try {
-    const response = await fetch(PLANNING_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json();
-    box.style.display = "none";
-    box.innerHTML = "";
-
-    if (data.success) {
-      showToast(data.message || "Rendez-vous noté", "success");
-      maybeShowFirstScheduleNotice();
-      pendingClarifyAgent = null;
-      if (typeof unlockAgentButtons === "function") unlockAgentButtons();
-      if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
-      return;
-    }
-
-    if (data.reason === "missing_date" || data.reason === "missing_time") {
-      openPlanningScheduleSheet(data, pendingPlanningInstruction);
-      return;
-    }
-
-    if (data.reason === "missing_contact") {
-      openPlanningContactModal(data, pendingPlanningInstruction);
-      return;
-    }
-
-    showToast(data.message || "Impossible de créer le rendez-vous", "error");
-  } catch (e) {
-    box.style.display = "none";
-    box.innerHTML = "";
-    showToast("Erreur réseau", "error");
-  }
+  openPlanningScheduleSheet(data, instruction);
 }
 
 // ─── POPUP DE CLARIFICATION ─────────────────────────────
@@ -15023,6 +14922,10 @@ function renderAppointment(a) {
   list.innerHTML = `
     <div class="agent-card" style="padding:22px;">
 
+      <div class="fiche-close-row">
+        <button type="button" class="fiche-close-btn" onclick="closePlanningDetail()" aria-label="Fermer">✕</button>
+      </div>
+
       <div class="field-group" style="margin-bottom:14px;">
         <div class="field-label">Contact</div>
         <input class="field-input" id="appointment-contact-input" value="${a.contact_name || ""}" placeholder="Nom du contact" oninput="toggleAppointmentSave()">
@@ -16368,7 +16271,7 @@ const CLARITY_MODAL_IDS = [
   "feature-request-modal",
   "contact-choice-modal", "quick-mail-modal", "quick-text-modal",
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
-  "planning-schedule-modal", "planning-contact-modal", "redaction-form-modal",
+  "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal"
 ];
@@ -18600,12 +18503,19 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
         unlockAgentButtons();
         const message = data.message || data.error || "Impossible de générer la réponse.";
 
-        if (effectiveAgent === "relance" && data.reason === "needs_schedule") {
+        if (
+          effectiveAgent === "relance" &&
+          (data.reason === "needs_schedule" || data.reason === "missing_content")
+        ) {
           // hideOrRemoveBox() RETIRE l'élément du DOM (au lieu d'un simple
           // display:none qui le laissait "zombie" — la prochaine dictée
           // retrouvait ce même noeud toujours caché, sans jamais rétablir
           // son display, d'où des bandeaux de progression invisibles par
           // intermittence sur les tours suivants).
+          // "missing_content" (le contenu du rappel manque) ouvre la même
+          // sheet que "needs_schedule" : elle a déjà un champ "De quoi
+          // dois-je te rappeler ?" sur la même feuille que la date/heure,
+          // au lieu d'une popup de clarification séparée à champ libre.
           hideOrRemoveBox(box);
           openReminderScheduleSheet(data);
           resetMicButton(true);
@@ -19142,7 +19052,7 @@ async function submitQuickMail() {
     { text: "Demande comprise", status: "done" },
     {
       text:
-        (contactJustCreated ? "Contact enregistré : " : "Contact sélectionné : ") +
+        (contactJustCreated ? "Contact enregistré : " : "Contact trouvé : ") +
         quickMailSelectedContact.full_name,
       status: "done"
     },
@@ -19597,12 +19507,18 @@ async function callSimpleAgent(
       unlockAgentButtons();
       const message = data.message || "Impossible de générer la réponse.";
 
-     if (agentName === "relance" && data.reason === "needs_schedule") {
+     if (
+        agentName === "relance" &&
+        (data.reason === "needs_schedule" || data.reason === "missing_content")
+      ) {
         // hideOrRemoveBox() RETIRE l'élément du DOM plutôt qu'un simple
         // display:none, qui le laissait "zombie" dans le DOM : le prochain
         // bandeau de progression retrouvait ce même noeud toujours masqué
         // sans jamais rétablir son display, d'où des bandeaux invisibles
         // par intermittence sur les tours suivants.
+        // "missing_content" ouvre la même sheet que "needs_schedule" : le
+        // champ "De quoi dois-je te rappeler ?" y est déjà présent, sur la
+        // même feuille que la date/heure.
         hideOrRemoveBox(box);
         document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
         openReminderScheduleSheet(data);
@@ -19777,14 +19693,14 @@ box.style.opacity = "1";
 // Quand on arrive ici depuis le popup "Que voulez-vous dire ?" (contenu
 // redemandé), le contact a déjà été résolu plus tôt dans le même échange
 // (choix du contact, ou ajout d'un nouveau contact) : on ne veut pas
-// réafficher "Contact sélectionné" sans nom comme si on recommençait de
+// réafficher "Contact trouvé" sans nom comme si on recommençait de
 // zéro, ni faire disparaître l'étape "Demande comprise" déjà validée.
 // Si ce contact vient d'être créé (contactJustCreated), le label doit être
 // "Contact enregistré" dès ce premier rendu — même texte que celui que le
 // polling (loadAgentProgress) affichera juste après — sinon on voit
-// "Contact sélectionné" un instant puis ça bascule sur "Contact
+// "Contact trouvé" un instant puis ça bascule sur "Contact
 // enregistré", ce qui donne l'impression d'un changement de contact.
-let quickMailContactLabel = contactJustCreated ? "Contact enregistré" : "Contact sélectionné";
+let quickMailContactLabel = contactJustCreated ? "Contact enregistré" : "Contact trouvé";
 if (quickMailFlowActive && contactId) {
   // quickMailSelectedContact est déjà rempli à ce stade (choisi juste avant
   // dans submitQuickMail()) : on s'en sert en priorité, plutôt que de
@@ -19798,7 +19714,7 @@ if (quickMailFlowActive && contactId) {
       : (contactsCache || []).find(c => c.id === contactId);
   if (resolvedContact) {
     quickMailContactLabel =
-      (contactJustCreated ? "Contact enregistré : " : "Contact sélectionné : ") +
+      (contactJustCreated ? "Contact enregistré : " : "Contact trouvé : ") +
       resolvedContact.full_name;
   }
 }
@@ -20123,8 +20039,8 @@ async function loadAgentProgress(requestId) {
         { text: "Demande comprise", status: "done" },
         {
           text: progress.message
-            ? `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`
-            : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné")),
+            ? `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`
+            : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact trouvé")),
           status: "done"
         },
         { text: "Préparation du mail...", status: "loading" }
@@ -20134,7 +20050,7 @@ async function loadAgentProgress(requestId) {
     // nom), pour les étapes suivantes qui n'auront pas ce message.
     if (progress.message) {
       currentMailContactLabel =
-        `${contactJustCreated ? "Contact enregistré" : "Contact sélectionné"} : ${progress.message}`;
+        `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`;
     }
     break;
 
@@ -20146,7 +20062,7 @@ async function loadAgentProgress(requestId) {
           [
             { text: "Demande comprise", status: "done" },
             {
-    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
+    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact trouvé"),
     status: "done"
   },
             { text: "Rédaction du mail...", status: "loading" }
@@ -20162,7 +20078,7 @@ async function loadAgentProgress(requestId) {
           [
             { text: "Demande comprise", status: "done" },
             {
-    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact sélectionné"),
+    text: currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact trouvé"),
     status: "done"
   },
             { text: "Mail rédigé", status: "done" }
@@ -23487,6 +23403,10 @@ async function loadFollowUps() {
 
   list.innerHTML = `
   <div class="agent-card" style="padding:22px;">
+
+    <div class="fiche-close-row">
+      <button type="button" class="fiche-close-btn" onclick="closePlanningDetail()" aria-label="Fermer">✕</button>
+    </div>
 
     <div class="field-group" style="margin-bottom:14px;">
       <div class="field-label">Contact</div>
