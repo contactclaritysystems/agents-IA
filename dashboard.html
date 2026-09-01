@@ -8897,16 +8897,27 @@ body[data-theme="light"]::after {
 
 </div>
 
-<!-- NOTIFICATIONS : une seule ligne ici (style iPhone), le détail est dans
-     la sous-page #notifications-mobile-section (même patron que Styles
-     d'écriture). -->
-<div class="settings-page-block">
+<!-- Notifications / Préférences / Application : chacune une seule ligne
+     qui ouvre sa propre sous-page. Pas de sous-titre au-dessus de ce
+     groupe (comme le tout premier groupe des Réglages iPhone) : un
+     sous-titre "NOTIFICATIONS" juste au-dessus d'une ligne "Notifications"
+     faisait doublon avec le mot répété deux fois. -->
+<div class="settings-page-block" style="margin-top:22px;">
 
-  <div class="settings-group-label">Notifications</div>
   <div class="settings-group">
     <div class="settings-row" id="notifications-settings-row" onclick="openNotificationsSubpage()">
       <span class="settings-row-icon settings-row-icon-blue">🔔</span>
       <div class="settings-row-title">Notifications</div>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="preferences-settings-row" onclick="openPreferencesSubpage()">
+      <span class="settings-row-icon settings-row-icon-violet">🎨</span>
+      <div class="settings-row-title">Préférences</div>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="application-settings-row" onclick="openApplicationSubpage()">
+      <span class="settings-row-icon settings-row-icon-green">📲</span>
+      <div class="settings-row-title">Application</div>
       <span class="settings-row-chevron">›</span>
     </div>
   </div>
@@ -9068,30 +9079,9 @@ body[data-theme="light"]::after {
 </div>
 </div>
 
-      <!-- PRÉFÉRENCES : une seule ligne ici (style iPhone), le détail est
-           dans la sous-page #preferences-mobile-section (même patron que
-           Notifications / Styles d'écriture). -->
+      <!-- Lignes Préférences/Application déplacées dans le groupe sans
+           sous-titre, juste après Compte (voir plus haut). -->
 <div class="settings-page-block">
-
-  <div class="settings-group-label">Préférences</div>
-  <div class="settings-group">
-    <div class="settings-row" id="preferences-settings-row" onclick="openPreferencesSubpage()">
-      <span class="settings-row-icon settings-row-icon-violet">🎨</span>
-      <div class="settings-row-title">Préférences</div>
-      <span class="settings-row-chevron">›</span>
-    </div>
-  </div>
-
-  <!-- APPLICATION : une seule ligne ici aussi, détail dans
-       #application-mobile-section. -->
-  <div class="settings-group-label">Application</div>
-  <div class="settings-group">
-    <div class="settings-row" id="application-settings-row" onclick="openApplicationSubpage()">
-      <span class="settings-row-icon settings-row-icon-green">📲</span>
-      <div class="settings-row-title">Application</div>
-      <span class="settings-row-chevron">›</span>
-    </div>
-  </div>
 
   <div class="settings-group-label">Contenu</div>
   <div class="settings-group">
