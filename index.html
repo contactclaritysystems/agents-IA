@@ -5,10 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Clarity Systems — Dictez, Clarity s'occupe du reste</title>
 <script>
-/* Le navigateur restaure parfois la position de scroll précédente au
-   rechargement de la page (comportement natif, surtout sur Safari) —
-   on force ici un retour en haut de page à chaque actualisation. */
+/* La vraie cause : en cliquant sur un lien du menu (ex. "Tarifs"), l'URL
+   devient clarity-systems.fr/#pricing. Le navigateur garde ce # et, à
+   chaque actualisation, saute directement à cette section — ce n'est pas
+   une restauration de scroll, c'est le comportement normal d'une ancre.
+   On retire donc le # de l'URL dès le chargement pour repartir en haut. */
+if (window.location.hash) {
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+}
 if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+window.scrollTo(0, 0);
+document.addEventListener('DOMContentLoaded', function () { window.scrollTo(0, 0); });
 window.addEventListener('load', function () { window.scrollTo(0, 0); });
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -243,6 +250,12 @@ nav.banner-hidden { top: 0; }
 }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
+/* Détection du remplissage automatique (Trousseau / Touch ID / Face ID) :
+   les navigateurs appliquent la pseudo-classe :-webkit-autofill quand un
+   champ est rempli par le gestionnaire de mots de passe — on l'utilise
+   pour déclencher une connexion automatique, sans clic supplémentaire. */
+@keyframes onAutoFillStart { from {} to {} }
+input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .01s; }
 @keyframes fu { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
 .forgot-password {
     text-align: right;
@@ -295,6 +308,10 @@ nav.banner-hidden { top: 0; }
 .atile-example {
   margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
   font-size: .78rem; font-style: italic; color: var(--muted-2); line-height: 1.55;
+}
+.agents-evolve-note {
+  margin-top: 28px; text-align: center; font-size: .84rem;
+  color: var(--muted); font-weight: 500;
 }
 /* POUR QUI */
 .pourqui { background: rgba(255,255,255,.54); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 76px 24px; text-align: center; }
@@ -872,6 +889,7 @@ Bonne journée
       <p class="atile-example">« Fais-moi penser à rappeler Julie demain matin. »</p>
     </div>
   </div>
+  <p class="agents-evolve-note rv">Et ce n'est que le début : Clarity apprend de nouvelles choses chaque semaine.</p>
 </section>
 <!-- POUR QUI -->
 <div class="pourqui">
@@ -1049,7 +1067,7 @@ Bonne journée
       <button class="tbtn active" onclick="switchTab('login',this)">Connexion</button>
       <button class="tbtn" onclick="switchTab('register',this)">Créer un compte</button>
     </div>
-    <div id="loginForm">
+    <form id="loginForm" autocomplete="on" onsubmit="event.preventDefault(); signIn();">
   <button type="button" class="btn-google" onclick="signInWithGoogle()">
     <svg width="18" height="18" viewBox="0 0 48 48">
       <path fill="#4285F4" d="M45.5 24c0-1.2-.1-2.4-.3-3.5H24v6.6h12.1c-.5 2.7-2.1 5-4.4 6.5v5.4h7.1c4.2-3.8 6.7-9.5 6.7-15z"/>
@@ -1062,12 +1080,12 @@ Bonne journée
   <div class="auth-divider">ou</div>
   <div class="field">
     <label>Email</label>
-    <input id="loginEmail" type="email" placeholder="vous@exemple.fr"/>
+    <input id="loginEmail" type="email" name="email" autocomplete="username" placeholder="vous@exemple.fr"/>
   </div>
   <div class="field">
   <label>Mot de passe</label>
   <div style="position:relative;">
-    <input type="password" id="loginPassword" placeholder="••••••••" style="padding-right:44px;"/>
+    <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••••" style="padding-right:44px;"/>
     <button type="button" onclick="toggleLoginPassword(this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1rem;padding:0;line-height:1;">👁</button>
   </div>
 </div>
@@ -1079,8 +1097,8 @@ Bonne journée
   Vérifiez votre boîte mail pour choisir un nouveau mot de passe.
 </div>
 
-  <button class="btn-sub" onclick="signIn()">Se connecter</button>
-</div>
+  <button type="submit" class="btn-sub">Se connecter</button>
+</form>
     <div id="registerForm" style="display:none">
       <button type="button" class="btn-google" onclick="signInWithGoogle()">
         <svg width="18" height="18" viewBox="0 0 48 48">
@@ -1271,6 +1289,34 @@ async function signIn() {
   }
   window.location.href = "dashboard.html";
 }
+/* Connexion automatique via Trousseau / Touch ID / Face ID : dès que Safari
+   (ou tout navigateur compatible) remplit les deux champs via le gestionnaire
+   de mots de passe, on se connecte directement — sans clic supplémentaire. */
+(function setupAutoSignIn() {
+  const emailEl = document.getElementById('loginEmail');
+  const passwordEl = document.getElementById('loginPassword');
+  if (!emailEl || !passwordEl) return;
+  let emailAutofilled = false;
+  let passwordAutofilled = false;
+  let triggered = false;
+  function maybeAutoSignIn() {
+    if (triggered) return;
+    if (emailAutofilled && passwordAutofilled && emailEl.value && passwordEl.value) {
+      triggered = true;
+      signIn();
+    }
+  }
+  function onAnim(el, flagSetter) {
+    el.addEventListener('animationstart', (e) => {
+      if (e.animationName === 'onAutoFillStart') {
+        flagSetter();
+        maybeAutoSignIn();
+      }
+    });
+  }
+  onAnim(emailEl, () => { emailAutofilled = true; });
+  onAnim(passwordEl, () => { passwordAutofilled = true; });
+})();
 const dictationSentence = "« Envoie un mail à Anthony pour lui proposer une réunion mardi matin afin de faire le point sur le dossier. »";
 function animateHeroDemo() {
   const textEl = document.getElementById("dictationText");
