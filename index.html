@@ -146,7 +146,7 @@ nav.banner-hidden { top: 0; }
 }
 .hero-btns {
   display: flex; gap: 12px; justify-content: center;
-  flex-wrap: wrap; animation: fu .7s .24s ease both;
+  flex-wrap: wrap; animation: fu .7s .32s ease both;
 }
 .btn-dark, .btn-dark-full, .btn-sub {
   background: var(--dark); color: white; border: 1px solid var(--dark);
@@ -171,12 +171,12 @@ nav.banner-hidden { top: 0; }
 }
 .hero-trial-badge {
   display: inline-flex; align-items: center; gap: 8px;
-  margin-top: 18px; padding: 9px 20px;
+  margin-top: 4px; margin-bottom: 26px; padding: 9px 20px;
   background: rgba(255,255,255,.85); border: 1px solid var(--line-strong);
   border-radius: 100px; font-size: .86rem; font-weight: 700;
   color: var(--text); letter-spacing: -.005em;
   box-shadow: 0 6px 20px rgba(0,0,0,.05);
-  animation: fu .7s .32s ease both;
+  animation: fu .7s .24s ease both;
 }
 .hero-trial-badge .htb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
 /* HERO CARD */
@@ -212,6 +212,30 @@ nav.banner-hidden { top: 0; }
 .abubble {
   background: var(--dark); border-radius: 18px 18px 6px 18px;
   color: white; margin-left: auto; display: block; max-width: 92%;
+}
+.mail-to-row {
+  font-size: .72rem; font-weight: 700; color: rgba(255,255,255,.62);
+  margin-bottom: 10px; padding-bottom: 9px;
+  border-bottom: 1px solid rgba(255,255,255,.14);
+}
+.mail-to-email { font-weight: 400; color: rgba(255,255,255,.5); }
+.hcard-actions {
+  display: flex; gap: 8px; margin-top: 14px;
+  opacity: 0; transform: translateY(4px);
+  transition: opacity .4s ease, transform .4s ease;
+}
+.hcard-actions.show { opacity: 1; transform: translateY(0); }
+.hcard-btn-send {
+  background: var(--dark); color: white; border: none;
+  border-radius: 100px; padding: 9px 18px; font-size: .78rem; font-weight: 700;
+  font-family: 'Inter', sans-serif; cursor: default;
+  transition: transform .15s ease, background .15s ease;
+}
+.hcard-btn-send.pressed { transform: scale(.93); background: #000; }
+.hcard-btn-ghost {
+  background: transparent; color: var(--muted); border: 1px solid var(--line-strong);
+  border-radius: 100px; padding: 9px 16px; font-size: .78rem; font-weight: 600;
+  font-family: 'Inter', sans-serif; cursor: default;
 }
 .hcard-ft {
   position: relative; margin-top: 16px; font-size: .72rem;
@@ -770,11 +794,11 @@ header {
   <p class="hero-tagline">Elle ne dort jamais — vous, si.</p>
   <h1>Dictez.<br/><em>Clarity s'occupe du reste.</em></h1>
   <p class="hero-sub">Mails, textes, rendez-vous et rappels<br/>depuis votre voix. 7 jours pour essayer.</p>
+  <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-btns">
     <a href="#" class="btn-dark" onclick="openRegisterFromChat(event)">Commencer l'essai gratuit</a>
     <a href="#how" class="btn-light">Voir comment ça marche</a>
   </div>
-  <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-vis">
   <div class="hcard">
     <div class="hcard-lbl">Dictée vocale en cours</div>
@@ -782,11 +806,17 @@ header {
       <span id="dictationText"></span><span class="typing-cursor">|</span>
     </div>
     <div class="abubble" id="mailPreview" style="opacity:0; transform:translateY(8px);">
+      <div class="mail-to-row">À : Anthony <span class="mail-to-email">(anthony@exemple.fr)</span></div>
       Objet : Point sur le dossier<br/><br/>
 Bonjour Anthony,<br/>
 Je vous propose que nous organisions une réunion mardi matin afin de faire le point sur le dossier et les prochaines étapes.<br/><br/>
 Dites-moi si ce créneau vous convient.<br/><br/>
 Bonne journée
+    </div>
+    <div class="hcard-actions" id="mailActions">
+      <button type="button" class="hcard-btn-send" id="mailSendBtn">Envoyer</button>
+      <button type="button" class="hcard-btn-ghost">Modifier</button>
+      <button type="button" class="hcard-btn-ghost">Annuler</button>
     </div>
     <div class="hcard-ft" id="mailStatus">
       <span class="dot"></span>Préparation du mail…
@@ -865,7 +895,7 @@ Bonne journée
 <!-- PRICING -->
 <section class="sec" id="pricing">
   <div class="eye rv">Tarifs</div>
-  <h2 class="stitle rv">Trois formules,<br/>un essai gratuit.</h2>
+  <h2 class="stitle rv">Un essai gratuit.<br/>Trois formules ensuite.</h2>
   <p class="ssub rv">Essai 7 jours · 100 actions offertes · Aucune carte bancaire.</p>
 <div id="pricing-mobile" style="display:none;">
   <div style="display:flex; gap:8px; background:#f1f1ef; border-radius:14px; padding:4px; margin-bottom:20px;">
@@ -1246,41 +1276,56 @@ function animateHeroDemo() {
   const textEl = document.getElementById("dictationText");
   const mailEl = document.getElementById("mailPreview");
   const statusEl = document.getElementById("mailStatus");
-  if (!textEl || !mailEl || !statusEl) return;
+  const actionsEl = document.getElementById("mailActions");
+  const sendBtn = document.getElementById("mailSendBtn");
+  if (!textEl || !mailEl || !statusEl || !actionsEl || !sendBtn) return { interval: null, timeouts: [] };
   textEl.textContent = "";
   mailEl.style.opacity = "0";
   mailEl.style.transform = "translateY(8px)";
   mailEl.classList.remove("mail-sent");
+  actionsEl.classList.remove("show");
+  sendBtn.classList.remove("pressed");
   statusEl.innerHTML = '<span class="dot"></span>Dictée en cours…';
+  const timeouts = [];
   let i = 0;
   const interval = setInterval(() => {
     textEl.textContent += dictationSentence.charAt(i);
     i++;
     if (i >= dictationSentence.length) {
       clearInterval(interval);
-      setTimeout(() => {
+      timeouts.push(setTimeout(() => {
         statusEl.innerHTML = '<span class="dot"></span>Rédaction du mail…';
-      }, 400);
-      setTimeout(() => {
+      }, 400));
+      timeouts.push(setTimeout(() => {
         mailEl.classList.add("mail-sent");
         mailEl.style.opacity = "1";
         mailEl.style.transform = "translateY(0)";
-        statusEl.innerHTML = '<span class="dot"></span>Mail envoyé via Gmail · il y a 2 secondes';
-      }, 1200);
+        statusEl.innerHTML = '<span class="dot"></span>Aperçu prêt — à vous de valider';
+      }, 1200));
+      timeouts.push(setTimeout(() => {
+        actionsEl.classList.add("show");
+      }, 1900));
+      timeouts.push(setTimeout(() => {
+        sendBtn.classList.add("pressed");
+      }, 2900));
+      timeouts.push(setTimeout(() => {
+        statusEl.innerHTML = '<span class="dot"></span>Envoyé';
+      }, 3250));
     }
   }, 45);
-  return interval;
+  return { interval, timeouts };
 }
 window.addEventListener("load", () => {
   const card = document.querySelector(".hcard");
   if (!card) return;
-  let currentInterval = null;
+  let current = { interval: null, timeouts: [] };
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        currentInterval = animateHeroDemo();
+        current = animateHeroDemo();
       } else {
-        clearInterval(currentInterval);
+        clearInterval(current.interval);
+        (current.timeouts || []).forEach(t => clearTimeout(t));
       }
     });
   }, { threshold: 0.6 });
