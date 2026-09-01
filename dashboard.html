@@ -12315,12 +12315,16 @@ async function sendTypedInstruction(instruction, continuing = false) {
     unlockAgentButtons();
     resetOrchestratorMicButton();
 
-    await incrementActions();
-    await loadSubscription();
+    // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie action,
+    // ne compte pas dans l'historique ni dans le quota.
+    if (!isComingSoonResponse(data, content)) {
+      await incrementActions();
+      await loadSubscription();
 
-    const logText = "DEMANDE:\n" + instruction + "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
-    await saveActionLog(effectiveAgent, logText, "success");
-    await loadActionCounter();
+      const logText = "DEMANDE:\n" + instruction + "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+      await saveActionLog(effectiveAgent, logText, "success");
+      await loadActionCounter();
+    }
   } catch (err) {
     console.error("Erreur envoi instruction tapée:", err);
     unlockAgentButtons();
@@ -17271,6 +17275,18 @@ document.addEventListener("DOMContentLoaded", preloadVoiceLines);
 document.addEventListener("click", unlockVoicePlayback, { once: true });
 document.addEventListener("touchstart", unlockVoicePlayback, { once: true });
 
+// Une réponse "à venir" (l'assistant explique qu'une fonctionnalité n'est
+// pas encore disponible, ex: "Bientôt disponible !" quand on lui demande de
+// générer un devis) n'est pas une vraie action rendue : elle ne doit ni
+// s'ajouter à l'historique des actions, ni consommer une action du quota
+// mensuel. On la détecte via le flag explicite du backend (coming_soon) ou,
+// à défaut, via le texte de la réponse elle-même.
+function isComingSoonResponse(data, content) {
+  if (data && data.coming_soon === true) return true;
+  const text = (content || "").toLowerCase();
+  return text.includes("bientôt") || text.includes("pas encore disponible");
+}
+
 async function saveActionLog(agent, action, status) {
   if (!currentUser) return;
 
@@ -18656,17 +18672,21 @@ console.log("MESSAGE =", message);
       unlockAgentButtons();
       resetMicButton();
 
-      await incrementActions();
-      await loadSubscription();
+      // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie
+      // action, ne compte pas dans l'historique ni dans le quota.
+      if (!isComingSoonResponse(data, content)) {
+        await incrementActions();
+        await loadSubscription();
 
-      // On garde la demande ET la réponse générée dans l'historique
-      // (avant, seule la demande dictée était enregistrée)
-      const logText =
-        "DEMANDE:\n" + instruction +
-        "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+        // On garde la demande ET la réponse générée dans l'historique
+        // (avant, seule la demande dictée était enregistrée)
+        const logText =
+          "DEMANDE:\n" + instruction +
+          "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
 
-      await saveActionLog(effectiveAgent, logText, "success");
-      await loadActionCounter();
+        await saveActionLog(effectiveAgent, logText, "success");
+        await loadActionCounter();
+      }
 
       autoHideDictationBox(box);
 
@@ -19670,15 +19690,19 @@ async function callSimpleAgent(
     unlockAgentButtons();
     resetOrchestratorMicButton();
 
-    await incrementActions();
-    await loadSubscription();
+    // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie action,
+    // ne compte pas dans l'historique ni dans le quota.
+    if (!isComingSoonResponse(data, content)) {
+      await incrementActions();
+      await loadSubscription();
 
-    const logText =
-      "DEMANDE:\n" + instruction +
-      "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
+      const logText =
+        "DEMANDE:\n" + instruction +
+        "\n\nREPONSE:\n" + (content || "Aucune réponse générée");
 
-    await saveActionLog(agentName, logText, "success");
-    await loadActionCounter();
+      await saveActionLog(agentName, logText, "success");
+      await loadActionCounter();
+    }
   } catch (err) {
     console.error("Erreur agent " + agentName + " :", err);
     unlockAgentButtons();
