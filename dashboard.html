@@ -11016,14 +11016,47 @@ let pendingReminderPartial = null;
 // clarification est résolue.
 let pendingClarifyAgent = null;
 
+// Quand l'utilisateur dicte une demande vague ("rappelle-moi", "ne pas
+// oublier de me rappeler"...) sans donner de vrai motif, le backend peut
+// renvoyer cette formulation générique elle-même comme "motif" — ce n'est
+// pas un vrai contenu, juste un écho de la phrase. La préremplir donnerait
+// l'impression que Clarity a compris quelque chose de précis alors que ce
+// n'est pas le cas : dans ce cas, le champ doit rester vide (placeholder
+// seulement) pour que l'utilisateur tape le vrai motif.
+function isGenericReminderReason(text) {
+  const normalized = (text || "")
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const genericPhrases = [
+    "rappelle moi",
+    "rappeler moi",
+    "me rappeler",
+    "se rappeler",
+    "ne pas oublier de me rappeler",
+    "ne pas oublier",
+    "pense a me rappeler",
+    "penser a me rappeler",
+    "fais moi penser",
+    "faire moi penser",
+    "rappel moi",
+    "rappelle"
+  ];
+  return genericPhrases.includes(normalized);
+}
+
 function openReminderScheduleSheet(data) {
   pendingReminderPartial = data.partial || {};
   const defaults = data.defaults || {};
   // Message informatif du backend (ex: la question posée s'il manque un
   // motif). Le motif lui-même est saisi/édité via le champ dédié ci-dessous,
-  // pré-rempli seulement s'il est déjà connu.
+  // pré-rempli seulement s'il est déjà connu (et si ce n'est pas juste un
+  // écho générique de la demande, voir isGenericReminderReason ci-dessus).
   const subtitleText = data.message || "";
-  const initialReason = pendingReminderPartial.reason || "";
+  const rawReminderReason = pendingReminderPartial.reason || "";
+  const initialReason = isGenericReminderReason(rawReminderReason) ? "" : rawReminderReason;
 
   const today = defaults.today || new Date().toISOString().slice(0, 10);
   const tomorrow = defaults.tomorrow || today;
