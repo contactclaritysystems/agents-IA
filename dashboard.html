@@ -2083,13 +2083,17 @@ select.field-input {
 
   #profil-mobile-section,
   #writing-styles-mobile-section,
-  #notifications-mobile-section {
+  #notifications-mobile-section,
+  #preferences-mobile-section,
+  #application-mobile-section {
     display: none;
   }
 
   #profil-mobile-section.open,
   #writing-styles-mobile-section.open,
-  #notifications-mobile-section.open {
+  #notifications-mobile-section.open,
+  #preferences-mobile-section.open,
+  #application-mobile-section.open {
     display: block;
     position: fixed;
     inset: 0;
@@ -2113,7 +2117,9 @@ select.field-input {
      en mobile (bouton + titre en ligne, titre plus grand et marqué). */
   #profil-mobile-section .mobile-subpage-header,
   #writing-styles-mobile-section .mobile-subpage-header,
-  #notifications-mobile-section .mobile-subpage-header {
+  #notifications-mobile-section .mobile-subpage-header,
+  #preferences-mobile-section .mobile-subpage-header,
+  #application-mobile-section .mobile-subpage-header {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -2122,7 +2128,9 @@ select.field-input {
 
   #profil-mobile-section .mobile-subpage-header .sheet-btn,
   #writing-styles-mobile-section .mobile-subpage-header .sheet-btn,
-  #notifications-mobile-section .mobile-subpage-header .sheet-btn {
+  #notifications-mobile-section .mobile-subpage-header .sheet-btn,
+  #preferences-mobile-section .mobile-subpage-header .sheet-btn,
+  #application-mobile-section .mobile-subpage-header .sheet-btn {
     width: auto !important;
     height: 34px !important;
     padding: 0 12px !important;
@@ -2133,7 +2141,9 @@ select.field-input {
 
   #profil-mobile-section .mobile-subpage-header .section-title,
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
-  #notifications-mobile-section .mobile-subpage-header .section-title {
+  #notifications-mobile-section .mobile-subpage-header .section-title,
+  #preferences-mobile-section .mobile-subpage-header .section-title,
+  #application-mobile-section .mobile-subpage-header .section-title {
     font-size: 20px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
@@ -5430,13 +5440,17 @@ body,
 
 #profil-mobile-section,
 #writing-styles-mobile-section,
-#notifications-mobile-section {
+#notifications-mobile-section,
+#preferences-mobile-section,
+#application-mobile-section {
   display: none !important;
 }
 
 #profil-mobile-section.open,
 #writing-styles-mobile-section.open,
-#notifications-mobile-section.open {
+#notifications-mobile-section.open,
+#preferences-mobile-section.open,
+#application-mobile-section.open {
   display: block !important;
   position: fixed !important;
   inset: 0;
@@ -5609,7 +5623,9 @@ a:hover {
 /* Pages plein écran (Profil) : contenu limité comme le reste du site */
 #profil-mobile-section.open,
 #writing-styles-mobile-section.open,
-#notifications-mobile-section.open {
+#notifications-mobile-section.open,
+#preferences-mobile-section.open,
+#application-mobile-section.open {
   padding-left: max(18px, calc((100% - 900px) / 2)) !important;
   padding-right: max(18px, calc((100% - 900px) / 2)) !important;
 }
@@ -6205,7 +6221,9 @@ body[data-theme="azur"] .loader-halo {
 @media (min-width: 601px) {
   #profil-mobile-section .mobile-subpage-header,
   #writing-styles-mobile-section .mobile-subpage-header,
-  #notifications-mobile-section .mobile-subpage-header {
+  #notifications-mobile-section .mobile-subpage-header,
+  #preferences-mobile-section .mobile-subpage-header,
+  #application-mobile-section .mobile-subpage-header {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -6217,7 +6235,9 @@ body[data-theme="azur"] .loader-halo {
 
   #profil-mobile-section .mobile-subpage-header .section-title,
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
-  #notifications-mobile-section .mobile-subpage-header .section-title {
+  #notifications-mobile-section .mobile-subpage-header .section-title,
+  #preferences-mobile-section .mobile-subpage-header .section-title,
+  #application-mobile-section .mobile-subpage-header .section-title {
     font-size: 21px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
@@ -6229,7 +6249,9 @@ body[data-theme="azur"] .loader-halo {
   #profil-mobile-section .mobile-subpage-header .section-title,
   #contact-mobile-section.open .mobile-subpage-header .section-title,
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
-  #notifications-mobile-section .mobile-subpage-header .section-title {
+  #notifications-mobile-section .mobile-subpage-header .section-title,
+  #preferences-mobile-section .mobile-subpage-header .section-title,
+  #application-mobile-section .mobile-subpage-header .section-title {
     font-size: 26px !important;
   }
 }
@@ -6244,7 +6266,9 @@ body[data-theme="azur"] .loader-halo {
 @media (min-width: 601px) {
   #profil-mobile-section.open,
   #writing-styles-mobile-section.open,
-  #notifications-mobile-section.open {
+  #notifications-mobile-section.open,
+  #preferences-mobile-section.open,
+  #application-mobile-section.open {
     position: static !important;
     inset: auto !important;
     z-index: auto !important;
@@ -7015,7 +7039,9 @@ body[data-theme="dark"] .clarity-hero {
 
   body.is-standalone-ios #profil-mobile-section.open,
   body.is-standalone-ios #writing-styles-mobile-section.open,
-  body.is-standalone-ios #notifications-mobile-section.open {
+  body.is-standalone-ios #notifications-mobile-section.open,
+  body.is-standalone-ios #preferences-mobile-section.open,
+  body.is-standalone-ios #application-mobile-section.open {
     padding-top: calc(24px + env(safe-area-inset-top)) !important;
     padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important;
   }
@@ -8959,6 +8985,63 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+<!-- Sous-page Préférences (style iPhone) : Apparence + Réponses vocales,
+     regroupées derrière une seule entrée sur la page principale, même
+     patron que #notifications-mobile-section. -->
+<div id="preferences-mobile-section">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closePreferencesSubpage()">← Retour</button>
+    <div class="section-title">Préférences</div>
+  </div>
+
+  <div class="settings-group" style="margin-top:14px;">
+    <div class="settings-row" id="theme-settings-block" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-violet">🎨</span>
+      <div class="settings-row-title">Apparence</div>
+      <div class="settings-theme-dots">
+        <button type="button" class="settings-theme-dot settings-theme-dot-light" data-theme-option="light" onclick="setTheme('light')" aria-label="Thème clair"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-dark" data-theme-option="dark" onclick="setTheme('dark')" aria-label="Thème sombre"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-slate" data-theme-option="slate" onclick="setTheme('slate')" aria-label="Thème ardoise"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-corail" data-theme-option="corail" onclick="setTheme('corail')" aria-label="Thème corail"></button>
+        <button type="button" class="settings-theme-dot settings-theme-dot-azur" data-theme-option="azur" onclick="setTheme('azur')" aria-label="Thème azur"></button>
+      </div>
+    </div>
+    <div class="settings-row" id="voice-settings-block" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-amber">🔊</span>
+      <div class="settings-row-title">Réponses vocales</div>
+      <button type="button" class="settings-row-info-btn" onclick="openMicPermissionInfoSheet()" aria-label="En savoir plus sur l'autorisation du micro">ⓘ</button>
+      <button type="button" class="settings-toggle" id="voice-toggle-switch" onclick="setVoiceEnabled(!isVoiceEnabled())" aria-label="Activer les réponses vocales">
+        <span class="settings-toggle-knob"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Sous-page Application (style iPhone) : Ajouter à l'écran d'accueil +
+     Agenda Google. -->
+<div id="application-mobile-section">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closeApplicationSubpage()">← Retour</button>
+    <div class="section-title">Application</div>
+  </div>
+
+  <div class="settings-group" style="margin-top:14px;">
+    <div class="settings-row" id="add-to-home-row" onclick="handleAddToHomeScreen()">
+      <span class="settings-row-icon settings-row-icon-green">📲</span>
+      <div class="settings-row-title">Ajouter à l'écran d'accueil</div>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <!-- Aucune promesse d'installation sur iOS (impossible techniquement,
+         pas d'API pour ça sur Safari) : ligne grisée, juste informative,
+         un clic explique simplement que ça arrive plus tard. -->
+    <div class="settings-row" id="google-calendar-row" onclick="showToast('Bientôt — connectez Google Agenda pour voir vos RDV.')" style="opacity:.55;">
+      <span class="settings-row-icon settings-row-icon-blue">📅</span>
+      <div class="settings-row-title">Agenda Google</div>
+      <span class="settings-row-value">Bientôt</span>
+    </div>
+  </div>
+</div>
+
   <!-- GMAIL -->
   <div class="gmail-section" id="gmail-connect-section">
   <div>
@@ -8985,51 +9068,28 @@ body[data-theme="light"]::after {
 </div>
 </div>
 
-      <!-- PRÉFÉRENCES -->
+      <!-- PRÉFÉRENCES : une seule ligne ici (style iPhone), le détail est
+           dans la sous-page #preferences-mobile-section (même patron que
+           Notifications / Styles d'écriture). -->
 <div class="settings-page-block">
 
   <div class="settings-group-label">Préférences</div>
   <div class="settings-group">
-    <div class="settings-row" id="theme-settings-block" style="cursor:default;">
+    <div class="settings-row" id="preferences-settings-row" onclick="openPreferencesSubpage()">
       <span class="settings-row-icon settings-row-icon-violet">🎨</span>
-      <div class="settings-row-title">Apparence</div>
-      <div class="settings-theme-dots">
-        <button type="button" class="settings-theme-dot settings-theme-dot-light" data-theme-option="light" onclick="setTheme('light')" aria-label="Thème clair"></button>
-        <button type="button" class="settings-theme-dot settings-theme-dot-dark" data-theme-option="dark" onclick="setTheme('dark')" aria-label="Thème sombre"></button>
-        <button type="button" class="settings-theme-dot settings-theme-dot-slate" data-theme-option="slate" onclick="setTheme('slate')" aria-label="Thème ardoise"></button>
-        <button type="button" class="settings-theme-dot settings-theme-dot-corail" data-theme-option="corail" onclick="setTheme('corail')" aria-label="Thème corail"></button>
-        <button type="button" class="settings-theme-dot settings-theme-dot-azur" data-theme-option="azur" onclick="setTheme('azur')" aria-label="Thème azur"></button>
-      </div>
-    </div>
-    <div class="settings-row" id="voice-settings-block" style="cursor:default;">
-      <span class="settings-row-icon settings-row-icon-amber">🔊</span>
-      <div class="settings-row-title">Réponses vocales</div>
-      <!-- Pas de paragraphe explicatif sous la rangée (ça allongeait la
-           carte et cassait le rythme régulier des 22px avant chaque
-           titre de section, ex. avant "Application") : l'info tient
-           maintenant dans une petite icône ⓘ, même hauteur de rangée
-           que partout ailleurs dans Réglages. -->
-      <button type="button" class="settings-row-info-btn" onclick="openMicPermissionInfoSheet()" aria-label="En savoir plus sur l'autorisation du micro">ⓘ</button>
-      <button type="button" class="settings-toggle" id="voice-toggle-switch" onclick="setVoiceEnabled(!isVoiceEnabled())" aria-label="Activer les réponses vocales">
-        <span class="settings-toggle-knob"></span>
-      </button>
+      <div class="settings-row-title">Préférences</div>
+      <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
+  <!-- APPLICATION : une seule ligne ici aussi, détail dans
+       #application-mobile-section. -->
   <div class="settings-group-label">Application</div>
   <div class="settings-group">
-    <div class="settings-row" id="add-to-home-row" onclick="handleAddToHomeScreen()">
+    <div class="settings-row" id="application-settings-row" onclick="openApplicationSubpage()">
       <span class="settings-row-icon settings-row-icon-green">📲</span>
-      <div class="settings-row-title">Ajouter à l'écran d'accueil</div>
+      <div class="settings-row-title">Application</div>
       <span class="settings-row-chevron">›</span>
-    </div>
-    <!-- Aucune promesse d'installation sur iOS (impossible techniquement,
-         pas d'API pour ça sur Safari) : ligne grisée, juste informative,
-         un clic explique simplement que ça arrive plus tard. -->
-    <div class="settings-row" id="google-calendar-row" onclick="showToast('Bientôt — connectez Google Agenda pour voir vos RDV.')" style="opacity:.55;">
-      <span class="settings-row-icon settings-row-icon-blue">📅</span>
-      <div class="settings-row-title">Agenda Google</div>
-      <span class="settings-row-value">Bientôt</span>
     </div>
   </div>
 
@@ -16007,6 +16067,44 @@ function closeNotificationsSubpage() {
   ).forEach(el => el.classList.remove("is-hidden"));
 }
 
+// Sous-pages "Préférences" et "Application" (Réglages) : même patron que
+// Notifications/Styles d'écriture ci-dessus.
+function openPreferencesSubpage() {
+  const section = document.getElementById("preferences-mobile-section");
+  if (!section) return;
+  section.classList.add("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.add("is-hidden"));
+}
+
+function closePreferencesSubpage() {
+  const section = document.getElementById("preferences-mobile-section");
+  if (!section) return;
+  section.classList.remove("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.remove("is-hidden"));
+}
+
+function openApplicationSubpage() {
+  const section = document.getElementById("application-mobile-section");
+  if (!section) return;
+  section.classList.add("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.add("is-hidden"));
+}
+
+function closeApplicationSubpage() {
+  const section = document.getElementById("application-mobile-section");
+  if (!section) return;
+  section.classList.remove("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.remove("is-hidden"));
+}
+
  async function saveProfile() {
 
   if (!currentUser) {
@@ -20742,6 +20840,10 @@ function showSection(section, btn) {
   if (writingStylesSubpageNav) writingStylesSubpageNav.classList.remove("open");
   const notificationsSubpageNav = document.getElementById("notifications-mobile-section");
   if (notificationsSubpageNav) notificationsSubpageNav.classList.remove("open");
+  const preferencesSubpageNav = document.getElementById("preferences-mobile-section");
+  if (preferencesSubpageNav) preferencesSubpageNav.classList.remove("open");
+  const applicationSubpageNav = document.getElementById("application-mobile-section");
+  if (applicationSubpageNav) applicationSubpageNav.classList.remove("open");
   document.querySelectorAll(
     "#main-settings .settings-page-block"
   ).forEach(el => el.classList.remove("is-hidden"));
