@@ -4,6 +4,13 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Clarity Systems — Dictez, Clarity s'occupe du reste</title>
+<script>
+/* Le navigateur restaure parfois la position de scroll précédente au
+   rechargement de la page (comportement natif, surtout sur Safari) —
+   on force ici un retour en haut de page à chaque actualisation. */
+if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+window.addEventListener('load', function () { window.scrollTo(0, 0); });
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -261,6 +268,10 @@ nav.banner-hidden { top: 0; }
 }
 .atile-name { font-size: .96rem; font-weight: 720; margin-bottom: 8px; letter-spacing: -.018em; }
 .atile-desc { font-size: .84rem; color: var(--muted); line-height: 1.72; font-weight: 380; }
+.atile-example {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: .78rem; font-style: italic; color: var(--muted-2); line-height: 1.55;
+}
 /* POUR QUI */
 .pourqui { background: rgba(255,255,255,.54); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 76px 24px; text-align: center; }
 .pourqui-in { max-width: 720px; margin: 0 auto; }
@@ -758,7 +769,7 @@ header {
 <section class="hero">
   <p class="hero-tagline">Elle ne dort jamais — vous, si.</p>
   <h1>Dictez.<br/><em>Clarity s'occupe du reste.</em></h1>
-  <p class="hero-sub">Mails, textes, rendez-vous et rappels — depuis votre voix. 7 jours pour essayer.</p>
+  <p class="hero-sub">Mails, textes, rendez-vous et rappels<br/>depuis votre voix. 7 jours pour essayer.</p>
   <div class="hero-btns">
     <a href="#" class="btn-dark" onclick="openRegisterFromChat(event)">Commencer l'essai gratuit</a>
     <a href="#how" class="btn-light">Voir comment ça marche</a>
@@ -788,9 +799,9 @@ Bonne journée
   <div class="proof-in">
     <div class="proof-eye"><span class="eye rv">En 3 secondes</span></div>
     <ul class="proof-list">
-      <li class="proof-item rv"><span class="proof-check">✓</span>Un mail dicté, prêt à envoyer</li>
-      <li class="proof-item rv"><span class="proof-check">✓</span>Un RDV noté, rappel 1 h avant</li>
-      <li class="proof-item rv"><span class="proof-check">✓</span>Un post rédigé sans tout retaper</li>
+      <li class="proof-item rv"><span class="proof-check">✓</span>Un mail dicté, prêt à valider</li>
+      <li class="proof-item rv"><span class="proof-check">✓</span>Un RDV noté, rappel avant l'heure</li>
+      <li class="proof-item rv"><span class="proof-check">✓</span>Un post rédigé à partir d'une simple idée</li>
     </ul>
   </div>
 </div>
@@ -804,26 +815,31 @@ Bonne journée
       <span class="atile-ico">✉️</span>
       <div class="atile-name">Mail</div>
       <p class="atile-desc">Clarity prépare votre mail à partir de votre dictée, vous relisez, elle l'envoie via Gmail, Outlook ou SMTP.</p>
+      <p class="atile-example">« Envoie un mail à Julie pour décaler notre RDV à jeudi. »</p>
     </div>
     <div class="atile">
       <span class="atile-ico">✍️</span>
       <div class="atile-name">Rédaction</div>
       <p class="atile-desc">Clarity rédige vos posts, textes et offres commerciales à partir d'une simple idée.</p>
+      <p class="atile-example">« Écris un post pour annoncer nos nouveaux horaires. »</p>
     </div>
     <div class="atile">
       <span class="atile-ico">💬</span>
       <div class="atile-name">Assistant</div>
       <p class="atile-desc">Clarity répond à vos questions et vous donne votre planning ou vos rappels à l'oral.</p>
+      <p class="atile-example">« Qu'est-ce que j'ai de prévu demain ? »</p>
     </div>
     <div class="atile">
       <span class="atile-ico">📅</span>
       <div class="atile-name">Planning</div>
       <p class="atile-desc">Clarity note votre rendez-vous en une phrase, sans que vous ouvriez votre agenda.</p>
+      <p class="atile-example">« RDV avec M. Dupont mardi à 14h. »</p>
     </div>
     <div class="atile">
       <span class="atile-ico">⏰</span>
       <div class="atile-name">Rappels</div>
       <p class="atile-desc">Vous dites « fais-moi penser à... », Clarity vous prévient à l'heure.</p>
+      <p class="atile-example">« Fais-moi penser à rappeler Julie demain matin. »</p>
     </div>
   </div>
 </section>
@@ -831,7 +847,7 @@ Bonne journée
 <div class="pourqui">
   <div class="pourqui-in">
     <div class="eye rv">Pour qui</div>
-    <p class="pourqui-text rv">Pensé pour les artisans, indépendants, TPE et PME qui veulent gagner du temps sur les tâches répétitives du quotidien.</p>
+    <p class="pourqui-text rv">Utile à tous ceux qui veulent gagner du temps sur les tâches répétitives du quotidien — professionnels ou non.</p>
   </div>
 </div>
 <!-- FONCTIONNEMENT -->
