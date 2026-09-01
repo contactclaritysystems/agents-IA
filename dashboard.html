@@ -5435,7 +5435,11 @@ body,
   inset: 0;
   z-index: 500;
   background: var(--clarity-page);
-  padding: 24px 18px 110px;
+  /* 110px ne suffisait pas toujours : la dernière ligne (ex: dernier style
+     d'écriture) pouvait se retrouver cachée sous la barre d'onglets du bas.
+     Marge augmentée + zone de sécurité iOS ajoutée ci-dessous (comme déjà
+     fait pour le padding-top de ces mêmes sous-pages). */
+  padding: 24px 18px 140px;
   overflow-y: auto;
 }
 
@@ -7000,6 +7004,7 @@ body[data-theme="dark"] .clarity-hero {
   body.is-standalone-ios #profil-mobile-section.open,
   body.is-standalone-ios #writing-styles-mobile-section.open {
     padding-top: calc(24px + env(safe-area-inset-top)) !important;
+    padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important;
   }
 
   body.is-standalone-ios #contact-detail-page.open {
@@ -8812,14 +8817,53 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="digest-time-display">07:30</span>
       <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" id="notify-test-row" onclick="sendNotifyTestEmail(this)">
-      <span class="settings-row-icon settings-row-icon-purple">📨</span>
-      <div class="settings-row-title">E-mail test</div>
-      <span class="settings-row-value">Envoyer</span>
+    <!-- Avant : ligne principale "E-mail test" (même poids visuel que les
+         vrais réglages, à côté de laquelle elle n'a rien à faire) — un lien
+         discret suffit, pour ne pas donner l'impression qu'il faut cliquer
+         dessus régulièrement. -->
+    <div style="padding:2px 16px 12px;">
+      <button type="button" id="notify-test-link" onclick="sendNotifyTestEmail(this)" style="background:none;border:none;padding:0;font-size:12.5px;color:var(--clarity-text-secondary);text-decoration:underline;cursor:pointer;font-family:inherit;">
+        Recevoir un e-mail test
+      </button>
+    </div>
+    <div class="settings-row" id="reminder-offset-row" onclick="openReminderOffsetModal()">
+      <span class="settings-row-icon settings-row-icon-purple">⏰</span>
+      <div class="settings-row-title">Rappels</div>
+      <span class="settings-row-value" id="reminder-offset-display">À l'heure</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="appointment-offset-row" onclick="openAppointmentOffsetModal()">
+      <span class="settings-row-icon settings-row-icon-green">📅</span>
+      <div class="settings-row-title">Rendez-vous</div>
+      <span class="settings-row-value" id="appointment-offset-display">1 h avant</span>
       <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
+</div>
+
+<div id="reminder-offset-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeReminderOffsetModal()"></div>
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Rappels</div>
+    <div class="mail-choice-subtitle">Quand voulez-vous être prévenu ?</div>
+    <div id="reminder-offset-options" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+    <button class="sheet-btn" type="button" onclick="closeReminderOffsetModal()" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
+</div>
+
+<div id="appointment-offset-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeAppointmentOffsetModal()"></div>
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Rendez-vous</div>
+    <div class="mail-choice-subtitle">Quand voulez-vous être prévenu ?</div>
+    <div id="appointment-offset-options" style="display:flex;flex-direction:column;gap:8px;margin-top:14px;"></div>
+    <button class="sheet-btn" type="button" onclick="closeAppointmentOffsetModal()" style="width:100%;justify-content:center;margin-top:10px;">
+      Fermer
+    </button>
+  </div>
 </div>
 
   <!-- GMAIL -->
@@ -10445,6 +10489,11 @@ async function sendFirstScheduleTestEmail() {
 // tourne indépendamment de l'appareil utilisé pour le configurer.
 let digestEnabled = true;
 let digestTime = "07:30";
+// Rappels/RDV : mêmes tokens que le backend, pas de traduction UI <-> API.
+// Rappels : "0" (à l'heure) | "15" | "off". RDV : "60" (1h) | "15" | "digest"
+// (le matin avec le brief) | "off". Défauts confirmés par Grok : "0"/"60".
+let reminderOffset = "0";
+let appointmentOffset = "60";
 
 function isDigestEnabled() {
   return digestEnabled;
@@ -10462,15 +10511,19 @@ async function loadDigestSettings() {
       // "settings" (voir confirmation Grok) : on lit l'un ou l'autre pour
       // rester compatible si l'un des deux disparaît un jour.
       const s = data.settings || data;
-      // Absent côté serveur (compte jamais configuré) -> défauts : ON, 07:30.
+      // Absent côté serveur (compte jamais configuré) -> défauts : ON, 07:30,
+      // rappels "à l'heure" (0), RDV "1h avant" (60).
       digestEnabled = s.digest_enabled !== false;
       digestTime = s.digest_time || "07:30";
+      reminderOffset = s.reminder_offset || "0";
+      appointmentOffset = s.appointment_offset || "60";
     }
   } catch (e) {
     // Pas de réseau : on garde les défauts plutôt que de bloquer le
     // chargement de l'app pour un réglage secondaire.
   }
   syncDigestUI();
+  syncNotifyOffsetsUI();
 }
 
 function syncDigestUI() {
@@ -10624,6 +10677,10 @@ async function confirmDigestTimeModal() {
   await saveDigestSettings();
 }
 
+// Envoie TOUJOURS les 4 réglages ensemble (brief + rappels + RDV), même
+// quand un seul vient de changer : évite qu'un POST partiel n'écrase les
+// autres côté backend si /notify/settings remplace la ligne entière plutôt
+// que de la fusionner.
 async function saveDigestSettings() {
   if (!currentUser || !currentUser.id) return;
   try {
@@ -10634,7 +10691,9 @@ async function saveDigestSettings() {
         user_id: currentUser.id,
         user_email: currentUser.email,
         digest_enabled: digestEnabled,
-        digest_time: digestTime
+        digest_time: digestTime,
+        reminder_offset: reminderOffset,
+        appointment_offset: appointmentOffset
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -10644,6 +10703,77 @@ async function saveDigestSettings() {
   } catch (e) {
     showToast("Erreur réseau", "error");
   }
+}
+
+// ─── RÉGLAGES > NOTIFICATIONS — Rappels / Rendez-vous (offsets) ─────────
+// Chargé/sauvegardé côté serveur via /notify/settings, comme le brief du
+// jour (voir loadDigestSettings/saveDigestSettings) : mêmes tokens que le
+// backend (confirmé par Grok), pas de traduction UI <-> API à faire.
+const REMINDER_OFFSET_OPTIONS = [
+  { value: "0", label: "À l'heure" },
+  { value: "15", label: "15 min avant" },
+  { value: "off", label: "Off" }
+];
+
+const APPOINTMENT_OFFSET_OPTIONS = [
+  { value: "60", label: "1 h avant" },
+  { value: "15", label: "15 min" },
+  { value: "digest", label: "Le matin avec le brief" },
+  { value: "off", label: "Off" }
+];
+
+function syncNotifyOffsetsUI() {
+  const rLabel = (REMINDER_OFFSET_OPTIONS.find(o => o.value === reminderOffset) || {}).label || "À l'heure";
+  const aLabel = (APPOINTMENT_OFFSET_OPTIONS.find(o => o.value === appointmentOffset) || {}).label || "1 h avant";
+  const rEl = document.getElementById("reminder-offset-display");
+  const aEl = document.getElementById("appointment-offset-display");
+  if (rEl) rEl.textContent = rLabel;
+  if (aEl) aEl.textContent = aLabel;
+}
+
+function renderOffsetOptions(containerId, options, currentValue, kind) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = options.map(opt => `
+    <button type="button" class="mail-choice-btn" style="justify-content:space-between;" onclick="chooseNotifyOffset('${kind}', '${opt.value}')">
+      <span>${opt.label}</span>
+      ${opt.value === currentValue ? "<span>✓</span>" : ""}
+    </button>
+  `).join("");
+}
+
+function openReminderOffsetModal() {
+  renderOffsetOptions("reminder-offset-options", REMINDER_OFFSET_OPTIONS, reminderOffset, "reminder");
+  const modal = document.getElementById("reminder-offset-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeReminderOffsetModal() {
+  const modal = document.getElementById("reminder-offset-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function openAppointmentOffsetModal() {
+  renderOffsetOptions("appointment-offset-options", APPOINTMENT_OFFSET_OPTIONS, appointmentOffset, "appointment");
+  const modal = document.getElementById("appointment-offset-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeAppointmentOffsetModal() {
+  const modal = document.getElementById("appointment-offset-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function chooseNotifyOffset(kind, value) {
+  if (kind === "reminder") {
+    reminderOffset = value;
+    closeReminderOffsetModal();
+  } else {
+    appointmentOffset = value;
+    closeAppointmentOffsetModal();
+  }
+  syncNotifyOffsetsUI();
+  await saveDigestSettings();
 }
 
 async function openQuickPlanningModal() {
@@ -16450,7 +16580,8 @@ const CLARITY_MODAL_IDS = [
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
-  "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet"
+  "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
+  "reminder-offset-modal", "appointment-offset-modal"
 ];
 
 let clarityScrollLockY = 0;
