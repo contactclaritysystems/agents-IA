@@ -8875,12 +8875,13 @@ body[data-theme="light"]::after {
 
     <div id="notify-offset-mode-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
 
-    <div id="notify-offset-wheel-wrap" style="display:none;align-items:center;justify-content:center;gap:8px;">
+    <div id="notify-offset-wheel-wrap" style="display:none;align-items:center;justify-content:center;">
       <div class="time-wheel-wrap" style="height:150px;margin-top:8px;">
         <div class="time-wheel-highlight"></div>
-        <div class="time-wheel-col" id="notify-offset-wheel-col" style="height:150px;"></div>
+        <div class="time-wheel-col" id="notify-offset-wheel-hours" style="height:150px;"></div>
+        <div class="time-wheel-sep">h</div>
+        <div class="time-wheel-col" id="notify-offset-wheel-minutes" style="height:150px;"></div>
       </div>
-      <span id="notify-offset-wheel-unit" style="font-size:13px;font-weight:700;color:var(--clarity-text-secondary);">min</span>
     </div>
 
     <button class="save-btn" type="button" style="width:100%;margin-top:14px;padding:12px;font-size:14px;" onclick="confirmNotifyOffset()">
@@ -10779,36 +10780,35 @@ async function saveDigestSettings() {
 
 // ─── RÉGLAGES > NOTIFICATIONS — Rappels / Rendez-vous (offsets) ─────────
 // Chargé/sauvegardé côté serveur via /notify/settings, comme le brief du
-// jour (voir loadDigestSettings/saveDigestSettings).
-// ATTENTION backend : le contrat confirmé par Grok validait jusqu'ici une
-// liste fermée ("0"/"15"/"off" pour les rappels, "60"/"15"/"digest"/"off"
-// pour les RDV). Le picker ci-dessous laisse maintenant choisir une valeur
-// exacte (minutes OU heures, converties en minutes pour le stockage), donc
-// il peut envoyer n'importe quel entier positif en string (ex: "45",
-// "180"), plus la sentinelle "digest" désormais aussi pour les rappels.
-// Il faut demander à Grok d'élargir la validation serveur en conséquence.
+// jour (voir loadDigestSettings/saveDigestSettings). Contrat élargi par
+// Grok : accepte "0", n'importe quel entier positif de minutes (ex: "45",
+// "180"), "off" et "digest" (les deux désormais valables pour les rappels
+// ET les RDV), jusqu'à 7 jours max.
+// Le mode "exact" ci-dessous combine heures + minutes sur une seule popup
+// (2 bandes déroulantes, comme l'heure du brief) pour permettre un délai
+// du type "1 h 30 avant", impossible avec des bandes séparées.
 let notifyOffsetKind = null; // "reminder" | "appointment"
-let notifyOffsetMode = "minutes"; // "minutes" | "hours" | "digest" | "off"
-let notifyOffsetMinutesValue = 15;
+let notifyOffsetMode = "exact"; // "exact" | "digest" | "off"
 let notifyOffsetHoursValue = 1;
-const notifyOffsetWheelScrollTimer = { id: null };
+let notifyOffsetMinutesValue = 0;
+const notifyOffsetWheelScrollTimers = {};
 
 function parseOffsetValue(value) {
-  if (value == null || value === "off") return { mode: "off", minutes: 15, hours: 1 };
-  if (value === "digest") return { mode: "digest", minutes: 15, hours: 1 };
+  if (value == null || value === "off") return { mode: "off", hours: 1, minutes: 0 };
+  if (value === "digest") return { mode: "digest", hours: 1, minutes: 0 };
   const n = parseInt(value, 10);
-  if (isNaN(n)) return { mode: "off", minutes: 15, hours: 1 };
-  if (n > 0 && n % 60 === 0) return { mode: "hours", minutes: 15, hours: n / 60 };
-  return { mode: "minutes", minutes: n, hours: Math.max(1, Math.round(n / 60)) };
+  if (isNaN(n) || n < 0) return { mode: "off", hours: 1, minutes: 0 };
+  return { mode: "exact", hours: Math.floor(n / 60), minutes: n % 60 };
 }
 
 function formatOffsetLabel(value) {
   const p = parseOffsetValue(value);
   if (p.mode === "off") return "Off";
   if (p.mode === "digest") return "Avec le brief";
-  if (p.mode === "hours") return p.hours + " h avant";
-  if (p.minutes === 0) return "À l'heure";
-  return p.minutes + " min avant";
+  if (p.hours === 0 && p.minutes === 0) return "À l'heure";
+  if (p.hours === 0) return p.minutes + " min avant";
+  if (p.minutes === 0) return p.hours + " h avant";
+  return p.hours + " h " + String(p.minutes).padStart(2, "0") + " avant";
 }
 
 function syncNotifyOffsetsUI() {
@@ -10819,8 +10819,7 @@ function syncNotifyOffsetsUI() {
 }
 
 const NOTIFY_OFFSET_MODE_OPTIONS = [
-  { key: "minutes", label: "Dans un nombre de minutes précis" },
-  { key: "hours", label: "Dans un nombre d'heures précis" },
+  { key: "exact", label: "Dans un délai précis (h / min)" },
   { key: "digest", label: "Seulement dans le brief du jour" },
   { key: "off", label: "Off" }
 ];
@@ -10830,8 +10829,8 @@ function openNotifyOffsetModal(kind) {
   const currentValue = kind === "reminder" ? reminderOffset : appointmentOffset;
   const parsed = parseOffsetValue(currentValue);
   notifyOffsetMode = parsed.mode;
-  notifyOffsetMinutesValue = parsed.minutes;
   notifyOffsetHoursValue = parsed.hours;
+  notifyOffsetMinutesValue = parsed.minutes;
 
   const title = document.getElementById("notify-offset-title");
   if (title) title.textContent = kind === "reminder" ? "Rappels" : "Rendez-vous";
@@ -10868,22 +10867,26 @@ function selectOffsetMode(mode) {
 
 function renderOffsetWheelIfNeeded() {
   const wrap = document.getElementById("notify-offset-wheel-wrap");
-  const col = document.getElementById("notify-offset-wheel-col");
-  const unit = document.getElementById("notify-offset-wheel-unit");
-  if (!wrap || !col) return;
+  const hoursCol = document.getElementById("notify-offset-wheel-hours");
+  const minutesCol = document.getElementById("notify-offset-wheel-minutes");
+  if (!wrap || !hoursCol || !minutesCol) return;
 
-  if (notifyOffsetMode !== "minutes" && notifyOffsetMode !== "hours") {
+  if (notifyOffsetMode !== "exact") {
     wrap.style.display = "none";
-    col.innerHTML = "";
     return;
   }
 
   wrap.style.display = "flex";
-  const isMinutes = notifyOffsetMode === "minutes";
-  if (unit) unit.textContent = isMinutes ? "min" : "h";
+  buildOffsetWheelColumn(hoursCol, 0, 23, "hours");
+  buildOffsetWheelColumn(minutesCol, 0, 59, "minutes");
 
-  const min = isMinutes ? 0 : 1;
-  const max = isMinutes ? 59 : 24;
+  requestAnimationFrame(() => {
+    scrollOffsetWheelTo("notify-offset-wheel-hours", notifyOffsetHoursValue);
+    scrollOffsetWheelTo("notify-offset-wheel-minutes", notifyOffsetMinutesValue);
+  });
+}
+
+function buildOffsetWheelColumn(col, min, max, kind) {
   let html = "";
   for (let v = min; v <= max; v++) {
     html += '<div class="time-wheel-item" data-value="' + v + '">' + v + "</div>";
@@ -10892,34 +10895,31 @@ function renderOffsetWheelIfNeeded() {
 
   col.querySelectorAll(".time-wheel-item").forEach(item => {
     item.addEventListener("click", () => {
-      scrollOffsetWheelTo(parseInt(item.dataset.value, 10));
+      scrollOffsetWheelTo(col.id, parseInt(item.dataset.value, 10));
     });
   });
 
   col.onscroll = () => {
-    clearTimeout(notifyOffsetWheelScrollTimer.id);
-    notifyOffsetWheelScrollTimer.id = setTimeout(updateOffsetWheelSelection, 90);
+    clearTimeout(notifyOffsetWheelScrollTimers[col.id]);
+    notifyOffsetWheelScrollTimers[col.id] = setTimeout(() => {
+      updateOffsetWheelSelection(col, kind);
+    }, 90);
   };
-
-  const currentValue = isMinutes ? notifyOffsetMinutesValue : notifyOffsetHoursValue;
-  requestAnimationFrame(() => scrollOffsetWheelTo(currentValue));
 }
 
-function scrollOffsetWheelTo(value) {
-  const col = document.getElementById("notify-offset-wheel-col");
+function scrollOffsetWheelTo(colId, value) {
+  const col = document.getElementById(colId);
   if (!col) return;
   const item = col.querySelector('.time-wheel-item[data-value="' + value + '"]');
   if (!item) return;
   col.scrollTop = item.offsetTop - (col.clientHeight / 2) + (item.clientHeight / 2);
   col.querySelectorAll(".time-wheel-item").forEach(i => i.classList.remove("selected"));
   item.classList.add("selected");
-  if (notifyOffsetMode === "minutes") notifyOffsetMinutesValue = value;
-  else if (notifyOffsetMode === "hours") notifyOffsetHoursValue = value;
+  if (colId === "notify-offset-wheel-hours") notifyOffsetHoursValue = value;
+  else notifyOffsetMinutesValue = value;
 }
 
-function updateOffsetWheelSelection() {
-  const col = document.getElementById("notify-offset-wheel-col");
-  if (!col) return;
+function updateOffsetWheelSelection(col, kind) {
   const items = col.querySelectorAll(".time-wheel-item");
   const colRect = col.getBoundingClientRect();
   const centerY = colRect.top + colRect.height / 2;
@@ -10937,8 +10937,8 @@ function updateOffsetWheelSelection() {
   if (closest) {
     closest.classList.add("selected");
     const value = parseInt(closest.dataset.value, 10);
-    if (notifyOffsetMode === "minutes") notifyOffsetMinutesValue = value;
-    else if (notifyOffsetMode === "hours") notifyOffsetHoursValue = value;
+    if (kind === "hours") notifyOffsetHoursValue = value;
+    else notifyOffsetMinutesValue = value;
   }
 }
 
@@ -10946,8 +10946,7 @@ async function confirmNotifyOffset() {
   let value;
   if (notifyOffsetMode === "off") value = "off";
   else if (notifyOffsetMode === "digest") value = "digest";
-  else if (notifyOffsetMode === "minutes") value = String(notifyOffsetMinutesValue);
-  else value = String(notifyOffsetHoursValue * 60);
+  else value = String(notifyOffsetHoursValue * 60 + notifyOffsetMinutesValue);
 
   if (notifyOffsetKind === "reminder") reminderOffset = value;
   else if (notifyOffsetKind === "appointment") appointmentOffset = value;
