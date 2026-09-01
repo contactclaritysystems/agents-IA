@@ -8990,8 +8990,11 @@ body[data-theme="light"]::after {
     </div>
     <!-- Pas de popup de permission micro à chaque ouverture : juste ce
          rappel discret, l'autorisation se fait une fois dans les réglages
-         du téléphone (pas dans l'app). -->
-    <div style="padding:2px 16px 14px;font-size:12.5px;line-height:1.5;color:var(--clarity-text-secondary);">
+         du téléphone (pas dans l'app). Padding bas réduit (était 14px) :
+         ce texte, à l'intérieur de la carte, ajoutait un espace visuel
+         bien plus grand avant le prochain titre de section ("Application")
+         que partout ailleurs dans Réglages, cassant le rythme régulier. -->
+    <div style="padding:2px 16px 4px;font-size:12.5px;line-height:1.5;color:var(--clarity-text-secondary);">
       Autorisez le micro une fois dans les réglages du téléphone (Safari ou Chrome → Micro). On ne le redemande pas à chaque ouverture.
     </div>
   </div>
