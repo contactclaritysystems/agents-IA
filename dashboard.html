@@ -6171,6 +6171,17 @@ body[data-theme="azur"] .loader-halo {
     margin-right: auto !important;
   }
 
+  /* .sheet-btn est en display:inline-flex par défaut (BLOC de base) : sur
+     un élément inline, margin:auto gauche/droite ne centre rien (ce
+     comportement de centrage n'existe que pour les boîtes de type bloc),
+     d'où le bouton "+ Ajouter un style" resté collé à gauche malgré les
+     règles ci-dessus. En display:flex (bloc), les mêmes marges auto
+     centrent réellement la boîte, tout en gardant align-items/
+     justify-content pour centrer le texte à l'intérieur. */
+  #writing-styles-mobile-section > .sheet-btn {
+    display: flex !important;
+  }
+
   #main-settings .settings-topbar {
     position: relative !important;
     flex-direction: row !important;
