@@ -19663,6 +19663,19 @@ async function callSimpleAgent(
   }
 }
 
+// Construit le libellé "Contact trouvé : Nom" / "Contact enregistré : Nom"
+// à partir du message reçu du backend pendant le polling. Le backend
+// renvoie parfois déjà le libellé complet (pas seulement le nom) : sans
+// cette garde, on obtenait un doublon visible à l'écran, du type
+// "Contact trouvé : Contact trouvé : Anthony Rinaldi".
+function formatContactLabel(message, justCreated) {
+  const prefix = justCreated ? "Contact enregistré" : "Contact trouvé";
+  const text = (message || "").trim();
+  if (!text) return prefix;
+  const alreadyPrefixed = /^Contact (trouvé|enregistré)\s*:/i.test(text);
+  return alreadyPrefixed ? text : `${prefix} : ${text}`;
+}
+
 async function callMailAgent(
   instruction,
   box = null,
@@ -20039,7 +20052,7 @@ async function loadAgentProgress(requestId) {
         { text: "Demande comprise", status: "done" },
         {
           text: progress.message
-            ? `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`
+            ? formatContactLabel(progress.message, contactJustCreated)
             : (currentMailContactLabel || (contactJustCreated ? "Contact enregistré" : "Contact trouvé")),
           status: "done"
         },
@@ -20049,8 +20062,7 @@ async function loadAgentProgress(requestId) {
     // On garde en mémoire le libellé le plus complet reçu jusqu'ici (avec le
     // nom), pour les étapes suivantes qui n'auront pas ce message.
     if (progress.message) {
-      currentMailContactLabel =
-        `${contactJustCreated ? "Contact enregistré" : "Contact trouvé"} : ${progress.message}`;
+      currentMailContactLabel = formatContactLabel(progress.message, contactJustCreated);
     }
     break;
 
