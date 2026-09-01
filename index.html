@@ -764,7 +764,6 @@ header {
   .hcard {
     padding: 20px 16px !important;
   }
-
   .hero-vis {
     margin-top: 36px !important;
   }
@@ -782,12 +781,10 @@ header {
 #pricing-mobile .pfeats { gap: 6px !important; margin-bottom: 14px !important; }
 #pricing-mobile .pli { font-size: .78rem !important; }
 #pricing-mobile .pname { margin-bottom: 6px !important; }
-
 .steps { grid-template-columns: 1fr !important; gap: 10px; }
 .step { padding: 18px 20px; }
 .step-n { margin-bottom: 10px; }
 }
-
 </style>
 </head>
 <body>
@@ -809,7 +806,6 @@ header {
 <li><a href="#" onclick="openLoginModal(event)">Se connecter</a></li>
 <li><a href="#" class="nav-cta" onclick="openRegisterFromChat(event)">Commencer</a></li>
   </ul>
-
   <a href="#" class="mobile-login" onclick="openLoginModal(event)">Se connecter</a>
 </nav>
 <!-- HERO -->
@@ -982,7 +978,6 @@ Bonne journée
     </div>
   </div>
 </div>
-
   <div class="pgrid rv">
     <div class="pcard">
       <div class="pname">Starter</div>
@@ -1102,7 +1097,6 @@ Bonne journée
   ✓ Email envoyé<br>
   Vérifiez votre boîte mail pour choisir un nouveau mot de passe.
 </div>
-
   <button type="submit" class="btn-sub">Se connecter</button>
 </form>
     <div id="registerForm" style="display:none">
@@ -1148,7 +1142,6 @@ function closeBanner() {
   btn.style.color = '#1d1d1f';
   btn.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
 }
-
 function toggleRegisterPassword(btn) {
   const input = document.getElementById('registerPassword');
   if (input.type === 'password') {
@@ -1182,7 +1175,6 @@ function openLoginModal(e) {
   document.getElementById('loginForm').style.display = 'block';
   document.getElementById('registerForm').style.display = 'none';
 }
-
 function closeModal() {
   document.getElementById('authModal').classList.remove('open');
 }
@@ -1406,7 +1398,6 @@ function openRegisterFromChat(e) {
   document.getElementById('loginForm').style.display = 'none';
   document.getElementById('registerForm').style.display = 'block';
 }
-
 function resetChatbot() {
   const body = document.getElementById('chatbotBody');
   body.innerHTML = `
@@ -1483,16 +1474,22 @@ function showAnswer(cat, index) {
     </div>
   `;
 }
-  document.addEventListener('click', function(e) {
+document.addEventListener('click', function(e) {
   const chat = document.getElementById('chatbotWindow');
   const launcher = document.querySelector('.chatbot-launcher');
   const nudge = document.querySelector('.chatbot-nudge');
-  if (
-    chat.classList.contains('open') &&
-    !chat.contains(e.target) &&
-    !launcher.contains(e.target) &&
-    !nudge.contains(e.target)
-  ) {
+  if (!chat.classList.contains('open')) return;
+  // BUG corrigé : "chat.contains(e.target)" échouait car un clic sur un
+  // bouton du menu (ex. "Questions techniques") appelle showCategory(),
+  // qui réécrit chatbotBody.innerHTML — ce qui détruit le bouton cliqué
+  // AVANT que cet écouteur ne s'exécute. e.target pointe alors vers un
+  // nœud qui n'est plus dans la page, donc chat.contains(e.target) rendait
+  // "false" à tort, et le widget se refermait à chaque clic sur un bouton
+  // au lieu d'afficher la réponse. composedPath() capture le chemin du
+  // clic AU MOMENT du clic, avant cette réécriture, donc reste fiable.
+  const path = e.composedPath();
+  const clickedInside = path.includes(chat) || path.includes(launcher) || path.includes(nudge);
+  if (!clickedInside) {
     chat.classList.remove('open');
   }
 });
@@ -1500,7 +1497,6 @@ function showAnswer(cat, index) {
   const nudge = document.querySelector('.chatbot-nudge');
   if (nudge) nudge.classList.add('show');
 }, 9000);
-
 </script>
 <!-- CHATBOT -->
 <div class="chatbot-nudge" onclick="toggleChatbot()">
@@ -1527,6 +1523,5 @@ function showAnswer(cat, index) {
     </div>
   </div>
 </div>
-
 </body>
 </html>
