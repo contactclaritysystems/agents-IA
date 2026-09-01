@@ -8402,7 +8402,15 @@ body[data-theme="light"]::after {
   margin: 22px 4px 8px;
 }
 
-#main-settings .settings-group-label:first-of-type {
+/* BUG corrigé : ":first-of-type" se juge par rapport aux frères et
+   sœurs DANS LE MÊME PARENT, pas sur la page entière. Comme chaque
+   ".settings-page-block" isolé (Notifications, Préférences) ne contient
+   qu'un seul ".settings-group-label", ce label y est TOUJOURS "le premier
+   de son type" dans son propre parent, et récupérait donc à tort la
+   marge réduite de 4px destinée uniquement au tout premier bloc de la
+   page ("Compte") — d'où le rythme irrégulier signalé. On cible
+   maintenant explicitement le label du premier bloc de la page. */
+#main-settings .settings-page-block:first-of-type .settings-group-label {
   margin-top: 4px;
 }
 
