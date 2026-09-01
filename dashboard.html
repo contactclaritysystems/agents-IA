@@ -8911,6 +8911,15 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
+  <!-- "Vous aimez Clarity ?" : ne s'affiche que de temps en temps (voir
+       shouldShowHappinessCheck, ~1 fois par mois), pas à chaque ouverture
+       de Réglages. Oui -> avis Google public. Non -> message privé pour
+       Anthony (jamais publié), pour comprendre et s'améliorer sans risquer
+       un mauvais avis public. -->
+  <div id="happiness-check-card" style="display:none; margin-top:22px; padding:20px; border-radius:20px; background:var(--clarity-surface); border:1px solid var(--clarity-border); box-shadow:var(--clarity-shadow-sm, none);">
+    <div id="happiness-check-content"></div>
+  </div>
+
 </div>
 
 <div id="add-to-home-sheet" style="display:none;">
@@ -20381,6 +20390,7 @@ if (section === "settings") {
     if (btn) btn.classList.add("active");
     onboardingOnEvent("page:settings");
     loadWritingStyles();
+    updateHappinessCheckVisibility();
     return;
   }
 
@@ -22826,6 +22836,30 @@ let trialEndFlowShownThisSession = false;
 // reste alors masqué (on n'invente jamais de lien), seul "Continuer" reste.
 const GOOGLE_REVIEW_URL = "https://g.page/r/CQNsZC3OpyvqEAE/review";
 
+// Cooldown partagé entre CE parcours (fin d'essai) et le petit rappel
+// "Vous aimez Clarity ?" de Réglages : les deux posent la même question, on
+// ne veut donc jamais les faire apparaître à quelques jours d'écart l'un de
+// l'autre. Le déclenchement de l'un remet à zéro le compteur de l'autre.
+const REVIEW_ASK_COOLDOWN_DAYS = 30;
+
+function getReviewCooldownKey() {
+  return currentUser ? `clarity_review_last_asked_${currentUser.email}` : null;
+}
+
+function markReviewAsked() {
+  const key = getReviewCooldownKey();
+  if (key) localStorage.setItem(key, new Date().toISOString());
+}
+
+function shouldShowHappinessCheck() {
+  const key = getReviewCooldownKey();
+  if (!key) return false;
+  const last = localStorage.getItem(key);
+  if (!last) return true;
+  const daysSince = (Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24);
+  return daysSince >= REVIEW_ASK_COOLDOWN_DAYS;
+}
+
 // Détermine pourquoi l'utilisateur est bloqué : "trial" (essai vraiment
 // terminé, jours à 0), "quota" (actions épuisées, essai ou abonnement payant
 // en cours), ou null (pas bloqué). "trial" est prioritaire sur "quota" si
@@ -22869,6 +22903,10 @@ function openTrialEndFlowNow(reason) {
 function renderTrialReviewStep() {
   const content = document.getElementById("pricing-modal-content");
   if (!content) return;
+
+  // Même question que le rappel périodique de Réglages : on remet le
+  // cooldown à zéro pour ne pas redemander via l'autre canal juste après.
+  markReviewAsked();
 
   content.innerHTML = `
     <div class="mail-choice-title">Votre essai Clarity est terminé</div>
@@ -22988,6 +23026,119 @@ function renderTrialPlansStep(reason) {
 
     <button class="mail-choice-close" onclick="closePricingPage()" type="button">Fermer</button>
   `;
+}
+
+// ─── RÉGLAGES : "VOUS AIMEZ CLARITY ?" (rappel périodique, pas à chaque
+// ouverture) ──────────────────────────────────────────────────────────
+// Même logique Oui/Non que le parcours fin d'essai, mais volontaire (pas
+// de blocage derrière) : Oui -> avis Google public. Non -> message privé
+// pour Anthony uniquement (source différente pour bien séparer des vrais
+// avis publics) — le but est justement d'éviter qu'un client mécontent
+// laisse un mauvais avis au lieu de nous dire directement ce qui ne va pas.
+function updateHappinessCheckVisibility() {
+  const card = document.getElementById("happiness-check-card");
+  if (!card) return;
+  if (shouldShowHappinessCheck()) {
+    renderHappinessCheckQuestion();
+    card.style.display = "block";
+  } else {
+    card.style.display = "none";
+  }
+}
+
+function renderHappinessCheckQuestion() {
+  const content = document.getElementById("happiness-check-content");
+  if (!content) return;
+
+  content.innerHTML = `
+    <div style="font-weight:800;font-size:15px;color:var(--clarity-text);margin-bottom:4px;">Vous aimez Clarity ?</div>
+    <div style="font-size:13px;color:var(--clarity-text-secondary);margin-bottom:14px;">Votre avis nous aide à nous améliorer.</div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="mail-choice-btn" style="flex:1;justify-content:center;" onclick="handleHappinessAnswer(true)">
+        <strong>Oui</strong>
+      </button>
+      <button type="button" class="mail-choice-btn" style="flex:1;justify-content:center;" onclick="handleHappinessAnswer(false)">
+        <strong>Non</strong>
+      </button>
+    </div>
+  `;
+}
+
+function handleHappinessAnswer(helped) {
+  const content = document.getElementById("happiness-check-content");
+  if (!content) return;
+
+  // Répondre (Oui ou Non) suffit à remettre le cooldown à zéro, même si
+  // l'utilisateur ne va pas au bout (ferme sans écrire ni cliquer sur le
+  // lien) : on ne veut pas re-solliciter juste après un premier refus.
+  markReviewAsked();
+
+  if (helped) {
+    content.innerHTML = `
+      <div style="font-weight:800;font-size:15px;color:var(--clarity-text);">Merci !</div>
+      <div style="font-size:13px;color:var(--clarity-text-secondary);margin:6px 0 14px;">
+        Dites-nous ce que Clarity vous fait gagner — un avis public nous aide vraiment.
+      </div>
+      ${GOOGLE_REVIEW_URL ? `
+        <a href="${GOOGLE_REVIEW_URL}" target="_blank" rel="noopener" class="save-btn" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">
+          ⭐ Laisser un avis Google
+        </a>
+      ` : ""}
+      <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeHappinessCheck()">
+        Fermer
+      </button>
+    `;
+  } else {
+    content.innerHTML = `
+      <div style="font-weight:800;font-size:15px;color:var(--clarity-text);">Dites-nous pourquoi</div>
+      <div style="font-size:13px;color:var(--clarity-text-secondary);margin:6px 0 10px;">
+        Ça reste entre nous, ça nous aide à nous améliorer.
+      </div>
+      <textarea id="happiness-feedback-input" class="field-input" rows="3" style="width:100%;max-width:100%;box-sizing:border-box;resize:vertical;" placeholder="Qu'est-ce qui vous manque ou vous freine ?"></textarea>
+      <button type="button" class="save-btn" style="width:100%;margin-top:10px;" id="happiness-feedback-submit-btn" onclick="submitHappinessFeedback()">
+        Envoyer
+      </button>
+    `;
+  }
+}
+
+async function submitHappinessFeedback() {
+  const input = document.getElementById("happiness-feedback-input");
+  const idea = input ? input.value.trim() : "";
+
+  if (!idea) {
+    showToast("Écrivez un mot avant d'envoyer", "error");
+    return;
+  }
+
+  const btn = document.getElementById("happiness-feedback-submit-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Envoi...";
+  }
+
+  try {
+    await fetch(FEATURE_REQUEST_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser ? currentUser.id : null,
+        user_email: currentUser ? currentUser.email : null,
+        idea: idea,
+        source: "settings_happiness_check"
+      })
+    });
+    showToast("Merci, c'est noté");
+  } catch (e) {
+    console.error("Erreur envoi avis Réglages :", e);
+  }
+
+  closeHappinessCheck();
+}
+
+function closeHappinessCheck() {
+  const card = document.getElementById("happiness-check-card");
+  if (card) card.style.display = "none";
 }
 
   async function canUseAgents() {
