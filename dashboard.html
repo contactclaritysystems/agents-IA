@@ -8433,6 +8433,18 @@ body[data-theme="light"]::after {
   transition: background .15s ease;
 }
 
+#main-settings .settings-row-info-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--clarity-text-tertiary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 #main-settings .settings-row[onclick]:hover {
   background: rgba(var(--clarity-glass-rgb),.5);
 }
@@ -8984,18 +8996,15 @@ body[data-theme="light"]::after {
     <div class="settings-row" id="voice-settings-block" style="cursor:default;">
       <span class="settings-row-icon settings-row-icon-amber">🔊</span>
       <div class="settings-row-title">Réponses vocales</div>
+      <!-- Pas de paragraphe explicatif sous la rangée (ça allongeait la
+           carte et cassait le rythme régulier des 22px avant chaque
+           titre de section, ex. avant "Application") : l'info tient
+           maintenant dans une petite icône ⓘ, même hauteur de rangée
+           que partout ailleurs dans Réglages. -->
+      <button type="button" class="settings-row-info-btn" onclick="openMicPermissionInfoSheet()" aria-label="En savoir plus sur l'autorisation du micro">ⓘ</button>
       <button type="button" class="settings-toggle" id="voice-toggle-switch" onclick="setVoiceEnabled(!isVoiceEnabled())" aria-label="Activer les réponses vocales">
         <span class="settings-toggle-knob"></span>
       </button>
-    </div>
-    <!-- Pas de popup de permission micro à chaque ouverture : juste ce
-         rappel discret, l'autorisation se fait une fois dans les réglages
-         du téléphone (pas dans l'app). Padding bas réduit (était 14px) :
-         ce texte, à l'intérieur de la carte, ajoutait un espace visuel
-         bien plus grand avant le prochain titre de section ("Application")
-         que partout ailleurs dans Réglages, cassant le rythme régulier. -->
-    <div style="padding:2px 16px 4px;font-size:12.5px;line-height:1.5;color:var(--clarity-text-secondary);">
-      Autorisez le micro une fois dans les réglages du téléphone (Safari ou Chrome → Micro). On ne le redemande pas à chaque ouverture.
     </div>
   </div>
 
@@ -9050,6 +9059,22 @@ body[data-theme="light"]::after {
       Appuyez sur Partager (le carré avec la flèche), puis choisissez « Sur l'écran d'accueil ».
     </div>
     <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeAddToHomeScreenSheet()">
+      Compris
+    </button>
+  </div>
+</div>
+
+<!-- Petite fiche d'info pour l'icône ⓘ à côté de "Réponses vocales" :
+     même patron que add-to-home-sheet, pour ne pas alourdir la rangée
+     avec un paragraphe permanent dans la liste. -->
+<div id="mic-permission-info-sheet" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeMicPermissionInfoSheet()"></div>
+  <div class="mail-choice-box" style="max-width:300px;">
+    <div class="mail-choice-title">Micro</div>
+    <div class="mail-choice-subtitle">
+      Autorisez le micro une fois dans les réglages du téléphone (Safari ou Chrome → Micro). On ne le redemande pas à chaque ouverture.
+    </div>
+    <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeMicPermissionInfoSheet()">
       Compris
     </button>
   </div>
@@ -12804,6 +12829,16 @@ function openAddToHomeScreenSheet() {
 
 function closeAddToHomeScreenSheet() {
   const modal = document.getElementById("add-to-home-sheet");
+  if (modal) modal.style.display = "none";
+}
+
+function openMicPermissionInfoSheet() {
+  const modal = document.getElementById("mic-permission-info-sheet");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeMicPermissionInfoSheet() {
+  const modal = document.getElementById("mic-permission-info-sheet");
   if (modal) modal.style.display = "none";
 }
 
@@ -16786,7 +16821,7 @@ const CLARITY_MODAL_IDS = [
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
-  "notify-offset-modal"
+  "notify-offset-modal", "mic-permission-info-sheet"
 ];
 
 let clarityScrollLockY = 0;
