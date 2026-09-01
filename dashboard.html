@@ -19771,7 +19771,16 @@ box.style.opacity = "1";
 // "Contact trouvé" un instant puis ça bascule sur "Contact
 // enregistré", ce qui donne l'impression d'un changement de contact.
 let quickMailContactLabel = contactJustCreated ? "Contact enregistré" : "Contact trouvé";
-if (quickMailFlowActive && contactId) {
+// Le contact est déjà résolu dès qu'un contactId est fourni à cet appel —
+// que ce soit via le flux "+" (quickMailFlowActive) OU via le choix d'un
+// contact dans le popup d'ambiguïté (chooseContact(), après un premier
+// retour "action":"choose_contact"). Avant, seul quickMailFlowActive
+// déclenchait ce rendu "contact connu" : dans le second cas, le bandeau
+// restait bloqué sur "Recherche du contact..." alors que l'utilisateur
+// venait justement de le choisir lui-même — on se base donc sur contactId,
+// pas sur quickMailFlowActive, pour décider quel texte afficher.
+const contactAlreadyKnown = !!contactId;
+if (contactAlreadyKnown) {
   // quickMailSelectedContact est déjà rempli à ce stade (choisi juste avant
   // dans submitQuickMail()) : on s'en sert en priorité, plutôt que de
   // relancer une recherche dans contactsCache qui peut échouer (contact tout
@@ -19792,13 +19801,13 @@ if (quickMailFlowActive && contactId) {
 // puisse le réafficher aux étapes suivantes même quand Make ne renvoie pas
 // le nom à nouveau. Si le contact n'est pas encore connu ici (cas "Recherche
 // du contact..."), on efface l'ancien nom éventuel d'un échange précédent.
-currentMailContactLabel = quickMailFlowActive ? quickMailContactLabel : "";
+currentMailContactLabel = contactAlreadyKnown ? quickMailContactLabel : "";
 
 setAgentProgress(
     box,
     "Clarity",
     "✨",
-  quickMailFlowActive
+  contactAlreadyKnown
     ? [
         { text: "Demande comprise", status: "done" },
         { text: quickMailContactLabel, status: "done" },
