@@ -9072,6 +9072,18 @@ body[data-theme="light"]::after {
     Connecter avec Google
   </button>
 </div>
+
+  <!-- Filet de sécurité si l'utilisateur ferme la popup de consentement
+       Google sans connecter Gmail, ou revient d'OAuth sans y arriver
+       (voir renderGmailWaitlistHint) : petite carte informative, pas une
+       alerte rouge, avec option "Me prévenir" (waitlist). -->
+  <div id="gmail-not-connected-hint" style="display:none; margin-top:14px; padding:16px 18px; border-radius:18px; background:var(--clarity-surface); border:1px solid var(--clarity-border);">
+    <div style="font-size:13.5px; font-weight:650; color:var(--clarity-text); margin-bottom:4px;">Gmail n'est pas encore relié.</div>
+    <div style="font-size:12.5px; color:var(--clarity-text-tertiary); line-height:1.5; margin-bottom:12px;">
+      Vous pouvez réessayer (Avancé → Accéder à Clarity) ou vous faire prévenir dès que Google a validé l'app.
+    </div>
+    <button class="sheet-btn" type="button" id="gmail-waitlist-btn" style="width:100%;justify-content:center;" onclick="submitGmailWaitlist()">Me prévenir</button>
+  </div>
 </div>
 
       <!-- Lignes Préférences/Application déplacées dans le groupe sans
@@ -9576,7 +9588,7 @@ body[data-theme="light"]::after {
     <div class="mail-choice-title">Connecter un compte mail</div>
     <div class="mail-choice-subtitle">Choisissez le type de compte à connecter.</div>
 
-    <button class="mail-choice-btn" onclick="closeMailChoiceModal(); connectGmail();">
+    <button class="mail-choice-btn" onclick="closeMailChoiceModal(); openGmailConnectConsent();">
       <span>📧</span>
       <div>
         <strong>Gmail</strong>
@@ -9603,6 +9615,27 @@ body[data-theme="light"]::after {
     <button class="mail-choice-close" onclick="closeMailChoiceModal()">Annuler</button>
   </div>
 </div>
+
+  <!-- Avertissement Google "application non vérifiée" AVANT de partir sur
+       OAuth : sans ça, l'écran Google fait peur (ressemble à une alerte de
+       piratage) alors que c'est juste que Clarity est une app récente,
+       pas encore validée par Google (processus normal, en cours). -->
+  <div id="gmail-connect-consent-modal" style="display:none;">
+    <div class="mail-choice-backdrop" onclick="closeGmailConnectConsent()"></div>
+    <div class="mail-choice-box" style="max-width:340px;">
+      <div class="mail-choice-title">Connexion Gmail</div>
+      <div class="mail-choice-subtitle">
+        Clarity est une app récente. Google affiche parfois « application non vérifiée ». C'est normal, ce n'est pas une alerte de piratage.
+        <br><br>
+        1. Touchez <strong>Avancé</strong><br>
+        2. Touchez <strong>Accéder à Clarity Systems</strong>
+        <br><br>
+        Rien ne s'envoie sans votre accord.
+      </div>
+      <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="confirmGmailOAuthConsent()">Continuer vers Google</button>
+      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="deferGmailOAuthConsent()">Plus tard</button>
+    </div>
+  </div>
 
   <div id="smtp-config-modal" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closeSmtpConfigModal()"></div>
@@ -10094,6 +10127,8 @@ function renderGmailConnected(gmailEmail) {
   const lbl = document.getElementById("gmail-status-label");
 if (lbl) lbl.textContent = "✓ " + gmailEmail;
   onboardingOnEvent("gmail_connected");
+  const hint = document.getElementById("gmail-not-connected-hint");
+  if (hint) hint.style.display = "none";
 }
 
 function renderGmailDisconnected() {
@@ -10110,6 +10145,93 @@ function renderGmailDisconnected() {
     </button>`;
   const lbl = document.getElementById("gmail-status-label");
 if (lbl) lbl.textContent = "Non connecté";
+  renderGmailWaitlistHint();
+}
+
+// ─── GMAIL : POPUP DE CONSENTEMENT AVANT OAUTH + FILET "PAS ENCORE RELIÉ" ──
+// Avant d'envoyer vers Google (qui affiche parfois "application non
+// vérifiée", inquiétant si on ne s'y attend pas) : petite popup Clarity qui
+// explique que c'est normal. Si l'utilisateur ferme ("Plus tard") ou revient
+// d'OAuth sans que Gmail soit connecté, une carte discrète propose de le
+// prévenir dès que l'app sera validée par Google (waitlist via
+// /feature-request, endpoint déjà utilisé par "Une idée, un besoin ?").
+function openGmailConnectConsent() {
+  const modal = document.getElementById("gmail-connect-consent-modal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeGmailConnectConsent() {
+  const modal = document.getElementById("gmail-connect-consent-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function markGmailOAuthAttempted() {
+  if (!currentUser?.email) return;
+  localStorage.setItem("gmail_oauth_attempted_" + currentUser.email, "1");
+}
+
+function confirmGmailOAuthConsent() {
+  closeGmailConnectConsent();
+  markGmailOAuthAttempted();
+  connectGmail();
+}
+
+function deferGmailOAuthConsent() {
+  closeGmailConnectConsent();
+  markGmailOAuthAttempted();
+  renderGmailWaitlistHint();
+}
+
+// N'affiche la carte "Gmail n'est pas encore relié" que si l'utilisateur a
+// déjà tenté la connexion au moins une fois (popup de consentement vue) —
+// jamais au tout premier affichage de Réglages, pour ne pas alarmer
+// inutilement quelqu'un qui n'a encore rien essayé.
+function renderGmailWaitlistHint() {
+  const hint = document.getElementById("gmail-not-connected-hint");
+  if (!hint || !currentUser?.email) return;
+
+  const alreadyConnected = !!localStorage.getItem("gmail_" + currentUser.email);
+  const attempted = localStorage.getItem("gmail_oauth_attempted_" + currentUser.email) === "1";
+  const alreadyRequested = localStorage.getItem("gmail_waitlist_requested_" + currentUser.email) === "1";
+
+  hint.style.display = (!alreadyConnected && attempted && !alreadyRequested) ? "block" : "none";
+}
+
+async function submitGmailWaitlist() {
+  const btn = document.getElementById("gmail-waitlist-btn");
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "Envoi...";
+  }
+
+  try {
+    const response = await fetch(FEATURE_REQUEST_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser ? currentUser.id : null,
+        user_email: currentUser ? currentUser.email : null,
+        idea: "waitlist Gmail OAuth",
+        source: "gmail_waitlist"
+      })
+    });
+
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    if (currentUser?.email) {
+      localStorage.setItem("gmail_waitlist_requested_" + currentUser.email, "1");
+    }
+
+    showToast("C'est noté, on vous écrit dès que c'est bon.", "success");
+    renderGmailWaitlistHint();
+  } catch (e) {
+    console.error("Erreur submitGmailWaitlist:", e);
+    showToast("Erreur d'envoi, réessayez plus tard", "error");
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Me prévenir";
+    }
+  }
 }
 
   function openMailChoiceModal() {
@@ -17044,7 +17166,7 @@ const CLARITY_MODAL_IDS = [
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
-  "notify-offset-modal", "mic-permission-info-sheet"
+  "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal"
 ];
 
 let clarityScrollLockY = 0;
