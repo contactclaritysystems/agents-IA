@@ -425,20 +425,21 @@ body.loading-subscription #actions-count {
 
 .help-actions-soon-item {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  width: 100%;
+  gap: 2px;
   font-size: 13px;
 }
 
 .help-actions-soon-item strong {
   font-weight: 700;
   color: var(--clarity-text-secondary);
-  flex-shrink: 0;
 }
 
 .help-actions-soon-item span {
+  display: block;
   color: var(--clarity-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .help-actions-idea-link {
@@ -6698,12 +6699,14 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
 .help-icon.purple { background: rgba(139, 92, 246, .16); }
 .help-icon.green { background: rgba(34, 197, 94, .16); }
 .help-icon.orange { background: var(--warning-bg); }
+.help-icon.teal { background: rgba(20, 184, 166, .16); }
 
 body[data-theme="dark"] .help-icon.blue { box-shadow: 0 0 22px 5px rgba(92, 156, 224, 0.32); }
 body[data-theme="dark"] .help-icon.yellow { box-shadow: 0 0 22px 5px rgba(245, 185, 77, 0.32); }
 body[data-theme="dark"] .help-icon.purple { box-shadow: 0 0 22px 5px rgba(167, 139, 250, 0.32); }
 body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209, 124, 0.32); }
 body[data-theme="dark"] .help-icon.orange { box-shadow: 0 0 22px 5px rgba(230, 150, 60, 0.32); }
+body[data-theme="dark"] .help-icon.teal { box-shadow: 0 0 22px 5px rgba(45, 212, 191, 0.32); }
 
 /* Remplace le gros bouton bleu plein "Essayer maintenant" (pas assez
    premium, retour utilisateur) par une icône seule, plus grande et
@@ -7259,6 +7262,7 @@ body:not([data-theme="dark"]) .help-icon.yellow { box-shadow: 0 0 18px 4px rgba(
 body:not([data-theme="dark"]) .help-icon.purple { box-shadow: 0 0 18px 4px rgba(167, 139, 250, 0.28); }
 body:not([data-theme="dark"]) .help-icon.green { box-shadow: 0 0 18px 4px rgba(52, 209, 124, 0.28); }
 body:not([data-theme="dark"]) .help-icon.orange { box-shadow: 0 0 18px 4px rgba(230, 150, 60, 0.28); }
+body:not([data-theme="dark"]) .help-icon.teal { box-shadow: 0 0 18px 4px rgba(20, 184, 166, 0.28); }
 
 /* Carte héro d'accueil : même teinte bleu marque que le thème sombre
    (couleur fixe), adaptée en intensité pour un fond clair. */
@@ -9744,16 +9748,16 @@ body[data-theme="light"]::after {
   <div class="mail-choice-box">
     <button class="help-actions-back" type="button" id="mail-preview-back-btn" style="display:none;" onclick="goBackFromMailPreview()">← Retour</button>
 
-    <div class="mail-choice-title">Mail prêt à envoyer</div>
-    <div class="mail-choice-subtitle">Vérifiez rapidement avant l’envoi.</div>
+    <div class="mail-choice-title" id="mail-preview-title">Mail prêt à envoyer</div>
+    <div class="mail-choice-subtitle" id="mail-preview-subtitle">Vérifiez rapidement avant l’envoi.</div>
 
-    <div class="field-group">
+    <div class="field-group" id="mail-preview-to-group">
       <div class="field-label">Destinataire</div>
       <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onfocus="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onblur="hideMailContactSuggestionsDelayed('mail-contact-suggestions')">
       <div id="mail-contact-suggestions" style="display:none;"></div>
     </div>
 
-    <div class="field-group" style="margin-top:12px;">
+    <div class="field-group" style="margin-top:12px;" id="mail-preview-cc-group">
       <div class="field-label">Cc <span style="font-weight:400;color:var(--clarity-text-tertiary);">(optionnel)</span></div>
       <input class="field-input" id="preview-mail-cc" placeholder="cc@email.com" oninput="showMailContactSuggestions('preview-mail-cc','mail-cc-suggestions')" onfocus="showMailContactSuggestions('preview-mail-cc','mail-cc-suggestions')" onblur="hideMailContactSuggestionsDelayed('mail-cc-suggestions')">
       <div id="mail-cc-suggestions" style="display:none;"></div>
@@ -9971,7 +9975,7 @@ body[data-theme="light"]::after {
       </div>
     </button>
 
-    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Problème technique', 'Bonjour,\n\nJ\'ai un problème avec :\n\n')">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Problème technique', 'Bonjour,\n\nJ\'ai un problème avec :\n\n', 'J\'ai un problème technique')">
       <span>🛠️</span>
       <div>
         <strong>J'ai un problème technique</strong>
@@ -9979,7 +9983,7 @@ body[data-theme="light"]::after {
       </div>
     </button>
 
-    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Question', 'Bonjour,\n\n')">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Question', 'Bonjour,\n\n', 'J\'ai une question')">
       <span>❓</span>
       <div>
         <strong>J'ai une question</strong>
@@ -9992,7 +9996,7 @@ body[data-theme="light"]::after {
          ou veut se former à l'IA — un vrai contact commercial/humain,
          donc même circuit que les autres demandes (mail direct), pas la
          file de suggestions feature-request. -->
-    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Projet / Formation IA', 'Bonjour,\n\n')">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Projet / Formation IA', 'Bonjour,\n\n', 'J\'ai un projet, ou je veux me former à l\'IA')">
       <span>🚀</span>
       <div>
         <strong>J'ai un projet, ou je veux me former à l'IA</strong>
@@ -10000,7 +10004,7 @@ body[data-theme="light"]::after {
       </div>
     </button>
 
-    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Autre demande', 'Bonjour,\n\n')">
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Autre demande', 'Bonjour,\n\n', 'Autre demande')">
       <span>💬</span>
       <div>
         <strong>Autre demande</strong>
@@ -10414,6 +10418,17 @@ const HELP_ACTIONS = [
       "Rappelle-moi de relancer Marc demain matin.",
       "Crée un rappel pour envoyer le devis à Sophie vendredi.",
       "Préviens-moi dans 3 jours si le client n'a pas répondu."
+    ],
+    ready: true
+  },
+  {
+    id: "compte_rendu",
+    label: "Compte rendu",
+    icon: "🗒️",
+    color: "teal",
+    examples: [
+      "Fais-moi un compte rendu de mon rendez-vous avec Julie.",
+      "Résume cette intervention pour l'envoyer au client."
     ],
     ready: true
   }
@@ -13154,7 +13169,7 @@ function closeSupportChoiceModal() {
   if (modal) modal.style.display = "none";
 }
 
-  function sendContactMessage(subject, body) {
+  function sendContactMessage(subject, body, cardTitle) {
   closeSupportChoiceModal();
 
   const gmailConnected = localStorage.getItem("gmail_" + currentUser.email);
@@ -13168,7 +13183,7 @@ function closeSupportChoiceModal() {
     to: "contact@clarity-systems.fr",
     subject: subject,
     body: body
-  }, "Message envoyé à Clarity Systems", "support-choice-modal");
+  }, "Message envoyé à Clarity Systems", "support-choice-modal", cardTitle || subject);
 }
 
 // "Une idée, un besoin ?" (Réglages > Contenu) : enregistrée directement
@@ -18682,7 +18697,7 @@ function rawEmailListFromDisplay(value) {
     .join(", ");
 }
 
-function openMailPreview(data, instruction, backTarget) {
+function openMailPreview(data, instruction, backTarget, headerTitle) {
   // Bouton "← Retour" affiché dans #mail-preview-modal uniquement quand un
   // backTarget est explicitement fourni (ex: "support-choice-modal" depuis
   // sendContactMessage) — reste caché pour tous les autres appels
@@ -18691,6 +18706,24 @@ function openMailPreview(data, instruction, backTarget) {
 
   const backBtn = document.getElementById("mail-preview-back-btn");
   if (backBtn) backBtn.style.display = mailPreviewBackTarget ? "block" : "none";
+
+  // Cas "Une idée, un besoin ?" (support-choice-modal) : c'est un message
+  // à Clarity Systems, pas un mail à un contact — le destinataire est
+  // toujours fixe (contact@clarity-systems.fr) et il n'y a jamais de Cc,
+  // donc ces deux champs n'ont pas leur place ici. Le titre reprend le nom
+  // de la carte cliquée pour que l'utilisateur se retrouve, le sous-titre
+  // confirme juste que le message est prêt. Pour tous les autres appels
+  // (dictée, saisie rapide...), on restaure l'affichage complet standard.
+  const isSupportFlow = mailPreviewBackTarget === "support-choice-modal";
+  const titleEl = document.getElementById("mail-preview-title");
+  const subtitleEl = document.getElementById("mail-preview-subtitle");
+  const toGroup = document.getElementById("mail-preview-to-group");
+  const ccGroup = document.getElementById("mail-preview-cc-group");
+
+  if (titleEl) titleEl.textContent = isSupportFlow ? (headerTitle || "Nous contacter") : "Mail prêt à envoyer";
+  if (subtitleEl) subtitleEl.textContent = isSupportFlow ? "Mail prêt à envoyer" : "Vérifiez rapidement avant l’envoi.";
+  if (toGroup) toGroup.style.display = isSupportFlow ? "none" : "block";
+  if (ccGroup) ccGroup.style.display = isSupportFlow ? "none" : "block";
 
   // La popup de progression ("Demande comprise"...) devait sinon rester
   // visible jusqu'à 3.5s (son délai normal de disparition), pendant que
