@@ -9965,8 +9965,8 @@ body[data-theme="light"]::after {
     <button class="mail-choice-btn" type="button" onclick="closeSupportChoiceModal(); openFeatureRequestModal();">
       <span>💡</span>
       <div>
-        <strong>J'ai une idée d'agent</strong>
-        <small>Suggérez un agent qui vous simplifierait le quotidien</small>
+        <strong>J'ai une idée pour Clarity</strong>
+        <small>Suggérez une nouvelle chose que Clarity pourrait apprendre à faire</small>
       </div>
     </button>
 
@@ -9982,7 +9982,20 @@ body[data-theme="light"]::after {
       <span>❓</span>
       <div>
         <strong>J'ai une question</strong>
-        <small>Sur votre abonnement, un agent, ou autre</small>
+        <small>Sur votre abonnement, une fonctionnalité, ou autre</small>
+      </div>
+    </button>
+
+    <!-- Distinct d'une simple "idée pour Clarity" (au-dessus) : ici la
+         personne a un projet à elle (pas une fonctionnalité pour Clarity)
+         ou veut se former à l'IA — un vrai contact commercial/humain,
+         donc même circuit que les autres demandes (mail direct), pas la
+         file de suggestions feature-request. -->
+    <button class="mail-choice-btn" type="button" onclick="sendContactMessage('Projet / Formation IA', 'Bonjour,\n\n')">
+      <span>🚀</span>
+      <div>
+        <strong>J'ai un projet, ou je veux me former à l'IA</strong>
+        <small>Parlons de votre projet ou d'un accompagnement personnalisé</small>
       </div>
     </button>
 
