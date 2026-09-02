@@ -19703,7 +19703,16 @@ progressIcon: "✨",
       clearTimeout(watchdogTimer);
       clearTimeout(silenceTimer);
 
-      const instruction = (latestText || finalText).trim();
+      const spokenText = (latestText || finalText).trim();
+
+      // config.instructionPrefix (ex: Compte rendu depuis l'accueil) : force
+      // l'agent ciblé, avec ou sans texte dicté en plus. Si rien n'a été
+      // dicté, on envoie quand même le préfixe seul plutôt que d'abandonner
+      // — l'agent (ex: Rédaction) répond alors "needs_form" faute de détails
+      // et ouvre son propre formulaire, au lieu d'un message d'erreur muet.
+      const instruction = config.instructionPrefix
+        ? (config.instructionPrefix + (spokenText ? " " + spokenText : "")).trim()
+        : spokenText;
 
       if (!instruction) {
         if (isMobileDevice()) {
@@ -19866,6 +19875,21 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
           hideOrRemoveBox(box);
           openPlanningContactModal(data, instruction);
           resetMicButton(true);
+          return;
+        }
+
+        // Rédaction (dont Compte rendu, cf. quickStartCompteRendu) : même
+        // formulaire multi-champs que côté callSimpleAgent, plutôt que la
+        // popup de clarification à un seul champ texte libre. C'est ce
+        // formulaire (sujet / points / décisions) qui doit s'ouvrir quand
+        // rien n'a été dicté ou que les détails manquent.
+        if (effectiveAgent === "redaction" && data.reason === "needs_form" && Array.isArray(data.fields)) {
+          hideOrRemoveBox(box);
+          pushConversationHistory(instruction, data.brief || data.title || "Formulaire de précisions");
+          pendingClarifyAgent = { agentName: config.agent, webhookUrl: config.webhookUrl };
+          openRedactionFormModal(data, config.webhookUrl, instruction);
+          resetMicButton(true);
+          await saveActionLog(effectiveAgent, instruction, "error");
           return;
         }
 
@@ -24944,14 +24968,32 @@ async function addTask() {
 }
 
 // ─── Actions rapides (accueil) : Compte rendu + Nouvelle tâche ───
-// Compte rendu n'a pas de champs structurés (contact/date...), tout part
-// d'une dictée libre : même comportement que le raccourci "Essayer
-// maintenant" du popup "?" pour ce même agent (cf. tryHelpActionsExample,
-// cas "default" -> startOrchestratorDictation()).
-async function quickStartCompteRendu() {
-  const allowed = await canUseAgents();
-  if (!allowed) return;
-  startOrchestratorDictation();
+// Compte rendu : ne doit JAMAIS passer par le Chef d'Orchestre (une dictée
+// libre du type "j'ai eu un rendez-vous avec Julie..." risquerait d'être
+// mal routée vers Planning) ni forcément par un aller-retour réseau à vide.
+// On appelle directement /agent/redaction (startSimpleAgentDictation, même
+// mécanisme que pour une clarification déjà en cours avec un agent
+// identifié) avec un préfixe fixe : le texte dicté est ajouté après ce
+// préfixe s'il y en a un, sinon le préfixe seul suffit à faire répondre
+// l'agent par son formulaire (sujet / points / décisions) faute de détails.
+function quickStartCompteRendu() {
+  startSimpleAgentDictation({
+    agent: "redaction",
+    buttonId: "orchestrator-dictation-btn",
+    cardId: "card-orchestrator-run",
+    boxId: "orchestrator-dictation-box",
+    webhookUrl: REDACTION_WEBHOOK_URL,
+    instructionPrefix: "Rédige un compte-rendu.",
+    loadingText: `
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+        <img src="${CLARITY_THINKING_LOGO_SRC}" alt="" class="clarity-thinking-logo" style="height:26px;width:auto;display:block;" />
+        <span style="font-size:13.5px;font-weight:800;color:var(--clarity-text);">Réflexion en cours...</span>
+      </div>
+    `,
+    successText: "✅ Compte rendu prêt",
+    modalTitle: "Clarity",
+    modalSubtitle: "Je prépare votre compte rendu."
+  });
 }
 
 // Nouvelle tâche : contrairement aux autres raccourcis (Mail, Planning,
