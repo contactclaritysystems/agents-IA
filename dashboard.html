@@ -10293,6 +10293,12 @@ const CAPABILITIES_API_URL = "https://clarity-backend-me14.onrender.com/capabili
 // encore connecté.
 const FEATURE_REQUEST_API_URL = "https://clarity-backend-me14.onrender.com/feature-request";
 const TASKS_API_URL = "https://clarity-backend-me14.onrender.com/tasks";
+// Agent "taches" du chef d'orchestre : contrairement à Planning/Relance,
+// pas de scénario Make derrière — l'orchestrateur appelle directement cette
+// route REST du backend, qui fait le POST /tasks en coulisse. Même
+// contrat d'appel que les autres agents "simples" (SIMPLE_AGENT_WEBHOOKS),
+// donc callSimpleAgent() fonctionne sans changement.
+const TASKS_AGENT_URL = "https://clarity-backend-me14.onrender.com/agent/taches";
 const CONTACTS_API_BASE_URL = "https://clarity-backend-me14.onrender.com/contacts";
 const MAILS_SENT_API_URL = "https://clarity-backend-me14.onrender.com/mails/sent";
      
@@ -20747,7 +20753,8 @@ const SIMPLE_AGENT_WEBHOOKS = {
   assistant: ASSISTANT_WEBHOOK_URL,
   redaction: REDACTION_WEBHOOK_URL,
   planning: PLANNING_WEBHOOK_URL,
-  relance: RELANCE_WEBHOOK_URL
+  relance: RELANCE_WEBHOOK_URL,
+  taches: TASKS_AGENT_URL
 };
 
 async function callSimpleAgent(
@@ -20939,7 +20946,7 @@ async function callSimpleAgent(
     pushConversationHistory(instruction, content);
     lastAgentInfo = { agentName: agentName, webhookUrl: webhookUrl };
 
-    if (agentName === "planning" || agentName === "relance") {
+    if (agentName === "planning" || agentName === "relance" || agentName === "taches") {
   if (box) {
     setDictationBoxState(box, "success");
     box.innerHTML = "✅ Réponse prête";
@@ -20947,6 +20954,16 @@ async function callSimpleAgent(
   }
   showToast(content || "C’est noté", "success");
   maybeShowFirstScheduleNotice();
+
+  // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
+  // vient de créer apparaît tout de suite dans la liste, sans attendre un
+  // rechargement manuel — même logique que le rafraîchissement immédiat de
+  // l'activité contact après un mail envoyé.
+  if (agentName === "taches" && data.task) {
+    tasksCache.push(data.task);
+    const tasksView = document.getElementById("tasks-view");
+    if (tasksView && tasksView.style.display !== "none") renderTasks();
+  }
 } else {
   // Assistant / Rédaction : pas de bandeau "✅ Réponse prête" (trop long
   // à l'écran) — on referme directement le bandeau de progression et on
