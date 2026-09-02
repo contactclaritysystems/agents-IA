@@ -9620,19 +9620,38 @@ body[data-theme="light"]::after {
        OAuth : sans ça, l'écran Google peut inquiéter. Le mot "piratage" a
        été retiré (fait peur inutilement) — le message se contente
        d'expliquer que la vérification Google prend plusieurs semaines pour
-       une nouvelle app, ce qui est normal et attendu. Les libellés des 2
-       boutons Google reproduits tels quels (texte exact affiché par
-       Google), pas de raccourci ("Avancé" seul, etc.). -->
+       une nouvelle app, ce qui est normal et attendu. On ne peut rien
+       afficher PAR-DESSUS la vraie page accounts.google.com (site tiers,
+       aucun accès) : à la place, un mini mockup visuel reproduisant l'écran
+       Google (mêmes couleurs/mise en page) aide à repérer les 2 liens à
+       cliquer avant même d'y arriver, dans l'ordre exact (①②). -->
   <div id="gmail-connect-consent-modal" style="display:none;">
     <div class="mail-choice-backdrop" onclick="closeGmailConnectConsent()"></div>
     <div class="mail-choice-box" style="max-width:340px;">
       <div class="mail-choice-title">Connexion Gmail</div>
       <div class="mail-choice-subtitle">
         Clarity est une app récente. Il est normal que Google mette plusieurs semaines à vérifier une nouvelle application — c'est une simple formalité, pas un problème.
-        <br><br>
-        1. Touchez <strong>« Afficher les paramètres avancés »</strong><br>
-        2. Touchez <strong>« Accéder à Clarity Systems (non sécurisé) »</strong>
-        <br><br>
+      </div>
+
+      <div style="background:#fff; border:1px solid #dadce0; border-radius:10px; padding:14px 15px; margin:14px 0; text-align:left;">
+        <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px;">
+          <span style="font-size:16px; line-height:1;">⚠️</span>
+          <div style="font-size:12px; color:#3c4043; font-weight:700; line-height:1.35;">Google n'a pas validé cette application</div>
+        </div>
+        <div style="font-size:11px; color:#5f6368; line-height:1.5; margin-bottom:12px;">
+          Vous verrez cet écran chez Google — c'est attendu, voici quoi toucher :
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+          <span style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:#1a73e8; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">1</span>
+          <span style="font-size:12.5px; color:#1a73e8; font-weight:600;">Paramètres avancés</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:#1a73e8; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">2</span>
+          <span style="font-size:12.5px; color:#1a73e8; font-weight:600;">Accéder à Clarity Systems (non sécurisé)</span>
+        </div>
+      </div>
+
+      <div class="mail-choice-subtitle">
         Rien ne s'envoie sans votre accord.
       </div>
       <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="confirmGmailOAuthConsent()">Continuer vers Google</button>
