@@ -5024,6 +5024,8 @@ body,
 .quick-action-icon.yellow { background: rgba(245, 158, 11, .18); }
 .quick-action-icon.green { background: rgba(34, 197, 94, .14); }
 .quick-action-icon.orange { background: var(--warning-bg); }
+.quick-action-icon.teal { background: rgba(20, 184, 166, .16); }
+.quick-action-icon.pink { background: rgba(236, 72, 153, .14); }
 
 .quick-action-label {
   font-size: 10px;
@@ -9431,6 +9433,12 @@ body[data-theme="light"]::after {
         </button>
         <button type="button" class="quick-action-btn" id="quick-relance-btn" onclick="openQuickReminderModal()" title="Créer un rappel">
           <span class="quick-action-icon orange">⏰</span><span class="quick-action-label">Créer un<br>rappel</span>
+        </button>
+        <button type="button" class="quick-action-btn" id="quick-compte-rendu-btn" onclick="quickStartCompteRendu()" title="Faire un compte rendu">
+          <span class="quick-action-icon teal">🗒️</span><span class="quick-action-label">Compte<br>rendu</span>
+        </button>
+        <button type="button" class="quick-action-btn" id="quick-task-btn" onclick="openQuickTaskModal()" title="Ajouter une tâche">
+          <span class="quick-action-icon pink">☑️</span><span class="quick-action-label">Nouvelle<br>tâche</span>
         </button>
       </div>
     </div>
@@ -17490,7 +17498,8 @@ const CLARITY_MODAL_IDS = [
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
-  "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal"
+  "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
+  "quick-task-modal"
 ];
 
 let clarityScrollLockY = 0;
@@ -24870,6 +24879,95 @@ async function addTask() {
     renderTasks();
   } catch (e) {
     console.error("Erreur addTask:", e);
+    showToast("Impossible d'ajouter la tâche", "error");
+  }
+}
+
+// ─── Actions rapides (accueil) : Compte rendu + Nouvelle tâche ───
+// Compte rendu n'a pas de champs structurés (contact/date...), tout part
+// d'une dictée libre : même comportement que le raccourci "Essayer
+// maintenant" du popup "?" pour ce même agent (cf. tryHelpActionsExample,
+// cas "default" -> startOrchestratorDictation()).
+async function quickStartCompteRendu() {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+  startOrchestratorDictation();
+}
+
+// Nouvelle tâche : contrairement aux autres raccourcis (Mail, Planning,
+// Rappel...), pas besoin d'un gros formulaire — un seul champ texte suffit,
+// donc un mini-modal dédié plutôt que de réutiliser openQuickTextModal (qui
+// route vers l'orchestrateur, alors qu'une tâche s'ajoute directement).
+async function openQuickTaskModal() {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
+  let modal = document.getElementById("quick-task-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "quick-task-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeQuickTaskModal()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title">Nouvelle tâche</div>
+        <div class="mail-choice-subtitle">C'est ajouté tout de suite à votre liste.</div>
+
+        <div class="field-group" style="margin-top:14px;">
+          <div class="field-label">Tâche</div>
+          <input class="field-input" type="text" id="quick-task-input" placeholder="Ex : recontacter le fournisseur" />
+        </div>
+
+        <button class="save-btn" type="button" id="quick-task-confirm" style="margin-top:16px;">
+          ✓ Ajouter la tâche
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeQuickTaskModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("quick-task-confirm").onclick = confirmQuickTask;
+    document.getElementById("quick-task-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); confirmQuickTask(); }
+    });
+  }
+
+  document.getElementById("quick-task-input").value = "";
+  modal.style.display = "block";
+  setTimeout(() => document.getElementById("quick-task-input")?.focus(), 60);
+}
+
+function closeQuickTaskModal() {
+  const modal = document.getElementById("quick-task-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function confirmQuickTask() {
+  const input = document.getElementById("quick-task-input");
+  const titre = input ? input.value.trim() : "";
+
+  if (!titre) {
+    showToast("Écrivez une tâche avant de l'ajouter", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(TASKS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.id, titre })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const data = await response.json();
+    const task = data && data.id ? data : (data.task || { id: Date.now(), titre, status: "a_faire" });
+    tasksCache.push(task);
+    closeQuickTaskModal();
+    showToast("Tâche ajoutée");
+  } catch (e) {
+    console.error("Erreur confirmQuickTask:", e);
     showToast("Impossible d'ajouter la tâche", "error");
   }
 }
