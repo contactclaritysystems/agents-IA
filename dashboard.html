@@ -2456,6 +2456,17 @@ body[data-theme="dark"] .detail-line strong {
     display: block !important;
   }
 
+  /* Bascule Rendez-vous <-> Tâches (showPlanningTasksView/showPlanningRdvView) :
+     sur mobile, #planning-detail garde en permanence la classe "open" (ce
+     n'est plus un panneau qu'on ouvre/ferme, cf. commentaire plus bas), donc
+     la règle !important ci-dessus écrasait toujours notre style.display
+     inline dès qu'on cliquait "Tâches" — le calendrier restait visible et
+     #tasks-view s'affichait en dessous. Spécificité supérieure (#main-planning
+     en plus) pour être sûr de gagner face à la règle ci-dessus. */
+  #main-planning #planning-detail.tasks-hidden {
+    display: none !important;
+  }
+
   #planning-detail .section-header {
     display: flex !important;
     flex-direction: row !important;
@@ -24871,14 +24882,25 @@ function openPlanningFollowUps() {
 let tasksCache = [];
 let tasksLoadedOnce = false;
 
-// window.scrollTo seul ne suffisait pas sur mobile : la bascule Rendez-vous
-// <-> Tâches héritait du scroll laissé par la liste de RDV (souvent longue),
-// donc la vue nouvellement affichée démarrait hors-écran, "en bas de la
-// page". Même remise à zéro que showSection() lors d'un changement d'onglet.
+// Filet de sécurité repris de showSection() : la vue calendrier de Planning
+// verrouille le scroll et force #main-planning à une hauteur/overflow
+// spécifiques (classe "planning-calendar-fit" + overflow:hidden sur
+// html/body, posés par renderPlanningCalendarMonth), normalement retirés
+// par closePlanningDetail()/openPlanningCalendarDay(). Notre bascule
+// Rendez-vous <-> Tâches ne passe par aucun des deux, donc on l'annule ici
+// aussi pour ne pas hériter d'un scroll bloqué ou d'une hauteur figée.
 function resetPlanningScroll() {
   window.scrollTo(0, 0);
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+  document.body.style.touchAction = "";
+  const mainPlanningEl = document.getElementById("main-planning");
+  if (mainPlanningEl) {
+    mainPlanningEl.classList.remove("planning-calendar-fit");
+    mainPlanningEl.style.minHeight = "";
+  }
 }
 
 function showPlanningRdvView() {
@@ -24886,7 +24908,15 @@ function showPlanningRdvView() {
   document.getElementById("planning-toggle-tasks")?.classList.remove("active");
   const detail = document.getElementById("planning-detail");
   const tasksView = document.getElementById("tasks-view");
-  if (detail) detail.style.display = "block";
+  // "tasks-hidden" (pas juste style.display) : #planning-detail garde en
+  // permanence la classe "open" sur mobile, avec une règle CSS
+  // "#planning-detail.open { display:block !important; }" — un simple
+  // style.display="none" inline ne suffit donc pas à le cacher là-bas (voir
+  // la classe "tasks-hidden", plus spécifique, ajoutée pour ce cas précis).
+  if (detail) {
+    detail.classList.remove("tasks-hidden");
+    detail.style.display = "block";
+  }
   if (tasksView) tasksView.style.display = "none";
   resetPlanningScroll();
 }
@@ -24896,7 +24926,10 @@ function showPlanningTasksView() {
   document.getElementById("planning-toggle-rdv")?.classList.remove("active");
   const detail = document.getElementById("planning-detail");
   const tasksView = document.getElementById("tasks-view");
-  if (detail) detail.style.display = "none";
+  if (detail) {
+    detail.classList.add("tasks-hidden");
+    detail.style.display = "none";
+  }
   if (tasksView) tasksView.style.display = "block";
   resetPlanningScroll();
   loadTasks();
