@@ -9742,7 +9742,8 @@ body[data-theme="light"]::after {
   <div class="mail-choice-backdrop" onclick="closeMailPreview()"></div>
 
   <div class="mail-choice-box">
-  
+    <button class="help-actions-back" type="button" id="mail-preview-back-btn" style="display:none;" onclick="goBackFromMailPreview()">← Retour</button>
+
     <div class="mail-choice-title">Mail prêt à envoyer</div>
     <div class="mail-choice-subtitle">Vérifiez rapidement avant l’envoi.</div>
 
@@ -10015,6 +10016,7 @@ body[data-theme="light"]::after {
   <div class="mail-choice-backdrop" onclick="closeFeatureRequestModal()"></div>
 
   <div class="mail-choice-box">
+    <button class="help-actions-back" type="button" onclick="closeFeatureRequestModal(); openSupportChoiceModal();">← Retour</button>
     <div class="mail-choice-title">Une idée, un besoin ?</div>
     <div class="mail-choice-subtitle">Dites-moi ce qui vous simplifierait la vie — j'étudie chaque demande.</div>
 
@@ -13166,7 +13168,7 @@ function closeSupportChoiceModal() {
     to: "contact@clarity-systems.fr",
     subject: subject,
     body: body
-  }, "Message envoyé à Clarity Systems");
+  }, "Message envoyé à Clarity Systems", "support-choice-modal");
 }
 
 // "Une idée, un besoin ?" (Réglages > Contenu) : enregistrée directement
@@ -18206,6 +18208,12 @@ async function saveActionLog(agent, action, status) {
 
   let pendingMailInstruction = "";
   let currentPreparedMail = null;
+  // Non-null uniquement quand l'aperçu du mail a été ouvert depuis
+  // "Une idée, un besoin ?" (sendContactMessage) : affiche alors un bouton
+  // "← Retour" dans #mail-preview-modal pour revenir à ce choix. Reste à
+  // null pour tous les autres appels à openMailPreview() (dictée, saisie
+  // rapide, compte rendu...) afin de ne pas afficher ce bouton ailleurs.
+  let mailPreviewBackTarget = null;
 
   // ─── Persistance du brouillon de mail (survit à un rechargement iOS) ───
   // Si l'utilisateur pose son téléphone pendant que le mail est prêt à
@@ -18674,7 +18682,16 @@ function rawEmailListFromDisplay(value) {
     .join(", ");
 }
 
-function openMailPreview(data, instruction) {
+function openMailPreview(data, instruction, backTarget) {
+  // Bouton "← Retour" affiché dans #mail-preview-modal uniquement quand un
+  // backTarget est explicitement fourni (ex: "support-choice-modal" depuis
+  // sendContactMessage) — reste caché pour tous les autres appels
+  // (dictée, saisie rapide, etc.) puisque backTarget vaut alors undefined.
+  mailPreviewBackTarget = backTarget || null;
+
+  const backBtn = document.getElementById("mail-preview-back-btn");
+  if (backBtn) backBtn.style.display = mailPreviewBackTarget ? "block" : "none";
+
   // La popup de progression ("Demande comprise"...) devait sinon rester
   // visible jusqu'à 3.5s (son délai normal de disparition), pendant que
   // l'aperçu du mail s'ouvre par-dessus : les deux se superposaient de
@@ -18804,9 +18821,26 @@ function openMailPreview(data, instruction) {
   });
 }
 
+// Bouton "← Retour" du mail-preview-modal (visible seulement quand
+// mailPreviewBackTarget est défini, cf. openMailPreview) : referme
+// l'aperçu SANS le toast/son "Envoi annulé" (ce n'est pas une annulation,
+// juste un retour en arrière), puis rouvre l'écran d'origine.
+function goBackFromMailPreview() {
+  const target = mailPreviewBackTarget;
+  document.getElementById("mail-preview-modal").style.display = "none";
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
+  mailPreviewBackTarget = null;
+
+  if (target === "support-choice-modal") {
+    openSupportChoiceModal();
+  }
+}
+
 function closeMailPreview(showCancel = true) {
   document.getElementById("mail-preview-modal").style.display = "none";
   unlockAgentButtons();
+  mailPreviewBackTarget = null;
   // Que ce soit une annulation (showCancel=true) ou une fermeture après
   // envoi réussi (showCancel=false, déjà géré aussi dans sendPreparedMail),
   // le micro peut redevenir utilisable ici.
@@ -25162,7 +25196,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
       <div class="help-actions-grid" id="help-actions-grid"></div>
 
       <div class="help-actions-soon-wrap" id="help-actions-soon-wrap" style="display:none;">
-        <div class="help-actions-soon-label">Bientôt</div>
+        <div class="help-actions-soon-label">Prochainement</div>
         <div class="help-actions-soon-list" id="help-actions-soon-list"></div>
       </div>
 
