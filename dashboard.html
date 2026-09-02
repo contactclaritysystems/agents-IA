@@ -6138,6 +6138,107 @@ body[data-theme="azur"] .loader-halo {
 }
 
 /* =========================================================
+   CLARITY SYSTEMS — BLOC 27bis
+   Onglet Planning : bascule Rendez-vous / Tâches + liste de
+   tâches à cocher. Réutilise les mêmes tons que le reste de
+   l'app (pas de nouvelle palette).
+   ========================================================= */
+
+.planning-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 18px;
+}
+
+.planning-view-toggle-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--line);
+  background: rgba(var(--clarity-glass-rgb),.66);
+  color: var(--muted);
+  font-size: 13px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.planning-view-toggle-btn.active {
+  background: rgba(0,212,255,.10);
+  border-color: rgba(59,212,255,.35);
+  color: var(--clarity-text);
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 16px;
+  background: rgba(29,29,31,.035);
+  border: 1px solid var(--line);
+}
+
+.task-item.done {
+  opacity: .55;
+}
+
+.task-checkbox {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  background: transparent;
+  color: var(--clarity-text);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.task-item.done .task-checkbox {
+  background: rgba(0,212,255,.16);
+  border-color: rgba(59,212,255,.5);
+}
+
+.task-title {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.task-item.done .task-title {
+  text-decoration: line-through;
+}
+
+.task-due {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.task-delete {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted-2);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.task-delete:hover {
+  color: var(--text);
+}
+
+/* =========================================================
    CLARITY SYSTEMS — BLOC 28
    Desktop uniquement : page Réglages moins large et centrée
    (mini-cartes, carte Apparence, carte contact) + titre/sous-
@@ -9350,6 +9451,11 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
+  <div class="planning-view-toggle" id="planning-view-toggle">
+    <button type="button" class="planning-view-toggle-btn active" id="planning-toggle-rdv" onclick="showPlanningRdvView()">Rendez-vous</button>
+    <button type="button" class="planning-view-toggle-btn" id="planning-toggle-tasks" onclick="showPlanningTasksView()">Tâches</button>
+  </div>
+
   <div id="planning-detail" style="display:block;">
     <div class="section-header" id="planning-detail-header" style="display:none;">
       <button class="sheet-btn" onclick="closePlanningDetail()" type="button">
@@ -9360,6 +9466,14 @@ body[data-theme="light"]::after {
     </div>
 
     <div id="planning-list" class="agents-grid" style="display:flex; flex-direction:column; gap:14px;"></div>
+  </div>
+
+  <div id="tasks-view" style="display:none;">
+    <div class="field-row" style="grid-template-columns: 1fr auto; margin-bottom:14px;">
+      <input class="field-input" id="new-task-input" placeholder="Nouvelle tâche…" onkeydown="if(event.key==='Enter'){addTask();}">
+      <button class="save-btn" type="button" style="height:auto;padding:12px 18px;margin-top:0;width:auto;" onclick="addTask()">+ Ajouter</button>
+    </div>
+    <div id="tasks-list" style="display:flex; flex-direction:column; gap:10px;"></div>
   </div>
 </main>
 
@@ -9491,7 +9605,26 @@ body[data-theme="light"]::after {
         <strong id="contact-detail-style"></strong>
       </div>
 
-      <button class="save-btn" onclick="editSelectedContact()" type="button">
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Tags <span style="font-weight:400;color:var(--clarity-text-tertiary);">(client, fournisseur…)</span></div>
+        <div class="field-row" style="grid-template-columns:1fr auto;">
+          <input class="field-input" id="contact-tag-input" placeholder="Ajouter un tag…" onkeydown="if(event.key==='Enter'){event.preventDefault();addContactTag();}">
+          <button class="sheet-btn" type="button" style="width:auto;" onclick="addContactTag()">+</button>
+        </div>
+        <div id="contact-tags-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+      </div>
+
+      <div class="field-group" style="margin-top:14px;">
+        <div class="field-label">Notes internes <span style="font-weight:400;color:var(--clarity-text-tertiary);">(jamais envoyées au client)</span></div>
+        <textarea class="field-input" id="contact-notes-internes" style="min-height:80px;" onblur="saveContactNotesInternes()"></textarea>
+      </div>
+
+      <div id="contact-activity-section" style="margin-top:18px;">
+        <div class="field-label" style="margin-bottom:10px;">Activité récente</div>
+        <div id="contact-activity-list" class="info-box">Chargement...</div>
+      </div>
+
+      <button class="save-btn" onclick="editSelectedContact()" type="button" style="margin-top:18px;">
         Modifier
       </button>
 
@@ -10151,6 +10284,8 @@ const CAPABILITIES_API_URL = "https://clarity-backend-me14.onrender.com/capabili
 // par l'envoi d'un mail — fonctionne même si le compte mail n'est pas
 // encore connecté.
 const FEATURE_REQUEST_API_URL = "https://clarity-backend-me14.onrender.com/feature-request";
+const TASKS_API_URL = "https://clarity-backend-me14.onrender.com/tasks";
+const CONTACTS_API_BASE_URL = "https://clarity-backend-me14.onrender.com/contacts";
      
 let currentUser = null;
   document.body.classList.add("loading-subscription");
@@ -17012,7 +17147,143 @@ if (contactFormPage) {
     styleRow.style.display = "none";
   }
 
+  // Tags + notes internes : purement locaux au contact (pas envoyés au
+  // client), pré-remplis avec ce qui existe déjà en base.
+  contactTagsBeingEdited = Array.isArray(contact.tags) ? contact.tags.slice() : [];
+  renderContactTags();
+
+  const notesField = document.getElementById("contact-notes-internes");
+  if (notesField) notesField.value = contact.notes_internes || "";
+
   document.getElementById("contact-detail-page").classList.add("open");
+
+  loadContactActivity(contactId);
+}
+
+// ─── Tags + notes internes + activité (Contacts avancés) ───
+let contactTagsBeingEdited = [];
+
+function renderContactTags() {
+  const wrap = document.getElementById("contact-tags-chips");
+  if (!wrap) return;
+
+  if (!contactTagsBeingEdited.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.innerHTML = contactTagsBeingEdited.map(tag => {
+    const safeTag = (tag || "").replace(/</g, "&lt;");
+    return (
+      '<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:100px;background:rgba(0,212,255,.10);border:1px solid rgba(59,212,255,.35);font-size:12px;color:var(--clarity-text);">' +
+        safeTag +
+        '<button type="button" onclick="removeContactTag(\'' + safeTag.replace(/'/g, "\\'") + '\')" style="background:none;border:none;color:var(--muted-2);cursor:pointer;font-size:12px;padding:0;line-height:1;" aria-label="Retirer">✕</button>' +
+      "</span>"
+    );
+  }).join("");
+}
+
+function addContactTag() {
+  const input = document.getElementById("contact-tag-input");
+  const tag = input ? input.value.trim() : "";
+  if (!tag) return;
+
+  if (!contactTagsBeingEdited.includes(tag)) {
+    contactTagsBeingEdited.push(tag);
+    renderContactTags();
+    saveContactTags();
+  }
+  if (input) input.value = "";
+}
+
+function removeContactTag(tag) {
+  contactTagsBeingEdited = contactTagsBeingEdited.filter(t => t !== tag);
+  renderContactTags();
+  saveContactTags();
+}
+
+async function saveContactTags() {
+  if (!selectedContactId) return;
+
+  try {
+    const response = await fetch(CONTACTS_API_BASE_URL + "/" + selectedContactId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.id, tags: contactTagsBeingEdited })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const contact = contactsCache.find(c => c.id === selectedContactId);
+    if (contact) contact.tags = contactTagsBeingEdited.slice();
+  } catch (e) {
+    console.error("Erreur saveContactTags:", e);
+    showToast("Impossible d'enregistrer les tags", "error");
+  }
+}
+
+async function saveContactNotesInternes() {
+  if (!selectedContactId) return;
+
+  const notesField = document.getElementById("contact-notes-internes");
+  const notes = notesField ? notesField.value : "";
+
+  try {
+    const response = await fetch(CONTACTS_API_BASE_URL + "/" + selectedContactId, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.id, notes_internes: notes })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const contact = contactsCache.find(c => c.id === selectedContactId);
+    if (contact) contact.notes_internes = notes;
+  } catch (e) {
+    console.error("Erreur saveContactNotesInternes:", e);
+    showToast("Impossible d'enregistrer les notes", "error");
+  }
+}
+
+// mails: [] côté backend pour l'instant (l'envoi passe encore par Make) —
+// on n'affiche donc que RDV et rappels tant que ce n'est pas branché,
+// plutôt qu'une section "Mails" vide qui donnerait l'impression d'un bug.
+async function loadContactActivity(contactId) {
+  const list = document.getElementById("contact-activity-list");
+  if (!list) return;
+  list.textContent = "Chargement...";
+  list.className = "info-box";
+
+  try {
+    const response = await fetch(CONTACTS_API_BASE_URL + "/" + contactId + "/activity?user_id=" + currentUser.id);
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const data = await response.json();
+    const appointments = Array.isArray(data.appointments) ? data.appointments : [];
+    const followUps = Array.isArray(data.follow_ups) ? data.follow_ups : [];
+
+    if (!appointments.length && !followUps.length) {
+      list.textContent = "Aucune activité récente avec ce contact.";
+      return;
+    }
+
+    const items = [];
+
+    appointments.forEach(a => {
+      items.push('<div class="task-item"><div class="task-title">📅 ' +
+        (a.title || a.motif || "Rendez-vous").replace(/</g, "&lt;") +
+        '</div><div class="task-due">' + formatTaskDueDate(a.date || a.start_at) + "</div></div>");
+    });
+
+    followUps.forEach(f => {
+      items.push('<div class="task-item"><div class="task-title">⏰ ' +
+        (f.reason || f.title || "Rappel").replace(/</g, "&lt;") +
+        '</div><div class="task-due">' + formatTaskDueDate(f.reminder_date) + "</div></div>");
+    });
+
+    list.outerHTML = '<div id="contact-activity-list" style="display:flex;flex-direction:column;gap:8px;">' + items.join("") + "</div>";
+  } catch (e) {
+    console.error("Erreur loadContactActivity:", e);
+    list.textContent = "Impossible de charger l'activité récente.";
+  }
 }
 
 // Résout le libellé lisible ("Formel", "Décontracté"...) correspondant à la
@@ -24491,6 +24762,157 @@ function openPlanningFollowUps() {
 
   loadFollowUps();
 }
+// ─── Tâches (onglet Planning, bascule Rendez-vous / Tâches) ───
+// Liste à cocher toute simple, distincte des Rappels (follow_ups) : pas de
+// date de notification obligatoire, pas de cron — juste "à faire" / "fait".
+// Chargée à la demande (au premier clic sur "Tâches"), mise à jour de façon
+// optimiste (l'UI change tout de suite, on annule si le serveur répond mal).
+let tasksCache = [];
+let tasksLoadedOnce = false;
+
+function showPlanningRdvView() {
+  document.getElementById("planning-toggle-rdv")?.classList.add("active");
+  document.getElementById("planning-toggle-tasks")?.classList.remove("active");
+  const detail = document.getElementById("planning-detail");
+  const tasksView = document.getElementById("tasks-view");
+  if (detail) detail.style.display = "block";
+  if (tasksView) tasksView.style.display = "none";
+}
+
+function showPlanningTasksView() {
+  document.getElementById("planning-toggle-tasks")?.classList.add("active");
+  document.getElementById("planning-toggle-rdv")?.classList.remove("active");
+  const detail = document.getElementById("planning-detail");
+  const tasksView = document.getElementById("tasks-view");
+  if (detail) detail.style.display = "none";
+  if (tasksView) tasksView.style.display = "block";
+  loadTasks();
+}
+
+async function loadTasks() {
+  const list = document.getElementById("tasks-list");
+  if (list && !tasksLoadedOnce) list.innerHTML = '<div class="info-box">Chargement...</div>';
+
+  try {
+    const response = await fetch(TASKS_API_URL + "?user_id=" + currentUser.id);
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const data = await response.json();
+    tasksCache = Array.isArray(data) ? data : (Array.isArray(data.tasks) ? data.tasks : []);
+    tasksLoadedOnce = true;
+    renderTasks();
+  } catch (e) {
+    console.error("Erreur loadTasks:", e);
+    if (list) list.innerHTML = '<div class="info-box">Impossible de charger les tâches pour le moment.</div>';
+  }
+}
+
+function renderTasks() {
+  const list = document.getElementById("tasks-list");
+  if (!list) return;
+
+  if (!tasksCache.length) {
+    list.innerHTML = '<div class="info-box">Aucune tâche pour le moment.</div>';
+    return;
+  }
+
+  // Les tâches "à faire" remontent en haut, les "fait" descendent en bas
+  // sans disparaître (utile pour voir ce qu'on vient de cocher).
+  const sorted = tasksCache.slice().sort((a, b) => {
+    const aDone = a.status === "fait" ? 1 : 0;
+    const bDone = b.status === "fait" ? 1 : 0;
+    return aDone - bDone;
+  });
+
+  list.innerHTML = sorted.map(t => {
+    const done = t.status === "fait";
+    const titre = (t.titre || "").replace(/</g, "&lt;");
+    return (
+      '<div class="task-item' + (done ? " done" : "") + '">' +
+        '<button type="button" class="task-checkbox" onclick="toggleTaskDone(\'' + t.id + '\',\'' + t.status + '\')" aria-label="' + (done ? "Marquer à faire" : "Marquer comme fait") + '">' + (done ? "✓" : "") + "</button>" +
+        '<div class="task-title">' + titre + "</div>" +
+        (t.due_date ? '<div class="task-due">' + formatTaskDueDate(t.due_date) + "</div>" : "") +
+        '<button type="button" class="task-delete" onclick="deleteTask(\'' + t.id + '\')" aria-label="Supprimer">✕</button>' +
+      "</div>"
+    );
+  }).join("");
+}
+
+function formatTaskDueDate(iso) {
+  try {
+    return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch (e) {
+    return "";
+  }
+}
+
+async function addTask() {
+  const input = document.getElementById("new-task-input");
+  const titre = input ? input.value.trim() : "";
+
+  if (!titre) {
+    showToast("Écrivez une tâche avant de l'ajouter", "error");
+    return;
+  }
+
+  try {
+    const response = await fetch(TASKS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.id, titre })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    const data = await response.json();
+    const task = data && data.id ? data : (data.task || { id: Date.now(), titre, status: "a_faire" });
+    tasksCache.push(task);
+    if (input) input.value = "";
+    renderTasks();
+  } catch (e) {
+    console.error("Erreur addTask:", e);
+    showToast("Impossible d'ajouter la tâche", "error");
+  }
+}
+
+async function toggleTaskDone(id, currentStatus) {
+  const newStatus = currentStatus === "fait" ? "a_faire" : "fait";
+  const task = tasksCache.find(t => String(t.id) === String(id));
+  if (task) task.status = newStatus;
+  renderTasks();
+
+  try {
+    const response = await fetch(TASKS_API_URL + "/" + id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: currentUser.id, status: newStatus })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+  } catch (e) {
+    console.error("Erreur toggleTaskDone:", e);
+    if (task) task.status = currentStatus;
+    renderTasks();
+    showToast("Impossible de mettre à jour la tâche", "error");
+  }
+}
+
+async function deleteTask(id) {
+  const previous = tasksCache;
+  tasksCache = tasksCache.filter(t => String(t.id) !== String(id));
+  renderTasks();
+
+  try {
+    const response = await fetch(TASKS_API_URL + "/" + id + "?user_id=" + currentUser.id, {
+      method: "DELETE"
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+  } catch (e) {
+    console.error("Erreur deleteTask:", e);
+    tasksCache = previous;
+    renderTasks();
+    showToast("Impossible de supprimer la tâche", "error");
+  }
+}
+
 function closePlanningDetail() {
 
   if (window.currentPlanningSubPage === "appointment-detail") {
