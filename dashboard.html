@@ -9627,27 +9627,27 @@ body[data-theme="light"]::after {
        cliquer avant même d'y arriver, dans l'ordre exact (①②). -->
   <div id="gmail-connect-consent-modal" style="display:none;">
     <div class="mail-choice-backdrop" onclick="closeGmailConnectConsent()"></div>
-    <div class="mail-choice-box" style="max-width:340px;">
+    <div class="mail-choice-box" style="max-width:380px; text-align:center;">
       <div class="mail-choice-title">Connexion Gmail</div>
       <div class="mail-choice-subtitle">
         Clarity est une app récente. Il est normal que Google mette plusieurs semaines à vérifier une nouvelle application — c'est une simple formalité, pas un problème.
       </div>
 
-      <div style="background:#fff; border:1px solid #dadce0; border-radius:10px; padding:14px 15px; margin:14px 0; text-align:left;">
-        <div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px;">
+      <div style="background:#fff; border:1px solid #dadce0; border-radius:10px; padding:14px 15px; margin:14px 0; text-align:center;">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin-bottom:10px;">
           <span style="font-size:16px; line-height:1;">⚠️</span>
           <div style="font-size:12px; color:#3c4043; font-weight:700; line-height:1.35;">Google n'a pas validé cette application</div>
         </div>
         <div style="font-size:11px; color:#5f6368; line-height:1.5; margin-bottom:12px;">
           Vous verrez cet écran chez Google — c'est attendu, voici quoi toucher :
         </div>
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
           <span style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:#1a73e8; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">1</span>
           <span style="font-size:12.5px; color:#1a73e8; font-weight:600;">Paramètres avancés</span>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
           <span style="flex-shrink:0; width:18px; height:18px; border-radius:50%; background:#1a73e8; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">2</span>
-          <span style="font-size:12.5px; color:#1a73e8; font-weight:600;">Accéder à Clarity Systems (non sécurisé)</span>
+          <span style="font-size:12px; color:#1a73e8; font-weight:600; white-space:nowrap;">Accéder à Clarity Systems (non sécurisé)</span>
         </div>
       </div>
 
@@ -13633,7 +13633,7 @@ function startOnboardingPositionLoop() {
     // s'efface entièrement tant qu'une de ces popups reste ouverte ;
     // dès qu'elle se ferme, l'étape en cours (ou la suivante) reprend
     // normalement au prochain passage de cette boucle.
-    const interruptingModalIds = ["mail-choice-modal", "smtp-config-modal"];
+    const interruptingModalIds = ["mail-choice-modal", "smtp-config-modal", "gmail-connect-consent-modal"];
     const interruptingModalOpen = interruptingModalIds.some((id) => {
       const el = document.getElementById(id);
       return el && el.style.display === "block";
