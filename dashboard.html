@@ -9617,18 +9617,21 @@ body[data-theme="light"]::after {
 </div>
 
   <!-- Avertissement Google "application non vérifiée" AVANT de partir sur
-       OAuth : sans ça, l'écran Google fait peur (ressemble à une alerte de
-       piratage) alors que c'est juste que Clarity est une app récente,
-       pas encore validée par Google (processus normal, en cours). -->
+       OAuth : sans ça, l'écran Google peut inquiéter. Le mot "piratage" a
+       été retiré (fait peur inutilement) — le message se contente
+       d'expliquer que la vérification Google prend plusieurs semaines pour
+       une nouvelle app, ce qui est normal et attendu. Les libellés des 2
+       boutons Google reproduits tels quels (texte exact affiché par
+       Google), pas de raccourci ("Avancé" seul, etc.). -->
   <div id="gmail-connect-consent-modal" style="display:none;">
     <div class="mail-choice-backdrop" onclick="closeGmailConnectConsent()"></div>
     <div class="mail-choice-box" style="max-width:340px;">
       <div class="mail-choice-title">Connexion Gmail</div>
       <div class="mail-choice-subtitle">
-        Clarity est une app récente. Google affiche parfois « application non vérifiée ». C'est normal, ce n'est pas une alerte de piratage.
+        Clarity est une app récente. Il est normal que Google mette plusieurs semaines à vérifier une nouvelle application — c'est une simple formalité, pas un problème.
         <br><br>
-        1. Touchez <strong>Avancé</strong><br>
-        2. Touchez <strong>Accéder à Clarity Systems</strong>
+        1. Touchez <strong>« Afficher les paramètres avancés »</strong><br>
+        2. Touchez <strong>« Accéder à Clarity Systems (non sécurisé) »</strong>
         <br><br>
         Rien ne s'envoie sans votre accord.
       </div>
@@ -10180,6 +10183,7 @@ function deferGmailOAuthConsent() {
   closeGmailConnectConsent();
   markGmailOAuthAttempted();
   renderGmailWaitlistHint();
+  showToast("Pas de souci, vous pourrez connecter Gmail quand vous voulez.");
 }
 
 // N'affiche la carte "Gmail n'est pas encore relié" que si l'utilisateur a
