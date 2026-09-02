@@ -10294,6 +10294,7 @@ const CAPABILITIES_API_URL = "https://clarity-backend-me14.onrender.com/capabili
 const FEATURE_REQUEST_API_URL = "https://clarity-backend-me14.onrender.com/feature-request";
 const TASKS_API_URL = "https://clarity-backend-me14.onrender.com/tasks";
 const CONTACTS_API_BASE_URL = "https://clarity-backend-me14.onrender.com/contacts";
+const MAILS_SENT_API_URL = "https://clarity-backend-me14.onrender.com/mails/sent";
      
 let currentUser = null;
   document.body.classList.add("loading-subscription");
@@ -17251,9 +17252,37 @@ async function saveContactNotesInternes() {
   }
 }
 
-// mails: [] côté backend pour l'instant (l'envoi passe encore par Make) —
-// on n'affiche donc que RDV et rappels tant que ce n'est pas branché,
-// plutôt qu'une section "Mails" vide qui donnerait l'impression d'un bug.
+// Contrat Grok : POST /mails/sent { user_id, contact_id, to_email, subject }
+// dès qu'un envoi réel (Make/Gmail) a réussi. Pas de contenu ni d'IA ici,
+// juste une trace consultable ensuite dans "Activité récente". Rafraîchit
+// la fiche contact ouverte si elle correspond, pour voir le mail apparaître
+// sans avoir à refermer/rouvrir la fiche.
+async function logSentMailActivity(contactId, toEmail, subject) {
+  if (!currentUser) return;
+
+  try {
+    const response = await fetch(MAILS_SENT_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        contact_id: contactId,
+        to_email: toEmail,
+        subject: subject
+      })
+    });
+    if (!response.ok) throw new Error("Réponse serveur invalide");
+
+    if (contactId && selectedContactId === contactId) {
+      loadContactActivity(contactId);
+    }
+  } catch (e) {
+    // Non bloquant : un mail réellement envoyé ne doit jamais être remis en
+    // cause parce que sa simple journalisation a échoué. On log seulement.
+    console.error("Erreur logSentMailActivity:", e);
+  }
+}
+
 async function loadContactActivity(contactId) {
   const list = document.getElementById("contact-activity-list");
   if (!list) return;
@@ -17267,8 +17296,9 @@ async function loadContactActivity(contactId) {
     const data = await response.json();
     const appointments = Array.isArray(data.appointments) ? data.appointments : [];
     const followUps = Array.isArray(data.follow_ups) ? data.follow_ups : [];
+    const mails = Array.isArray(data.mails) ? data.mails : [];
 
-    if (!appointments.length && !followUps.length) {
+    if (!appointments.length && !followUps.length && !mails.length) {
       list.textContent = "Aucune activité récente avec ce contact.";
       return;
     }
@@ -17285,6 +17315,12 @@ async function loadContactActivity(contactId) {
       items.push('<div class="task-item"><div class="task-title">⏰ ' +
         (f.reason || f.title || "Rappel").replace(/</g, "&lt;") +
         '</div><div class="task-due">' + formatTaskDueDate(f.reminder_date) + "</div></div>");
+    });
+
+    mails.forEach(m => {
+      items.push('<div class="task-item"><div class="task-title">📧 ' +
+        (m.subject || "Mail envoyé").replace(/</g, "&lt;") +
+        '</div><div class="task-due">' + formatTaskDueDate(m.sent_at) + "</div></div>");
     });
 
     list.outerHTML = '<div id="contact-activity-list" style="display:flex;flex-direction:column;gap:8px;">' + items.join("") + "</div>";
@@ -24618,7 +24654,14 @@ if (!contactName && Array.isArray(contactsCache)) {
     contactName = foundContact.full_name || "";
   }
 }
-  
+
+// Journalise le mail envoyé (contract Grok : POST /mails/sent) pour que
+// "Activité récente" sur la fiche contact puisse enfin l'afficher — jusqu'ici
+// mails: [] côté /contacts/{id}/activity puisque rien n'était journalisé.
+// contact_id reste null si aucun contact du carnet ne correspond à l'email
+// (mail envoyé à une adresse hors carnet) : le backend accepte ce cas.
+logSentMailActivity(foundContact?.id || null, firstEmail, subject);
+
 await saveActionLog(
   "mails",
   `CONTACT: ${contactName}
