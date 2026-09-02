@@ -17309,24 +17309,32 @@ async function loadContactActivity(contactId) {
       return;
     }
 
+    // formatTaskDueDate() renvoie "" (pas "Invalid Date") pour tout champ
+    // absent/invalide — on n'affiche donc la ligne de date que si elle a
+    // réellement pu être formatée, plutôt qu'un encart vide.
+    const dueDiv = formatted => (formatted ? '<div class="task-due">' + formatted + "</div>" : "");
+
     const items = [];
 
     appointments.forEach(a => {
+      const due = formatTaskDueDate(a.date || a.start_at || a.appointment_date || a.scheduled_at);
       items.push('<div class="task-item"><div class="task-title">📅 ' +
         (a.title || a.motif || "Rendez-vous").replace(/</g, "&lt;") +
-        '</div><div class="task-due">' + formatTaskDueDate(a.date || a.start_at) + "</div></div>");
+        "</div>" + dueDiv(due) + "</div>");
     });
 
     followUps.forEach(f => {
+      const due = formatTaskDueDate(f.reminder_date || f.due_date || f.date);
       items.push('<div class="task-item"><div class="task-title">⏰ ' +
         (f.reason || f.title || "Rappel").replace(/</g, "&lt;") +
-        '</div><div class="task-due">' + formatTaskDueDate(f.reminder_date) + "</div></div>");
+        "</div>" + dueDiv(due) + "</div>");
     });
 
     mails.forEach(m => {
+      const due = formatTaskDueDate(m.sent_at || m.created_at);
       items.push('<div class="task-item"><div class="task-title">📧 ' +
         (m.subject || "Mail envoyé").replace(/</g, "&lt;") +
-        '</div><div class="task-due">' + formatTaskDueDate(m.sent_at) + "</div></div>");
+        "</div>" + dueDiv(due) + "</div>");
     });
 
     list.outerHTML = '<div id="contact-activity-list" style="display:flex;flex-direction:column;gap:8px;">' + items.join("") + "</div>";
@@ -24863,6 +24871,16 @@ function openPlanningFollowUps() {
 let tasksCache = [];
 let tasksLoadedOnce = false;
 
+// window.scrollTo seul ne suffisait pas sur mobile : la bascule Rendez-vous
+// <-> Tâches héritait du scroll laissé par la liste de RDV (souvent longue),
+// donc la vue nouvellement affichée démarrait hors-écran, "en bas de la
+// page". Même remise à zéro que showSection() lors d'un changement d'onglet.
+function resetPlanningScroll() {
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
 function showPlanningRdvView() {
   document.getElementById("planning-toggle-rdv")?.classList.add("active");
   document.getElementById("planning-toggle-tasks")?.classList.remove("active");
@@ -24870,6 +24888,7 @@ function showPlanningRdvView() {
   const tasksView = document.getElementById("tasks-view");
   if (detail) detail.style.display = "block";
   if (tasksView) tasksView.style.display = "none";
+  resetPlanningScroll();
 }
 
 function showPlanningTasksView() {
@@ -24879,6 +24898,7 @@ function showPlanningTasksView() {
   const tasksView = document.getElementById("tasks-view");
   if (detail) detail.style.display = "none";
   if (tasksView) tasksView.style.display = "block";
+  resetPlanningScroll();
   loadTasks();
 }
 
@@ -24931,12 +24951,17 @@ function renderTasks() {
   }).join("");
 }
 
+// new Date(iso).toLocaleDateString() ne lève PAS d'exception pour une date
+// invalide/absente : elle renvoie littéralement la chaîne "Invalid Date",
+// affichée telle quelle à l'utilisateur (bug vu en prod sur "Activité
+// récente"). On vérifie donc explicitement la validité avant de formater,
+// et on accepte plusieurs noms de champ possibles selon la source
+// (rendez-vous, rappel, tâche) plutôt qu'un seul nom supposé.
 function formatTaskDueDate(iso) {
-  try {
-    return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-  } catch (e) {
-    return "";
-  }
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
 
 async function addTask() {
