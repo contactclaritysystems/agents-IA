@@ -12823,10 +12823,16 @@ function handleOrchestratorTextKeydown(event) {
   submitOrchestratorTypedText();
 }
 
-// Bouton "Envoyer" à côté du champ : n'apparaît que si le champ contient du
-// texte (tapé au clavier OU écrit en direct par la dictée vocale, qui écrit
-// dans ce même champ). Le MutationObserver couvre les deux cas sans avoir à
-// modifier chaque endroit du code qui touche au texte reconnu.
+// Bouton "Envoyer" à côté du champ : ne doit apparaître QUE quand c'est
+// l'utilisateur qui tape lui-même au clavier — jamais pendant que la dictée
+// vocale écrit son texte en direct dans ce même champ (via .textContent,
+// voir startSimpleAgentDictation), même si le champ contient alors du texte.
+// Un MutationObserver existait ici pour aussi déclencher l'affichage sur les
+// écritures de la dictée (les assignations .textContent ne déclenchent pas
+// l'évènement natif "input"), mais c'est précisément ce comportement qui
+// posait problème : le bouton apparaissait pendant qu'on dictait. Supprimé —
+// seul l'évènement "input" du champ (oninput dans le HTML), qui ne se
+// déclenche que sur une vraie saisie clavier, pilote désormais ce bouton.
 function updateOrchestratorSendButton() {
   const el = document.getElementById("orchestrator-text-input");
   const btn = document.getElementById("orchestrator-send-btn");
@@ -12834,13 +12840,6 @@ function updateOrchestratorSendButton() {
   const hasText = !!(el.textContent || "").trim();
   btn.classList.toggle("is-visible", hasText);
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  const el = document.getElementById("orchestrator-text-input");
-  if (!el || typeof MutationObserver === "undefined") return;
-  const observer = new MutationObserver(() => updateOrchestratorSendButton());
-  observer.observe(el, { childList: true, characterData: true, subtree: true });
-});
 
 // Clic sur "Envoyer" = exactement la même action que valider la saisie
 // actuelle (Entrée) : envoie le texte tel quel au Chef d'Orchestre, vide le
