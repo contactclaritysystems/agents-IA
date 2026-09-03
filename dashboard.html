@@ -10637,6 +10637,74 @@ if (box) {
    marqués "Bientôt disponible". Liste à étoffer au fur et à mesure
    que les vraies actions seront développées.
    ========================================================= */
+// L'exemple du compte rendu ne peut pas parler à tout le monde de la même
+// façon (un plombier et un consultant ne décrivent pas leurs rendez-vous
+// avec les mêmes mots) — plutôt que de choisir un seul exemple universel
+// (toujours un peu à côté pour quelqu'un), on adapte automatiquement selon
+// le "Métier / activité" renseigné dans le profil (Réglages), avec un jeu
+// générique par défaut si le métier est vide ou ne correspond à aucune
+// catégorie reconnue.
+const CR_EXAMPLE_SETS = {
+  generic: [
+    "Rendez-vous ce matin avec Julien pour le projet Meunier.",
+    "Le client est satisfait, il préfère la deuxième proposition qu'on lui a présentée.",
+    "Il souhaite qu'on ajoute un point supplémentaire avant de valider.",
+    "Contrainte principale : le budget ne doit pas dépasser 8000€.",
+    "Autre contrainte : tout doit être prêt avant la fin du mois."
+  ],
+  btp: [
+    "Intervention chez M. Perrin pour la remise en état de la terrasse.",
+    "Le carrelage extérieur est fissuré par endroits, à remplacer.",
+    "Prévoir l'achat de 15m² de carrelage et de colle adaptée.",
+    "Le client souhaite garder la même teinte que l'existant.",
+    "Prochaine étape : passer commande puis planifier les travaux."
+  ],
+  service: [
+    "Rendez-vous ce matin avec Madame Lefort pour le dossier en cours.",
+    "Elle valide l'orientation proposée pour la suite du projet.",
+    "Une question reste en suspens concernant le calendrier.",
+    "Contrainte principale : le budget ne doit pas dépasser 8000€.",
+    "Prochaine étape : lui envoyer une proposition actualisée."
+  ],
+  sante: [
+    "Séance ce matin avec Madame Rey.",
+    "Elle ressent une nette amélioration depuis la dernière fois.",
+    "Une légère gêne persiste au niveau de l'épaule droite.",
+    "On continue le même suivi encore deux séances.",
+    "Prochain rendez-vous prévu la semaine prochaine."
+  ],
+  commerce: [
+    "Rendez-vous ce matin avec un client intéressé par le produit haut de gamme.",
+    "Il hésite encore entre deux modèles, budget autour de 500€.",
+    "Il souhaite un temps de réflexion avant de se décider.",
+    "Prévoir de le relancer avec une offre adaptée à son budget.",
+    "Globalement, l'échange s'est très bien passé."
+  ]
+};
+
+const CR_JOB_KEYWORDS = {
+  btp: ["plomb", "électric", "electric", "maçon", "macon", "chauffagiste", "peintre", "menuisier", "couvreur", "carrele", "artisan", "bâtiment", "batiment", "travaux", "rénovation", "renovation", "chantier"],
+  service: ["consultant", "avocat", "comptable", "agence", "immobilier", "coach", "formateur", "architecte", "notaire", "assurance", "conseil", "audit", "freelance", "graphiste", "designer", "marketing", "communication"],
+  sante: ["kiné", "kine", "thérap", "therap", "ostéo", "osteo", "infirmi", "médecin", "medecin", "psycholog", "esthétic", "esthetic", "dentiste", "sage-femme"],
+  commerce: ["commercial", "boutique", "vente", "magasin", "restaurant", "coiff", "vendeur", "vendeuse", "restaurateur"]
+};
+
+function detectCrJobCategory(jobText) {
+  const text = (jobText || "").toLowerCase().trim();
+  if (!text) return "generic";
+  for (const category in CR_JOB_KEYWORDS) {
+    if (CR_JOB_KEYWORDS[category].some(k => text.includes(k))) return category;
+  }
+  return "generic";
+}
+
+function getCompteRenduExamples() {
+  const category = detectCrJobCategory(currentProfile && currentProfile.job);
+  return CR_EXAMPLE_SETS[category] || CR_EXAMPLE_SETS.generic;
+}
+window.getCompteRenduExamples = getCompteRenduExamples;
+window.detectCrJobCategory = detectCrJobCategory;
+
 // Uniquement les actions réellement disponibles aujourd'hui. Compléter
 // cette liste au fur et à mesure que de nouvelles actions sont
 // développées côté Make (chacune avec ready:true une fois branchée).
@@ -10854,9 +10922,14 @@ function showHelpActionExample(index) {
 
   const phraseListEl = document.getElementById("help-actions-example-phrase-list");
   if (phraseListEl) {
-    const examples = Array.isArray(action.examples)
-      ? action.examples
-      : (action.example ? [action.example] : []);
+    // Le compte rendu s'adapte au métier déclaré dans le profil
+    // (currentProfile.job) : un plombier et un consultant ne notent pas
+    // du tout les mêmes points, l'exemple générique ne parlait à personne.
+    const examples = action.id === "compte_rendu"
+      ? getCompteRenduExamples()
+      : (Array.isArray(action.examples)
+          ? action.examples
+          : (action.example ? [action.example] : []));
     // Numéroté quand il y a un hint dédié (compte rendu, dictée point par
     // point) : rend visible que ce sont plusieurs points distincts d'un
     // même compte rendu, pas une liste de phrases interchangeables.
