@@ -10590,8 +10590,8 @@ const HELP_ACTIONS = [
     icon: "🗒️",
     color: "teal",
     examples: [
-      "Fais-moi un compte rendu de mon rendez-vous avec Julie.",
-      "Résume cette intervention pour l'envoyer au client."
+      "Intervention chez M. Martin : chaudière remplacée, tout fonctionne, prochain contrôle dans 6 mois.",
+      "Rendez-vous avec Julie : budget de 3000€ validé, travaux prévus à partir de lundi prochain."
     ],
     ready: true
   },
@@ -10742,12 +10742,16 @@ function tryHelpActionsExample() {
     case "relance":
       openQuickReminderModal();
       break;
+    case "compte_rendu":
+    case "taches":
+      openQuickTextModal(action.id);
+      break;
     default:
       startOrchestratorDictation();
       return;
   }
 
-  if (action.id === "redaction" || action.id === "assistant") {
+  if (action.id === "redaction" || action.id === "assistant" || action.id === "compte_rendu" || action.id === "taches") {
     const examples = Array.isArray(action.examples) ? action.examples : (action.example ? [action.example] : []);
     const exampleText = examples[0] || "";
     if (exampleText) {
@@ -10780,6 +10784,18 @@ const QUICK_TEXT_MODAL_CONFIG = {
     subtitle: "Écrivez ou dictez votre question, Clarity vous répond.",
     placeholder: "Quelle est votre question ?",
     submitLabel: "💡 Envoyer à l'agent"
+  },
+  compte_rendu: {
+    title: "Compte rendu",
+    subtitle: "Racontez ce qui s'est passé, Clarity en fait un compte rendu structuré.",
+    placeholder: "Ex : Intervention chez M. Martin, chaudière remplacée, prochain contrôle dans 6 mois...",
+    submitLabel: "🗒️ Générer le compte rendu"
+  },
+  taches: {
+    title: "Nouvelle tâche",
+    subtitle: "Écrivez ou dictez la tâche à ajouter.",
+    placeholder: "Ex : Rappeler le fournisseur pour les prix",
+    submitLabel: "☑️ Ajouter la tâche"
   }
 };
 
@@ -10859,6 +10875,7 @@ function closeQuickTextModal() {
 function submitQuickText() {
   const modal = document.getElementById("quick-text-modal");
   const continuing = modal && modal.dataset.continuing === "1";
+  const kind = modal ? modal.dataset.kind : "";
   const textarea = document.getElementById("quick-text-instruction");
   const text = (textarea ? textarea.value : "").trim();
   if (!text) {
@@ -10866,6 +10883,17 @@ function submitQuickText() {
     return;
   }
   closeQuickTextModal();
+
+  // Compte rendu : jamais /orchestrate ni /agent/planning (consigne Grok).
+  // On appelle directement /agent/redaction avec le préfixe qui force le
+  // formulaire compte-rendu, exactement comme le fait le bouton Accueil
+  // "Compte rendu" en dictée (quickStartCompteRendu / startSimpleAgentDictation).
+  if (kind === "compte_rendu") {
+    const instruction = ("Rédige un compte-rendu. " + text).trim();
+    callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction);
+    return;
+  }
+
   sendTypedInstruction(text, continuing);
 }
 
@@ -24719,14 +24747,16 @@ const firstEmail = to
   .trim()
   .toLowerCase();
 
-if (!contactName && Array.isArray(contactsCache)) {
-  const foundContact = contactsCache.find(c =>
-    (c.email || "").trim().toLowerCase() === firstEmail
-  );
+// Recherché systématiquement (pas seulement si contactName est vide) :
+// c'est aussi ce qui sert à retrouver le contact_id pour la journalisation
+// juste en dessous, y compris quand le nom du contact était déjà connu
+// via currentPreparedMail (ex: mail envoyé depuis la fiche contact).
+const foundContact = Array.isArray(contactsCache)
+  ? contactsCache.find(c => (c.email || "").trim().toLowerCase() === firstEmail)
+  : null;
 
-  if (foundContact) {
-    contactName = foundContact.full_name || "";
-  }
+if (!contactName && foundContact) {
+  contactName = foundContact.full_name || "";
 }
 
 // Journalise le mail envoyé (contract Grok : POST /mails/sent) pour que
