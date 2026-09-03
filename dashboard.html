@@ -10899,6 +10899,12 @@ window.submitQuickText = submitQuickText;
 // /orchestrate ni /agent/planning (même règle que le bouton Accueil).
 let crPoints = [];
 let crDictationRecognition = null;
+// Champs que Clarity juge encore manquants pour rédiger le compte rendu
+// (ex: "sujet") : renvoyés par /agent/redaction via needs_form. Affichés
+// directement dans NOTRE modal (jamais le formulaire générique séparé) pour
+// que l'utilisateur sache concrètement quoi compléter, au lieu qu'un toast
+// vague ("à compléter") sans plus de précision le fasse tourner en rond.
+let crMissingFields = [];
 
 async function openCompteRenduModal(prefillPoints) {
   const allowed = await canUseAgents();
@@ -10930,6 +10936,8 @@ async function openCompteRenduModal(prefillPoints) {
 
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
 
+          <div id="cr-missing-fields" style="display:none;margin-top:14px;"></div>
+
           <button class="save-btn" type="button" id="cr-create-btn" style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="requestCloseCompteRendu()">Annuler</button>
         </div>
@@ -10956,6 +10964,12 @@ async function openCompteRenduModal(prefillPoints) {
   const input = document.getElementById("cr-point-input");
   if (input) input.value = "";
   renderCrPoints();
+
+  // Réinitialisé par défaut à chaque ouverture "propre" : c'est
+  // onNeedsForm (dans submitCompteRendu) qui le repeuple juste après avoir
+  // rouvert le modal, si Clarity a redemandé une précision.
+  crMissingFields = [];
+  renderCrMissingFields();
 
   // Toujours repartir sur la vue principale (pas la confirmation
   // d'abandon d'une session précédente).
@@ -11072,6 +11086,37 @@ function addCrPoint() {
 function removeCrPoint(index) {
   crPoints.splice(index, 1);
   renderCrPoints();
+}
+
+// Affiche les champs que Clarity a explicitement demandés (ex: "Sujet")
+// quand la liste de points seule ne suffit pas — mêmes id/attributs que
+// openRedactionFormModal (préfixe "cr-field-" au lieu de
+// "redaction-form-field-") pour rester cohérent avec ce composant déjà
+// existant ailleurs dans l'app.
+function renderCrMissingFields() {
+  const wrap = document.getElementById("cr-missing-fields");
+  if (!wrap) return;
+
+  if (!crMissingFields.length) {
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+    return;
+  }
+
+  wrap.innerHTML =
+    '<div class="clarity-mic-hint" style="margin-bottom:8px;">Clarity a besoin d\'une précision de plus :</div>' +
+    crMissingFields.map(function (f) {
+      const label = (f.label || f.id || "").replace(/</g, "&lt;");
+      const placeholder = (f.placeholder || "").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+      return (
+        '<div class="field-group" style="margin-bottom:10px;">' +
+          '<div class="field-label">' + label + (f.required ? " *" : "") + "</div>" +
+          '<input class="field-input" type="text" id="cr-field-' + f.id + '" autocomplete="off" placeholder="' + placeholder + '" />' +
+        "</div>"
+      );
+    }).join("");
+
+  wrap.style.display = "block";
 }
 
 // Dictée d'un point : même mécanique robuste que toggleQuickTextDictation()
@@ -11247,7 +11292,27 @@ function submitCompteRendu() {
     return;
   }
 
-  // Copie des points AVANT de fermer le modal : si Clarity redemande une
+  // Si Clarity a déjà réclamé des précisions (sujet, etc.) au tour
+  // précédent, ces champs sont affichés dans NOTRE modal (voir
+  // renderCrMissingFields) — on les relit ici avant d'envoyer, comme
+  // submitRedactionForm() le fait pour son propre formulaire.
+  const formAnswers = {};
+  let missingRequiredLabel = null;
+  crMissingFields.forEach(function (f) {
+    const el = document.getElementById("cr-field-" + f.id);
+    const val = el ? el.value.trim() : "";
+    if (val) {
+      formAnswers[f.id] = val;
+    } else if (f.required && !missingRequiredLabel) {
+      missingRequiredLabel = f.label || f.id;
+    }
+  });
+  if (missingRequiredLabel) {
+    showToast("Indiquez au moins : " + missingRequiredLabel, "error");
+    return;
+  }
+
+  // Copie AVANT de fermer le modal : si Clarity redemande encore une
   // précision (onNeedsForm), on doit pouvoir rouvrir avec exactement les
   // mêmes points, jamais une liste vide.
   const pointsSnapshot = crPoints.slice();
@@ -11257,20 +11322,30 @@ function submitCompteRendu() {
 
   closeCompteRenduModal();
 
-  callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction, null, window.currentRequestId, null, {
-    onSuccess: (data, content) => openCompteRenduMailPreview(data, content),
-    onNeedsForm: data => {
-      // Jamais le formulaire générique vide : on revient sur NOTRE modal,
-      // points intacts, et on indique ce qu'il manque via un toast — il
-      // suffit d'ajouter un point de plus (le sujet, par exemple) et de
-      // recréer le compte rendu.
-      openCompteRenduModal(pointsSnapshot);
-      showToast(
-        data.brief || data.message || "Ajoutez encore un point (ex : le sujet) puis recréez le compte rendu.",
-        "error"
-      );
+  callSimpleAgent(
+    "redaction",
+    REDACTION_WEBHOOK_URL,
+    instruction,
+    null,
+    window.currentRequestId,
+    Object.keys(formAnswers).length ? { form_answers: formAnswers } : null,
+    {
+      onSuccess: (data, content) => openCompteRenduMailPreview(data, content),
+      onNeedsForm: async data => {
+        // Jamais le formulaire générique séparé : on revient sur NOTRE
+        // modal, points intacts, et on affiche concrètement CE QUI manque
+        // (ex: un champ "Sujet") au lieu d'un toast vague — sinon
+        // l'utilisateur ne sait pas quoi ajouter et tourne en rond.
+        await openCompteRenduModal(pointsSnapshot);
+        crMissingFields = Array.isArray(data.fields) ? data.fields : [];
+        renderCrMissingFields();
+        showToast(
+          data.brief || data.message || "Complétez les informations ci-dessous puis recréez le compte rendu.",
+          "error"
+        );
+      }
     }
-  });
+  );
 }
 
 window.openCompteRenduModal = openCompteRenduModal;
