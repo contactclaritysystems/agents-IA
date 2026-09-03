@@ -10705,6 +10705,31 @@ function getCompteRenduExamples() {
 window.getCompteRenduExamples = getCompteRenduExamples;
 window.detectCrJobCategory = detectCrJobCategory;
 
+// Même logique que pour le compte rendu : l'exemple "obligations légales"
+// de l'Assistant nommait "artisan" en dur, ce qui ne parle pas à un
+// consultant, un kiné ou une coiffeuse. On réutilise la même détection de
+// métier (currentProfile.job / detectCrJobCategory) pour adapter cette
+// seule ligne, les 3 autres exemples de l'Assistant restent universels.
+const ASSISTANT_LEGAL_EXAMPLES = {
+  generic: "Quelles sont mes obligations légales en tant qu'indépendant ?",
+  btp: "Quelles sont mes obligations légales pour afficher mes prix en tant qu'artisan du bâtiment ?",
+  service: "Quelles sont mes obligations légales en tant que consultant indépendant ?",
+  sante: "Quelles sont mes obligations légales pour la tenue du dossier patient ?",
+  commerce: "Quelles sont mes obligations légales pour l'affichage de mes prix en boutique ?"
+};
+
+function getAssistantExamples() {
+  const category = detectCrJobCategory(currentProfile && currentProfile.job);
+  const legalExample = ASSISTANT_LEGAL_EXAMPLES[category] || ASSISTANT_LEGAL_EXAMPLES.generic;
+  return [
+    "Quels sont mes rendez-vous prévus cette semaine ?",
+    "Ai-je des relances en retard en ce moment ?",
+    legalExample,
+    "Comment répondre poliment à un client qui conteste une facture ?"
+  ];
+}
+window.getAssistantExamples = getAssistantExamples;
+
 // Uniquement les actions réellement disponibles aujourd'hui. Compléter
 // cette liste au fur et à mesure que de nouvelles actions sont
 // développées côté Make (chacune avec ready:true une fois branchée).
@@ -10946,9 +10971,11 @@ function showHelpActionExample(index) {
     // du tout les mêmes points, l'exemple générique ne parlait à personne.
     const examples = action.id === "compte_rendu"
       ? getCompteRenduExamples()
-      : (Array.isArray(action.examples)
-          ? action.examples
-          : (action.example ? [action.example] : []));
+      : action.id === "assistant"
+        ? getAssistantExamples()
+        : (Array.isArray(action.examples)
+            ? action.examples
+            : (action.example ? [action.example] : []));
     // Numéroté quand il y a un hint dédié (compte rendu, dictée point par
     // point) : rend visible que ce sont plusieurs points distincts d'un
     // même compte rendu, pas une liste de phrases interchangeables.
@@ -11010,16 +11037,10 @@ function tryHelpActionsExample() {
       return;
   }
 
-  if (action.id === "redaction" || action.id === "assistant" || action.id === "taches") {
-    const examples = Array.isArray(action.examples) ? action.examples : (action.example ? [action.example] : []);
-    const exampleText = examples[0] || "";
-    if (exampleText) {
-      setTimeout(() => {
-        const textarea = document.getElementById("quick-text-instruction");
-        if (textarea) textarea.value = exampleText;
-      }, 80);
-    }
-  }
+  // Même règle que pour le compte rendu : les exemples du popup "?" ne
+  // servent qu'à illustrer, pas à être envoyés tels quels. "Essayer
+  // maintenant" doit ouvrir un champ VIERGE, pas déjà rempli avec un texte
+  // que l'utilisateur n'a pas choisi lui-même.
 }
 
 // Boutons "Actions rapides" de l'accueil : un raccourci par agent connecté
