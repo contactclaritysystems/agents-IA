@@ -10705,26 +10705,28 @@ function getCompteRenduExamples() {
 window.getCompteRenduExamples = getCompteRenduExamples;
 window.detectCrJobCategory = detectCrJobCategory;
 
-// Même logique que pour le compte rendu : l'exemple "obligations légales"
-// de l'Assistant nommait "artisan" en dur, ce qui ne parle pas à un
-// consultant, un kiné ou une coiffeuse. On réutilise la même détection de
-// métier (currentProfile.job / detectCrJobCategory) pour adapter cette
-// seule ligne, les 3 autres exemples de l'Assistant restent universels.
-const ASSISTANT_LEGAL_EXAMPLES = {
-  generic: "Quelles sont mes obligations légales en tant qu'indépendant ?",
-  btp: "Quelles sont mes obligations légales pour afficher mes prix en tant qu'artisan du bâtiment ?",
-  service: "Quelles sont mes obligations légales en tant que consultant indépendant ?",
-  sante: "Quelles sont mes obligations légales pour la tenue du dossier patient ?",
-  commerce: "Quelles sont mes obligations légales pour l'affichage de mes prix en boutique ?"
+// L'exemple "obligations légales" a été retiré : le modèle derrière
+// l'Assistant n'a pas de source juridique à jour certifiée, une réponse
+// fausse sur du droit/fiscal est un vrai risque de confiance (confirmé
+// par Grok côté backend). On garde l'adaptation par métier
+// (currentProfile.job / detectCrJobCategory) mais sur un sujet sans enjeu
+// juridique : un conseil pratique, où une imprécision est sans
+// conséquence. Les 3 autres exemples de l'Assistant restent universels.
+const ASSISTANT_TIP_EXAMPLES = {
+  generic: "Quels conseils pour mieux organiser mon activité au quotidien ?",
+  btp: "Quels conseils pour bien présenter mon devis à un client ?",
+  service: "Comment structurer une proposition claire pour un client ?",
+  sante: "Comment organiser le suivi de mes patients plus efficacement ?",
+  commerce: "Quelles astuces pour fidéliser mes clients en boutique ?"
 };
 
 function getAssistantExamples() {
   const category = detectCrJobCategory(currentProfile && currentProfile.job);
-  const legalExample = ASSISTANT_LEGAL_EXAMPLES[category] || ASSISTANT_LEGAL_EXAMPLES.generic;
+  const tipExample = ASSISTANT_TIP_EXAMPLES[category] || ASSISTANT_TIP_EXAMPLES.generic;
   return [
     "Quels sont mes rendez-vous prévus cette semaine ?",
     "Ai-je des relances en retard en ce moment ?",
-    legalExample,
+    tipExample,
     "Comment répondre poliment à un client qui conteste une facture ?"
   ];
 }
@@ -10777,10 +10779,16 @@ const HELP_ACTIONS = [
     // Les 3 exemples d'origine étaient tous des questions génériques : on
     // ajoute 2 exemples "données perso" et on retire la question sur le
     // cours du cuivre (trop anecdotique, ne montre rien d'utile).
+    // Tableau de secours uniquement (le rendu réel passe par
+    // getAssistantExamples() dans showHelpActionExample, qui adapte le 3e
+    // exemple au métier) : pas de question juridique ici — le modèle
+    // n'a pas de source de droit fiable, une réponse fausse sur des
+    // obligations légales est un vrai risque pour un utilisateur qui s'y
+    // fierait (confirmé côté backend par Grok).
     examples: [
       "Quels sont mes rendez-vous prévus cette semaine ?",
       "Ai-je des relances en retard en ce moment ?",
-      "Quelles sont mes obligations légales pour afficher mes prix en tant qu'artisan ?",
+      "Quels conseils pour mieux organiser mon activité au quotidien ?",
       "Comment répondre poliment à un client qui conteste une facture ?"
     ],
     ready: true
