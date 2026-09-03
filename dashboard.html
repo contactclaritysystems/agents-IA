@@ -10703,9 +10703,20 @@ const HELP_ACTIONS = [
     label: "Compte rendu",
     icon: "🗒️",
     color: "teal",
+    // Contrairement aux autres agents (une seule phrase dictée), le compte
+    // rendu se construit point par point : le "Dites simplement :" générique
+    // ne montrait pas ça et donnait l'impression trompeuse d'une dictée
+    // unique. Ce hint dédié explique le vrai fonctionnement, et les exemples
+    // ci-dessous forment un compte rendu complet et réaliste (constat,
+    // travaux faits, matériel, point de vigilance) plutôt que 2 phrases
+    // vagues isolées.
+    hint: "Dictez chaque point l'un après l'autre, par exemple :",
     examples: [
-      "Intervention chez M. Martin : chaudière remplacée, tout fonctionne, prochain contrôle dans 6 mois.",
-      "Rendez-vous avec Julie : budget de 3000€ validé, travaux prévus à partir de lundi prochain."
+      "Intervention chez M. Rousseau pour une fuite sous l'évier de la cuisine.",
+      "Le joint du siphon était fissuré, il a été remplacé.",
+      "Prévoir de repasser dans 15 jours pour vérifier qu'il n'y a plus de fuite.",
+      "Le client a aussi signalé un bruit dans la chaudière, à vérifier lors du prochain passage.",
+      "Prévoir l'achat d'un siphon de rechange pour l'intervention suivante."
     ],
     ready: true
   },
@@ -10812,13 +10823,27 @@ function showHelpActionExample(index) {
   const titleEl = document.getElementById("help-actions-example-title");
   if (titleEl) titleEl.textContent = action.label;
 
+  // La plupart des agents se déclenchent en une seule phrase dictée
+  // ("Dites simplement :") — mais le compte rendu se construit point par
+  // point (voir openCompteRenduModal) : sans ce hint dédié, l'exemple
+  // donnait l'impression trompeuse d'une dictée unique.
+  const hintEl = document.getElementById("help-actions-example-hint");
+  if (hintEl) hintEl.textContent = action.hint || "Dites simplement :";
+
   const phraseListEl = document.getElementById("help-actions-example-phrase-list");
   if (phraseListEl) {
     const examples = Array.isArray(action.examples)
       ? action.examples
       : (action.example ? [action.example] : []);
+    // Numéroté quand il y a un hint dédié (compte rendu, dictée point par
+    // point) : rend visible que ce sont plusieurs points distincts d'un
+    // même compte rendu, pas une liste de phrases interchangeables.
     phraseListEl.innerHTML = examples
-      .map(ex => '<div class="help-actions-example-phrase">' + ex + '</div>')
+      .map((ex, i) =>
+        '<div class="help-actions-example-phrase">' +
+        (action.hint ? (i + 1) + ". " : "") + ex +
+        "</div>"
+      )
       .join("");
   }
 
@@ -11848,7 +11873,8 @@ function printCrResult() {
   printWindow.document.write(
     "<html><head><title>" + escapeHtmlForPrint(title) + "</title>" +
     "<style>" +
-    "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;line-height:1.5;color:#111;}" +
+    "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:64px 32px 32px;line-height:1.5;color:#111;}" +
+    "@media print{body{padding-top:32px;}}" +
     "h1{font-size:19px;margin-bottom:22px;}" +
     ".cr-h1{font-size:17px;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #ddd;}" +
     ".cr-h1:first-child{margin-top:0;}" +
@@ -11857,8 +11883,19 @@ function printCrResult() {
     ".cr-p{font-size:13.5px;line-height:1.65;margin:0 0 12px;}" +
     ".cr-ul{margin:4px 0 14px 18px;padding:0;}" +
     ".cr-li{font-size:13.5px;line-height:1.6;margin-bottom:6px;}" +
+    // Bouton "← Retour" : sur mobile surtout, "Imprimer" ouvre cet onglet
+    // séparé puis la boîte AirPrint/impression du système par-dessus — une
+    // fois cette boîte annulée (ex: aucune imprimante trouvée), l'utilisateur
+    // se retrouvait bloqué sur cet onglet, sans aucun moyen de revenir au
+    // compte rendu. display:none en impression (@media print) : ce bouton
+    // ne doit jamais apparaître sur le papier ou dans un PDF "Imprimer >
+    // Enregistrer en PDF".
+    ".cr-print-back{position:fixed;top:14px;left:14px;background:#0091c7;color:#fff;border:none;border-radius:20px;padding:10px 18px;font-size:14px;font-weight:600;font-family:inherit;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:999;}" +
+    "@media print{.cr-print-back{display:none;}}" +
     "</style>" +
-    "</head><body><h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div></body></html>"
+    "</head><body>" +
+    "<button type=\"button\" class=\"cr-print-back\" onclick=\"window.close()\">← Retour</button>" +
+    "<h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div></body></html>"
   );
   printWindow.document.close();
   printWindow.focus();
@@ -27338,7 +27375,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 
       <div class="help-icon help-actions-example-icon" id="help-actions-example-icon"></div>
       <div class="mail-choice-title help-actions-example-title" id="help-actions-example-title"></div>
-      <div class="mail-choice-subtitle help-actions-example-hint">Dites simplement :</div>
+      <div class="mail-choice-subtitle help-actions-example-hint" id="help-actions-example-hint">Dites simplement :</div>
       <div class="help-actions-example-phrase-list" id="help-actions-example-phrase-list"></div>
 
       <button id="help-actions-try-btn" type="button" onclick="tryHelpActionsExample()" class="clarity-try-icon-btn" aria-label="Essayer maintenant">
