@@ -1093,10 +1093,10 @@ select.field-input {
 .cr-result-rich .cr-h2 {
   font-size: 15px;
   font-weight: 700;
-  color: var(--clarity-accent, #4b6fff);
+  color: var(--clarity-accent, #0091c7);
   margin: 22px 0 10px;
   padding-left: 10px;
-  border-left: 3px solid var(--clarity-accent, #4b6fff);
+  border-left: 3px solid var(--clarity-accent, #0091c7);
 }
 
 .cr-result-rich .cr-h2:first-child {
@@ -11056,9 +11056,25 @@ let crCustomFieldSeq = 0;
 // historique inchangé si l'utilisateur n'a rien cliqué de spécifique.
 let crActiveDictationTargetId = "cr-point-input";
 
-async function openCompteRenduModal(prefillPoints) {
+async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   const allowed = await canUseAgents();
   if (!allowed) return;
+
+  // Bug corrigé : callSimpleAgent("redaction", ...) envoie toujours
+  // conversation_history au backend (mémoire courte partagée avec
+  // Rédaction/Assistant, utile pour "plus court", "complète-le"...). Sans
+  // cette remise à zéro, démarrer un TOUT NOUVEAU compte rendu réutilisait
+  // encore la demande/réponse du compte rendu précédent — Clarity voyait ce
+  // contexte et redonnait un résultat quasi identique, même en ne dictant
+  // que 2 points cette fois. On la vide donc à chaque ouverture "propre",
+  // sauf quand c'est submitCompteRendu qui rouvre CE MÊME modal après un
+  // needs_form (preserveHistory=true) : là, le contexte doit au contraire
+  // être conservé, puisqu'il s'agit du même compte rendu en cours.
+  if (!preserveHistory) {
+    simpleAgentConversationHistory = [];
+    lastAgentInfo = null;
+    pendingClarifyAgent = null;
+  }
 
   crPoints = Array.isArray(prefillPoints) ? prefillPoints.slice() : [];
 
@@ -11741,6 +11757,10 @@ function crResultToPlainText(container) {
 // et sépare chaque bloc (titre, paragraphe, liste) par une vraie ligne
 // vide — un mail en texte brut sans saut de ligne entre les sections n'a
 // rien de premium, même sans mise en forme riche possible dans ce format.
+// Un vrai gras est impossible en texte brut (aucune balise n'existe dans ce
+// format) : les sous-titres sont donc mis en MAJUSCULES suivies de ":",
+// convention standard des courriers/rapports en texte brut pour repérer une
+// section sans mise en forme riche.
 function crResultToMailText(container) {
   if (!container) return "";
   const blocks = [];
@@ -11752,7 +11772,10 @@ function crResultToMailText(container) {
       return;
     }
 
-    if (node.tagName === "UL") {
+    if (node.classList && node.classList.contains("cr-h2")) {
+      const t = node.textContent.trim();
+      blocks.push(t.toUpperCase() + (/[:!?.]$/.test(t) ? "" : " :"));
+    } else if (node.tagName === "UL") {
       const items = Array.from(node.querySelectorAll("li")).map(li => "- " + li.textContent.trim());
       if (items.length) blocks.push(items.join("\n"));
     } else {
@@ -11829,7 +11852,7 @@ function printCrResult() {
     "h1{font-size:19px;margin-bottom:22px;}" +
     ".cr-h1{font-size:17px;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #ddd;}" +
     ".cr-h1:first-child{margin-top:0;}" +
-    ".cr-h2{font-size:14px;font-weight:700;color:#4b6fff;margin:20px 0 8px;padding-left:10px;border-left:3px solid #4b6fff;}" +
+    ".cr-h2{font-size:14px;font-weight:700;color:#0091c7;margin:20px 0 8px;padding-left:10px;border-left:3px solid #0091c7;}" +
     ".cr-h2:first-child{margin-top:0;}" +
     ".cr-p{font-size:13.5px;line-height:1.65;margin:0 0 12px;}" +
     ".cr-ul{margin:4px 0 14px 18px;padding:0;}" +
@@ -11886,10 +11909,10 @@ async function downloadCrResultPDF() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const maxWidth = pageWidth - marginX * 2;
-    // Même bleu accent que le rendu à l'écran (.cr-h2, voir CSS) : le PDF
-    // doit avoir la même identité visuelle "premium", pas un simple texte
-    // noir et blanc.
-    const accent = [75, 111, 255];
+    // Même bleu accent que le rendu à l'écran (--clarity-accent: #0091c7,
+    // voir CSS) : le PDF doit avoir la même identité visuelle "premium",
+    // pas une couleur approximative différente de celle vue dans l'app.
+    const accent = [0, 145, 199];
     const ink = [17, 17, 17];
     let y = 0;
 
@@ -12131,7 +12154,7 @@ function submitCompteRendu() {
         // modal, points ET champs déjà remplis intacts, et on affiche
         // concrètement CE QUI manque en plus (rare : sujet est déjà
         // couvert) au lieu d'un toast vague qui ferait tourner en rond.
-        await openCompteRenduModal(pointsSnapshot);
+        await openCompteRenduModal(pointsSnapshot, true);
         restoreCrFieldsState(fieldsStateSnapshot);
         crMissingFields = Array.isArray(data.fields)
           ? data.fields.filter(f => f.id !== "sujet")
