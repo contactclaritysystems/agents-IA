@@ -10710,13 +10710,18 @@ const HELP_ACTIONS = [
     // ci-dessous forment un compte rendu complet et réaliste (constat,
     // travaux faits, matériel, point de vigilance) plutôt que 2 phrases
     // vagues isolées.
+    // Phrase générale au-dessus des exemples : montre à quoi sert l'outil
+    // (pas un métier précis) avant même de voir les points, pour que
+    // n'importe quel utilisateur (BTP, conseil, santé, commerce...) se
+    // reconnaisse.
+    intro: "Utile après une visite pour un devis, un rendez-vous client, une réunion, ou toute intervention que vous voulez garder en mémoire.",
     hint: "Dictez chaque point l'un après l'autre, par exemple :",
     examples: [
-      "Intervention chez M. Rousseau pour une fuite sous l'évier de la cuisine.",
-      "Le joint du siphon était fissuré, il a été remplacé.",
-      "Prévoir de repasser dans 15 jours pour vérifier qu'il n'y a plus de fuite.",
-      "Le client a aussi signalé un bruit dans la chaudière, à vérifier lors du prochain passage.",
-      "Prévoir l'achat d'un siphon de rechange pour l'intervention suivante."
+      "Rendez-vous avec Madame Chevalier pour faire le point sur le dossier.",
+      "Le budget a été validé, on peut passer à l'étape suivante.",
+      "Prochaine action : lui envoyer le devis avant vendredi.",
+      "Elle souhaite être recontactée dans 2 semaines pour un point d'avancement.",
+      "À prévoir : préparer les documents nécessaires pour le prochain rendez-vous."
     ],
     ready: true
   },
@@ -10823,6 +10828,15 @@ function showHelpActionExample(index) {
   const titleEl = document.getElementById("help-actions-example-title");
   if (titleEl) titleEl.textContent = action.label;
 
+  // Phrase générale sur l'usage (ex: compte rendu = visite, RDV, réunion...),
+  // affichée seulement quand l'action en définit une — pas de trou visuel
+  // pour les agents qui n'en ont pas besoin.
+  const introEl = document.getElementById("help-actions-example-intro");
+  if (introEl) {
+    introEl.textContent = action.intro || "";
+    introEl.style.display = action.intro ? "block" : "none";
+  }
+
   // La plupart des agents se déclenchent en une seule phrase dictée
   // ("Dites simplement :") — mais le compte rendu se construit point par
   // point (voir openCompteRenduModal) : sans ce hint dédié, l'exemple
@@ -10885,11 +10899,11 @@ function tryHelpActionsExample() {
       openQuickTextModal(action.id);
       break;
     case "compte_rendu":
-      // Multi-points (voir openCompteRenduModal) : on préremplit avec les
-      // exemples affichés pour que "Essayer maintenant" montre tout de
-      // suite à quoi ressemble une vraie liste de points, plutôt qu'un
-      // champ texte vide.
-      openCompteRenduModal(Array.isArray(action.examples) ? action.examples : []);
+      // Les exemples affichés dans le popup "?" ne servent qu'à illustrer
+      // le principe (dicter point par point) — "Essayer maintenant" doit
+      // ouvrir un compte rendu VIERGE, pas déjà rempli avec ces points-là,
+      // que l'utilisateur n'a pas choisis lui-même.
+      openCompteRenduModal();
       return;
     default:
       startOrchestratorDictation();
@@ -11631,7 +11645,17 @@ async function toggleCrPointDictation() {
 // de partir DIRECTEMENT dans l'aperçu mail : l'utilisateur doit pouvoir
 // relire/corriger le texte avant de décider ce qu'il en fait (l'envoyer,
 // le télécharger en PDF, l'imprimer, ou juste le copier ailleurs).
-function openCompteRenduResultModal(data, content) {
+// crResultSkipCloseConfirm / crResultHistoryLogId : état de la dernière
+// ouverture. Un compte rendu FRAÎCHEMENT généré (submitCompteRendu) demande
+// confirmation avant de fermer, car il y a un texte non encore envoyé à
+// perdre — mais un compte rendu ouvert depuis l'Historique (voir
+// openNotesHistoryDetail) est déjà enregistré : rien à perdre, donc pas de
+// confirmation, et un bouton "Supprimer" apparaît en plus (mêmes boutons
+// qu'à la création : Envoyer/PDF/Imprimer/Copier, plus Supprimer).
+let crResultSkipCloseConfirm = false;
+let crResultHistoryLogId = null;
+
+function openCompteRenduResultModal(data, content, options = {}) {
   let modal = document.getElementById("cr-result-modal");
   if (!modal) {
     modal = document.createElement("div");
@@ -11657,6 +11681,7 @@ function openCompteRenduResultModal(data, content) {
             <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="printCrResult()">🖨️ Imprimer</button>
             <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="copyCrResultText()">📋 Copier</button>
           </div>
+          <button class="sheet-btn" type="button" id="cr-result-delete-btn" style="display:none;width:100%;justify-content:center;margin-top:8px;color:var(--clarity-danger);" onclick="deleteCrResultFromHistory()">🗑️ Supprimer</button>
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="requestCloseCrResult()">Fermer</button>
         </div>
 
@@ -11671,11 +11696,26 @@ function openCompteRenduResultModal(data, content) {
     document.body.appendChild(modal);
   }
 
+  crResultSkipCloseConfirm = !!options.skipCloseConfirm;
+  crResultHistoryLogId = options.historyLogId || null;
+
+  const deleteBtn = document.getElementById("cr-result-delete-btn");
+  if (deleteBtn) deleteBtn.style.display = crResultHistoryLogId ? "block" : "none";
+
   document.getElementById("cr-result-title").textContent = data.title || "Compte rendu";
   document.getElementById("cr-result-content").innerHTML = renderCrMarkdownToHtml(content || "");
   document.getElementById("cr-result-main-view").style.display = "block";
   document.getElementById("cr-result-confirm-view").style.display = "none";
   modal.style.display = "flex";
+}
+
+// Réutilise deleteHistoryLog (confirm() + suppression Supabase + toast +
+// rafraîchissement de la liste "Comptes rendus") : pas de logique dupliquée,
+// juste refermer cette popup une fois fait.
+function deleteCrResultFromHistory() {
+  if (!crResultHistoryLogId) return;
+  deleteHistoryLog(crResultHistoryLogId, "notes");
+  closeCrResultModal();
 }
 
 // Transforme le texte brut renvoyé par Clarity en un rendu "premium" — vrais
@@ -11818,6 +11858,13 @@ function crResultToMailText(container) {
 // contrairement au modal de saisie (où on ne perd que des points bruts),
 // ici il y a TOUJOURS un texte rédigé fini à perdre.
 function requestCloseCrResult() {
+  // Un compte rendu déjà enregistré (ouvert depuis l'Historique) n'a rien
+  // à perdre en fermant : la confirmation "Fermer sans l'envoyer ?" n'a de
+  // sens que pour un compte rendu fraîchement généré, pas encore envoyé.
+  if (crResultSkipCloseConfirm) {
+    closeCrResultModal();
+    return;
+  }
   document.getElementById("cr-result-main-view").style.display = "none";
   document.getElementById("cr-result-confirm-view").style.display = "block";
 }
@@ -23707,58 +23754,28 @@ if (objetMatch && objetMatch[1]) {
   return "Détail";
 }
 
+  // Ouvre directement la MÊME popup que juste après la création d'un
+  // compte rendu (Envoyer par mail / PDF / Imprimer / Copier), au lieu
+  // d'une vue dédiée avec un simple bouton "Envoyer par mail" et le texte
+  // brut — cohérent avec la demande de retrouver les mêmes actions depuis
+  // l'historique. skipCloseConfirm:true car un compte rendu déjà enregistré
+  // n'a rien à perdre en fermant ; historyLogId affiche en plus un bouton
+  // Supprimer dans cette même popup.
   function openNotesHistoryDetail(index) {
 
   const log = currentHistoryLogs[index];
   if (!log) return;
 
-  const list = document.getElementById("history-list");
-  if (!list) return;
-
-    
   const cleanText = (log.action || "")
   .replace(/^Compte rendu\s*/i, "")
   .replace(/OBJET\s*:\s*.+/i, "")
   .trim();
 
-  window.currentHistorySubPage = "notes-detail";
-
-  list.classList.remove("planning-folder-grid");
-  list.style.display = "flex";
-  list.style.flexDirection = "column";
-  list.style.gap = "14px";
-
-  list.innerHTML = `
-    <div class="gmail-section" style="display:block;">
-      
-      <div class="section-title">
-  ${getNoteTitle(log.action || "")}
-</div>
-
-      <div class="gmail-desc" style="margin-top:8px;">
-        ${new Date(log.created_at).toLocaleString("fr-FR")}
-      </div>
-
-      <button class="save-btn" onclick="sendHistoryNoteByEmail(${index})" type="button" style="margin-top:16px;">
-  📤 Envoyer par mail
-</button>
-
-<div style="
-  margin-top:16px;
-  white-space:pre-wrap;
-  line-height:1.6;
-  font-size:14px;
-  word-break:break-word;
-">
-  ${cleanText || "Compte rendu vide"}
-</div>
-
-      <button class="sheet-btn" onclick="deleteHistoryLog('${log.id}', 'notes')" type="button" style="width:100%;justify-content:center;margin-top:18px;color:var(--clarity-danger);">
-        Supprimer
-      </button>
-
-    </div>
-  `;
+  openCompteRenduResultModal(
+    { title: getNoteTitle(log.action || "") },
+    cleanText || "Compte rendu vide",
+    { skipCloseConfirm: true, historyLogId: log.id }
+  );
 }
 
   function openSimpleAgentHistoryDetail(agentName, index) {
@@ -27375,6 +27392,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 
       <div class="help-icon help-actions-example-icon" id="help-actions-example-icon"></div>
       <div class="mail-choice-title help-actions-example-title" id="help-actions-example-title"></div>
+      <div class="mail-choice-subtitle" id="help-actions-example-intro" style="display:none;"></div>
       <div class="mail-choice-subtitle help-actions-example-hint" id="help-actions-example-hint">Dites simplement :</div>
       <div class="help-actions-example-phrase-list" id="help-actions-example-phrase-list"></div>
 
