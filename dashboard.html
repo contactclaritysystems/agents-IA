@@ -10921,7 +10921,7 @@ const CR_OPTIONAL_FIELD_DEFS = [
   // les grandes structures, le client (la société) et le contact (la
   // personne) sont deux informations différentes qui coexistent souvent
   // (ex : client "NGE", contact "M. Arnaud").
-  { id: "client", label: "Client", placeholder: "Ex : NGE" },
+  { id: "client", label: "Client", placeholder: "Ex : Société Martin" },
   { id: "contact", label: "Contact", placeholder: "Ex : M. Arnaud" },
   { id: "societe", label: "Société", placeholder: "Ex : SARL Dupont Bâtiment" }
 ];
@@ -10934,6 +10934,13 @@ let crOptionalFieldValues = {};
 // aucune case prévue à l'avance (référence de chantier, numéro de devis...).
 let crCustomFields = [];
 let crCustomFieldSeq = 0;
+
+// Champ actuellement ciblé par LE micro (voir écouteur "focusin" posé sur
+// le modal) : dicter remplit ce champ précis, quel qu'il soit, au lieu
+// d'être toujours câblé sur les points comme avant. Par défaut (avant
+// tout clic dans un champ), reste sur les points — comportement
+// historique inchangé si l'utilisateur n'a rien cliqué de spécifique.
+let crActiveDictationTargetId = "cr-point-input";
 
 async function openCompteRenduModal(prefillPoints) {
   const allowed = await canUseAgents();
@@ -10966,7 +10973,7 @@ async function openCompteRenduModal(prefillPoints) {
               <span class="mic-stop-icon" aria-hidden="true"></span>
             </button>
           </div>
-          <div class="clarity-mic-hint">🎙️ Dictez un point : il s'ajoute automatiquement à la liste, prêt pour le suivant.</div>
+          <div class="clarity-mic-hint">🎙️ Cliquez dans un champ (Sujet, un point, Client...) puis appuyez sur le micro pour le dicter directement dedans.</div>
 
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
 
@@ -10996,11 +11003,25 @@ async function openCompteRenduModal(prefillPoints) {
     if (sourceMicImg && targetMicBtn) {
       targetMicBtn.prepend(sourceMicImg.cloneNode(true));
     }
+
+    // Micro unique mais universel : plutôt qu'un micro par champ (Sujet,
+    // chaque point, Client, Contact...), on retient simplement quel champ
+    // texte a le focus au moment où l'utilisateur appuie sur LE micro — ce
+    // qui suit inclut aussi les champs ajoutés dynamiquement plus tard
+    // (Client/Contact/Société/champs libres), grâce à la délégation
+    // d'évènement sur le conteneur du modal plutôt que sur chaque champ.
+    modal.addEventListener("focusin", function (e) {
+      const el = e.target;
+      if (el && el.id && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+        crActiveDictationTargetId = el.id;
+      }
+    });
   }
 
   const input = document.getElementById("cr-point-input");
   if (input) input.value = "";
   renderCrPoints();
+  crActiveDictationTargetId = "cr-point-input";
 
   // Réinitialisé par défaut à chaque ouverture "propre" : c'est
   // onNeedsForm (dans submitCompteRendu) qui le repeuple juste après avoir
@@ -11292,7 +11313,14 @@ const CR_MIC_MAX_RETRIES = 20;
 
 async function toggleCrPointDictation() {
   const micBtn = document.getElementById("cr-mic-btn");
-  const textarea = document.getElementById("cr-point-input");
+  // Cible figée au moment où on appuie sur le micro (pas recalculée en
+  // cours de dictée) : le champ dernièrement cliqué par l'utilisateur
+  // (Sujet, un point, Client...), voir l'écouteur "focusin" posé sur le
+  // modal dans openCompteRenduModal(). Par défaut, les points (comportement
+  // historique si l'utilisateur n'a rien cliqué de spécifique).
+  const targetId = crActiveDictationTargetId || "cr-point-input";
+  const textarea = document.getElementById(targetId);
+  if (!textarea) return;
 
   if (crDictationRecognition) {
     // Arrêt manuel : ne pas avancer la génération ici (voir commentaire
@@ -11369,9 +11397,20 @@ async function toggleCrPointDictation() {
       }
 
       if (micBtn) micBtn.classList.remove("is-recording");
-      // Arrêt réel (pas une relance silencieuse) : on ajoute le(s) point(s)
-      // dicté(s) à la liste.
-      if (textarea && textarea.value.trim()) addCrPoint();
+
+      // Arrêt réel (pas une relance silencieuse) : comportement différent
+      // selon le champ ciblé. Pour les points, on ajoute (et sépare) à la
+      // liste comme avant. Pour tout autre champ (Sujet, Client, Contact,
+      // champs libres...), la valeur dictée reste simplement dans le champ
+      // — on synchronise juste son état JS (dispatch d'un vrai évènement
+      // "input", qui déclenche le oninput déjà câblé sur ces champs) pour
+      // qu'un futur re-rendu (ex: ajout d'un autre champ facultatif) ne
+      // l'efface pas.
+      if (targetId === "cr-point-input") {
+        if (textarea.value.trim()) addCrPoint();
+      } else if (textarea.value.trim()) {
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     };
 
     (async () => {
@@ -11416,29 +11455,156 @@ async function toggleCrPointDictation() {
   startCrAttempt();
 }
 
-// Une fois le texte généré, on propose de se l'envoyer directement par
-// mail (à sa propre adresse connectée par défaut, modifiable, + Cc
-// optionnel) plutôt que de laisser le résultat dans une simple popup de
-// lecture : c'est là que sert vraiment un compte rendu, pas juste à être
-// affiché une fois. Réutilise le même aperçu/envoi que pour un mail à un
-// contact (mail-preview-modal + sendPreparedMail), avec To/Cc visibles
-// cette fois (pas le mode "Une idée, un besoin ?" qui les masque).
-function openCompteRenduMailPreview(data, content) {
+// Une fois le texte généré, on l'affiche dans une popup dédiée — éditable,
+// comme la popup générique "Résultat prêt" des autres agents — plutôt que
+// de partir DIRECTEMENT dans l'aperçu mail : l'utilisateur doit pouvoir
+// relire/corriger le texte avant de décider ce qu'il en fait (l'envoyer,
+// le télécharger en PDF, l'imprimer, ou juste le copier ailleurs).
+function openCompteRenduResultModal(data, content) {
+  let modal = document.getElementById("cr-result-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "cr-result-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop"></div>
+      <div class="mail-choice-box">
+        <div id="cr-result-main-view">
+          <div class="mail-choice-title" style="display:flex;align-items:center;gap:9px;">
+            <img src="${CLARITY_THINKING_LOGO_SRC}" alt="" style="height:26px;width:auto;flex-shrink:0;display:block;" />
+            <span>Compte rendu prêt</span>
+          </div>
+
+          <div class="field-group" style="margin-top:12px;">
+            <div class="field-label" id="cr-result-title">Compte rendu</div>
+            <textarea class="field-input" id="cr-result-content" style="min-height:220px;"></textarea>
+          </div>
+
+          <button class="save-btn" type="button" style="width:100%;margin-top:10px;" onclick="sendCrResultByMail()">📧 Envoyer par mail</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="downloadCrResultPDF()">📄 Télécharger en PDF</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="printCrResult()">🖨️ Imprimer</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="copyCrResultText()">📋 Copier le texte</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="requestCloseCrResult()">Fermer</button>
+        </div>
+
+        <div id="cr-result-confirm-view" style="display:none;">
+          <div class="mail-choice-title">Fermer sans l'envoyer ?</div>
+          <div class="mail-choice-subtitle">Le compte rendu généré ne sera pas conservé.</div>
+          <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="closeCrResultModal()">Oui, fermer</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelCloseCrResult()">Continuer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById("cr-result-title").textContent = data.title || "Compte rendu";
+  document.getElementById("cr-result-content").value = content || "";
+  document.getElementById("cr-result-main-view").style.display = "block";
+  document.getElementById("cr-result-confirm-view").style.display = "none";
+  modal.style.display = "flex";
+}
+
+// Backdrop volontairement sans onclick (même règle que compte-rendu-modal) :
+// un compte rendu fraîchement généré ne doit jamais disparaître à cause
+// d'un clic à côté. Le bouton "Fermer" lui-même demande confirmation, car
+// contrairement au modal de saisie (où on ne perd que des points bruts),
+// ici il y a TOUJOURS un texte rédigé fini à perdre.
+function requestCloseCrResult() {
+  document.getElementById("cr-result-main-view").style.display = "none";
+  document.getElementById("cr-result-confirm-view").style.display = "block";
+}
+
+function cancelCloseCrResult() {
+  document.getElementById("cr-result-confirm-view").style.display = "none";
+  document.getElementById("cr-result-main-view").style.display = "block";
+}
+
+function closeCrResultModal() {
+  const modal = document.getElementById("cr-result-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function escapeHtmlForPrint(text) {
+  return (text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function copyCrResultText() {
+  const content = document.getElementById("cr-result-content")?.value || "";
+  if (!content.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+  navigator.clipboard
+    .writeText(content)
+    .then(() => showToast("Texte copié"))
+    .catch(() => showToast("Impossible de copier", "error"));
+}
+
+// Imprimer ET Télécharger en PDF passent tous les deux par la boîte de
+// dialogue d'impression native du navigateur : c'est le mécanisme standard
+// pour produire un vrai fichier PDF sans ajouter de bibliothèque tierce —
+// "Enregistrer au format PDF" y est proposé comme destination d'impression
+// sur Mac, Windows, et la plupart des navigateurs mobiles.
+function printCrResult() {
+  const title = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
+  const content = document.getElementById("cr-result-content")?.value || "";
+  if (!content.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showToast("Autorisez les popups pour imprimer ou télécharger en PDF", "error");
+    return;
+  }
+
+  printWindow.document.write(
+    "<html><head><title>" + escapeHtmlForPrint(title) + "</title>" +
+    "<style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;white-space:pre-wrap;line-height:1.5;color:#111;} h1{font-size:18px;margin-bottom:20px;}</style>" +
+    "</head><body><h1>" + escapeHtmlForPrint(title) + "</h1><div>" + escapeHtmlForPrint(content) + "</div></body></html>"
+  );
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 300);
+}
+
+function downloadCrResultPDF() {
+  printCrResult();
+}
+
+function sendCrResultByMail() {
+  // Relit le texte EN DIRECT depuis la popup (et pas la variable d'origine
+  // reçue de Clarity) : si l'utilisateur a corrigé/complété le texte ici
+  // avant d'envoyer, ce sont ses modifications qui doivent partir.
+  const content = document.getElementById("cr-result-content")?.value || "";
+  const subject = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
+  if (!content.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+
   const selfEmail =
     (currentUser &&
       (localStorage.getItem("gmail_" + currentUser.email) || currentUser.email)) ||
     "";
 
-  openMailPreview(
-    {
-      to: selfEmail,
-      subject: data.title || "Compte rendu",
-      body: content
-    },
-    "Compte rendu"
-  );
+  closeCrResultModal();
+  openMailPreview({ to: selfEmail, subject: subject, body: content }, "Compte rendu");
 }
-window.openCompteRenduMailPreview = openCompteRenduMailPreview;
+
+window.openCompteRenduResultModal = openCompteRenduResultModal;
+window.requestCloseCrResult = requestCloseCrResult;
+window.cancelCloseCrResult = cancelCloseCrResult;
+window.closeCrResultModal = closeCrResultModal;
+window.copyCrResultText = copyCrResultText;
+window.printCrResult = printCrResult;
+window.downloadCrResultPDF = downloadCrResultPDF;
+window.sendCrResultByMail = sendCrResultByMail;
 
 function submitCompteRendu() {
   if (!crPoints.length) {
@@ -11515,7 +11681,7 @@ function submitCompteRendu() {
     window.currentRequestId,
     { form_answers: formAnswers },
     {
-      onSuccess: (data, content) => openCompteRenduMailPreview(data, content),
+      onSuccess: (data, content) => openCompteRenduResultModal(data, content),
       onNeedsForm: async data => {
         // Jamais le formulaire générique séparé : on revient sur NOTRE
         // modal, points ET champs déjà remplis intacts, et on affiche
@@ -18295,7 +18461,7 @@ const CLARITY_MODAL_IDS = [
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
-  "quick-task-modal", "compte-rendu-modal"
+  "quick-task-modal", "compte-rendu-modal", "cr-result-modal"
 ];
 
 let clarityScrollLockY = 0;
