@@ -11488,6 +11488,25 @@ function looksLikeCompteRendu(text) {
 }
 window.looksLikeCompteRendu = looksLikeCompteRendu;
 
+// Ce que dit l'utilisateur en déclenchant la demande ("écris-moi le compte
+// rendu POUR LA REMISE EN ÉTAT DU PORTAIL") correspond quasiment toujours
+// au sujet du compte rendu — on le préremplit donc directement dans le
+// champ Sujet plutôt que de le jeter et de laisser l'utilisateur le
+// retaper. On retire juste la tournure de déclenchement pour ne garder que
+// l'objet réel de la phrase.
+function extractCompteRenduSubject(text) {
+  let s = (text || "").trim();
+  if (!s) return "";
+  s = s.replace(/^(écris|écrit|ecris|ecrit|fais|fait|rédige|redige|prépare|prepare)(\s*-?\s*moi)?\s+/i, "");
+  s = s.replace(/^(le|un|mon)\s+compte[\s-]?rendu\s*/i, "");
+  s = s.replace(/^compte[\s-]?rendu\s*/i, "");
+  s = s.replace(/^(pour|de|sur|concernant|à propos de)\s+/i, "");
+  s = s.trim().replace(/[.\s]+$/, "");
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+window.extractCompteRenduSubject = extractCompteRenduSubject;
+
 // ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
 // Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
 // aller-retour avec l'agent (souvent 2 popups : contact+motif, puis
@@ -13696,7 +13715,12 @@ async function sendTypedInstruction(instruction, continuing = false) {
       ) {
         hideOrRemoveBox(box);
         unlockAgentButtons();
-        openCompteRenduModal();
+        const crSubject = extractCompteRenduSubject(data.instruction || instruction);
+        await openCompteRenduModal();
+        if (crSubject) {
+          const sujetInput = document.getElementById("cr-field-sujet");
+          if (sujetInput) sujetInput.value = crSubject;
+        }
         return;
       }
 
@@ -20481,7 +20505,12 @@ if (
   hideOrRemoveBox(box);
   unlockAgentButtons();
   resetOrchestratorMicButton();
-  openCompteRenduModal();
+  const crSubject = extractCompteRenduSubject(data.instruction || instruction);
+  await openCompteRenduModal();
+  if (crSubject) {
+    const sujetInput = document.getElementById("cr-field-sujet");
+    if (sujetInput) sujetInput.value = crSubject;
+  }
   return;
 }
 
