@@ -11145,21 +11145,21 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
           <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
 
           <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
-            <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;"></textarea>
+            <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;" oninput="updateCrAddPointButtonState()"></textarea>
             <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
               <span class="mic-stop-icon" aria-hidden="true"></span>
             </button>
           </div>
           <div class="clarity-mic-hint">🎙️ Cliquez dans un champ (Sujet, un point, Client...) puis appuyez sur le micro pour le dicter directement dedans.</div>
 
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
+          <button class="sheet-btn" type="button" id="cr-add-point-btn" disabled style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
 
           <div id="cr-optional-active" style="margin-top:14px;"></div>
           <div id="cr-optional-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
 
           <div id="cr-missing-fields" style="display:none;margin-top:14px;"></div>
 
-          <button class="save-btn" type="button" id="cr-create-btn" style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
+          <button class="save-btn" type="button" id="cr-create-btn" disabled style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="requestCloseCompteRendu()">Annuler</button>
         </div>
 
@@ -11197,6 +11197,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
 
   const input = document.getElementById("cr-point-input");
   if (input) input.value = "";
+  updateCrAddPointButtonState();
   renderCrPoints();
   crActiveDictationTargetId = "cr-point-input";
 
@@ -11304,8 +11305,20 @@ function renderCrPoints() {
     createBtn.textContent = crPoints.length
       ? "🗒️ Créer le compte rendu (" + crPoints.length + (crPoints.length > 1 ? " points" : " point") + ")"
       : "🗒️ Créer le compte rendu";
+    // Grisé tant qu'il n'y a aucun point : rien à envoyer à Clarity sinon.
+    createBtn.disabled = crPoints.length === 0;
   }
 }
+
+// Grisé tant que le champ est vide : évite un clic "pour rien" sur un
+// point vide (qui ne faisait de toute façon rien, addCrPoint() l'ignorait
+// déjà — mais le bouton restait cliquable, ce qui n'était pas clair).
+function updateCrAddPointButtonState() {
+  const btn = document.getElementById("cr-add-point-btn");
+  const textarea = document.getElementById("cr-point-input");
+  if (btn) btn.disabled = !(textarea && textarea.value.trim());
+}
+window.updateCrAddPointButtonState = updateCrAddPointButtonState;
 
 // oninput plutôt qu'un re-rendu de toute la liste à chaque frappe : on
 // modifie juste le tableau en mémoire, sans jamais toucher au DOM pendant
@@ -11337,6 +11350,7 @@ function addCrPoint() {
   if (!raw) return;
   crPoints.push(...splitIntoCrPoints(raw));
   textarea.value = "";
+  updateCrAddPointButtonState();
   renderCrPoints();
   textarea.focus();
 }
