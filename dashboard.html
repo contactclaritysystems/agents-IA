@@ -10714,9 +10714,14 @@ const HELP_ACTIONS = [
     label: "Email",
     icon: "✉️",
     color: "blue",
+    // Les 2 exemples d'origine étaient tous les deux des demandes
+    // professionnelles assez formelles (ton similaire) : on ajoute un cas
+    // plus léger (remerciement + confirmation) pour montrer que Mail ne
+    // sert pas qu'à des échanges guindés.
     examples: [
       'Envoie un mail à "nom du contact" et dis-lui que "ce que vous voulez lui dire".',
-      'Envoie un mail à mon fournisseur pour demander un délai de paiement supplémentaire.'
+      'Envoie un mail à mon fournisseur pour demander un délai de paiement supplémentaire.',
+      "Envoie un mail à Julie pour la remercier de sa visite et confirmer le rendez-vous de la semaine prochaine."
     ],
     ready: true
   },
@@ -10725,9 +10730,14 @@ const HELP_ACTIONS = [
     label: "Rédaction",
     icon: "📝",
     color: "purple",
+    // Les 2 exemples d'origine penchaient tous les deux marketing (post
+    // réseau social, description site) : Rédaction écrit n'importe quel
+    // texte libre, pas seulement du marketing. On ajoute une annonce de
+    // recrutement pour montrer l'étendue réelle.
     examples: [
       'Rédige une publication Facebook pour annoncer notre nouvelle offre de printemps.',
-      "Écris une description professionnelle de mes services pour mon site internet."
+      "Écris une description professionnelle de mes services pour mon site internet.",
+      "Rédige une annonce pour recruter un apprenti dans mon entreprise."
     ],
     ready: true
   },
@@ -10736,9 +10746,16 @@ const HELP_ACTIONS = [
     label: "Assistant",
     icon: "💡",
     color: "green",
+    // Le code confirme que cet agent a le vrai contexte Clarity (RDV,
+    // relances, contacts) : il répond aussi sur les données personnelles
+    // de l'utilisateur, pas seulement des questions générales externes.
+    // Les 3 exemples d'origine étaient tous des questions génériques : on
+    // ajoute 2 exemples "données perso" et on retire la question sur le
+    // cours du cuivre (trop anecdotique, ne montre rien d'utile).
     examples: [
+      "Quels sont mes rendez-vous prévus cette semaine ?",
+      "Ai-je des relances en retard en ce moment ?",
       "Quelles sont mes obligations légales pour afficher mes prix en tant qu'artisan ?",
-      "Quel est le cours actuel du cuivre et son évolution récente ?",
       "Comment répondre poliment à un client qui conteste une facture ?"
     ],
     ready: true
@@ -10806,9 +10823,11 @@ const HELP_ACTIONS = [
     label: "Tâches",
     icon: "☑️",
     color: "pink",
+    // "matériel" évoquait trop spécifiquement le BTP : remplacé par un
+    // exemple neutre qui parle à n'importe quel métier.
     examples: [
       "Ajoute une tâche : rappeler le fournisseur pour les prix.",
-      "Il faut que je commande le matériel avant vendredi.",
+      "Il faut que je relance ce client avant vendredi.",
       "À faire : préparer le devis pour Mme Lefèvre."
     ],
     ready: true
