@@ -10742,16 +10742,22 @@ function tryHelpActionsExample() {
     case "relance":
       openQuickReminderModal();
       break;
-    case "compte_rendu":
     case "taches":
       openQuickTextModal(action.id);
       break;
+    case "compte_rendu":
+      // Multi-points (voir openCompteRenduModal) : on préremplit avec les
+      // exemples affichés pour que "Essayer maintenant" montre tout de
+      // suite à quoi ressemble une vraie liste de points, plutôt qu'un
+      // champ texte vide.
+      openCompteRenduModal(Array.isArray(action.examples) ? action.examples : []);
+      return;
     default:
       startOrchestratorDictation();
       return;
   }
 
-  if (action.id === "redaction" || action.id === "assistant" || action.id === "compte_rendu" || action.id === "taches") {
+  if (action.id === "redaction" || action.id === "assistant" || action.id === "taches") {
     const examples = Array.isArray(action.examples) ? action.examples : (action.example ? [action.example] : []);
     const exampleText = examples[0] || "";
     if (exampleText) {
@@ -10784,12 +10790,6 @@ const QUICK_TEXT_MODAL_CONFIG = {
     subtitle: "Écrivez ou dictez votre question, Clarity vous répond.",
     placeholder: "Quelle est votre question ?",
     submitLabel: "💡 Envoyer à l'agent"
-  },
-  compte_rendu: {
-    title: "Compte rendu",
-    subtitle: "Racontez ce qui s'est passé, Clarity en fait un compte rendu structuré.",
-    placeholder: "Ex : Intervention chez M. Martin, chaudière remplacée, prochain contrôle dans 6 mois...",
-    submitLabel: "🗒️ Générer le compte rendu"
   },
   taches: {
     title: "Nouvelle tâche",
@@ -10875,7 +10875,6 @@ function closeQuickTextModal() {
 function submitQuickText() {
   const modal = document.getElementById("quick-text-modal");
   const continuing = modal && modal.dataset.continuing === "1";
-  const kind = modal ? modal.dataset.kind : "";
   const textarea = document.getElementById("quick-text-instruction");
   const text = (textarea ? textarea.value : "").trim();
   if (!text) {
@@ -10883,23 +10882,216 @@ function submitQuickText() {
     return;
   }
   closeQuickTextModal();
-
-  // Compte rendu : jamais /orchestrate ni /agent/planning (consigne Grok).
-  // On appelle directement /agent/redaction avec le préfixe qui force le
-  // formulaire compte-rendu, exactement comme le fait le bouton Accueil
-  // "Compte rendu" en dictée (quickStartCompteRendu / startSimpleAgentDictation).
-  if (kind === "compte_rendu") {
-    const instruction = ("Rédige un compte-rendu. " + text).trim();
-    callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction);
-    return;
-  }
-
   sendTypedInstruction(text, continuing);
 }
 
 window.openQuickTextModal = openQuickTextModal;
 window.closeQuickTextModal = closeQuickTextModal;
 window.submitQuickText = submitQuickText;
+
+// ─── COMPTE RENDU — dictée multi-points ─────────────────────────
+// Un compte rendu ne se dicte quasiment jamais en une seule phrase (cf.
+// un devis) : le client énumère ses points un par un ("1: prévoir
+// remplacement de 10 tôles. 2: prévoir moteur pour portail 1500kg...").
+// On accumule donc chaque point dicté/écrit dans une liste visible et
+// modifiable (suppression possible), et un seul appel à /agent/redaction
+// part à la fin avec tous les points numérotés d'un coup — jamais
+// /orchestrate ni /agent/planning (même règle que le bouton Accueil).
+let crPoints = [];
+let crDictationRecognition = null;
+
+async function openCompteRenduModal(prefillPoints) {
+  const allowed = await canUseAgents();
+  if (!allowed) return;
+
+  crPoints = Array.isArray(prefillPoints) ? prefillPoints.slice() : [];
+
+  let modal = document.getElementById("compte-rendu-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "compte-rendu-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeCompteRenduModal()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title">Compte rendu</div>
+        <div class="mail-choice-subtitle">Dictez ou écrivez chaque point, un par un. Clarity rédige le compte rendu complet à la fin.</div>
+
+        <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
+
+        <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
+          <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;"></textarea>
+          <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
+            <span class="mic-stop-icon" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="clarity-mic-hint">🎙️ Dictez un point : il s'ajoute automatiquement à la liste, prêt pour le suivant.</div>
+
+        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
+
+        <button class="save-btn" type="button" id="cr-create-btn" style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
+        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeCompteRenduModal()">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Même icône micro réutilisée que pour les autres champs (voir
+    // openQuickTextModal) plutôt que de la dupliquer en dur une 4e fois.
+    const sourceMicImg = document.querySelector("#orchestrator-dictation-btn .mic-icon-img");
+    const targetMicBtn = document.getElementById("cr-mic-btn");
+    if (sourceMicImg && targetMicBtn) {
+      targetMicBtn.prepend(sourceMicImg.cloneNode(true));
+    }
+  }
+
+  const input = document.getElementById("cr-point-input");
+  if (input) input.value = "";
+  renderCrPoints();
+
+  modal.style.display = "flex";
+  setTimeout(() => document.getElementById("cr-point-input")?.focus(), 60);
+}
+
+function closeCompteRenduModal() {
+  const modal = document.getElementById("compte-rendu-modal");
+  if (modal) modal.style.display = "none";
+
+  if (crDictationRecognition) {
+    try { crDictationRecognition.stop(); } catch (e) {}
+  }
+  const micBtn = document.getElementById("cr-mic-btn");
+  if (micBtn) micBtn.classList.remove("is-recording");
+}
+
+function renderCrPoints() {
+  const list = document.getElementById("cr-points-list");
+  const createBtn = document.getElementById("cr-create-btn");
+  if (!list) return;
+
+  if (!crPoints.length) {
+    list.innerHTML = '<div class="info-box">Aucun point ajouté pour le moment.</div>';
+  } else {
+    list.innerHTML = crPoints.map((p, i) =>
+      '<div class="task-item">' +
+        '<div class="task-title">' + (i + 1) + ". " + p.replace(/</g, "&lt;") + "</div>" +
+        '<button type="button" class="task-delete" onclick="removeCrPoint(' + i + ')" aria-label="Supprimer">✕</button>' +
+      "</div>"
+    ).join("");
+  }
+
+  if (createBtn) {
+    createBtn.textContent = crPoints.length
+      ? "🗒️ Créer le compte rendu (" + crPoints.length + (crPoints.length > 1 ? " points" : " point") + ")"
+      : "🗒️ Créer le compte rendu";
+  }
+}
+
+// Si le client dicte (ou écrit) plusieurs idées d'un coup ("prévoir les
+// achats suivants : colle, ciment, parpaing. Prévoir remplacement du
+// portail. Prévoir d'acheter des sacs à gravats."), chaque phrase doit
+// devenir SON PROPRE point — Clarity remettra ensuite tout dans l'ordre
+// au moment de rédiger le compte rendu, mais encore faut-il lui donner
+// des points bien séparés en entrée plutôt qu'un seul bloc. On coupe
+// donc sur les fins de phrase (. ! ? ;) et les retours à la ligne, mais
+// JAMAIS sur une simple virgule : une énumération ("colle, ciment,
+// parpaing") doit rester un seul et même point.
+function splitIntoCrPoints(text) {
+  return text
+    .split(/(?<=[.!?;])\s+|\n+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function addCrPoint() {
+  const textarea = document.getElementById("cr-point-input");
+  const raw = (textarea ? textarea.value : "").trim();
+  if (!raw) return;
+  crPoints.push(...splitIntoCrPoints(raw));
+  textarea.value = "";
+  renderCrPoints();
+  textarea.focus();
+}
+
+function removeCrPoint(index) {
+  crPoints.splice(index, 1);
+  renderCrPoints();
+}
+
+// Dictée d'un point : contrairement au champ libre de Rédaction/Assistant,
+// on n'attend pas que l'utilisateur clique "Ajouter" après avoir parlé —
+// dès que la reconnaissance vocale se termine (silence détecté), le point
+// est ajouté automatiquement et le micro redevient prêt pour le suivant.
+// C'est ce qui rend l'énumération façon devis ("1... 2... 3...") fluide.
+async function toggleCrPointDictation() {
+  const micBtn = document.getElementById("cr-mic-btn");
+  const textarea = document.getElementById("cr-point-input");
+
+  if (crDictationRecognition) {
+    try { crDictationRecognition.stop(); } catch (e) {}
+    return;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = "fr-FR";
+  rec.continuous = false;
+  rec.interimResults = true;
+
+  let finalText = "";
+
+  rec.onresult = event => {
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += transcript;
+      else interim += transcript;
+    }
+    if (textarea) textarea.value = (finalText + " " + interim).trim();
+  };
+
+  rec.onend = () => {
+    crDictationRecognition = null;
+    if (micBtn) micBtn.classList.remove("is-recording");
+    if (textarea && textarea.value.trim()) addCrPoint();
+  };
+
+  rec.onerror = () => {
+    crDictationRecognition = null;
+    if (micBtn) micBtn.classList.remove("is-recording");
+  };
+
+  crDictationRecognition = rec;
+  if (micBtn) micBtn.classList.add("is-recording");
+
+  try {
+    rec.start();
+  } catch (e) {
+    crDictationRecognition = null;
+    if (micBtn) micBtn.classList.remove("is-recording");
+  }
+}
+
+function submitCompteRendu() {
+  if (!crPoints.length) {
+    showToast("Ajoutez au moins un point avant de créer le compte rendu", "error");
+    return;
+  }
+  const instruction = "Rédige un compte-rendu. " + crPoints.map((p, i) => (i + 1) + ". " + p).join(" ");
+  closeCompteRenduModal();
+  callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction);
+}
+
+window.openCompteRenduModal = openCompteRenduModal;
+window.closeCompteRenduModal = closeCompteRenduModal;
+window.addCrPoint = addCrPoint;
+window.removeCrPoint = removeCrPoint;
+window.toggleCrPointDictation = toggleCrPointDictation;
+window.submitCompteRendu = submitCompteRendu;
 
 // ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
 // Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
@@ -17602,7 +17794,7 @@ const CLARITY_MODAL_IDS = [
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
-  "quick-task-modal"
+  "quick-task-modal", "compte-rendu-modal"
 ];
 
 let clarityScrollLockY = 0;
@@ -25078,24 +25270,13 @@ async function addTask() {
 // identifié) avec un préfixe fixe : le texte dicté est ajouté après ce
 // préfixe s'il y en a un, sinon le préfixe seul suffit à faire répondre
 // l'agent par son formulaire (sujet / points / décisions) faute de détails.
+// Compte rendu Accueil : ouvre désormais le même modal multi-points que
+// le popup "?" (voir openCompteRenduModal) plutôt qu'une dictée unique —
+// un compte rendu se construit presque toujours point par point (façon
+// devis), pas en une seule phrase. Toujours /agent/redaction au final,
+// jamais /orchestrate ni /agent/planning.
 function quickStartCompteRendu() {
-  startSimpleAgentDictation({
-    agent: "redaction",
-    buttonId: "orchestrator-dictation-btn",
-    cardId: "card-orchestrator-run",
-    boxId: "orchestrator-dictation-box",
-    webhookUrl: REDACTION_WEBHOOK_URL,
-    instructionPrefix: "Rédige un compte-rendu.",
-    loadingText: `
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
-        <img src="${CLARITY_THINKING_LOGO_SRC}" alt="" class="clarity-thinking-logo" style="height:26px;width:auto;display:block;" />
-        <span style="font-size:13.5px;font-weight:800;color:var(--clarity-text);">Réflexion en cours...</span>
-      </div>
-    `,
-    successText: "✅ Compte rendu prêt",
-    modalTitle: "Clarity",
-    modalSubtitle: "Je prépare votre compte rendu."
-  });
+  openCompteRenduModal();
 }
 
 // Nouvelle tâche : contrairement aux autres raccourcis (Mail, Planning,
