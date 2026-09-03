@@ -11217,14 +11217,60 @@ async function toggleCrPointDictation() {
   startCrAttempt();
 }
 
+// Une fois le texte généré, on propose de se l'envoyer directement par
+// mail (à sa propre adresse connectée par défaut, modifiable, + Cc
+// optionnel) plutôt que de laisser le résultat dans une simple popup de
+// lecture : c'est là que sert vraiment un compte rendu, pas juste à être
+// affiché une fois. Réutilise le même aperçu/envoi que pour un mail à un
+// contact (mail-preview-modal + sendPreparedMail), avec To/Cc visibles
+// cette fois (pas le mode "Une idée, un besoin ?" qui les masque).
+function openCompteRenduMailPreview(data, content) {
+  const selfEmail =
+    (currentUser &&
+      (localStorage.getItem("gmail_" + currentUser.email) || currentUser.email)) ||
+    "";
+
+  openMailPreview(
+    {
+      to: selfEmail,
+      subject: data.title || "Compte rendu",
+      body: content
+    },
+    "Compte rendu"
+  );
+}
+window.openCompteRenduMailPreview = openCompteRenduMailPreview;
+
 function submitCompteRendu() {
   if (!crPoints.length) {
     showToast("Ajoutez au moins un point avant de créer le compte rendu", "error");
     return;
   }
-  const instruction = "Rédige un compte-rendu. " + crPoints.map((p, i) => (i + 1) + ". " + p).join(" ");
+
+  // Copie des points AVANT de fermer le modal : si Clarity redemande une
+  // précision (onNeedsForm), on doit pouvoir rouvrir avec exactement les
+  // mêmes points, jamais une liste vide.
+  const pointsSnapshot = crPoints.slice();
+  const instruction =
+    "Rédige un compte-rendu. " +
+    pointsSnapshot.map((p, i) => (i + 1) + ". " + p).join(" ");
+
   closeCompteRenduModal();
-  callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction);
+
+  callSimpleAgent("redaction", REDACTION_WEBHOOK_URL, instruction, null, window.currentRequestId, null, {
+    onSuccess: (data, content) => openCompteRenduMailPreview(data, content),
+    onNeedsForm: data => {
+      // Jamais le formulaire générique vide : on revient sur NOTRE modal,
+      // points intacts, et on indique ce qu'il manque via un toast — il
+      // suffit d'ajouter un point de plus (le sujet, par exemple) et de
+      // recréer le compte rendu.
+      openCompteRenduModal(pointsSnapshot);
+      showToast(
+        data.brief || data.message || "Ajoutez encore un point (ex : le sujet) puis recréez le compte rendu.",
+        "error"
+      );
+    }
+  });
 }
 
 window.openCompteRenduModal = openCompteRenduModal;
@@ -21222,7 +21268,8 @@ async function callSimpleAgent(
   instruction,
   box = null,
   requestId = window.currentRequestId,
-  extra = null
+  extra = null,
+  handlers = null
 ) {
   try {
     if (!box) {
@@ -21364,7 +21411,16 @@ async function callSimpleAgent(
         // générique par défaut, qui polluerait l'historique.
         pushConversationHistory(instruction, data.brief || data.title || "Formulaire de précisions");
         pendingClarifyAgent = { agentName, webhookUrl };
-        openRedactionFormModal(data, webhookUrl, instruction);
+        // Compte rendu multi-points : jamais le formulaire générique vide
+        // (sujet/points/décisions) — ça donnait l'impression que tous les
+        // points dictés avaient disparu. L'appelant (submitCompteRendu)
+        // reprend la main pour rouvrir SON propre modal avec les points
+        // intacts à la place.
+        if (handlers && typeof handlers.onNeedsForm === "function") {
+          handlers.onNeedsForm(data);
+        } else {
+          openRedactionFormModal(data, webhookUrl, instruction);
+        }
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
         await saveActionLog(agentName, instruction, "error");
@@ -21428,14 +21484,21 @@ async function callSimpleAgent(
   // à l'écran) — on referme directement le bandeau de progression et on
   // ouvre la popup avec la réponse.
   if (box) hideOrRemoveBox(box);
-  openSimpleAgentPreview({
-    title: data.title || "Réponse",
-    content,
-    modalTitle: "Clarity",
-    // Rouvre la popup texte + micro (bouton d'action rapide), pas le
-    // micro plein écran de l'orchestrateur.
-    onRelaunch: () => openQuickTextModal(agentName === "redaction" ? "redaction" : "assistant", true)
-  });
+  if (handlers && typeof handlers.onSuccess === "function") {
+    // Compte rendu multi-points : l'appelant décide de la suite (ouvrir
+    // directement l'aperçu mail pré-rempli) plutôt que la popup générique
+    // "Résultat prêt" — voir submitCompteRendu().
+    handlers.onSuccess(data, content);
+  } else {
+    openSimpleAgentPreview({
+      title: data.title || "Réponse",
+      content,
+      modalTitle: "Clarity",
+      // Rouvre la popup texte + micro (bouton d'action rapide), pas le
+      // micro plein écran de l'orchestrateur.
+      onRelaunch: () => openQuickTextModal(agentName === "redaction" ? "redaction" : "assistant", true)
+    });
+  }
 }
 
     unlockAgentButtons();
