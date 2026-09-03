@@ -1057,6 +1057,102 @@ select.field-input {
   }
 }
 
+/* Popup "Compte rendu prêt" : le texte généré est souvent un document
+   structuré (titres, sections) assez long. Sur mobile on garde la taille
+   standard et les boutons empilés pleine largeur (plus faciles à toucher).
+   Sur PC (>=601px) la popup et la zone de texte s'agrandissent nettement
+   pour rester lisible sans trop scroller, et les boutons d'action passent
+   sur une seule ligne au lieu de s'empiler verticalement. */
+#cr-result-content {
+  min-height: 220px;
+}
+
+/* Rendu "premium" du compte rendu dans la popup : au lieu d'afficher le
+   texte brut avec ses marqueurs Markdown (#, ##, -) tels quels — moche et
+   pas digne d'un SaaS payant — on les transforme en vrais titres/sous-titres
+   en gras et en liste à puces, directement dans la zone éditable
+   (contenteditable, voir renderCrMarkdownToHtml). */
+.cr-result-rich {
+  overflow-y: auto;
+  cursor: text;
+}
+
+.cr-result-rich .cr-h1 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 18px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cr-result-rich .cr-h1:first-child {
+  margin-top: 0;
+}
+
+.cr-result-rich .cr-h2 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--clarity-accent, #4b6fff);
+  margin: 14px 0 6px;
+}
+
+.cr-result-rich .cr-p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 8px;
+}
+
+.cr-result-rich .cr-ul {
+  margin: 2px 0 10px 18px;
+  padding: 0;
+}
+
+.cr-result-rich .cr-li {
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+
+.cr-result-actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+@media (min-width: 601px) {
+  #cr-result-modal .mail-choice-box {
+    max-width: 640px;
+    max-height: 86vh;
+  }
+
+  #cr-result-content {
+    min-height: 320px;
+  }
+
+  .cr-result-actions-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .cr-result-actions-row button {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto !important;
+  }
+}
+
+@media (min-width: 901px) {
+  #cr-result-modal .mail-choice-box {
+    max-width: 760px;
+  }
+
+  #cr-result-content {
+    min-height: 380px;
+  }
+}
+
 /* Boutons plus compacts que le style par défaut (50px/42px), pour laisser
    plus de place verticale au texte de la réponse. */
 #simple-agent-preview-modal .save-btn {
@@ -11500,13 +11596,15 @@ function openCompteRenduResultModal(data, content) {
 
           <div class="field-group" style="margin-top:12px;">
             <div class="field-label" id="cr-result-title">Compte rendu</div>
-            <textarea class="field-input" id="cr-result-content" style="min-height:220px;"></textarea>
+            <div class="field-input cr-result-rich" id="cr-result-content" contenteditable="true" style="min-height:220px;"></div>
           </div>
 
-          <button class="save-btn" type="button" style="width:100%;margin-top:10px;" onclick="sendCrResultByMail()">📧 Envoyer par mail</button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="downloadCrResultPDF()">📄 Télécharger en PDF</button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="printCrResult()">🖨️ Imprimer</button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="copyCrResultText()">📋 Copier le texte</button>
+          <div class="cr-result-actions-row">
+            <button class="save-btn" type="button" style="width:100%;" onclick="sendCrResultByMail()">📧 Envoyer</button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="downloadCrResultPDF()">📄 PDF</button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="printCrResult()">🖨️ Imprimer</button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="copyCrResultText()">📋 Copier</button>
+          </div>
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="requestCloseCrResult()">Fermer</button>
         </div>
 
@@ -11522,10 +11620,77 @@ function openCompteRenduResultModal(data, content) {
   }
 
   document.getElementById("cr-result-title").textContent = data.title || "Compte rendu";
-  document.getElementById("cr-result-content").value = content || "";
+  document.getElementById("cr-result-content").innerHTML = renderCrMarkdownToHtml(content || "");
   document.getElementById("cr-result-main-view").style.display = "block";
   document.getElementById("cr-result-confirm-view").style.display = "none";
   modal.style.display = "flex";
+}
+
+// Transforme le texte brut renvoyé par Clarity (Markdown léger : # / ##
+// pour les titres, - ou * pour les puces) en un rendu "premium" — vrais
+// titres en gras, sous-titres colorés, liste à puces — au lieu d'afficher
+// les # littéraux, qui ne font pas sérieux dans un SaaS payant.
+function renderCrMarkdownToHtml(text) {
+  const lines = (text || "").split("\n");
+  let html = "";
+  let inList = false;
+
+  function closeList() {
+    if (inList) { html += "</ul>"; inList = false; }
+  }
+
+  lines.forEach(rawLine => {
+    const line = rawLine.trim();
+
+    if (!line) { closeList(); return; }
+
+    if (/^##\s+/.test(line)) {
+      closeList();
+      html += '<div class="cr-h2">' + escapeHtmlForPrint(line.replace(/^##\s+/, "")) + "</div>";
+    } else if (/^#\s+/.test(line)) {
+      closeList();
+      html += '<div class="cr-h1">' + escapeHtmlForPrint(line.replace(/^#\s+/, "")) + "</div>";
+    } else if (/^[-*]\s+/.test(line)) {
+      if (!inList) { html += '<ul class="cr-ul">'; inList = true; }
+      html += '<li class="cr-li">' + escapeHtmlForPrint(line.replace(/^[-*]\s+/, "")) + "</li>";
+    } else {
+      closeList();
+      html += '<div class="cr-p">' + escapeHtmlForPrint(line) + "</div>";
+    }
+  });
+
+  closeList();
+  return html || '<div class="cr-p"></div>';
+}
+
+// Reconstruit un texte brut (avec les marqueurs # / ## / - préservés, pour
+// que downloadCrResultPDF puisse continuer à les styliser, et que le corps
+// du mail reste lisible) à partir du rendu actuellement affiché/édité dans
+// la popup — permet de garder les corrections faites à la main.
+function crResultToPlainText(container) {
+  if (!container) return "";
+  const parts = [];
+
+  container.childNodes.forEach(node => {
+    if (node.nodeType !== 1) {
+      const t = (node.textContent || "").replace(/ /g, " ").trim();
+      if (t) parts.push(t);
+      return;
+    }
+
+    if (node.classList && node.classList.contains("cr-h1")) {
+      parts.push("# " + node.textContent.trim());
+    } else if (node.classList && node.classList.contains("cr-h2")) {
+      parts.push("## " + node.textContent.trim());
+    } else if (node.tagName === "UL") {
+      node.querySelectorAll("li").forEach(li => parts.push("- " + li.textContent.trim()));
+    } else {
+      const t = node.textContent.replace(/ /g, " ").trim();
+      if (t) parts.push(t);
+    }
+  });
+
+  return parts.join("\n");
 }
 
 // Backdrop volontairement sans onclick (même règle que compte-rendu-modal) :
@@ -11556,7 +11721,7 @@ function escapeHtmlForPrint(text) {
 }
 
 function copyCrResultText() {
-  const content = document.getElementById("cr-result-content")?.value || "";
+  const content = crResultToPlainText(document.getElementById("cr-result-content"));
   if (!content.trim()) {
     showToast("Texte vide", "error");
     return;
@@ -11567,15 +11732,15 @@ function copyCrResultText() {
     .catch(() => showToast("Impossible de copier", "error"));
 }
 
-// Imprimer ET Télécharger en PDF passent tous les deux par la boîte de
-// dialogue d'impression native du navigateur : c'est le mécanisme standard
-// pour produire un vrai fichier PDF sans ajouter de bibliothèque tierce —
-// "Enregistrer au format PDF" y est proposé comme destination d'impression
-// sur Mac, Windows, et la plupart des navigateurs mobiles.
+// Réutilise directement le HTML déjà mis en forme (titres gras, sous-titres
+// colorés, puces — voir renderCrMarkdownToHtml/.cr-result-rich) plutôt que
+// de repartir du texte brut avec ses # : le document imprimé/exporté en PDF
+// via "Imprimer" a ainsi le même rendu soigné que dans la popup.
 function printCrResult() {
   const title = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
-  const content = document.getElementById("cr-result-content")?.value || "";
-  if (!content.trim()) {
+  const contentEl = document.getElementById("cr-result-content");
+  const contentHtml = contentEl ? contentEl.innerHTML : "";
+  if (!contentEl || !contentEl.textContent.trim()) {
     showToast("Texte vide", "error");
     return;
   }
@@ -11588,23 +11753,122 @@ function printCrResult() {
 
   printWindow.document.write(
     "<html><head><title>" + escapeHtmlForPrint(title) + "</title>" +
-    "<style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;white-space:pre-wrap;line-height:1.5;color:#111;} h1{font-size:18px;margin-bottom:20px;}</style>" +
-    "</head><body><h1>" + escapeHtmlForPrint(title) + "</h1><div>" + escapeHtmlForPrint(content) + "</div></body></html>"
+    "<style>" +
+    "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;line-height:1.5;color:#111;}" +
+    "h1{font-size:19px;margin-bottom:22px;}" +
+    ".cr-h1{font-size:16px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #ddd;}" +
+    ".cr-h1:first-child{margin-top:0;}" +
+    ".cr-h2{font-size:14px;font-weight:700;color:#4b6fff;margin:14px 0 6px;}" +
+    ".cr-p{font-size:13.5px;line-height:1.6;margin:0 0 8px;}" +
+    ".cr-ul{margin:2px 0 10px 18px;padding:0;}" +
+    ".cr-li{font-size:13.5px;line-height:1.55;margin-bottom:4px;}" +
+    "</style>" +
+    "</head><body><h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div></body></html>"
   );
   printWindow.document.close();
   printWindow.focus();
   setTimeout(() => printWindow.print(), 300);
 }
 
-function downloadCrResultPDF() {
-  printCrResult();
+// jsPDF est chargé à la demande (au premier clic sur "Télécharger en PDF"
+// seulement, pas au chargement de la page) depuis un CDN, exactement comme
+// supabase-js déjà utilisé dans l'app — évite d'alourdir le chargement
+// initial pour une fonctionnalité utilisée occasionnellement.
+let crJsPdfLoadPromise = null;
+function ensureJsPdfLoaded() {
+  if (window.jspdf && window.jspdf.jsPDF) return Promise.resolve();
+  if (crJsPdfLoadPromise) return crJsPdfLoadPromise;
+  crJsPdfLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = () => resolve();
+    script.onerror = () => { crJsPdfLoadPromise = null; reject(new Error("jsPDF load failed")); };
+    document.head.appendChild(script);
+  });
+  return crJsPdfLoadPromise;
+}
+
+// Génère un VRAI fichier .pdf téléchargé directement (contrairement à la
+// version précédente qui rouvrait juste la boîte de dialogue d'impression
+// du navigateur sous l'étiquette "Télécharger en PDF" — trompeur, l'utilisateur
+// s'attend à un fichier, pas à un dialogue). Rendu texte simple avec un peu
+// de mise en forme (titres # / ## en gras, puces -/*), suffisant pour un
+// compte rendu ; pas besoin de reproduire le Markdown à l'identique.
+async function downloadCrResultPDF() {
+  const title = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
+  const content = crResultToPlainText(document.getElementById("cr-result-content"));
+  if (!content.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+
+  const btn = document.querySelector('#cr-result-modal button[onclick="downloadCrResultPDF()"]');
+  const originalLabel = btn ? btn.innerHTML : "";
+  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Génération..."; }
+
+  try {
+    await ensureJsPdfLoaded();
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const marginX = 48;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const maxWidth = pageWidth - marginX * 2;
+    let y = 56;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.splitTextToSize(title, maxWidth).forEach(w => { doc.text(w, marginX, y); y += 20; });
+    y += 10;
+
+    content.split("\n").forEach(rawLine => {
+      let line = rawLine;
+      let fontStyle = "normal";
+      let fontSize = 11;
+
+      if (/^##\s+/.test(line)) {
+        line = line.replace(/^##\s+/, "");
+        fontStyle = "bold";
+        fontSize = 13;
+        y += 6;
+      } else if (/^#\s+/.test(line)) {
+        line = line.replace(/^#\s+/, "");
+        fontStyle = "bold";
+        fontSize = 14;
+        y += 8;
+      } else if (/^[-*]\s+/.test(line)) {
+        line = "•  " + line.replace(/^[-*]\s+/, "");
+      }
+
+      doc.setFont("helvetica", fontStyle);
+      doc.setFontSize(fontSize);
+
+      const wrapped = doc.splitTextToSize(line || " ", maxWidth);
+      wrapped.forEach(w => {
+        if (y > pageHeight - 56) {
+          doc.addPage();
+          y = 56;
+        }
+        doc.text(w, marginX, y);
+        y += fontSize * 1.45;
+      });
+    });
+
+    const safeName = title.replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "") || "compte_rendu";
+    doc.save(safeName + ".pdf");
+  } catch (e) {
+    console.error("Erreur génération PDF:", e);
+    showToast("Impossible de générer le PDF, réessayez", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
 }
 
 function sendCrResultByMail() {
   // Relit le texte EN DIRECT depuis la popup (et pas la variable d'origine
   // reçue de Clarity) : si l'utilisateur a corrigé/complété le texte ici
   // avant d'envoyer, ce sont ses modifications qui doivent partir.
-  const content = document.getElementById("cr-result-content")?.value || "";
+  const content = crResultToPlainText(document.getElementById("cr-result-content"));
   const subject = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
   if (!content.trim()) {
     showToast("Texte vide", "error");
@@ -11616,11 +11880,20 @@ function sendCrResultByMail() {
       (localStorage.getItem("gmail_" + currentUser.email) || currentUser.email)) ||
     "";
 
-  closeCrResultModal();
-  openMailPreview({ to: selfEmail, subject: subject, body: content }, "Compte rendu");
+  // On NE ferme PLUS définitivement le compte rendu ici : on passe
+  // "cr-result-modal" comme backTarget, ce qui affiche un bouton "← Retour"
+  // dans l'aperçu mail ET fait automatiquement revenir sur cette popup une
+  // fois le mail envoyé (ou annulé) — voir closeMailPreview/goBackFromMailPreview.
+  // Le contenu (#cr-result-content) reste intact dans le DOM pendant ce
+  // temps, donc l'utilisateur peut ensuite imprimer/télécharger/copier ce
+  // même compte rendu sans avoir à le régénérer.
+  document.getElementById("cr-result-modal").style.display = "none";
+  openMailPreview({ to: selfEmail, subject: subject, body: content }, "Compte rendu", "cr-result-modal");
 }
 
 window.openCompteRenduResultModal = openCompteRenduResultModal;
+window.renderCrMarkdownToHtml = renderCrMarkdownToHtml;
+window.crResultToPlainText = crResultToPlainText;
 window.requestCloseCrResult = requestCloseCrResult;
 window.cancelCloseCrResult = cancelCloseCrResult;
 window.closeCrResultModal = closeCrResultModal;
@@ -20132,10 +20405,21 @@ function goBackFromMailPreview() {
 
   if (target === "support-choice-modal") {
     openSupportChoiceModal();
+  } else if (target === "cr-result-modal") {
+    const crModal = document.getElementById("cr-result-modal");
+    if (crModal) crModal.style.display = "flex";
   }
 }
 
 function closeMailPreview(showCancel = true) {
+  // Capturé AVANT la remise à null juste en dessous : permet de revenir
+  // automatiquement au compte rendu (cr-result-modal) une fois ce mail
+  // envoyé ou annulé, quand c'est de là qu'on est parti (bouton "Envoyer
+  // par mail" de openCompteRenduResultModal) — sans ça, l'envoi refermait
+  // définitivement le compte rendu et il fallait tout régénérer pour
+  // pouvoir ensuite l'imprimer ou le télécharger.
+  const wasCrResultTarget = mailPreviewBackTarget === "cr-result-modal";
+
   document.getElementById("mail-preview-modal").style.display = "none";
   unlockAgentButtons();
   mailPreviewBackTarget = null;
@@ -20161,6 +20445,11 @@ if (box) {
 
   clearMailDraftFromStorage();
   currentPreparedMail = null;
+
+  if (wasCrResultTarget) {
+    const crModal = document.getElementById("cr-result-modal");
+    if (crModal) crModal.style.display = "flex";
+  }
 }
 
 function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
