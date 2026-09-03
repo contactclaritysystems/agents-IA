@@ -11735,6 +11735,35 @@ function crResultToPlainText(container) {
   return parts.join("\n");
 }
 
+// Version "email/copie" du contenu : contrairement à crResultToPlainText
+// (qui garde les marqueurs #/##/- pour que downloadCrResultPDF sache
+// distinguer titres et puces), celle-ci ne montre JAMAIS de # à l'utilisateur
+// et sépare chaque bloc (titre, paragraphe, liste) par une vraie ligne
+// vide — un mail en texte brut sans saut de ligne entre les sections n'a
+// rien de premium, même sans mise en forme riche possible dans ce format.
+function crResultToMailText(container) {
+  if (!container) return "";
+  const blocks = [];
+
+  container.childNodes.forEach(node => {
+    if (node.nodeType !== 1) {
+      const t = (node.textContent || "").trim();
+      if (t) blocks.push(t);
+      return;
+    }
+
+    if (node.tagName === "UL") {
+      const items = Array.from(node.querySelectorAll("li")).map(li => "- " + li.textContent.trim());
+      if (items.length) blocks.push(items.join("\n"));
+    } else {
+      const t = node.textContent.trim();
+      if (t) blocks.push(t);
+    }
+  });
+
+  return blocks.join("\n\n");
+}
+
 // Backdrop volontairement sans onclick (même règle que compte-rendu-modal) :
 // un compte rendu fraîchement généré ne doit jamais disparaître à cause
 // d'un clic à côté. Le bouton "Fermer" lui-même demande confirmation, car
@@ -11763,7 +11792,7 @@ function escapeHtmlForPrint(text) {
 }
 
 function copyCrResultText() {
-  const content = crResultToPlainText(document.getElementById("cr-result-content"));
+  const content = crResultToMailText(document.getElementById("cr-result-content"));
   if (!content.trim()) {
     showToast("Texte vide", "error");
     return;
@@ -11857,44 +11886,104 @@ async function downloadCrResultPDF() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const maxWidth = pageWidth - marginX * 2;
-    let y = 56;
+    // Même bleu accent que le rendu à l'écran (.cr-h2, voir CSS) : le PDF
+    // doit avoir la même identité visuelle "premium", pas un simple texte
+    // noir et blanc.
+    const accent = [75, 111, 255];
+    const ink = [17, 17, 17];
+    let y = 0;
+
+    // En-tête de marque (logo Clarity + liseré bleu) répété sur chaque
+    // page, comme un vrai document professionnel plutôt qu'un export brut.
+    function drawHeader() {
+      try {
+        doc.addImage(CLARITY_THINKING_LOGO_SRC, "PNG", marginX, 34, 18, 21.6);
+      } catch (e) {
+        // Logo optionnel : si l'image ne charge pas pour une raison ou une
+        // autre, le PDF reste parfaitement utilisable sans.
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(ink[0], ink[1], ink[2]);
+      doc.text("Clarity Systems", marginX + 26, 50);
+      doc.setDrawColor(accent[0], accent[1], accent[2]);
+      doc.setLineWidth(1.3);
+      doc.line(marginX, 64, pageWidth - marginX, 64);
+      y = 92;
+    }
+
+    function ensureSpace() {
+      if (y > pageHeight - 56) {
+        doc.addPage();
+        drawHeader();
+      }
+    }
+
+    drawHeader();
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.splitTextToSize(title, maxWidth).forEach(w => { doc.text(w, marginX, y); y += 20; });
+    doc.setTextColor(ink[0], ink[1], ink[2]);
+    doc.splitTextToSize(title, maxWidth).forEach(w => { ensureSpace(); doc.text(w, marginX, y); y += 20; });
     y += 10;
 
     content.split("\n").forEach(rawLine => {
       let line = rawLine;
       let fontStyle = "normal";
       let fontSize = 11;
+      let color = ink;
+      let isBullet = false;
 
       if (/^##\s+/.test(line)) {
         line = line.replace(/^##\s+/, "");
         fontStyle = "bold";
         fontSize = 13;
-        y += 6;
+        color = accent;
+        y += 10;
       } else if (/^#\s+/.test(line)) {
         line = line.replace(/^#\s+/, "");
         fontStyle = "bold";
         fontSize = 14;
-        y += 8;
+        y += 10;
       } else if (/^[-*]\s+/.test(line)) {
-        line = "•  " + line.replace(/^[-*]\s+/, "");
+        line = line.replace(/^[-*]\s+/, "");
+        isBullet = true;
       }
 
       doc.setFont("helvetica", fontStyle);
       doc.setFontSize(fontSize);
+      doc.setTextColor(color[0], color[1], color[2]);
 
-      const wrapped = doc.splitTextToSize(line || " ", maxWidth);
-      wrapped.forEach(w => {
-        if (y > pageHeight - 56) {
-          doc.addPage();
-          y = 56;
+      if (isBullet) {
+        // Vraie puce ronde dessinée (pas un caractère "•" tapé dans le
+        // texte) avec un retrait suspendu : les lignes qui débordent
+        // s'alignent sous le texte, pas sous la puce.
+        const indent = 14;
+        const wrapped = doc.splitTextToSize(line || " ", maxWidth - indent);
+        wrapped.forEach((w, i) => {
+          ensureSpace();
+          if (i === 0) {
+            doc.setFillColor(ink[0], ink[1], ink[2]);
+            doc.circle(marginX + 3, y - fontSize * 0.32, 1.6, "F");
+          }
+          doc.text(w, marginX + indent, y);
+          y += fontSize * 1.45;
+        });
+      } else {
+        // Sous-titre en couleur accent : petit liseré vertical bleu à
+        // gauche, comme le border-left de .cr-h2 dans le rendu à l'écran.
+        if (color === accent) {
+          ensureSpace();
+          doc.setFillColor(accent[0], accent[1], accent[2]);
+          doc.rect(marginX - 8, y - fontSize + 2, 2, fontSize, "F");
         }
-        doc.text(w, marginX, y);
-        y += fontSize * 1.45;
-      });
+        const wrapped = doc.splitTextToSize(line || " ", maxWidth);
+        wrapped.forEach(w => {
+          ensureSpace();
+          doc.text(w, marginX, y);
+          y += fontSize * 1.45;
+        });
+      }
     });
 
     const safeName = title.replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "") || "compte_rendu";
@@ -11911,7 +12000,7 @@ function sendCrResultByMail() {
   // Relit le texte EN DIRECT depuis la popup (et pas la variable d'origine
   // reçue de Clarity) : si l'utilisateur a corrigé/complété le texte ici
   // avant d'envoyer, ce sont ses modifications qui doivent partir.
-  const content = crResultToPlainText(document.getElementById("cr-result-content"));
+  const content = crResultToMailText(document.getElementById("cr-result-content"));
   const subject = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
   if (!content.trim()) {
     showToast("Texte vide", "error");
@@ -11937,6 +12026,7 @@ function sendCrResultByMail() {
 window.openCompteRenduResultModal = openCompteRenduResultModal;
 window.renderCrMarkdownToHtml = renderCrMarkdownToHtml;
 window.crResultToPlainText = crResultToPlainText;
+window.crResultToMailText = crResultToMailText;
 window.requestCloseCrResult = requestCloseCrResult;
 window.cancelCloseCrResult = cancelCloseCrResult;
 window.closeCrResultModal = closeCrResultModal;
