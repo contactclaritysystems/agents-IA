@@ -10904,7 +10904,24 @@ let crDictationRecognition = null;
 // directement dans NOTRE modal (jamais le formulaire générique séparé) pour
 // que l'utilisateur sache concrètement quoi compléter, au lieu qu'un toast
 // vague ("à compléter") sans plus de précision le fasse tourner en rond.
+// Ne sert plus que de filet de sécurité pour un champ vraiment imprévu :
+// "sujet" est désormais toujours demandé d'emblée (voir plus bas), donc ce
+// mécanisme ne devrait quasiment plus se déclencher en pratique.
 let crMissingFields = [];
+
+// Champs facultatifs (Adresse, Contact/client, Société...) : masqués par
+// défaut pour ne pas alourdir la popup avec des champs que la plupart des
+// comptes rendus n'utilisent pas — un simple "+ Adresse" les fait
+// apparaître à la demande. Contrairement à "Sujet" (toujours visible, c'est
+// le titre du document), ceux-ci sont entièrement à l'initiative de
+// l'utilisateur.
+const CR_OPTIONAL_FIELD_DEFS = [
+  { id: "adresse", label: "Adresse", placeholder: "Ex : 12 rue des Lilas, 69000 Lyon" },
+  { id: "contact", label: "Contact / client", placeholder: "Ex : M. Dupont" },
+  { id: "societe", label: "Société", placeholder: "Ex : SARL Dupont Bâtiment" }
+];
+let crActiveOptionalFieldIds = [];
+let crOptionalFieldValues = {};
 
 async function openCompteRenduModal(prefillPoints) {
   const allowed = await canUseAgents();
@@ -10924,6 +10941,11 @@ async function openCompteRenduModal(prefillPoints) {
           <div class="mail-choice-title">Compte rendu</div>
           <div class="mail-choice-subtitle">Dictez ou écrivez chaque point, un par un. Clarity rédige le compte rendu complet à la fin.</div>
 
+          <div class="field-group" style="margin-top:14px;">
+            <div class="field-label">Sujet *</div>
+            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail">
+          </div>
+
           <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
 
           <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
@@ -10935,6 +10957,9 @@ async function openCompteRenduModal(prefillPoints) {
           <div class="clarity-mic-hint">🎙️ Dictez un point : il s'ajoute automatiquement à la liste, prêt pour le suivant.</div>
 
           <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
+
+          <div id="cr-optional-active" style="margin-top:14px;"></div>
+          <div id="cr-optional-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
 
           <div id="cr-missing-fields" style="display:none;margin-top:14px;"></div>
 
@@ -10970,6 +10995,12 @@ async function openCompteRenduModal(prefillPoints) {
   // rouvert le modal, si Clarity a redemandé une précision.
   crMissingFields = [];
   renderCrMissingFields();
+
+  const sujetField = document.getElementById("cr-field-sujet");
+  if (sujetField) sujetField.value = "";
+  crActiveOptionalFieldIds = [];
+  crOptionalFieldValues = {};
+  renderCrOptionalFields();
 
   // Toujours repartir sur la vue principale (pas la confirmation
   // d'abandon d'une session précédente).
@@ -11117,6 +11148,70 @@ function renderCrMissingFields() {
     }).join("");
 
   wrap.style.display = "block";
+}
+
+// Champs facultatifs (voir CR_OPTIONAL_FIELD_DEFS) : deux zones distinctes
+// — les champs déjà ajoutés (avec un "✕" pour les retirer) et une rangée de
+// pastilles "+ Adresse" / "+ Contact / client" / "+ Société" pour les
+// champs pas encore ajoutés. Rien ne s'affiche tant que l'utilisateur n'a
+// rien demandé : la popup reste courte par défaut.
+function renderCrOptionalFields() {
+  const activeWrap = document.getElementById("cr-optional-active");
+  const chipsWrap = document.getElementById("cr-optional-chips");
+  if (!activeWrap || !chipsWrap) return;
+
+  const activeDefs = CR_OPTIONAL_FIELD_DEFS.filter(f => crActiveOptionalFieldIds.includes(f.id));
+  const inactiveDefs = CR_OPTIONAL_FIELD_DEFS.filter(f => !crActiveOptionalFieldIds.includes(f.id));
+
+  activeWrap.innerHTML = activeDefs.map(function (f) {
+    const value = (crOptionalFieldValues[f.id] || "").replace(/"/g, "&quot;");
+    return (
+      '<div class="field-group" style="margin-bottom:10px;display:flex;align-items:flex-end;gap:8px;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="field-label">' + f.label + "</div>" +
+          '<input class="field-input" type="text" id="cr-optional-field-' + f.id + '" autocomplete="off" placeholder="' + f.placeholder + '" value="' + value + '" oninput="crOptionalFieldValues[\'' + f.id + '\'] = this.value">' +
+        "</div>" +
+        '<button type="button" class="task-delete" style="margin-bottom:2px;" onclick="removeCrOptionalField(\'' + f.id + '\')" aria-label="Retirer">✕</button>' +
+      "</div>"
+    );
+  }).join("");
+
+  chipsWrap.innerHTML = inactiveDefs.map(function (f) {
+    return '<button type="button" class="tag blue" style="cursor:pointer;border:none;" onclick="addCrOptionalField(\'' + f.id + '\')">+ ' + f.label + "</button>";
+  }).join("");
+}
+
+function addCrOptionalField(id) {
+  if (!crActiveOptionalFieldIds.includes(id)) crActiveOptionalFieldIds.push(id);
+  renderCrOptionalFields();
+  setTimeout(() => document.getElementById("cr-optional-field-" + id)?.focus(), 60);
+}
+
+function removeCrOptionalField(id) {
+  crActiveOptionalFieldIds = crActiveOptionalFieldIds.filter(x => x !== id);
+  delete crOptionalFieldValues[id];
+  renderCrOptionalFields();
+}
+
+// Permet de restaurer sujet + champs facultatifs déjà remplis après un
+// aller-retour needs_form (openCompteRenduModal les aurait sinon
+// réinitialisés en rouvrant le modal) : rien de ce que l'utilisateur a
+// déjà tapé ne doit se perdre entre deux tentatives.
+function snapshotCrFieldsState() {
+  return {
+    sujet: document.getElementById("cr-field-sujet")?.value.trim() || "",
+    optionalIds: crActiveOptionalFieldIds.slice(),
+    optionalValues: Object.assign({}, crOptionalFieldValues)
+  };
+}
+
+function restoreCrFieldsState(state) {
+  if (!state) return;
+  const sujetInput = document.getElementById("cr-field-sujet");
+  if (sujetInput) sujetInput.value = state.sujet || "";
+  crActiveOptionalFieldIds = state.optionalIds.slice();
+  crOptionalFieldValues = Object.assign({}, state.optionalValues);
+  renderCrOptionalFields();
 }
 
 // Dictée d'un point : même mécanique robuste que toggleQuickTextDictation()
@@ -11292,13 +11387,33 @@ function submitCompteRendu() {
     return;
   }
 
-  // Si Clarity a déjà réclamé des précisions (sujet, etc.) au tour
-  // précédent, ces champs sont affichés dans NOTRE modal (voir
-  // renderCrMissingFields) — on les relit ici avant d'envoyer, comme
-  // submitRedactionForm() le fait pour son propre formulaire.
-  const formAnswers = {};
+  // Sujet = titre du compte rendu, toujours demandé (contrairement aux
+  // champs facultatifs ci-dessous, il ne sert à rien d'envoyer un compte
+  // rendu sans titre).
+  const sujetInput = document.getElementById("cr-field-sujet");
+  const sujet = sujetInput ? sujetInput.value.trim() : "";
+  if (!sujet) {
+    showToast("Indiquez un sujet pour le compte rendu", "error");
+    if (sujetInput) sujetInput.focus();
+    return;
+  }
+
+  const formAnswers = { sujet };
+
+  // Champs facultatifs ajoutés par l'utilisateur (Adresse, Contact/client,
+  // Société...) : seulement ceux qu'il a choisi d'afficher ET remplis.
+  crActiveOptionalFieldIds.forEach(function (id) {
+    const el = document.getElementById("cr-optional-field-" + id);
+    const val = el ? el.value.trim() : "";
+    if (val) formAnswers[id] = val;
+  });
+
+  // Filet de sécurité résiduel : si Clarity avait déjà réclamé un champ
+  // vraiment imprévu (needs_form) lors d'un tour précédent, on le relit ici
+  // aussi — voir renderCrMissingFields.
   let missingRequiredLabel = null;
   crMissingFields.forEach(function (f) {
+    if (formAnswers[f.id]) return; // déjà couvert (ex: si jamais "sujet" y réapparaissait)
     const el = document.getElementById("cr-field-" + f.id);
     const val = el ? el.value.trim() : "";
     if (val) {
@@ -11314,8 +11429,9 @@ function submitCompteRendu() {
 
   // Copie AVANT de fermer le modal : si Clarity redemande encore une
   // précision (onNeedsForm), on doit pouvoir rouvrir avec exactement les
-  // mêmes points, jamais une liste vide.
+  // mêmes points et les mêmes champs déjà remplis, jamais une liste vide.
   const pointsSnapshot = crPoints.slice();
+  const fieldsStateSnapshot = snapshotCrFieldsState();
   const instruction =
     "Rédige un compte-rendu. " +
     pointsSnapshot.map((p, i) => (i + 1) + ". " + p).join(" ");
@@ -11328,16 +11444,19 @@ function submitCompteRendu() {
     instruction,
     null,
     window.currentRequestId,
-    Object.keys(formAnswers).length ? { form_answers: formAnswers } : null,
+    { form_answers: formAnswers },
     {
       onSuccess: (data, content) => openCompteRenduMailPreview(data, content),
       onNeedsForm: async data => {
         // Jamais le formulaire générique séparé : on revient sur NOTRE
-        // modal, points intacts, et on affiche concrètement CE QUI manque
-        // (ex: un champ "Sujet") au lieu d'un toast vague — sinon
-        // l'utilisateur ne sait pas quoi ajouter et tourne en rond.
+        // modal, points ET champs déjà remplis intacts, et on affiche
+        // concrètement CE QUI manque en plus (rare : sujet est déjà
+        // couvert) au lieu d'un toast vague qui ferait tourner en rond.
         await openCompteRenduModal(pointsSnapshot);
-        crMissingFields = Array.isArray(data.fields) ? data.fields : [];
+        restoreCrFieldsState(fieldsStateSnapshot);
+        crMissingFields = Array.isArray(data.fields)
+          ? data.fields.filter(f => f.id !== "sujet")
+          : [];
         renderCrMissingFields();
         showToast(
           data.brief || data.message || "Complétez les informations ci-dessous puis recréez le compte rendu.",
