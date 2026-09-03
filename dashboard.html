@@ -10912,25 +10912,34 @@ async function openCompteRenduModal(prefillPoints) {
     modal.id = "compte-rendu-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeCompteRenduModal()"></div>
+      <div class="mail-choice-backdrop"></div>
       <div class="mail-choice-box">
-        <div class="mail-choice-title">Compte rendu</div>
-        <div class="mail-choice-subtitle">Dictez ou écrivez chaque point, un par un. Clarity rédige le compte rendu complet à la fin.</div>
+        <div id="cr-main-view">
+          <div class="mail-choice-title">Compte rendu</div>
+          <div class="mail-choice-subtitle">Dictez ou écrivez chaque point, un par un. Clarity rédige le compte rendu complet à la fin.</div>
 
-        <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
+          <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
 
-        <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
-          <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;"></textarea>
-          <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
-            <span class="mic-stop-icon" aria-hidden="true"></span>
-          </button>
+          <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
+            <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;"></textarea>
+            <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
+              <span class="mic-stop-icon" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div class="clarity-mic-hint">🎙️ Dictez un point : il s'ajoute automatiquement à la liste, prêt pour le suivant.</div>
+
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
+
+          <button class="save-btn" type="button" id="cr-create-btn" style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="requestCloseCompteRendu()">Annuler</button>
         </div>
-        <div class="clarity-mic-hint">🎙️ Dictez un point : il s'ajoute automatiquement à la liste, prêt pour le suivant.</div>
 
-        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
-
-        <button class="save-btn" type="button" id="cr-create-btn" style="width:100%;margin-top:14px;" onclick="submitCompteRendu()">🗒️ Créer le compte rendu</button>
-        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeCompteRenduModal()">Annuler</button>
+        <div id="cr-confirm-view" style="display:none;">
+          <div class="mail-choice-title">Abandonner ce compte rendu ?</div>
+          <div class="mail-choice-subtitle" id="cr-confirm-subtitle"></div>
+          <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="discardCompteRendu()">Oui, tout effacer</button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelDiscardCompteRendu()">Continuer le compte rendu</button>
+        </div>
       </div>
     `;
     document.body.appendChild(modal);
@@ -10948,19 +10957,67 @@ async function openCompteRenduModal(prefillPoints) {
   if (input) input.value = "";
   renderCrPoints();
 
+  // Toujours repartir sur la vue principale (pas la confirmation
+  // d'abandon d'une session précédente).
+  const mainView = document.getElementById("cr-main-view");
+  const confirmView = document.getElementById("cr-confirm-view");
+  if (mainView) mainView.style.display = "block";
+  if (confirmView) confirmView.style.display = "none";
+
   modal.style.display = "flex";
   setTimeout(() => document.getElementById("cr-point-input")?.focus(), 60);
 }
 
+// Un clic sur le fond flouté (backdrop) ne ferme PAS ce modal — seul le
+// bouton Annuler le peut (voir requestCloseCompteRendu) : un clic
+// accidentel à côté d'une popup ne doit jamais faire perdre des points
+// déjà dictés/écrits. Contrairement aux autres popups de l'app (plus
+// anodines à refermer par erreur), celle-ci peut contenir plusieurs
+// minutes de dictée.
 function closeCompteRenduModal() {
   const modal = document.getElementById("compte-rendu-modal");
   if (modal) modal.style.display = "none";
 
+  crMicRetryCount = CR_MIC_MAX_RETRIES;
+  clearTimeout(crWatchdogTimer);
   if (crDictationRecognition) {
     try { crDictationRecognition.stop(); } catch (e) {}
   }
   const micBtn = document.getElementById("cr-mic-btn");
   if (micBtn) micBtn.classList.remove("is-recording");
+}
+
+// Bouton "Annuler" : si des points ont déjà été ajoutés, on ne ferme pas
+// tout de suite — on demande confirmation, puisque tout serait perdu.
+// Rien à perdre (liste vide) -> ferme directement, pas besoin d'enrober
+// une liste vide d'une confirmation inutile.
+function requestCloseCompteRendu() {
+  if (!crPoints.length) {
+    closeCompteRenduModal();
+    return;
+  }
+
+  const mainView = document.getElementById("cr-main-view");
+  const confirmView = document.getElementById("cr-confirm-view");
+  const subtitle = document.getElementById("cr-confirm-subtitle");
+  if (subtitle) {
+    subtitle.textContent = crPoints.length > 1
+      ? `Les ${crPoints.length} points déjà ajoutés seront perdus.`
+      : "Le point déjà ajouté sera perdu.";
+  }
+  if (mainView) mainView.style.display = "none";
+  if (confirmView) confirmView.style.display = "block";
+}
+
+function cancelDiscardCompteRendu() {
+  const mainView = document.getElementById("cr-main-view");
+  const confirmView = document.getElementById("cr-confirm-view");
+  if (confirmView) confirmView.style.display = "none";
+  if (mainView) mainView.style.display = "block";
+}
+
+function discardCompteRendu() {
+  closeCompteRenduModal();
 }
 
 function renderCrPoints() {
@@ -11017,16 +11074,33 @@ function removeCrPoint(index) {
   renderCrPoints();
 }
 
-// Dictée d'un point : contrairement au champ libre de Rédaction/Assistant,
-// on n'attend pas que l'utilisateur clique "Ajouter" après avoir parlé —
-// dès que la reconnaissance vocale se termine (silence détecté), le point
-// est ajouté automatiquement et le micro redevient prêt pour le suivant.
-// C'est ce qui rend l'énumération façon devis ("1... 2... 3...") fluide.
+// Dictée d'un point : même mécanique robuste que toggleQuickTextDictation()
+// / toggleQuickMailDictation() (continuous:true, compteur de génération,
+// chien de garde mobile 8s, relances bornées pour le bug WebKit iOS où une
+// session peut se couper sans déclencher un seul évènement) — pas de version
+// simplifiée qui coupait le micro au premier silence, ce qui interrompait
+// une dictée à peine commencée. Contrairement au champ libre de
+// Rédaction/Assistant, l'utilisateur n'a pas besoin de cliquer "Ajouter"
+// après avoir parlé : à l'arrêt réel du micro (clic manuel), le texte
+// dicté est ajouté automatiquement — et comme continuous:true permet
+// d'enchaîner plusieurs phrases dans une seule dictée, splitIntoCrPoints()
+// les sépare toutes d'un coup à ce moment-là.
+let crRecognitionGeneration = 0;
+let crWatchdogTimer = null;
+let crMicRetryCount = 0;
+let crHasReceivedAnyResult = false;
+const CR_MIC_MAX_RETRIES = 20;
+
 async function toggleCrPointDictation() {
   const micBtn = document.getElementById("cr-mic-btn");
   const textarea = document.getElementById("cr-point-input");
 
   if (crDictationRecognition) {
+    // Arrêt manuel : ne pas avancer la génération ici (voir commentaire
+    // équivalent dans toggleQuickMailDictation), sinon le "onend" légitime
+    // de cette session serait ignoré comme périmé.
+    crMicRetryCount = CR_MIC_MAX_RETRIES;
+    clearTimeout(crWatchdogTimer);
     try { crDictationRecognition.stop(); } catch (e) {}
     return;
   }
@@ -11037,43 +11111,110 @@ async function toggleCrPointDictation() {
     return;
   }
 
-  const rec = new SpeechRecognition();
-  rec.lang = "fr-FR";
-  rec.continuous = false;
-  rec.interimResults = true;
+  crMicRetryCount = 0;
 
-  let finalText = "";
+  function startCrAttempt() {
+    const myGeneration = ++crRecognitionGeneration;
+    crHasReceivedAnyResult = false;
 
-  rec.onresult = event => {
-    let interim = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) finalText += transcript;
-      else interim += transcript;
-    }
-    if (textarea) textarea.value = (finalText + " " + interim).trim();
-  };
+    const recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
 
-  rec.onend = () => {
-    crDictationRecognition = null;
-    if (micBtn) micBtn.classList.remove("is-recording");
-    if (textarea && textarea.value.trim()) addCrPoint();
-  };
+    let finalText = "";
 
-  rec.onerror = () => {
-    crDictationRecognition = null;
-    if (micBtn) micBtn.classList.remove("is-recording");
-  };
+    crDictationRecognition = recognition;
 
-  crDictationRecognition = rec;
-  if (micBtn) micBtn.classList.add("is-recording");
+    recognition.onresult = function (event) {
+      if (myGeneration !== crRecognitionGeneration) return;
+      crHasReceivedAnyResult = true;
+      clearTimeout(crWatchdogTimer);
 
-  try {
-    rec.start();
-  } catch (e) {
-    crDictationRecognition = null;
-    if (micBtn) micBtn.classList.remove("is-recording");
+      let interimText = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += text + " ";
+        } else {
+          interimText += text;
+        }
+      }
+      if (textarea) textarea.value = (finalText + interimText).trim();
+    };
+
+    recognition.onerror = function (event) {
+      if (myGeneration !== crRecognitionGeneration) return;
+      console.error("Erreur reconnaissance vocale (compte rendu) :", event.error);
+      if (event.error === "aborted") return;
+      if (!isMobileDevice()) {
+        showToast(describeSpeechError(event.error), "error");
+      }
+    };
+
+    recognition.onend = function () {
+      if (myGeneration !== crRecognitionGeneration) return; // tentative périmée
+      markMicActivity();
+      clearTimeout(crWatchdogTimer);
+      crDictationRecognition = null;
+
+      if (
+        isMobileDevice() &&
+        !crHasReceivedAnyResult &&
+        crMicRetryCount < CR_MIC_MAX_RETRIES
+      ) {
+        crMicRetryCount++;
+        setTimeout(startCrAttempt, 600);
+        return;
+      }
+
+      if (micBtn) micBtn.classList.remove("is-recording");
+      // Arrêt réel (pas une relance silencieuse) : on ajoute le(s) point(s)
+      // dicté(s) à la liste.
+      if (textarea && textarea.value.trim()) addCrPoint();
+    };
+
+    (async () => {
+      await delayBeforeMic();
+      if (myGeneration !== crRecognitionGeneration) return;
+
+      try {
+        recognition.start();
+        if (micBtn) micBtn.classList.add("is-recording");
+
+        if (isMobileDevice()) {
+          clearTimeout(crWatchdogTimer);
+          crWatchdogTimer = setTimeout(function () {
+            if (myGeneration !== crRecognitionGeneration) return;
+            if (crHasReceivedAnyResult) return;
+            try {
+              recognition.onresult = null;
+              recognition.onend = null;
+              recognition.onerror = null;
+            } catch (e) {}
+            try { recognition.abort(); } catch (e) {}
+            try { recognition.stop(); } catch (e) {}
+            markMicActivity();
+            crDictationRecognition = null;
+            if (crMicRetryCount < CR_MIC_MAX_RETRIES) {
+              crMicRetryCount++;
+              setTimeout(startCrAttempt, 600);
+            } else if (micBtn) {
+              micBtn.classList.remove("is-recording");
+            }
+          }, 8000);
+        }
+      } catch (e) {
+        if (myGeneration !== crRecognitionGeneration) return;
+        crDictationRecognition = null;
+        if (micBtn) micBtn.classList.remove("is-recording");
+      }
+    })();
   }
+
+  stopVoicePlayback();
+  startCrAttempt();
 }
 
 function submitCompteRendu() {
@@ -11088,10 +11229,24 @@ function submitCompteRendu() {
 
 window.openCompteRenduModal = openCompteRenduModal;
 window.closeCompteRenduModal = closeCompteRenduModal;
+window.requestCloseCompteRendu = requestCloseCompteRendu;
+window.cancelDiscardCompteRendu = cancelDiscardCompteRendu;
+window.discardCompteRendu = discardCompteRendu;
 window.addCrPoint = addCrPoint;
 window.removeCrPoint = removeCrPoint;
 window.toggleCrPointDictation = toggleCrPointDictation;
 window.submitCompteRendu = submitCompteRendu;
+
+// Détecte une demande de compte rendu dictée/écrite via le champ général
+// (pas les boutons dédiés) — ex: "écris-moi le compte rendu pour mon devis
+// de remise en état du portail". Dans ce cas, on ouvre le VRAI modal
+// multi-points au lieu de laisser /agent/redaction répondre avec son
+// formulaire générique (sujet/points/décisions) : deux popups différentes
+// pour la même intention, ça n'a pas de sens pour l'utilisateur.
+function looksLikeCompteRendu(text) {
+  return /compte[\s-]?rendu/i.test(text || "");
+}
+window.looksLikeCompteRendu = looksLikeCompteRendu;
 
 // ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
 // Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
@@ -13290,6 +13445,19 @@ async function sendTypedInstruction(instruction, continuing = false) {
         setDictationBoxState(box, "info");
         box.innerHTML = "🔎 Recherche du contact...";
         return callMailAgent(data.instruction, box, data.request_id || requestId);
+      }
+
+      // Compte rendu demandé via le champ général (pas le bouton dédié) :
+      // ouvre le même modal multi-points, pas le formulaire générique de
+      // /agent/redaction (voir looksLikeCompteRendu).
+      if (
+        (data.agent === "redaction" || data.agent === "compte_rendu") &&
+        looksLikeCompteRendu(data.instruction || instruction)
+      ) {
+        hideOrRemoveBox(box);
+        unlockAgentButtons();
+        openCompteRenduModal();
+        return;
       }
 
       if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
@@ -20061,6 +20229,20 @@ if (data.agent === "mail") {
   box,
   data.request_id || requestId
 );
+}
+
+// Compte rendu demandé à la voix via le micro général (pas le bouton
+// dédié) : même règle que côté texte (sendTypedInstruction) — on ouvre le
+// modal multi-points, jamais le formulaire générique de /agent/redaction.
+if (
+  (data.agent === "redaction" || data.agent === "compte_rendu") &&
+  looksLikeCompteRendu(data.instruction || instruction)
+) {
+  hideOrRemoveBox(box);
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
+  openCompteRenduModal();
+  return;
 }
 
 // Agents "simples" (une dictée -> une réponse, sans étape intermédiaire
