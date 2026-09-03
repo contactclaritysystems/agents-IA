@@ -10917,11 +10917,23 @@ let crMissingFields = [];
 // l'utilisateur.
 const CR_OPTIONAL_FIELD_DEFS = [
   { id: "adresse", label: "Adresse", placeholder: "Ex : 12 rue des Lilas, 69000 Lyon" },
-  { id: "contact", label: "Contact / client", placeholder: "Ex : M. Dupont" },
+  // Séparés en 2 champs distincts (et non un seul "Contact/client") : pour
+  // les grandes structures, le client (la société) et le contact (la
+  // personne) sont deux informations différentes qui coexistent souvent
+  // (ex : client "NGE", contact "M. Arnaud").
+  { id: "client", label: "Client", placeholder: "Ex : NGE" },
+  { id: "contact", label: "Contact", placeholder: "Ex : M. Arnaud" },
   { id: "societe", label: "Société", placeholder: "Ex : SARL Dupont Bâtiment" }
 ];
 let crActiveOptionalFieldIds = [];
 let crOptionalFieldValues = {};
+
+// Champs "libres" : en plus des 4 champs prédéfinis ci-dessus, l'utilisateur
+// peut ajouter n'importe quel champ de son choix (libellé ET valeur tapés
+// par lui) via la pastille "+ Autre" — pour tout ce qui ne rentre dans
+// aucune case prévue à l'avance (référence de chantier, numéro de devis...).
+let crCustomFields = [];
+let crCustomFieldSeq = 0;
 
 async function openCompteRenduModal(prefillPoints) {
   const allowed = await canUseAgents();
@@ -11000,6 +11012,7 @@ async function openCompteRenduModal(prefillPoints) {
   if (sujetField) sujetField.value = "";
   crActiveOptionalFieldIds = [];
   crOptionalFieldValues = {};
+  crCustomFields = [];
   renderCrOptionalFields();
 
   // Toujours repartir sur la vue principale (pas la confirmation
@@ -11155,6 +11168,11 @@ function renderCrMissingFields() {
 // pastilles "+ Adresse" / "+ Contact / client" / "+ Société" pour les
 // champs pas encore ajoutés. Rien ne s'affiche tant que l'utilisateur n'a
 // rien demandé : la popup reste courte par défaut.
+// Structure : le libellé est sur sa propre ligne, puis une rangée
+// [champ, bouton ✕] où les deux sont centrés verticalement l'un par
+// rapport à l'autre (align-items:center sur cette rangée précise, pas sur
+// tout le bloc libellé+champ — c'est ce qui causait le bouton mal centré
+// et trop espacé de l'input).
 function renderCrOptionalFields() {
   const activeWrap = document.getElementById("cr-optional-active");
   const chipsWrap = document.getElementById("cr-optional-chips");
@@ -11163,22 +11181,43 @@ function renderCrOptionalFields() {
   const activeDefs = CR_OPTIONAL_FIELD_DEFS.filter(f => crActiveOptionalFieldIds.includes(f.id));
   const inactiveDefs = CR_OPTIONAL_FIELD_DEFS.filter(f => !crActiveOptionalFieldIds.includes(f.id));
 
-  activeWrap.innerHTML = activeDefs.map(function (f) {
+  const fixedFieldsHtml = activeDefs.map(function (f) {
     const value = (crOptionalFieldValues[f.id] || "").replace(/"/g, "&quot;");
     return (
-      '<div class="field-group" style="margin-bottom:10px;display:flex;align-items:flex-end;gap:8px;">' +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="field-label">' + f.label + "</div>" +
-          '<input class="field-input" type="text" id="cr-optional-field-' + f.id + '" autocomplete="off" placeholder="' + f.placeholder + '" value="' + value + '" oninput="crOptionalFieldValues[\'' + f.id + '\'] = this.value">' +
+      '<div class="field-group" style="margin-bottom:10px;">' +
+        '<div class="field-label">' + f.label + "</div>" +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<input class="field-input" type="text" id="cr-optional-field-' + f.id + '" autocomplete="off" placeholder="' + f.placeholder + '" value="' + value + '" style="flex:1;min-width:0;" oninput="crOptionalFieldValues[\'' + f.id + '\'] = this.value">' +
+          '<button type="button" class="task-delete" onclick="removeCrOptionalField(\'' + f.id + '\')" aria-label="Retirer">✕</button>' +
         "</div>" +
-        '<button type="button" class="task-delete" style="margin-bottom:2px;" onclick="removeCrOptionalField(\'' + f.id + '\')" aria-label="Retirer">✕</button>' +
       "</div>"
     );
   }).join("");
 
-  chipsWrap.innerHTML = inactiveDefs.map(function (f) {
+  const customFieldsHtml = crCustomFields.map(function (f) {
+    const labelVal = (f.label || "").replace(/"/g, "&quot;");
+    const valueVal = (f.value || "").replace(/"/g, "&quot;");
+    return (
+      '<div class="field-group" style="margin-bottom:10px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<input class="field-input" type="text" id="cr-custom-label-' + f.uid + '" autocomplete="off" placeholder="Libellé (ex : Référence chantier)" value="' + labelVal + '" style="flex:1;min-width:0;" oninput="updateCrCustomField(\'' + f.uid + '\', \'label\', this.value)">' +
+          '<button type="button" class="task-delete" onclick="removeCrCustomField(\'' + f.uid + '\')" aria-label="Retirer">✕</button>' +
+        "</div>" +
+        '<input class="field-input" type="text" id="cr-custom-value-' + f.uid + '" autocomplete="off" placeholder="Valeur" value="' + valueVal + '" style="margin-top:6px;" oninput="updateCrCustomField(\'' + f.uid + '\', \'value\', this.value)">' +
+      "</div>"
+    );
+  }).join("");
+
+  activeWrap.innerHTML = fixedFieldsHtml + customFieldsHtml;
+
+  const chipsHtml = inactiveDefs.map(function (f) {
     return '<button type="button" class="tag blue" style="cursor:pointer;border:none;" onclick="addCrOptionalField(\'' + f.id + '\')">+ ' + f.label + "</button>";
   }).join("");
+
+  // "+ Autre" toujours présent (contrairement aux 4 champs prédéfinis, un
+  // champ libre peut être ajouté plusieurs fois — chaque clic en crée un
+  // nouveau).
+  chipsWrap.innerHTML = chipsHtml + '<button type="button" class="tag blue" style="cursor:pointer;border:none;" onclick="addCrCustomField()">+ Autre</button>';
 }
 
 function addCrOptionalField(id) {
@@ -11193,6 +11232,24 @@ function removeCrOptionalField(id) {
   renderCrOptionalFields();
 }
 
+function addCrCustomField() {
+  crCustomFieldSeq++;
+  const uid = "c" + crCustomFieldSeq;
+  crCustomFields.push({ uid: uid, label: "", value: "" });
+  renderCrOptionalFields();
+  setTimeout(() => document.getElementById("cr-custom-label-" + uid)?.focus(), 60);
+}
+
+function updateCrCustomField(uid, key, value) {
+  const field = crCustomFields.find(f => f.uid === uid);
+  if (field) field[key] = value;
+}
+
+function removeCrCustomField(uid) {
+  crCustomFields = crCustomFields.filter(f => f.uid !== uid);
+  renderCrOptionalFields();
+}
+
 // Permet de restaurer sujet + champs facultatifs déjà remplis après un
 // aller-retour needs_form (openCompteRenduModal les aurait sinon
 // réinitialisés en rouvrant le modal) : rien de ce que l'utilisateur a
@@ -11201,7 +11258,8 @@ function snapshotCrFieldsState() {
   return {
     sujet: document.getElementById("cr-field-sujet")?.value.trim() || "",
     optionalIds: crActiveOptionalFieldIds.slice(),
-    optionalValues: Object.assign({}, crOptionalFieldValues)
+    optionalValues: Object.assign({}, crOptionalFieldValues),
+    customFields: crCustomFields.map(f => Object.assign({}, f))
   };
 }
 
@@ -11211,6 +11269,7 @@ function restoreCrFieldsState(state) {
   if (sujetInput) sujetInput.value = state.sujet || "";
   crActiveOptionalFieldIds = state.optionalIds.slice();
   crOptionalFieldValues = Object.assign({}, state.optionalValues);
+  crCustomFields = (state.customFields || []).map(f => Object.assign({}, f));
   renderCrOptionalFields();
 }
 
@@ -11400,12 +11459,22 @@ function submitCompteRendu() {
 
   const formAnswers = { sujet };
 
-  // Champs facultatifs ajoutés par l'utilisateur (Adresse, Contact/client,
-  // Société...) : seulement ceux qu'il a choisi d'afficher ET remplis.
+  // Champs facultatifs prédéfinis (Adresse, Client, Contact, Société...) :
+  // seulement ceux que l'utilisateur a choisi d'afficher ET remplis.
   crActiveOptionalFieldIds.forEach(function (id) {
     const el = document.getElementById("cr-optional-field-" + id);
     const val = el ? el.value.trim() : "";
     if (val) formAnswers[id] = val;
+  });
+
+  // Champs libres ("+ Autre") : libellé ET valeur tapés par l'utilisateur —
+  // on envoie le libellé choisi comme clé, tel quel, pour que Clarity
+  // comprenne de quoi il s'agit même si ce n'est pas un champ prévu
+  // d'avance.
+  crCustomFields.forEach(function (f) {
+    const label = (f.label || "").trim();
+    const val = (f.value || "").trim();
+    if (label && val) formAnswers[label] = val;
   });
 
   // Filet de sécurité résiduel : si Clarity avait déjà réclamé un champ
