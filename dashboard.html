@@ -1078,11 +1078,11 @@ select.field-input {
 }
 
 .cr-result-rich .cr-h1 {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -.01em;
-  margin: 18px 0 10px;
-  padding-bottom: 6px;
+  margin: 24px 0 14px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1091,27 +1091,38 @@ select.field-input {
 }
 
 .cr-result-rich .cr-h2 {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--clarity-accent, #4b6fff);
-  margin: 14px 0 6px;
+  margin: 22px 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid var(--clarity-accent, #4b6fff);
+}
+
+.cr-result-rich .cr-h2:first-child {
+  margin-top: 0;
 }
 
 .cr-result-rich .cr-p {
   font-size: 14px;
-  line-height: 1.6;
-  margin: 0 0 8px;
+  line-height: 1.7;
+  margin: 0 0 14px;
 }
 
 .cr-result-rich .cr-ul {
-  margin: 2px 0 10px 18px;
+  margin: 4px 0 16px 20px;
   padding: 0;
 }
 
 .cr-result-rich .cr-li {
   font-size: 14px;
-  line-height: 1.55;
-  margin-bottom: 4px;
+  line-height: 1.6;
+  margin-bottom: 7px;
+}
+
+.cr-result-rich .cr-p strong,
+.cr-result-rich .cr-li strong {
+  font-weight: 700;
 }
 
 .cr-result-actions-row {
@@ -11626,17 +11637,27 @@ function openCompteRenduResultModal(data, content) {
   modal.style.display = "flex";
 }
 
-// Transforme le texte brut renvoyé par Clarity (Markdown léger : # / ##
-// pour les titres, - ou * pour les puces) en un rendu "premium" — vrais
+// Transforme le texte brut renvoyé par Clarity en un rendu "premium" — vrais
 // titres en gras, sous-titres colorés, liste à puces — au lieu d'afficher
-// les # littéraux, qui ne font pas sérieux dans un SaaS payant.
+// les marqueurs Markdown littéraux, qui ne font pas sérieux dans un SaaS
+// payant. Gère deux styles de titres selon comment Clarity structure sa
+// réponse : "# " / "## " (Markdown classique) ET "**Ligne entière en
+// gras**" (ce que le backend envoie le plus souvent en pratique) — dans les
+// deux cas, la 1ère ligne-titre rencontrée devient le titre principal, les
+// suivantes des sous-titres. Le gras EN COURS de phrase ("le **bracon**
+// doit...") est aussi reconnu et rendu en <strong>.
 function renderCrMarkdownToHtml(text) {
   const lines = (text || "").split("\n");
   let html = "";
   let inList = false;
+  let sawTitle = false;
 
   function closeList() {
     if (inList) { html += "</ul>"; inList = false; }
+  }
+
+  function inlineFormat(escapedText) {
+    return escapedText.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   }
 
   lines.forEach(rawLine => {
@@ -11647,16 +11668,37 @@ function renderCrMarkdownToHtml(text) {
     if (/^##\s+/.test(line)) {
       closeList();
       html += '<div class="cr-h2">' + escapeHtmlForPrint(line.replace(/^##\s+/, "")) + "</div>";
-    } else if (/^#\s+/.test(line)) {
+      sawTitle = true;
+      return;
+    }
+
+    if (/^#\s+/.test(line)) {
       closeList();
       html += '<div class="cr-h1">' + escapeHtmlForPrint(line.replace(/^#\s+/, "")) + "</div>";
-    } else if (/^[-*]\s+/.test(line)) {
-      if (!inList) { html += '<ul class="cr-ul">'; inList = true; }
-      html += '<li class="cr-li">' + escapeHtmlForPrint(line.replace(/^[-*]\s+/, "")) + "</li>";
-    } else {
-      closeList();
-      html += '<div class="cr-p">' + escapeHtmlForPrint(line) + "</div>";
+      sawTitle = true;
+      return;
     }
+
+    // Ligne ENTIÈREMENT en gras ("**Titre**", éventuellement suivie de ":")
+    // : c'est ainsi que Clarity structure le plus souvent ses titres et
+    // sous-titres de compte rendu.
+    const boldLineMatch = line.match(/^\*\*(.+?)\*\*:?$/);
+    if (boldLineMatch) {
+      closeList();
+      const heading = boldLineMatch[1].trim();
+      html += '<div class="' + (sawTitle ? "cr-h2" : "cr-h1") + '">' + escapeHtmlForPrint(heading) + "</div>";
+      sawTitle = true;
+      return;
+    }
+
+    if (/^[-*•]\s+/.test(line)) {
+      if (!inList) { html += '<ul class="cr-ul">'; inList = true; }
+      html += '<li class="cr-li">' + inlineFormat(escapeHtmlForPrint(line.replace(/^[-*•]\s+/, ""))) + "</li>";
+      return;
+    }
+
+    closeList();
+    html += '<div class="cr-p">' + inlineFormat(escapeHtmlForPrint(line)) + "</div>";
   });
 
   closeList();
@@ -11756,12 +11798,13 @@ function printCrResult() {
     "<style>" +
     "body{font-family:-apple-system,Helvetica,Arial,sans-serif;padding:32px;line-height:1.5;color:#111;}" +
     "h1{font-size:19px;margin-bottom:22px;}" +
-    ".cr-h1{font-size:16px;font-weight:700;margin:20px 0 10px;padding-bottom:6px;border-bottom:1px solid #ddd;}" +
+    ".cr-h1{font-size:17px;font-weight:700;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid #ddd;}" +
     ".cr-h1:first-child{margin-top:0;}" +
-    ".cr-h2{font-size:14px;font-weight:700;color:#4b6fff;margin:14px 0 6px;}" +
-    ".cr-p{font-size:13.5px;line-height:1.6;margin:0 0 8px;}" +
-    ".cr-ul{margin:2px 0 10px 18px;padding:0;}" +
-    ".cr-li{font-size:13.5px;line-height:1.55;margin-bottom:4px;}" +
+    ".cr-h2{font-size:14px;font-weight:700;color:#4b6fff;margin:20px 0 8px;padding-left:10px;border-left:3px solid #4b6fff;}" +
+    ".cr-h2:first-child{margin-top:0;}" +
+    ".cr-p{font-size:13.5px;line-height:1.65;margin:0 0 12px;}" +
+    ".cr-ul{margin:4px 0 14px 18px;padding:0;}" +
+    ".cr-li{font-size:13.5px;line-height:1.6;margin-bottom:6px;}" +
     "</style>" +
     "</head><body><h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div></body></html>"
   );
@@ -11977,7 +12020,22 @@ function submitCompteRendu() {
     window.currentRequestId,
     { form_answers: formAnswers },
     {
-      onSuccess: (data, content) => openCompteRenduResultModal(data, content),
+      onSuccess: (data, content) => {
+        openCompteRenduResultModal(data, content);
+        // callSimpleAgent journalise déjà cette réussite sous agent:"redaction"
+        // (nécessaire pour son propre traitement needs_form) — mais le
+        // dossier "Comptes rendus" de l'Historique, lui, ne lit QUE les logs
+        // agent:"notes" au format "OBJET: ..." (hérité de l'ancienne version
+        // simple du compte rendu). Sans ce 2e log dédié, un compte rendu créé
+        // via ce nouveau flux multi-points n'apparaissait donc jamais dans
+        // ce dossier, même s'il était bien enregistré ailleurs (sous
+        // "Rédaction").
+        saveActionLog(
+          "notes",
+          "Compte rendu\nOBJET: " + sujet + "\n\n" + (content || ""),
+          "success"
+        );
+      },
       onNeedsForm: async data => {
         // Jamais le formulaire générique séparé : on revient sur NOTRE
         // modal, points ET champs déjà remplis intacts, et on affiche
