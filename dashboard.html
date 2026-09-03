@@ -6193,6 +6193,13 @@ body[data-theme="azur"] .loader-halo {
   border: 1px solid var(--line);
 }
 
+/* Points du compte rendu : discret par défaut (aucune bordure visible), un
+   léger soulignement pointillé apparaît seulement au focus, pour montrer
+   que le texte est modifiable sans alourdir visuellement la liste. */
+.cr-point-edit-input:focus {
+  border-bottom-color: var(--clarity-accent, #999) !important;
+}
+
 .task-item.done {
   opacity: .55;
 }
@@ -11107,9 +11114,17 @@ function renderCrPoints() {
   if (!crPoints.length) {
     list.innerHTML = '<div class="info-box">Aucun point ajouté pour le moment.</div>';
   } else {
+    // Modifiable directement (comme le champ Sujet), pas seulement
+    // supprimable : une faute de dictée ou une mauvaise compréhension ne
+    // doit pas obliger à tout supprimer et redicter le point en entier.
+    // Le numéro reste un simple texte à côté (pas dans le champ), pour ne
+    // jamais être accidentellement effacé ou modifié avec le contenu.
     list.innerHTML = crPoints.map((p, i) =>
       '<div class="task-item">' +
-        '<div class="task-title">' + (i + 1) + ". " + p.replace(/</g, "&lt;") + "</div>" +
+        '<div class="task-title" style="display:flex;align-items:center;gap:4px;">' +
+          '<span style="flex-shrink:0;color:var(--muted);">' + (i + 1) + ".</span>" +
+          '<input type="text" class="cr-point-edit-input" id="cr-point-edit-' + i + '" value="' + p.replace(/"/g, "&quot;") + '" oninput="updateCrPointText(' + i + ', this.value)" style="flex:1;min-width:0;border:none;background:transparent;font:inherit;color:inherit;padding:2px 0;outline:none;border-bottom:1px dashed transparent;">' +
+        "</div>" +
         '<button type="button" class="task-delete" onclick="removeCrPoint(' + i + ')" aria-label="Supprimer">✕</button>' +
       "</div>"
     ).join("");
@@ -11121,6 +11136,14 @@ function renderCrPoints() {
       : "🗒️ Créer le compte rendu";
   }
 }
+
+// oninput plutôt qu'un re-rendu de toute la liste à chaque frappe : on
+// modifie juste le tableau en mémoire, sans jamais toucher au DOM pendant
+// la frappe (qui ferait perdre le focus/curseur en plein milieu du mot).
+function updateCrPointText(index, value) {
+  if (crPoints[index] !== undefined) crPoints[index] = value;
+}
+window.updateCrPointText = updateCrPointText;
 
 // Si le client dicte (ou écrit) plusieurs idées d'un coup ("prévoir les
 // achats suivants : colle, ciment, parpaing. Prévoir remplacement du
