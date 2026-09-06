@@ -11710,7 +11710,10 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   updateCrAddPointButtonState();
   renderCrPoints();
   renderCrLiveChecklistPanel();
-  crActiveDictationTargetId = "cr-point-input";
+  // Sujet est le premier champ à remplir (obligatoire, en haut du
+  // formulaire) : le curseur doit y démarrer, pas directement dans le
+  // champ Point — voir aussi le focus() plus bas.
+  crActiveDictationTargetId = "cr-field-sujet";
 
   // Réinitialisé par défaut à chaque ouverture "propre" : c'est
   // onNeedsForm (dans submitCompteRendu) qui le repeuple juste après avoir
@@ -11733,7 +11736,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   if (confirmView) confirmView.style.display = "none";
 
   modal.style.display = "flex";
-  setTimeout(() => document.getElementById("cr-point-input")?.focus(), 60);
+  setTimeout(() => document.getElementById("cr-field-sujet")?.focus(), 60);
 }
 
 // Un clic sur le fond flouté (backdrop) ne ferme PAS ce modal — seul le
