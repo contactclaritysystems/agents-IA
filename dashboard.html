@@ -1146,46 +1146,25 @@ select.field-input {
   gap: 10px;
 }
 
-/* Checklist "live" à côté des points pendant la dictée (voir bloc JS
-   "checklist live"). Sur mobile/étroit, empilée sous les points plutôt
-   qu'à côté — pas de place pour 2 colonnes. */
-#compte-rendu-modal .mail-choice-box {
-  max-width: 480px;
-}
+/* Checklist "live" pendant la dictée (voir bloc JS "checklist live") :
+   toujours empilée SOUS les points, jamais à côté — une 2e colonne
+   obligeait à élargir la popup sur PC, ce qui donnait une fenêtre
+   inhabituellement large par rapport à toutes les autres popups de
+   l'app. On garde donc la largeur normale de .mail-choice-box, quel que
+   soit l'écran. */
 .cr-points-and-checklist-row {
   display: flex;
-  gap: 18px;
-  align-items: flex-start;
+  flex-direction: column;
   margin-top: 14px;
 }
 .cr-points-col {
-  flex: 1 1 0;
   min-width: 0;
 }
 .cr-live-checklist-panel {
-  flex: 1 1 0;
-  min-width: 0;
   display: none;
-}
-@media (min-width: 640px) {
-  #compte-rendu-modal .mail-choice-box {
-    max-width: 860px;
-  }
-  .cr-live-checklist-panel {
-    border-left: 1px solid var(--line);
-    padding-left: 18px;
-  }
-}
-@media (max-width: 639px) {
-  .cr-points-and-checklist-row {
-    flex-direction: column;
-  }
-  .cr-live-checklist-panel {
-    border-top: 1px solid var(--line);
-    padding-top: 14px;
-    margin-top: 4px;
-    width: 100%;
-  }
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 14px;
 }
 
 .cr-checklist-row {
