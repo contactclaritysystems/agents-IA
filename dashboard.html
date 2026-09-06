@@ -11685,7 +11685,27 @@ function collectChecklistIds(items) {
 // l'ancienne réponse), puis reconstruit tout le conteneur — c'est le plus
 // simple pour rester toujours cohérent avec un arbre à profondeur variable.
 // Jamais de nouvel appel backend ici : tout est dérivé localement.
-function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames, confirmedIds) {
+//
+// Construit une phrase "Question : Réponse" à partir du libellé d'une
+// question et de sa réponse — utilisée pour que TOUTE réponse cochée
+// (Oui/Non ou texte) devienne un point lisible et contextualisé dans la
+// liste des points, plutôt qu'un mot isolé sans contexte ("Battant" tout
+// seul) ou une réponse invisible une fois la ligne de la checklist cachée.
+function buildChecklistPointText(label, value) {
+  const cleanLabel = (label || "").trim().replace(/\?+\s*$/, "").trim();
+  return (cleanLabel || label || "") + " : " + value;
+}
+
+// addAsPoint (true côté panneau live uniquement, comme pour
+// confirmChecklistTextAnswer) : quand une question Oui/Non reçoit une
+// réponse (pas quand elle est désélectionnée), cette réponse devient elle
+// aussi un point du compte rendu ("Peinture à refaire ? : Oui"), visible et
+// modifiable — jusqu'ici seules les réponses texte devenaient des points,
+// ce qui rendait les réponses Oui/Non invisibles une fois leur ligne
+// cachée. L'id de l'item est ajouté à confirmedIds pour être exclu du
+// checklist_answers envoyé au final (voir submitCompteRendu) : l'info part
+// déjà via le point, pas la peine de l'envoyer 2 fois.
+function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames, confirmedIds, addAsPoint) {
   const itemId = btn.getAttribute("data-item");
   const value = btn.getAttribute("data-value");
   const node = findChecklistItemById(treeItems, itemId);
@@ -11694,6 +11714,12 @@ function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, c
     delete answers[itemId];
   } else {
     answers[itemId] = value;
+    if (addAsPoint && node) {
+      crPoints.push(buildChecklistPointText(node.label, value === "oui" ? "Oui" : "Non"));
+      renderCrPoints();
+      scheduleCrPointsPreview();
+      if (confirmedIds) confirmedIds.add(itemId);
+    }
   }
   if (node) {
     clearChecklistDescendantAnswers(node.followups_if_oui, answers);
@@ -11780,6 +11806,7 @@ function confirmChecklistTextAnswer(btn, treeItems, answers, confirmedIds, idPre
   if (!input || !input.value.trim()) return; // rien à valider (bouton caché de toute façon dans ce cas)
 
   const value = input.value.trim();
+  const node = findChecklistItemById(treeItems, itemId);
   answers[itemId] = value;
   confirmedIds.add(itemId);
   input.blur();
@@ -11788,7 +11815,11 @@ function confirmChecklistTextAnswer(btn, treeItems, answers, confirmedIds, idPre
   if (container) container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds);
 
   if (convertToPoint) {
-    crPoints.push(...splitIntoCrPoints(value));
+    // Avec le libellé de la question en préfixe ("Quel type de portail ? :
+    // Battant") plutôt que la réponse brute toute seule ("Battant") : sans
+    // contexte, un point isolé ne veut rien dire à la relecture.
+    const label = node ? node.label : "";
+    crPoints.push(buildChecklistPointText(label, value));
     renderCrPoints();
     scheduleCrPointsPreview();
   } else {
@@ -11895,7 +11926,7 @@ function renderCrLiveChecklistPanel() {
 }
 
 function setCrLiveChecklistAnswer(btn) {
-  applyChecklistToggle(btn, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds);
+  applyChecklistToggle(btn, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds, true);
 }
 window.setCrLiveChecklistAnswer = setCrLiveChecklistAnswer;
 
@@ -12611,6 +12642,7 @@ async function toggleCrPointDictation() {
 // qu'à la création : Envoyer/PDF/Imprimer/Copier, plus Supprimer).
 let crResultSkipCloseConfirm = false;
 let crResultHistoryLogId = null;
+let crResultPhotoUrls = [];
 
 function openCompteRenduResultModal(data, content, options = {}) {
   let modal = document.getElementById("cr-result-modal");
@@ -12665,11 +12697,14 @@ function openCompteRenduResultModal(data, content, options = {}) {
   document.getElementById("cr-result-content").innerHTML = renderCrMarkdownToHtml(content || "");
 
   // Photos jointes via la checklist métier (voir openCrChecklistModal) :
-  // simple affichage sous le texte pour cette V1, pas d'intégration dans
-  // le PDF/mail/impression (pas d'analyse vision non plus).
+  // affichage sous le texte + reprises telles quelles (mêmes URLs
+  // publiques cr-photos, aucun nouvel appel à /agent/redaction) dans
+  // Copier / Imprimer / PDF / Envoyer, voir plus bas.
+  crResultPhotoUrls = Array.isArray(data.photo_urls) ? data.photo_urls.slice() : [];
+
   const photosEl = document.getElementById("cr-result-photos");
   if (photosEl) {
-    const photoUrls = Array.isArray(data.photo_urls) ? data.photo_urls : [];
+    const photoUrls = crResultPhotoUrls;
     if (photoUrls.length) {
       photosEl.innerHTML = photoUrls
         .map(url => '<img src="' + url + '" alt="" class="cr-result-photo" />')
@@ -12864,10 +12899,16 @@ function escapeHtmlForPrint(text) {
 }
 
 function copyCrResultText() {
-  const content = crResultToMailText(document.getElementById("cr-result-content"));
+  let content = crResultToMailText(document.getElementById("cr-result-content"));
   if (!content.trim()) {
     showToast("Texte vide", "error");
     return;
+  }
+  // Copier une image n'étant pas fiable au clavier/presse-papier sur tous
+  // les navigateurs, on ajoute simplement les liens des photos à la suite
+  // du texte (mêmes URLs publiques cr-photos que l'aperçu).
+  if (crResultPhotoUrls.length) {
+    content += "\n\nPhotos :\n" + crResultPhotoUrls.join("\n");
   }
   navigator.clipboard
     .writeText(content)
@@ -12916,10 +12957,18 @@ function printCrResult() {
     // Enregistrer en PDF".
     ".cr-print-back{position:fixed;top:14px;left:14px;background:#0091c7;color:#fff;border:none;border-radius:20px;padding:10px 18px;font-size:14px;font-weight:600;font-family:inherit;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:999;}" +
     "@media print{.cr-print-back{display:none;}}" +
+    ".cr-print-photos{margin-top:22px;display:flex;flex-direction:column;gap:14px;}" +
+    ".cr-print-photos img{width:100%;max-width:100%;border-radius:8px;display:block;}" +
     "</style>" +
     "</head><body>" +
     "<button type=\"button\" class=\"cr-print-back\" onclick=\"window.close()\">← Retour</button>" +
-    "<h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div></body></html>"
+    "<h1>" + escapeHtmlForPrint(title) + "</h1><div>" + contentHtml + "</div>" +
+    (crResultPhotoUrls.length
+      ? '<div class="cr-print-photos">' +
+          crResultPhotoUrls.map(url => '<img src="' + url + '" alt="" />').join("") +
+        "</div>"
+      : "") +
+    "</body></html>"
   );
   printWindow.document.close();
   printWindow.focus();
@@ -13070,6 +13119,68 @@ async function downloadCrResultPDF() {
       }
     });
 
+    // Photos jointes (mêmes URLs publiques cr-photos que l'aperçu, déjà
+    // reçues avec le compte rendu — aucun nouvel appel à /agent/redaction).
+    // jsPDF ne consomme pas une URL distante directement : on la
+    // télécharge puis on la convertit en data URI avant addImage(). Une
+    // photo qui échoue à charger est simplement ignorée, sans faire
+    // échouer tout le PDF.
+    if (crResultPhotoUrls.length) {
+      y += 10;
+      ensureSpace();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(accent[0], accent[1], accent[2]);
+      doc.text("Photos", marginX, y);
+      y += 18;
+
+      for (const url of crResultPhotoUrls) {
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            fetch(url)
+              .then(r => r.blob())
+              .then(blob => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              })
+              .catch(reject);
+          });
+
+          const dims = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+            img.onerror = reject;
+            img.src = dataUrl;
+          });
+
+          const mimeMatch = dataUrl.match(/^data:image\/(\w+);/i);
+          let format = mimeMatch ? mimeMatch[1].toUpperCase() : "JPEG";
+          if (format === "JPG") format = "JPEG";
+
+          const ratio = dims.height / (dims.width || 1);
+          let imgWidth = maxWidth;
+          let imgHeight = imgWidth * ratio;
+          const maxImgHeight = pageHeight - 150;
+          if (imgHeight > maxImgHeight) {
+            imgHeight = maxImgHeight;
+            imgWidth = imgHeight / ratio;
+          }
+
+          if (y + imgHeight > pageHeight - 56) {
+            doc.addPage();
+            drawHeader();
+          }
+
+          doc.addImage(dataUrl, format, marginX, y, imgWidth, imgHeight);
+          y += imgHeight + 14;
+        } catch (e) {
+          console.error("Photo ignorée (chargement impossible) :", url, e);
+        }
+      }
+    }
+
     const safeName = title.replace(/[^\p{L}\p{N}]+/gu, "_").replace(/^_+|_+$/g, "") || "compte_rendu";
     doc.save(safeName + ".pdf");
   } catch (e) {
@@ -13084,11 +13195,19 @@ function sendCrResultByMail() {
   // Relit le texte EN DIRECT depuis la popup (et pas la variable d'origine
   // reçue de Clarity) : si l'utilisateur a corrigé/complété le texte ici
   // avant d'envoyer, ce sont ses modifications qui doivent partir.
-  const content = crResultToMailText(document.getElementById("cr-result-content"));
+  let content = crResultToMailText(document.getElementById("cr-result-content"));
   const subject = document.getElementById("cr-result-title")?.textContent || "Compte rendu";
   if (!content.trim()) {
     showToast("Texte vide", "error");
     return;
+  }
+
+  // L'envoi réel (sendPreparedMail) part en texte brut, pas en HTML (confirmé
+  // avec Grok) : on ne peut donc pas encore intégrer les photos en <img>
+  // dans le mail lui-même. En attendant, on ajoute au moins les liens des
+  // photos à la suite du texte, pour que le destinataire puisse les ouvrir.
+  if (crResultPhotoUrls.length) {
+    content += "\n\nPhotos :\n" + crResultPhotoUrls.join("\n");
   }
 
   const selfEmail =
@@ -13233,7 +13352,7 @@ function openCrChecklistModal(data) {
 // (= "passer", l'item n'apparaît alors dans aucune réponse, comme
 // spécifié : "rien coché = ignorer").
 function setCrChecklistAnswer(btn) {
-  applyChecklistToggle(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES, crChecklistConfirmedTextIds);
+  applyChecklistToggle(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES, crChecklistConfirmedTextIds, false);
 }
 
 // Équivalent popup de CR_LIVE_TEXT_FN_NAMES / handleCrLiveChecklistTextInput
