@@ -11334,28 +11334,34 @@ let crCustomFieldSeq = 0;
 let crActiveDictationTargetId = "cr-point-input";
 
 // ─── Checklist "live" pendant la dictée (validé avec Grok) ──────────
-// Objectif : faire apparaître la checklist métier À CÔTÉ des points
-// pendant que le client dicte, plutôt que d'attendre le clic "Créer" —
-// mais sans rappeler /agent/redaction à chaque point (coût IA à chaque
-// appel). Règles exactes convenues :
-//   - 1er appel dès que le champ Sujet atteint 3+ caractères + 1s de
-//     pause (les points peuvent encore être vides à ce moment-là) ;
+// Objectif : faire apparaître la checklist métier SOUS les points pendant
+// que le client dicte, plutôt que d'attendre le clic "Créer" — mais sans
+// rappeler /agent/redaction à chaque lettre/point (coût IA à chaque
+// appel). Règles exactes convenues avec Grok (2e version, remplace la 1ère
+// itération basée sur un debounce input+3 caractères) :
+//   - 1er appel au BLUR (perte de focus) du champ Sujet, seulement si le
+//     texte fait au moins ~12 caractères — jamais pendant la frappe elle-
+//     même, un seul appel par blur ;
 //   - puis un nouvel appel tous les 3 points ajoutés/supprimés depuis le
 //     dernier appel, avec 1,5s de pause après le dernier changement ;
 //   - jamais plus de 3 appels au total sur un même compte rendu ;
 //   - une simple modification du TEXTE d'un point déjà ajouté ne relance
 //     rien (seuls ajout/suppression comptent) ;
+//   - le bloc ne s'affiche que si le backend renvoie au moins 3 questions
+//     (items.length >= 3) — sous ce seuil ou si items est vide, on
+//     n'affiche rien : pas assez utile pour interrompre l'utilisateur ;
 //   - ces appels sont des aperçus silencieux : jamais d'incrementActions
 //     ni de saveActionLog dessus (voir fetchCrChecklistPreview) — seul le
 //     clic "Créer le compte rendu" doit compter comme 1 action.
 const CR_PREVIEW_MAX_CALLS = 3;
+const CR_PREVIEW_SUJET_MIN_LENGTH = 12;
+const CR_LIVE_CHECKLIST_MIN_ITEMS = 3;
 // Partagé avec la popup de checklist "après coup" (openCrChecklistModal,
 // plus bas dans le fichier) : une seule définition, utilisée par les deux.
 const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 3;
 let crPreviewCallCount = 0;
 let crPreviewSujetFired = false;
 let crPreviewPointsBaseline = 0;
-let crPreviewSujetDebounceTimer = null;
 let crPreviewPointsDebounceTimer = null;
 let crLiveChecklistItems = [];
 let crLiveChecklistAnswers = {};
@@ -11367,7 +11373,6 @@ function resetCrLivePreviewState() {
   crPreviewCallCount = 0;
   crPreviewSujetFired = false;
   crPreviewPointsBaseline = 0;
-  clearTimeout(crPreviewSujetDebounceTimer);
   clearTimeout(crPreviewPointsDebounceTimer);
   crLiveChecklistItems = [];
   crLiveChecklistAnswers = {};
@@ -11376,47 +11381,49 @@ function resetCrLivePreviewState() {
   crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
 }
 
-// Débounce distinct du champ Sujet (1s) : ne se déclenche qu'une seule
-// fois (le tout 1er appel) — une fois passé, les frappes suivantes dans
-// Sujet ne relancent plus rien, seuls les points le font désormais.
-function scheduleCrSujetPreview() {
+// Sur le blur du champ Sujet (pas sur chaque frappe) : un seul appel,
+// jamais répété ensuite même si l'utilisateur re-rentre puis ressort du
+// champ (crPreviewSujetFired verrouille définitivement ce déclencheur).
+function handleCrSujetBlur() {
   if (crPreviewSujetFired || crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
-  clearTimeout(crPreviewSujetDebounceTimer);
-  crPreviewSujetDebounceTimer = setTimeout(fireCrPreviewCallIfEligible, 1000);
+  const sujet = (document.getElementById("cr-field-sujet")?.value || "").trim();
+  if (sujet.length < CR_PREVIEW_SUJET_MIN_LENGTH) return;
+
+  crPreviewSujetFired = true;
+  crPreviewCallCount++;
+  crPreviewPointsBaseline = crPoints.length;
+
+  const pointsText = crPoints.length
+    ? crPoints.map((p, i) => (i + 1) + ". " + p).join(" ")
+    : "";
+  const instruction = "Rédige un compte-rendu. Sujet : " + sujet;
+  const formAnswers = { sujet, points: pointsText };
+
+  fetchCrChecklistPreview(instruction, formAnswers);
 }
-window.scheduleCrSujetPreview = scheduleCrSujetPreview;
+window.handleCrSujetBlur = handleCrSujetBlur;
 
 // Débounce des points (1,5s) : appelé après addCrPoint()/removeCrPoint()
 // uniquement (jamais updateCrPointText, une simple édition de texte).
+// Ce déclencheur-là reste tel que validé avec Grok initialement (basé sur
+// le nombre de points, pas sur le Sujet) — seul le 1er appel (ci-dessus) a
+// changé de mécanisme.
 function scheduleCrPointsPreview() {
   // Le tout 1er appel doit toujours être déclenché par le Sujet, pas par
   // les points — s'il n'a pas encore eu lieu, on ne programme rien ici.
   if (!crPreviewSujetFired || crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
   clearTimeout(crPreviewPointsDebounceTimer);
-  crPreviewPointsDebounceTimer = setTimeout(fireCrPreviewCallIfEligible, 1500);
+  crPreviewPointsDebounceTimer = setTimeout(fireCrPointsPreviewCallIfEligible, 1500);
 }
 
-function fireCrPreviewCallIfEligible() {
+function fireCrPointsPreviewCallIfEligible() {
   if (crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
+  if (crPoints.length - crPreviewPointsBaseline < 3) return;
+
   const sujet = (document.getElementById("cr-field-sujet")?.value || "").trim();
-
-  if (!crPreviewSujetFired) {
-    if (sujet.length >= 3) {
-      crPreviewSujetFired = true;
-      crPreviewPointsBaseline = crPoints.length;
-      runCrPreviewCall(sujet);
-    }
-    return;
-  }
-
-  if (crPoints.length - crPreviewPointsBaseline >= 3) {
-    crPreviewPointsBaseline = crPoints.length;
-    runCrPreviewCall(sujet);
-  }
-}
-
-function runCrPreviewCall(sujet) {
   if (!sujet) return; // filet de sécurité : jamais d'appel sans sujet
+
+  crPreviewPointsBaseline = crPoints.length;
   crPreviewCallCount++;
 
   const formAnswers = { sujet };
@@ -11480,8 +11487,15 @@ async function fetchCrChecklistPreview(instruction, formAnswers) {
 
 // Remplace la liste par la plus récente (le backend a maintenant plus de
 // points en contexte) mais conserve les réponses déjà données pour les
-// items dont l'id existe toujours.
+// items dont l'id existe toujours. Moins de 3 questions (ou aucune) :
+// pas assez utile pour interrompre l'utilisateur, on n'affiche rien.
 function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
+  if (!Array.isArray(items) || items.length < CR_LIVE_CHECKLIST_MIN_ITEMS) {
+    crLiveChecklistItems = [];
+    renderCrLiveChecklistPanel();
+    return;
+  }
+
   crLiveChecklistItems = items;
   crLiveChecklistPhotosAllowed = photosAllowed;
   crLiveChecklistMaxPhotos = maxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
@@ -11631,7 +11645,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
 
           <div class="field-group" style="margin-top:14px;">
             <div class="field-label">Sujet *</div>
-            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail" oninput="scheduleCrSujetPreview()">
+            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail" onblur="handleCrSujetBlur()">
           </div>
 
           <div class="cr-points-and-checklist-row">
