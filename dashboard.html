@@ -11949,26 +11949,42 @@ function startChecklistTextDictationFor(inputEl, onDone) {
   })();
 }
 
-// Remplace la liste par la plus récente (le backend a maintenant plus de
-// points en contexte) mais conserve les réponses déjà données pour les
-// items (et sous-questions, toutes profondeurs) dont l'id existe toujours.
-// Moins de 3 questions parents (ou aucune) : pas assez utile pour
-// interrompre l'utilisateur, on n'affiche rien.
+// AJOUTE les questions d'un nouvel aperçu à celles déjà affichées, ne les
+// remplace jamais : un 2e appel (déclenché après 3 nouveaux points, voir
+// fireCrPointsPreviewCallIfEligible) peut légitimement renvoyer moins de
+// questions que la 1re fois (moins de zones d'ombre restantes) — les
+// remplacer purement et simplement effaçait alors les questions déjà
+// posées ET déjà répondues, qui repassaient sous le seuil CR_LIVE_CHECKLIST_MIN_ITEMS
+// et faisaient disparaître tout le panneau (bug remonté : "des que je met
+// 3 points, la liste des questions disparait"). Pire : les réponses
+// perdues avec le panneau n'étaient plus envoyées au clic "Créer le
+// compte rendu" (voir submitCompteRendu, "if (crLiveChecklistItems.length)"),
+// donc le backend les redemandait dans la popup "après coup" — d'où les
+// questions déjà répondues qui réapparaissaient là.
+// Une fois une question affichée (répondue ou non), elle reste affichée
+// jusqu'à la création finale du compte rendu.
 function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
-  if (!Array.isArray(items) || items.length < CR_LIVE_CHECKLIST_MIN_ITEMS) {
+  const incoming = Array.isArray(items) ? items : [];
+  const existingTopIds = new Set(crLiveChecklistItems.map(it => String(it.id != null ? it.id : "")));
+  const newOnly = incoming.filter(it => !existingTopIds.has(String(it.id != null ? it.id : "")));
+  const merged = crLiveChecklistItems.concat(newOnly);
+
+  // Rien à afficher pour l'instant : ni déjà affiché, ni assez de nouvelles
+  // questions pertinentes cette fois pour justifier d'interrompre.
+  if (!crLiveChecklistItems.length && merged.length < CR_LIVE_CHECKLIST_MIN_ITEMS) {
     crLiveChecklistItems = [];
     renderCrLiveChecklistPanel();
     return;
   }
 
-  crLiveChecklistItems = items;
+  crLiveChecklistItems = merged;
   // photosAllowed n'est pris en compte que s'il est explicitement fourni :
   // undefined (aperçu qui ne renvoie pas cette info) ne doit pas faire
   // disparaître le bouton "Ajouter des photos" déjà visible par défaut.
   if (typeof photosAllowed === "boolean") crLiveChecklistPhotosAllowed = photosAllowed;
-  crLiveChecklistMaxPhotos = maxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+  crLiveChecklistMaxPhotos = maxPhotos || crLiveChecklistMaxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
 
-  const validIds = new Set(collectChecklistIds(items));
+  const validIds = new Set(collectChecklistIds(crLiveChecklistItems));
   Object.keys(crLiveChecklistAnswers).forEach(id => {
     if (!validIds.has(id)) delete crLiveChecklistAnswers[id];
   });
