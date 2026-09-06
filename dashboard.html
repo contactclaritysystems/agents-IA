@@ -1145,6 +1145,49 @@ select.field-input {
   flex-direction: column;
   gap: 10px;
 }
+
+/* Checklist "live" à côté des points pendant la dictée (voir bloc JS
+   "checklist live"). Sur mobile/étroit, empilée sous les points plutôt
+   qu'à côté — pas de place pour 2 colonnes. */
+#compte-rendu-modal .mail-choice-box {
+  max-width: 480px;
+}
+.cr-points-and-checklist-row {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  margin-top: 14px;
+}
+.cr-points-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.cr-live-checklist-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: none;
+}
+@media (min-width: 640px) {
+  #compte-rendu-modal .mail-choice-box {
+    max-width: 860px;
+  }
+  .cr-live-checklist-panel {
+    border-left: 1px solid var(--line);
+    padding-left: 18px;
+  }
+}
+@media (max-width: 639px) {
+  .cr-points-and-checklist-row {
+    flex-direction: column;
+  }
+  .cr-live-checklist-panel {
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    margin-top: 4px;
+    width: 100%;
+  }
+}
+
 .cr-checklist-row {
   display: flex;
   align-items: center;
@@ -11311,6 +11354,262 @@ let crCustomFieldSeq = 0;
 // historique inchangé si l'utilisateur n'a rien cliqué de spécifique.
 let crActiveDictationTargetId = "cr-point-input";
 
+// ─── Checklist "live" pendant la dictée (validé avec Grok) ──────────
+// Objectif : faire apparaître la checklist métier À CÔTÉ des points
+// pendant que le client dicte, plutôt que d'attendre le clic "Créer" —
+// mais sans rappeler /agent/redaction à chaque point (coût IA à chaque
+// appel). Règles exactes convenues :
+//   - 1er appel dès que le champ Sujet atteint 3+ caractères + 1s de
+//     pause (les points peuvent encore être vides à ce moment-là) ;
+//   - puis un nouvel appel tous les 3 points ajoutés/supprimés depuis le
+//     dernier appel, avec 1,5s de pause après le dernier changement ;
+//   - jamais plus de 3 appels au total sur un même compte rendu ;
+//   - une simple modification du TEXTE d'un point déjà ajouté ne relance
+//     rien (seuls ajout/suppression comptent) ;
+//   - ces appels sont des aperçus silencieux : jamais d'incrementActions
+//     ni de saveActionLog dessus (voir fetchCrChecklistPreview) — seul le
+//     clic "Créer le compte rendu" doit compter comme 1 action.
+const CR_PREVIEW_MAX_CALLS = 3;
+// Partagé avec la popup de checklist "après coup" (openCrChecklistModal,
+// plus bas dans le fichier) : une seule définition, utilisée par les deux.
+const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 3;
+let crPreviewCallCount = 0;
+let crPreviewSujetFired = false;
+let crPreviewPointsBaseline = 0;
+let crPreviewSujetDebounceTimer = null;
+let crPreviewPointsDebounceTimer = null;
+let crLiveChecklistItems = [];
+let crLiveChecklistAnswers = {};
+let crLiveChecklistPhotoUrls = [];
+let crLiveChecklistPhotosAllowed = false;
+let crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+
+function resetCrLivePreviewState() {
+  crPreviewCallCount = 0;
+  crPreviewSujetFired = false;
+  crPreviewPointsBaseline = 0;
+  clearTimeout(crPreviewSujetDebounceTimer);
+  clearTimeout(crPreviewPointsDebounceTimer);
+  crLiveChecklistItems = [];
+  crLiveChecklistAnswers = {};
+  crLiveChecklistPhotoUrls = [];
+  crLiveChecklistPhotosAllowed = false;
+  crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+}
+
+// Débounce distinct du champ Sujet (1s) : ne se déclenche qu'une seule
+// fois (le tout 1er appel) — une fois passé, les frappes suivantes dans
+// Sujet ne relancent plus rien, seuls les points le font désormais.
+function scheduleCrSujetPreview() {
+  if (crPreviewSujetFired || crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
+  clearTimeout(crPreviewSujetDebounceTimer);
+  crPreviewSujetDebounceTimer = setTimeout(fireCrPreviewCallIfEligible, 1000);
+}
+window.scheduleCrSujetPreview = scheduleCrSujetPreview;
+
+// Débounce des points (1,5s) : appelé après addCrPoint()/removeCrPoint()
+// uniquement (jamais updateCrPointText, une simple édition de texte).
+function scheduleCrPointsPreview() {
+  // Le tout 1er appel doit toujours être déclenché par le Sujet, pas par
+  // les points — s'il n'a pas encore eu lieu, on ne programme rien ici.
+  if (!crPreviewSujetFired || crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
+  clearTimeout(crPreviewPointsDebounceTimer);
+  crPreviewPointsDebounceTimer = setTimeout(fireCrPreviewCallIfEligible, 1500);
+}
+
+function fireCrPreviewCallIfEligible() {
+  if (crPreviewCallCount >= CR_PREVIEW_MAX_CALLS) return;
+  const sujet = (document.getElementById("cr-field-sujet")?.value || "").trim();
+
+  if (!crPreviewSujetFired) {
+    if (sujet.length >= 3) {
+      crPreviewSujetFired = true;
+      crPreviewPointsBaseline = crPoints.length;
+      runCrPreviewCall(sujet);
+    }
+    return;
+  }
+
+  if (crPoints.length - crPreviewPointsBaseline >= 3) {
+    crPreviewPointsBaseline = crPoints.length;
+    runCrPreviewCall(sujet);
+  }
+}
+
+function runCrPreviewCall(sujet) {
+  if (!sujet) return; // filet de sécurité : jamais d'appel sans sujet
+  crPreviewCallCount++;
+
+  const formAnswers = { sujet };
+  crActiveOptionalFieldIds.forEach(function (id) {
+    const el = document.getElementById("cr-optional-field-" + id);
+    const val = el ? el.value.trim() : "";
+    if (val) formAnswers[id] = val;
+  });
+  crCustomFields.forEach(function (f) {
+    const label = (f.label || "").trim();
+    const val = (f.value || "").trim();
+    if (label && val) formAnswers[label] = val;
+  });
+
+  const instruction =
+    "Rédige un compte-rendu. " +
+    crPoints.map((p, i) => (i + 1) + ". " + p).join(" ");
+
+  fetchCrChecklistPreview(instruction, formAnswers);
+}
+
+// Appel "silencieux" volontairement en dehors de callSimpleAgent : ce
+// dernier gère incrementActions()/saveActionLog()/verrouillage du micro à
+// chaque succès, ce qui est le comportement voulu pour une vraie action
+// utilisateur, mais PAS pour un aperçu en arrière-plan pendant la
+// dictée. On fait donc un fetch minimal, on ne regarde QUE le cas
+// needs_checklist, et on ignore silencieusement tout le reste (succès,
+// autre raison, erreur réseau) : ce n'est qu'un aperçu, jamais montré à
+// l'utilisateur comme un résultat.
+async function fetchCrChecklistPreview(instruction, formAnswers) {
+  try {
+    const response = await fetch(REDACTION_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        user_email: currentUser.email,
+        user_name: getUserDisplayName(),
+        instruction,
+        request_id: window.currentRequestId,
+        conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+        form_answers: formAnswers,
+        preview: true
+      })
+    });
+    const text = await response.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      return;
+    }
+
+    if (data && data.reason === "needs_checklist" && Array.isArray(data.items)) {
+      mergeCrLiveChecklistItems(data.items, !!data.photos_allowed, data.max_photos);
+    }
+  } catch (e) {
+    console.error("Erreur aperçu checklist compte rendu (silencieux):", e);
+  }
+}
+
+// Remplace la liste par la plus récente (le backend a maintenant plus de
+// points en contexte) mais conserve les réponses déjà données pour les
+// items dont l'id existe toujours.
+function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
+  crLiveChecklistItems = items;
+  crLiveChecklistPhotosAllowed = photosAllowed;
+  crLiveChecklistMaxPhotos = maxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+
+  const validIds = new Set(items.map(it => String(it.id)));
+  Object.keys(crLiveChecklistAnswers).forEach(id => {
+    if (!validIds.has(id)) delete crLiveChecklistAnswers[id];
+  });
+
+  renderCrLiveChecklistPanel();
+}
+
+function renderCrLiveChecklistPanel() {
+  const panel = document.getElementById("cr-live-checklist-panel");
+  if (!panel) return;
+
+  if (!crLiveChecklistItems.length) {
+    panel.style.display = "none";
+    return;
+  }
+
+  const itemsWrap = document.getElementById("cr-live-checklist-items");
+  if (itemsWrap) {
+    itemsWrap.innerHTML = crLiveChecklistItems.map(item => {
+      const id = String(item.id != null ? item.id : "");
+      const label = item.label || id;
+      return (
+        '<div class="cr-checklist-row">' +
+          '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
+          '<div class="cr-checklist-toggle-group">' +
+            '<button type="button" class="cr-checklist-toggle' + (crLiveChecklistAnswers[id] === "oui" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrLiveChecklistAnswer(this)">Oui</button>' +
+            '<button type="button" class="cr-checklist-toggle' + (crLiveChecklistAnswers[id] === "non" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrLiveChecklistAnswer(this)">Non</button>' +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  const photosSection = document.getElementById("cr-live-checklist-photos-section");
+  if (photosSection) photosSection.style.display = crLiveChecklistPhotosAllowed ? "block" : "none";
+  renderCrLiveChecklistPhotoThumbs();
+
+  panel.style.display = "block";
+}
+
+function setCrLiveChecklistAnswer(btn) {
+  const itemId = btn.getAttribute("data-item");
+  const value = btn.getAttribute("data-value");
+  if (crLiveChecklistAnswers[itemId] === value) {
+    delete crLiveChecklistAnswers[itemId];
+  } else {
+    crLiveChecklistAnswers[itemId] = value;
+  }
+  document.querySelectorAll('#cr-live-checklist-items .cr-checklist-toggle[data-item="' + CSS.escape(itemId) + '"]').forEach(el => {
+    el.classList.toggle("active", crLiveChecklistAnswers[itemId] === el.getAttribute("data-value"));
+  });
+}
+window.setCrLiveChecklistAnswer = setCrLiveChecklistAnswer;
+
+async function handleCrLiveChecklistPhotoSelect(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+  if (!files.length) return;
+
+  const remaining = crLiveChecklistMaxPhotos - crLiveChecklistPhotoUrls.length;
+  if (remaining <= 0) {
+    showToast("Maximum " + crLiveChecklistMaxPhotos + " photos", "error");
+    return;
+  }
+
+  const toUpload = files.slice(0, remaining);
+  const addBtn = document.getElementById("cr-live-checklist-add-photo-btn");
+  const originalLabel = addBtn ? addBtn.innerHTML : "";
+  if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = "⏳ Envoi..."; }
+
+  for (let i = 0; i < toUpload.length; i++) {
+    try {
+      const url = await uploadCrChecklistPhoto(toUpload[i]);
+      if (url) crLiveChecklistPhotoUrls.push(url);
+    } catch (e) {
+      console.error("Erreur upload photo compte rendu (live):", e);
+      showToast("Impossible d'envoyer une photo", "error");
+    }
+  }
+
+  renderCrLiveChecklistPhotoThumbs();
+  if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = originalLabel; }
+}
+window.handleCrLiveChecklistPhotoSelect = handleCrLiveChecklistPhotoSelect;
+
+function renderCrLiveChecklistPhotoThumbs() {
+  const wrap = document.getElementById("cr-live-checklist-photo-thumbs");
+  if (!wrap) return;
+  wrap.innerHTML = crLiveChecklistPhotoUrls.map((url, i) =>
+    '<div class="cr-checklist-thumb">' +
+      '<img src="' + url + '" alt="" />' +
+      '<button type="button" class="cr-checklist-thumb-remove" onclick="removeCrLiveChecklistPhoto(' + i + ')">✕</button>' +
+    "</div>"
+  ).join("");
+}
+
+function removeCrLiveChecklistPhoto(index) {
+  crLiveChecklistPhotoUrls.splice(index, 1);
+  renderCrLiveChecklistPhotoThumbs();
+}
+window.removeCrLiveChecklistPhoto = removeCrLiveChecklistPhoto;
+
 async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   const allowed = await canUseAgents();
   if (!allowed) return;
@@ -11329,6 +11628,12 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
     simpleAgentConversationHistory = [];
     lastAgentInfo = null;
     pendingClarifyAgent = null;
+    // Nouveau compte rendu "propre" : on repart aussi à zéro sur la
+    // checklist live (compteur d'appels, items déjà suggérés, réponses
+    // déjà cochées) — voir bloc "checklist live" plus haut. Un
+    // needs_form/needs_checklist qui rouvre CE MÊME compte rendu
+    // (preserveHistory=true) doit au contraire tout conserver.
+    resetCrLivePreviewState();
   }
 
   crPoints = Array.isArray(prefillPoints) ? prefillPoints.slice() : [];
@@ -11347,20 +11652,38 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
 
           <div class="field-group" style="margin-top:14px;">
             <div class="field-label">Sujet *</div>
-            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail">
+            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail" oninput="scheduleCrSujetPreview()">
           </div>
 
-          <div id="cr-points-list" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
+          <div class="cr-points-and-checklist-row">
+            <div class="cr-points-col">
+              <div id="cr-points-list" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;"></div>
 
-          <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
-            <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;" oninput="updateCrAddPointButtonState()"></textarea>
-            <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
-              <span class="mic-stop-icon" aria-hidden="true"></span>
-            </button>
+              <div class="clarity-input-row" id="cr-input-row" style="align-items:center;margin-top:14px;">
+                <textarea class="field-input" id="cr-point-input" rows="2" placeholder="Ex : Prévoir remplacement de 10 tôles" style="flex:1;min-width:0;resize:vertical;min-height:50px;" oninput="updateCrAddPointButtonState()"></textarea>
+                <button class="clarity-input-mic" id="cr-mic-btn" type="button" onclick="toggleCrPointDictation()">
+                  <span class="mic-stop-icon" aria-hidden="true"></span>
+                </button>
+              </div>
+              <div class="clarity-mic-hint">🎙️ Cliquez dans un champ (Sujet, un point, Client...) puis appuyez sur le micro pour le dicter directement dedans.</div>
+
+              <button class="sheet-btn" type="button" id="cr-add-point-btn" disabled style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
+            </div>
+
+            <!-- Apparaît dès qu'un aperçu en arrière-plan détecte des
+                 questions pertinentes (voir renderCrLiveChecklistPanel) —
+                 masqué tant qu'aucun aperçu n'a encore rien renvoyé. -->
+            <div id="cr-live-checklist-panel" class="cr-live-checklist-panel" style="display:none;">
+              <div class="field-label">Pour ne rien oublier</div>
+              <div id="cr-live-checklist-items" class="cr-checklist-items"></div>
+              <div id="cr-live-checklist-photos-section" style="display:none;margin-top:14px;">
+                <div class="field-label">Photos (facultatif)</div>
+                <div id="cr-live-checklist-photo-thumbs" class="cr-checklist-thumbs"></div>
+                <input type="file" id="cr-live-checklist-photo-input" accept="image/*" multiple style="display:none;" onchange="handleCrLiveChecklistPhotoSelect(event)">
+                <button class="sheet-btn" type="button" id="cr-live-checklist-add-photo-btn" style="width:100%;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-live-checklist-photo-input').click()">📷 Ajouter des photos</button>
+              </div>
+            </div>
           </div>
-          <div class="clarity-mic-hint">🎙️ Cliquez dans un champ (Sujet, un point, Client...) puis appuyez sur le micro pour le dicter directement dedans.</div>
-
-          <button class="sheet-btn" type="button" id="cr-add-point-btn" disabled style="width:100%;justify-content:center;margin-top:8px;" onclick="addCrPoint()">+ Ajouter ce point</button>
 
           <div id="cr-optional-active" style="margin-top:14px;"></div>
           <div id="cr-optional-chips" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
@@ -11407,6 +11730,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   if (input) input.value = "";
   updateCrAddPointButtonState();
   renderCrPoints();
+  renderCrLiveChecklistPanel();
   crActiveDictationTargetId = "cr-point-input";
 
   // Réinitialisé par défaut à chaque ouverture "propre" : c'est
@@ -11560,12 +11884,17 @@ function addCrPoint() {
   textarea.value = "";
   updateCrAddPointButtonState();
   renderCrPoints();
+  // Ajout de point = déclencheur possible de la checklist live (jamais une
+  // simple édition de texte, voir updateCrPointText) — voir bloc
+  // "checklist live" plus haut.
+  scheduleCrPointsPreview();
   textarea.focus();
 }
 
 function removeCrPoint(index) {
   crPoints.splice(index, 1);
   renderCrPoints();
+  scheduleCrPointsPreview();
 }
 
 // Affiche les champs que Clarity a explicitement demandés (ex: "Sujet")
@@ -12402,7 +12731,8 @@ window.sendCrResultByMail = sendCrResultByMail;
 let crChecklistData = null;
 let crChecklistAnswers = {};
 let crChecklistPhotoUrls = [];
-const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 3;
+// CR_CHECKLIST_MAX_PHOTOS_DEFAULT est déclaré plus haut (bloc "checklist
+// live"), utilisé dès la constitution de crLiveChecklistMaxPhotos.
 
 // Les photos n'ont pas de colonne dédiée dans action_event_logs (table
 // utilisée pour l'Historique) : on les stocke sur une ligne finale du texte
@@ -12427,8 +12757,18 @@ function extractCrPhotosFromLogText(text) {
 
 function openCrChecklistModal(data) {
   crChecklistData = data || {};
+
+  // Si la checklist live avait déjà recueilli des réponses/photos pendant
+  // la dictée, on les reprend ici plutôt que de tout redemander — mais
+  // uniquement les réponses dont l'id existe encore parmi les NOUVEAUX
+  // items renvoyés par le backend (des items obsolètes ne doivent pas
+  // repartir dans la requête suivante).
+  const newIds = new Set((crChecklistData.items || []).map(it => String(it.id)));
   crChecklistAnswers = {};
-  crChecklistPhotoUrls = [];
+  Object.keys(crLiveChecklistAnswers).forEach(id => {
+    if (newIds.has(id)) crChecklistAnswers[id] = crLiveChecklistAnswers[id];
+  });
+  crChecklistPhotoUrls = crLiveChecklistPhotoUrls.slice();
 
   let modal = document.getElementById("cr-checklist-modal");
   if (!modal) {
@@ -12480,8 +12820,8 @@ function openCrChecklistModal(data) {
         '<div class="cr-checklist-row">' +
           '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
           '<div class="cr-checklist-toggle-group">' +
-            '<button type="button" class="cr-checklist-toggle" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrChecklistAnswer(this)">Oui</button>' +
-            '<button type="button" class="cr-checklist-toggle" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrChecklistAnswer(this)">Non</button>' +
+            '<button type="button" class="cr-checklist-toggle' + (crChecklistAnswers[id] === "oui" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrChecklistAnswer(this)">Oui</button>' +
+            '<button type="button" class="cr-checklist-toggle' + (crChecklistAnswers[id] === "non" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrChecklistAnswer(this)">Non</button>' +
           "</div>" +
         "</div>"
       );
@@ -12693,6 +13033,17 @@ function submitCompteRendu() {
   if (missingRequiredLabel) {
     showToast("Indiquez au moins : " + missingRequiredLabel, "error");
     return;
+  }
+
+  // Si la checklist live (voir bloc plus haut) a déjà remonté des
+  // questions pendant la dictée, on envoie directement les réponses déjà
+  // cochées / photos déjà envoyées avec ce tout premier appel — pas besoin
+  // de repasser par la popup "après coup" (onNeedsChecklist ci-dessous)
+  // dans ce cas, sauf si le backend en redemande quand même une nouvelle.
+  if (crLiveChecklistItems.length) {
+    formAnswers.checklist_answers = Object.assign({}, crLiveChecklistAnswers);
+    formAnswers.checklist_items = crLiveChecklistItems.slice();
+    formAnswers.photo_urls = crLiveChecklistPhotoUrls.slice();
   }
 
   // Copie AVANT de fermer le modal : si Clarity redemande encore une
