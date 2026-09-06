@@ -1182,10 +1182,6 @@ select.field-input {
   gap: 8px;
   margin-top: 8px;
 }
-.cr-checklist-photo-btn-row {
-  display: flex;
-  gap: 8px;
-}
 .cr-checklist-thumb {
   position: relative;
   width: 72px;
@@ -12450,18 +12446,14 @@ function openCrChecklistModal(data) {
         <div id="cr-checklist-photos-section" style="display:none;margin-top:16px;">
           <div class="field-label">Photos (facultatif)</div>
           <div id="cr-checklist-photo-thumbs" class="cr-checklist-thumbs"></div>
-          <!-- 2 entrées distinctes plutôt qu'un seul input générique :
-               "capture=environment" force l'appareil photo direct sur
-               mobile (Android en tient compte ; iOS l'ignore et ouvre son
-               propre menu, mais le bouton reste cohérent visuellement).
-               L'input "Choisir" (sans capture, multiple) ouvre la
-               photothèque avec sélection multiple, y compris sur desktop. -->
-          <input type="file" id="cr-checklist-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleCrChecklistPhotoSelect(event)" />
+          <!-- Un seul input suffit : SANS l'attribut "capture", iOS ET
+               Android ouvrent tous les deux leur propre menu natif proposant
+               "Appareil photo" / "Photos" / "Fichiers" au même endroit — un
+               2e bouton dédié à la caméra n'apportait donc rien de plus sur
+               mobile, et sur PC il ouvrait de toute façon le même
+               explorateur de fichiers que celui-ci. -->
           <input type="file" id="cr-checklist-photo-input" accept="image/*" multiple style="display:none;" onchange="handleCrChecklistPhotoSelect(event)" />
-          <div class="cr-checklist-photo-btn-row">
-            <button class="sheet-btn" type="button" id="cr-checklist-camera-btn" style="flex:1;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-checklist-camera-input').click()">📷 Prendre une photo</button>
-            <button class="sheet-btn" type="button" id="cr-checklist-add-photo-btn" style="flex:1;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-checklist-photo-input').click()">🖼️ Choisir</button>
-          </div>
+          <button class="sheet-btn" type="button" id="cr-checklist-add-photo-btn" style="width:100%;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-checklist-photo-input').click()">📷 Ajouter des photos</button>
         </div>
 
         <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="submitCrChecklist()">🗒️ Rédiger</button>
@@ -12498,6 +12490,7 @@ function openCrChecklistModal(data) {
 
   const photosSection = document.getElementById("cr-checklist-photos-section");
   if (photosSection) photosSection.style.display = crChecklistData.photos_allowed ? "block" : "none";
+
   renderCrChecklistPhotoThumbs();
 
   modal.style.display = "flex";
@@ -12532,15 +12525,9 @@ async function handleCrChecklistPhotoSelect(event) {
   }
 
   const toUpload = files.slice(0, remaining);
-  // Les 2 boutons (caméra + choisir) partagent ce même handler : on
-  // désactive les deux pendant l'envoi pour éviter un double clic qui
-  // dépasserait le quota pendant qu'un 1er lot est encore en cours.
   const addBtn = document.getElementById("cr-checklist-add-photo-btn");
-  const cameraBtn = document.getElementById("cr-checklist-camera-btn");
   const originalAddLabel = addBtn ? addBtn.innerHTML : "";
-  const originalCameraLabel = cameraBtn ? cameraBtn.innerHTML : "";
-  if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = "⏳"; }
-  if (cameraBtn) { cameraBtn.disabled = true; cameraBtn.innerHTML = "⏳"; }
+  if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = "⏳ Envoi..."; }
 
   for (let i = 0; i < toUpload.length; i++) {
     try {
@@ -12554,7 +12541,6 @@ async function handleCrChecklistPhotoSelect(event) {
 
   renderCrChecklistPhotoThumbs();
   if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = originalAddLabel; }
-  if (cameraBtn) { cameraBtn.disabled = false; cameraBtn.innerHTML = originalCameraLabel; }
 }
 
 // Chemin exigé côté backend : {user_id}/{timestamp}-{n}.ext — pour que
