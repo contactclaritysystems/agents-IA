@@ -1258,6 +1258,24 @@ select.field-input {
   align-items: center;
   justify-content: center;
 }
+/* Bouton "Valider" (✓) : masqué tant que le champ est vide, apparaît dès la
+   1re lettre tapée ou dictée (voir renderChecklistTree, "hasValue"). Ne
+   sert qu'à valider/masquer le clavier — la réponse est de toute façon déjà
+   enregistrée en direct à chaque frappe (voir handleChecklistTextInput). */
+.cr-checklist-text-confirm-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--clarity-accent, #0091c7);
+  background: var(--clarity-accent, #0091c7);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
 .cr-checklist-thumbs {
   display: flex;
   flex-wrap: wrap;
@@ -11581,15 +11599,17 @@ function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames
     let rowHtml, branchAnswer;
     if (isTexte) {
       const value = typeof answer === "string" ? answer : "";
+      const hasValue = !!value.trim();
       rowHtml =
         '<div class="cr-checklist-row cr-checklist-text-row">' +
           '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
           '<div class="cr-checklist-text-input-row">' +
             '<input type="text" class="cr-checklist-text-input" data-item="' + escapeHtmlForPrint(id) + '" value="' + escapeHtmlForPrint(value) + '" placeholder="Répondez ici, ou dictez avec le micro" oninput="' + textFnNames.input + '(this)" />' +
             '<button type="button" class="cr-checklist-text-mic-btn" data-item="' + escapeHtmlForPrint(id) + '" onclick="' + textFnNames.mic + '(this)" aria-label="Dicter">🎙️</button>' +
+            '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="var wrap=this.closest(\'.cr-checklist-text-input-row\'); var inp=wrap&&wrap.querySelector(\'.cr-checklist-text-input\'); if(inp) inp.blur();" aria-label="Valider">✓</button>' +
           "</div>" +
         "</div>";
-      branchAnswer = value.trim() ? "oui" : null;
+      branchAnswer = hasValue ? "oui" : null;
     } else {
       rowHtml =
         '<div class="cr-checklist-row" style="display:' + (answer ? "none" : "flex") + ';">' +
@@ -11935,7 +11955,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
 
           <div class="field-group" style="margin-top:14px;">
             <div class="field-label">Sujet *</div>
-            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail" onblur="handleCrSujetBlur()">
+            <input class="field-input" type="text" id="cr-field-sujet" autocomplete="off" placeholder="Ex : Remise en état du portail" onblur="handleCrSujetBlur()" oninput="updateCrCreateButtonState()">
           </div>
 
           <div class="cr-points-and-checklist-row">
@@ -12027,6 +12047,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
 
   const sujetField = document.getElementById("cr-field-sujet");
   if (sujetField) sujetField.value = "";
+  updateCrCreateButtonState(); // Sujet vidé -> bouton regrisé (voir aussi renderCrPoints/oninput du champ Sujet)
   crActiveOptionalFieldIds = [];
   crOptionalFieldValues = {};
   crCustomFields = [];
@@ -12123,9 +12144,11 @@ function renderCrPoints() {
     createBtn.textContent = crPoints.length
       ? "🗒️ Créer le compte rendu (" + crPoints.length + (crPoints.length > 1 ? " points" : " point") + ")"
       : "🗒️ Créer le compte rendu";
-    // Grisé tant qu'il n'y a aucun point : rien à envoyer à Clarity sinon.
-    createBtn.disabled = crPoints.length === 0;
   }
+  // Les points n'entrent plus dans la condition d'activation du bouton
+  // (voir updateCrCreateButtonState : seul le Sujet compte désormais) — un
+  // point ajouté/retiré ne change donc plus rien à son état grisé/actif,
+  // seulement au libellé ci-dessus.
 }
 
 // Grisé tant que le champ est vide : évite un clic "pour rien" sur un
@@ -12137,6 +12160,20 @@ function updateCrAddPointButtonState() {
   if (btn) btn.disabled = !(textarea && textarea.value.trim());
 }
 window.updateCrAddPointButtonState = updateCrAddPointButtonState;
+
+// Le bouton "Créer le compte rendu" ne dépend plus que du Sujet (rempli ou
+// non) : les points sont désormais facultatifs — un compte rendu peut être
+// entièrement construit à partir des réponses de la checklist (Oui/Non/
+// texte) sans qu'aucun point n'ait été dicté. La vraie vérification "y a-t-
+// il quelque chose à envoyer" (point OU réponse checklist) se fait au clic,
+// dans submitCompteRendu(), pas ici — ici on veut juste éviter un bouton
+// actif avec un Sujet vide (le sujet, lui, reste toujours obligatoire).
+function updateCrCreateButtonState() {
+  const btn = document.getElementById("cr-create-btn");
+  const sujetInput = document.getElementById("cr-field-sujet");
+  if (btn) btn.disabled = !(sujetInput && sujetInput.value.trim());
+}
+window.updateCrCreateButtonState = updateCrCreateButtonState;
 
 // oninput plutôt qu'un re-rendu de toute la liste à chaque frappe : on
 // modifie juste le tableau en mémoire, sans jamais toucher au DOM pendant
@@ -12318,6 +12355,7 @@ function restoreCrFieldsState(state) {
   if (!state) return;
   const sujetInput = document.getElementById("cr-field-sujet");
   if (sujetInput) sujetInput.value = state.sujet || "";
+  updateCrCreateButtonState(); // Sujet restauré -> le bouton doit refléter sa vraie valeur, pas rester grisé
   crActiveOptionalFieldIds = state.optionalIds.slice();
   crOptionalFieldValues = Object.assign({}, state.optionalValues);
   crCustomFields = (state.customFields || []).map(f => Object.assign({}, f));
@@ -13270,19 +13308,26 @@ window.closeCrChecklistModal = closeCrChecklistModal;
 window.submitCrChecklist = submitCrChecklist;
 
 function submitCompteRendu() {
-  if (!crPoints.length) {
-    showToast("Ajoutez au moins un point avant de créer le compte rendu", "error");
-    return;
-  }
-
   // Sujet = titre du compte rendu, toujours demandé (contrairement aux
   // champs facultatifs ci-dessous, il ne sert à rien d'envoyer un compte
-  // rendu sans titre).
+  // rendu sans titre). C'est la SEULE condition qui active le bouton (voir
+  // updateCrCreateButtonState) : les points ne sont plus obligatoires.
   const sujetInput = document.getElementById("cr-field-sujet");
   const sujet = sujetInput ? sujetInput.value.trim() : "";
   if (!sujet) {
     showToast("Indiquez un sujet pour le compte rendu", "error");
     if (sujetInput) sujetInput.focus();
+    return;
+  }
+
+  // Les points sont facultatifs SI la checklist (répondue pendant la
+  // dictée, voir bloc "checklist live" plus haut) contient déjà au moins
+  // une réponse (oui, non ou texte) : dans ce cas il y a bien quelque chose
+  // à rédiger même sans point dicté. S'il n'y a NI point NI réponse
+  // checklist, en revanche, il n'y a réellement rien à envoyer à Clarity.
+  const hasChecklistAnswers = Object.keys(crLiveChecklistAnswers).length > 0;
+  if (!crPoints.length && !hasChecklistAnswers) {
+    showToast("Ajoutez au moins un point ou répondez à une question de la checklist avant de créer le compte rendu", "error");
     return;
   }
 
@@ -13341,9 +13386,13 @@ function submitCompteRendu() {
   // mêmes points et les mêmes champs déjà remplis, jamais une liste vide.
   const pointsSnapshot = crPoints.slice();
   const fieldsStateSnapshot = snapshotCrFieldsState();
-  const instruction =
-    "Rédige un compte-rendu. " +
-    pointsSnapshot.map((p, i) => (i + 1) + ". " + p).join(" ");
+  // Sans point dicté (compte rendu entièrement basé sur la checklist), on
+  // retombe sur le même format d'instruction que l'aperçu live
+  // (fetchCrChecklistPreview) plutôt que d'envoyer "Rédige un compte-rendu. "
+  // suivi de rien.
+  const instruction = pointsSnapshot.length
+    ? "Rédige un compte-rendu. " + pointsSnapshot.map((p, i) => (i + 1) + ". " + p).join(" ")
+    : "Rédige un compte-rendu. Sujet : " + sujet;
 
   closeCompteRenduModal();
 
