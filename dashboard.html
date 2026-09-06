@@ -1198,6 +1198,21 @@ select.field-input {
   border-color: var(--clarity-accent, #0091c7);
   color: #fff;
 }
+/* Sous-questions conditionnelles (item.followups_if_oui), révélées
+   seulement quand le parent = "Oui" — légèrement en retrait pour montrer
+   la hiérarchie sans passer par une indentation trop marquée. */
+.cr-checklist-followups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 0 18px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+.cr-checklist-followup-row .cr-checklist-label {
+  font-size: 13px;
+  color: var(--muted);
+}
 .cr-checklist-thumbs {
   display: flex;
   flex-wrap: wrap;
@@ -11485,10 +11500,98 @@ async function fetchCrChecklistPreview(instruction, formAnswers) {
   }
 }
 
+// Sous-questions conditionnelles (item.followups_if_oui) : ex. "Portail
+// motorisé ?" → si "Oui", révèle "Cellules de sécurité ?" / "Gyrophare ?".
+// Toujours fournies par le backend DANS la même réponse checklist (jamais
+// un 2e appel /agent/redaction) — on se contente de les afficher/masquer
+// et d'inclure/exclure leurs réponses selon l'état du parent. Fonction
+// PARTAGÉE entre le panneau live et la popup "après coup" (même format
+// d'items des deux côtés), idPrefix les distingue dans le DOM pour éviter
+// toute collision d'id entre les deux (compte-rendu-modal reste dans le
+// DOM, caché, même quand la popup s'ouvre).
+function buildChecklistItemsHtml(items, answers, idPrefix, toggleFnName) {
+  function buildRow(item) {
+    const id = String(item.id != null ? item.id : "");
+    const label = item.label || id;
+    return (
+      '<div class="cr-checklist-row">' +
+        '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
+        '<div class="cr-checklist-toggle-group">' +
+          '<button type="button" class="cr-checklist-toggle' + (answers[id] === "oui" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="' + toggleFnName + '(this)">Oui</button>' +
+          '<button type="button" class="cr-checklist-toggle' + (answers[id] === "non" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="' + toggleFnName + '(this)">Non</button>' +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  return items.map(item => {
+    const id = String(item.id != null ? item.id : "");
+    const followups = Array.isArray(item.followups_if_oui) ? item.followups_if_oui : [];
+    let html = buildRow(item);
+
+    if (followups.length) {
+      const visible = answers[id] === "oui";
+      html +=
+        '<div class="cr-checklist-followups" id="' + idPrefix + "followups-" + escapeHtmlForPrint(id) + '" style="display:' + (visible ? "flex" : "none") + ';">' +
+          followups.map(child => '<div class="cr-checklist-followup-row">' + buildRow(child) + "</div>").join("") +
+        "</div>";
+    }
+    return html;
+  }).join("");
+}
+
+// { parentId: [childId, ...] } — reconstruit à chaque rendu, utilisé par
+// les toggles pour savoir quel conteneur de sous-questions montrer/cacher
+// et quelles réponses effacer quand le parent repasse à "Non"/"passer".
+function buildChecklistFollowupsMap(items) {
+  const map = {};
+  (items || []).forEach(item => {
+    const followups = Array.isArray(item.followups_if_oui) ? item.followups_if_oui : [];
+    if (followups.length) {
+      map[String(item.id)] = followups.map(f => String(f.id));
+    }
+  });
+  return map;
+}
+
+// Applique le toggle Oui/Non/passer sur `answers`, remet à jour les
+// classes "active" des boutons concernés, et si `itemId` a des
+// sous-questions (via followupsMap), les révèle sur "Oui" ou les masque +
+// efface leurs réponses sur "Non"/"passer" — jamais de checklist_answers
+// résiduel pour une question qu'on ne montre plus.
+function applyChecklistToggle(btn, answers, followupsMap, idPrefix, itemsContainerSelector) {
+  const itemId = btn.getAttribute("data-item");
+  const value = btn.getAttribute("data-value");
+  if (answers[itemId] === value) {
+    delete answers[itemId];
+  } else {
+    answers[itemId] = value;
+  }
+  document.querySelectorAll(itemsContainerSelector + ' .cr-checklist-toggle[data-item="' + CSS.escape(itemId) + '"]').forEach(el => {
+    el.classList.toggle("active", answers[itemId] === el.getAttribute("data-value"));
+  });
+
+  const childIds = followupsMap[itemId];
+  if (childIds) {
+    const shouldShow = answers[itemId] === "oui";
+    const container = document.getElementById(idPrefix + "followups-" + itemId);
+    if (container) container.style.display = shouldShow ? "flex" : "none";
+    if (!shouldShow) {
+      childIds.forEach(cid => {
+        delete answers[cid];
+        document.querySelectorAll(itemsContainerSelector + ' .cr-checklist-toggle[data-item="' + CSS.escape(cid) + '"]').forEach(el => el.classList.remove("active"));
+      });
+    }
+  }
+}
+
+let crLiveChecklistFollowupsMap = {};
+
 // Remplace la liste par la plus récente (le backend a maintenant plus de
 // points en contexte) mais conserve les réponses déjà données pour les
-// items dont l'id existe toujours. Moins de 3 questions (ou aucune) :
-// pas assez utile pour interrompre l'utilisateur, on n'affiche rien.
+// items (et sous-questions) dont l'id existe toujours. Moins de 3
+// questions parents (ou aucune) : pas assez utile pour interrompre
+// l'utilisateur, on n'affiche rien.
 function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
   if (!Array.isArray(items) || items.length < CR_LIVE_CHECKLIST_MIN_ITEMS) {
     crLiveChecklistItems = [];
@@ -11499,8 +11602,13 @@ function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
   crLiveChecklistItems = items;
   crLiveChecklistPhotosAllowed = photosAllowed;
   crLiveChecklistMaxPhotos = maxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+  crLiveChecklistFollowupsMap = buildChecklistFollowupsMap(items);
 
-  const validIds = new Set(items.map(it => String(it.id)));
+  const validIds = new Set();
+  items.forEach(it => {
+    validIds.add(String(it.id));
+    (Array.isArray(it.followups_if_oui) ? it.followups_if_oui : []).forEach(f => validIds.add(String(f.id)));
+  });
   Object.keys(crLiveChecklistAnswers).forEach(id => {
     if (!validIds.has(id)) delete crLiveChecklistAnswers[id];
   });
@@ -11519,19 +11627,7 @@ function renderCrLiveChecklistPanel() {
 
   const itemsWrap = document.getElementById("cr-live-checklist-items");
   if (itemsWrap) {
-    itemsWrap.innerHTML = crLiveChecklistItems.map(item => {
-      const id = String(item.id != null ? item.id : "");
-      const label = item.label || id;
-      return (
-        '<div class="cr-checklist-row">' +
-          '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
-          '<div class="cr-checklist-toggle-group">' +
-            '<button type="button" class="cr-checklist-toggle' + (crLiveChecklistAnswers[id] === "oui" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrLiveChecklistAnswer(this)">Oui</button>' +
-            '<button type="button" class="cr-checklist-toggle' + (crLiveChecklistAnswers[id] === "non" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrLiveChecklistAnswer(this)">Non</button>' +
-          "</div>" +
-        "</div>"
-      );
-    }).join("");
+    itemsWrap.innerHTML = buildChecklistItemsHtml(crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer");
   }
 
   const photosSection = document.getElementById("cr-live-checklist-photos-section");
@@ -11542,16 +11638,7 @@ function renderCrLiveChecklistPanel() {
 }
 
 function setCrLiveChecklistAnswer(btn) {
-  const itemId = btn.getAttribute("data-item");
-  const value = btn.getAttribute("data-value");
-  if (crLiveChecklistAnswers[itemId] === value) {
-    delete crLiveChecklistAnswers[itemId];
-  } else {
-    crLiveChecklistAnswers[itemId] = value;
-  }
-  document.querySelectorAll('#cr-live-checklist-items .cr-checklist-toggle[data-item="' + CSS.escape(itemId) + '"]').forEach(el => {
-    el.classList.toggle("active", crLiveChecklistAnswers[itemId] === el.getAttribute("data-value"));
-  });
+  applyChecklistToggle(btn, crLiveChecklistAnswers, crLiveChecklistFollowupsMap, "cr-live-", "#cr-live-checklist-items");
 }
 window.setCrLiveChecklistAnswer = setCrLiveChecklistAnswer;
 
@@ -12751,15 +12838,22 @@ function extractCrPhotosFromLogText(text) {
   return { text: before, photoUrls };
 }
 
+let crChecklistFollowupsMap = {};
+
 function openCrChecklistModal(data) {
   crChecklistData = data || {};
+  crChecklistFollowupsMap = buildChecklistFollowupsMap(crChecklistData.items || []);
 
   // Si la checklist live avait déjà recueilli des réponses/photos pendant
   // la dictée, on les reprend ici plutôt que de tout redemander — mais
-  // uniquement les réponses dont l'id existe encore parmi les NOUVEAUX
-  // items renvoyés par le backend (des items obsolètes ne doivent pas
-  // repartir dans la requête suivante).
-  const newIds = new Set((crChecklistData.items || []).map(it => String(it.id)));
+  // uniquement les réponses dont l'id (parent OU sous-question) existe
+  // encore parmi les NOUVEAUX items renvoyés par le backend (des items
+  // obsolètes ne doivent pas repartir dans la requête suivante).
+  const newIds = new Set();
+  (crChecklistData.items || []).forEach(it => {
+    newIds.add(String(it.id));
+    (Array.isArray(it.followups_if_oui) ? it.followups_if_oui : []).forEach(f => newIds.add(String(f.id)));
+  });
   crChecklistAnswers = {};
   Object.keys(crLiveChecklistAnswers).forEach(id => {
     if (newIds.has(id)) crChecklistAnswers[id] = crLiveChecklistAnswers[id];
@@ -12809,19 +12903,7 @@ function openCrChecklistModal(data) {
   const items = Array.isArray(crChecklistData.items) ? crChecklistData.items : [];
   const itemsWrap = document.getElementById("cr-checklist-items");
   if (itemsWrap) {
-    itemsWrap.innerHTML = items.map(item => {
-      const id = String(item.id != null ? item.id : "");
-      const label = item.label || id;
-      return (
-        '<div class="cr-checklist-row">' +
-          '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
-          '<div class="cr-checklist-toggle-group">' +
-            '<button type="button" class="cr-checklist-toggle' + (crChecklistAnswers[id] === "oui" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrChecklistAnswer(this)">Oui</button>' +
-            '<button type="button" class="cr-checklist-toggle' + (crChecklistAnswers[id] === "non" ? " active" : "") + '" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrChecklistAnswer(this)">Non</button>' +
-          "</div>" +
-        "</div>"
-      );
-    }).join("");
+    itemsWrap.innerHTML = buildChecklistItemsHtml(items, crChecklistAnswers, "cr-", "setCrChecklistAnswer");
   }
 
   const photosSection = document.getElementById("cr-checklist-photos-section");
@@ -12836,16 +12918,7 @@ function openCrChecklistModal(data) {
 // (= "passer", l'item n'apparaît alors dans aucune réponse, comme
 // spécifié : "rien coché = ignorer").
 function setCrChecklistAnswer(btn) {
-  const itemId = btn.getAttribute("data-item");
-  const value = btn.getAttribute("data-value");
-  if (crChecklistAnswers[itemId] === value) {
-    delete crChecklistAnswers[itemId];
-  } else {
-    crChecklistAnswers[itemId] = value;
-  }
-  document.querySelectorAll('.cr-checklist-toggle[data-item="' + CSS.escape(itemId) + '"]').forEach(el => {
-    el.classList.toggle("active", crChecklistAnswers[itemId] === el.getAttribute("data-value"));
-  });
+  applyChecklistToggle(btn, crChecklistAnswers, crChecklistFollowupsMap, "cr-", "#cr-checklist-items");
 }
 
 async function handleCrChecklistPhotoSelect(event) {
