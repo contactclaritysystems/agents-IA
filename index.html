@@ -812,7 +812,7 @@ header {
 <section class="hero">
   <p class="hero-tagline">Elle ne dort jamais — vous, si.</p>
   <h1>Dictez.<br/><span class="brand-name">Clarity</span> <em>s'occupe du reste.</em></h1>
-  <p class="hero-sub">Mails, textes, rendez-vous et rappels<br/>depuis votre voix. 7 jours pour essayer.</p>
+  <p class="hero-sub">Mails, textes, rendez-vous, rappels et comptes rendus<br/>depuis votre voix. 7 jours pour essayer.</p>
   <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-btns">
     <a href="#" class="btn-dark" onclick="openRegisterFromChat(event)">Commencer l'essai gratuit</a>
@@ -851,6 +851,7 @@ Bonne journée
       <li class="proof-item rv"><span class="proof-check">✓</span>Un mail dicté, prêt à valider</li>
       <li class="proof-item rv"><span class="proof-check">✓</span>Un RDV noté, rappel avant l'heure</li>
       <li class="proof-item rv"><span class="proof-check">✓</span>Un post rédigé à partir d'une simple idée</li>
+      <li class="proof-item rv"><span class="proof-check">✓</span>Un compte rendu dicté, prêt à relire</li>
     </ul>
   </div>
 </div>
@@ -858,7 +859,7 @@ Bonne journée
 <section class="sec" id="agents">
   <div class="eye rv">Ce que fait Clarity</div>
   <h2 class="stitle rv">Ce que fait <span class="brand-name">Clarity</span>,<br/>aujourd'hui.</h2>
-  <p class="ssub rv">Cinq choses que Clarity sait faire. Pas une liste de promesses.</p>
+  <p class="ssub rv">Ce que Clarity sait faire aujourd'hui. Pas une liste de promesses.</p>
   <div class="agents-grid rv">
     <div class="atile">
       <span class="atile-ico">✉️</span>
@@ -890,6 +891,18 @@ Bonne journée
       <p class="atile-desc">Vous dites « fais-moi penser à... », Clarity vous prévient à l'heure.</p>
       <p class="atile-example">« Fais-moi penser à rappeler Julie demain matin. »</p>
     </div>
+    <div class="atile">
+      <span class="atile-ico">🗒️</span>
+      <div class="atile-name">Compte rendu</div>
+      <p class="atile-desc">Vous dictez ce qui s'est dit ou ce qu'il faut retenir. Clarity rédige un compte rendu clair — réunion, visite, échange client ou intervention.</p>
+      <p class="atile-example">« Fais-moi le compte rendu de mon rendez-vous avec Julie. »</p>
+    </div>
+    <div class="atile">
+      <span class="atile-ico">✅</span>
+      <div class="atile-name">Tâches</div>
+      <p class="atile-desc">Notez ce qu'il reste à faire, en une phrase.</p>
+      <p class="atile-example">« Ajoute une tâche : rappeler le fournisseur. »</p>
+    </div>
   </div>
   <p class="agents-evolve-note rv">✨ Et ce n'est que le début : Clarity apprend de nouvelles choses chaque semaine.</p>
 </section>
@@ -907,7 +920,7 @@ Bonne journée
     <h2 class="stitle rv">Simple comme<br/>une conversation.</h2>
     <div class="steps">
       <div class="step rv"><div class="step-n">01</div><div class="step-t">Vous parlez ou vous écrivez</div><p class="step-b">Au micro ou au clavier, dites simplement ce qu'il faut faire.</p></div>
-      <div class="step rv"><div class="step-n">02</div><div class="step-t">Clarity prépare</div><p class="step-b">Mail rédigé, RDV noté, rappel programmé — en quelques secondes.</p></div>
+      <div class="step rv"><div class="step-n">02</div><div class="step-t">Clarity prépare</div><p class="step-b">Mail rédigé, RDV noté, rappel programmé, compte rendu préparé — en quelques secondes.</p></div>
       <div class="step rv"><div class="step-n">03</div><div class="step-t">Vous validez</div><p class="step-b">Rien ne part sans votre accord. Vous relisez, vous confirmez.</p></div>
     </div>
   </div>
@@ -1422,7 +1435,9 @@ const faqData = {
       { q: "Comment fonctionne l'assistant vocal ?", a: "Vous lui posez une question, ou vous lui demandez votre planning ou vos rappels à l'oral." },
       { q: "Comment fonctionne la prise de rendez-vous ?", a: "Clarity note un rendez-vous en une phrase, sans que vous ayez à ouvrir un agenda." },
       { q: "Comment fonctionnent les rappels ?", a: "Vous dites « fais-moi penser à... » et Clarity vous prévient à l'heure." },
-      { q: "Faites-vous les devis ?", a: "Pas encore, c'est prévu. Aujourd'hui Clarity gère le mail, la rédaction, le planning, les rappels et vos questions courantes." }
+      { q: "Comment fonctionne le compte rendu ?", a: "Vous dictez ce qui s'est dit ou ce qu'il faut retenir, Clarity rédige un compte rendu clair — réunion, visite, échange client ou intervention." },
+      { q: "Comment fonctionnent les tâches ?", a: "Vous notez ce qu'il reste à faire en une phrase, Clarity l'ajoute à votre liste de tâches." },
+      { q: "Faites-vous les devis ?", a: "Pas encore, c'est prévu. Aujourd'hui Clarity gère le mail, la rédaction, le planning, les rappels, le compte rendu et les tâches, ainsi que vos questions courantes." }
     ]
   },
   gratuit: {
