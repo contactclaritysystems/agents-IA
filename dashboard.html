@@ -11615,8 +11615,8 @@ function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames
           '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
           '<div class="cr-checklist-text-input-row">' +
             '<input type="text" class="cr-checklist-text-input" data-item="' + escapeHtmlForPrint(id) + '" value="' + escapeHtmlForPrint(value) + '" placeholder="Répondez ici, ou dictez avec le micro" oninput="' + textFnNames.input + '(this)" />' +
-            '<button type="button" class="cr-checklist-text-mic-btn" data-item="' + escapeHtmlForPrint(id) + '" onclick="' + textFnNames.mic + '(this)" aria-label="Dicter">🎙️</button>' +
             '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="' + textFnNames.confirm + '(this)" aria-label="Valider">✓</button>' +
+            '<button type="button" class="cr-checklist-text-mic-btn" data-item="' + escapeHtmlForPrint(id) + '" onclick="' + textFnNames.mic + '(this)" aria-label="Dicter">🎙️</button>' +
           "</div>" +
         "</div>";
       branchAnswer = hasValue ? "oui" : null;
@@ -11763,20 +11763,37 @@ function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleF
 // voir renderChecklistTree). Jamais de nouvel appel backend ici non plus,
 // et un toast donne un retour visuel clair (sans lui, rien ne se voyait
 // avant que la ligne se cache).
-function confirmChecklistTextAnswer(btn, treeItems, answers, confirmedIds, idPrefix, toggleFnName, containerSelector, textFnNames) {
+// convertToPoint (true côté panneau live uniquement, voir
+// confirmCrLiveChecklistTextAnswer) : plutôt qu'un simple toast qu'on
+// oublie aussitôt, la réponse devient une phrase ajoutée à la liste des
+// points du compte rendu — visible, modifiable et supprimable exactement
+// comme un point dicté à la main (voir renderCrPoints/removeCrPoint). Pour
+// éviter d'envoyer cette info 2 fois au backend, elle est alors exclue de
+// checklist_answers au moment de l'envoi (voir submitCompteRendu, filtre
+// sur crLiveChecklistConfirmedTextIds) puisqu'elle part déjà via les
+// points. Côté popup (convertToPoint=false, pas de liste de points visible
+// à cet endroit), on garde le toast de confirmation classique.
+function confirmChecklistTextAnswer(btn, treeItems, answers, confirmedIds, idPrefix, toggleFnName, containerSelector, textFnNames, convertToPoint) {
   const itemId = btn.getAttribute("data-item");
   const wrap = btn.closest(".cr-checklist-text-input-row");
   const input = wrap && wrap.querySelector(".cr-checklist-text-input");
   if (!input || !input.value.trim()) return; // rien à valider (bouton caché de toute façon dans ce cas)
 
-  answers[itemId] = input.value;
+  const value = input.value.trim();
+  answers[itemId] = value;
   confirmedIds.add(itemId);
   input.blur();
 
   const container = document.querySelector(containerSelector);
   if (container) container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds);
 
-  showToast("Réponse enregistrée", "success");
+  if (convertToPoint) {
+    crPoints.push(...splitIntoCrPoints(value));
+    renderCrPoints();
+    scheduleCrPointsPreview();
+  } else {
+    showToast("Réponse enregistrée", "success");
+  }
 }
 
 let crChecklistTextRecognition = null;
@@ -11907,7 +11924,7 @@ function toggleCrLiveChecklistTextMic(btn) {
 window.toggleCrLiveChecklistTextMic = toggleCrLiveChecklistTextMic;
 
 function confirmCrLiveChecklistTextAnswer(btn) {
-  confirmChecklistTextAnswer(btn, crLiveChecklistItems, crLiveChecklistAnswers, crLiveChecklistConfirmedTextIds, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES);
+  confirmChecklistTextAnswer(btn, crLiveChecklistItems, crLiveChecklistAnswers, crLiveChecklistConfirmedTextIds, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, true);
 }
 window.confirmCrLiveChecklistTextAnswer = confirmCrLiveChecklistTextAnswer;
 
@@ -13230,7 +13247,7 @@ function handleCrChecklistTextInput(inputEl) {
 window.handleCrChecklistTextInput = handleCrChecklistTextInput;
 
 function confirmCrChecklistTextAnswer(btn) {
-  confirmChecklistTextAnswer(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, crChecklistConfirmedTextIds, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES);
+  confirmChecklistTextAnswer(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, crChecklistConfirmedTextIds, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES, false);
 }
 window.confirmCrChecklistTextAnswer = confirmCrChecklistTextAnswer;
 
@@ -13444,7 +13461,13 @@ function submitCompteRendu() {
   // de repasser par la popup "après coup" (onNeedsChecklist ci-dessous)
   // dans ce cas, sauf si le backend en redemande quand même une nouvelle.
   if (crLiveChecklistItems.length) {
-    formAnswers.checklist_answers = Object.assign({}, crLiveChecklistAnswers);
+    // Les réponses texte déjà validées (✓) sont devenues des points normaux
+    // (voir confirmChecklistTextAnswer) et partent donc déjà dans
+    // l'instruction via pointsSnapshot ci-dessous — on les exclut ici pour
+    // ne pas envoyer la même information 2 fois au backend.
+    const filteredChecklistAnswers = Object.assign({}, crLiveChecklistAnswers);
+    crLiveChecklistConfirmedTextIds.forEach(id => { delete filteredChecklistAnswers[id]; });
+    formAnswers.checklist_answers = filteredChecklistAnswers;
     formAnswers.checklist_items = crLiveChecklistItems.slice();
     formAnswers.photo_urls = crLiveChecklistPhotoUrls.slice();
   }
