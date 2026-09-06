@@ -1125,6 +1125,97 @@ select.field-input {
   font-weight: 700;
 }
 
+.cr-result-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.cr-result-photo {
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+
+.cr-checklist-items {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cr-checklist-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cr-checklist-label {
+  font-size: 14px;
+  line-height: 1.4;
+  flex: 1 1 auto;
+}
+.cr-checklist-toggle-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cr-checklist-toggle {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--clarity-text);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cr-checklist-toggle.active {
+  background: var(--clarity-accent, #0091c7);
+  border-color: var(--clarity-accent, #0091c7);
+  color: #fff;
+}
+.cr-checklist-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cr-checklist-photo-btn-row {
+  display: flex;
+  gap: 8px;
+}
+.cr-checklist-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+.cr-checklist-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.cr-checklist-thumb-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--clarity-danger, #e5484d);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .cr-result-actions-row {
   display: flex;
   flex-direction: column;
@@ -11818,6 +11909,8 @@ function openCompteRenduResultModal(data, content, options = {}) {
             <div class="field-input cr-result-rich" id="cr-result-content" contenteditable="true" style="min-height:220px;"></div>
           </div>
 
+          <div id="cr-result-photos" class="cr-result-photos" style="display:none;"></div>
+
           <div class="cr-result-actions-row">
             <button class="save-btn" type="button" style="width:100%;" onclick="sendCrResultByMail()">📧 Envoyer</button>
             <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="downloadCrResultPDF()">📄 PDF</button>
@@ -11847,6 +11940,24 @@ function openCompteRenduResultModal(data, content, options = {}) {
 
   document.getElementById("cr-result-title").textContent = data.title || "Compte rendu";
   document.getElementById("cr-result-content").innerHTML = renderCrMarkdownToHtml(content || "");
+
+  // Photos jointes via la checklist métier (voir openCrChecklistModal) :
+  // simple affichage sous le texte pour cette V1, pas d'intégration dans
+  // le PDF/mail/impression (pas d'analyse vision non plus).
+  const photosEl = document.getElementById("cr-result-photos");
+  if (photosEl) {
+    const photoUrls = Array.isArray(data.photo_urls) ? data.photo_urls : [];
+    if (photoUrls.length) {
+      photosEl.innerHTML = photoUrls
+        .map(url => '<img src="' + url + '" alt="" class="cr-result-photo" />')
+        .join("");
+      photosEl.style.display = "flex";
+    } else {
+      photosEl.innerHTML = "";
+      photosEl.style.display = "none";
+    }
+  }
+
   document.getElementById("cr-result-main-view").style.display = "block";
   document.getElementById("cr-result-confirm-view").style.display = "none";
   modal.style.display = "flex";
@@ -12285,6 +12396,263 @@ window.printCrResult = printCrResult;
 window.downloadCrResultPDF = downloadCrResultPDF;
 window.sendCrResultByMail = sendCrResultByMail;
 
+// Checklist métier + photos (V1, pas d'analyse vision) : avant de rédiger,
+// /agent/redaction peut redemander quelques précisions factuelles (ex:
+// "Portail motorisé ?") + jusqu'à quelques photos, pour ne rien inventer
+// dans le texte tant que ce n'est pas confirmé "oui". Les cases proposées
+// viennent entièrement du backend (data.items) : rien n'est codé en dur
+// ici, elles s'adaptent donc au contexte (chantier, réunion...) sans
+// changement frontend à chaque nouveau cas.
+let crChecklistData = null;
+let crChecklistAnswers = {};
+let crChecklistPhotoUrls = [];
+const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 3;
+
+// Les photos n'ont pas de colonne dédiée dans action_event_logs (table
+// utilisée pour l'Historique) : on les stocke sur une ligne finale du texte
+// du log lui-même, invisible à l'utilisateur, pour pouvoir les réafficher
+// quand on rouvre ce compte rendu depuis l'Historique plus tard.
+const CR_PHOTOS_LOG_MARKER = "[PHOTOS]";
+
+function appendCrPhotosToLogText(text, photoUrls) {
+  if (!Array.isArray(photoUrls) || !photoUrls.length) return text;
+  return text + "\n\n" + CR_PHOTOS_LOG_MARKER + photoUrls.join(",");
+}
+
+function extractCrPhotosFromLogText(text) {
+  const raw = text || "";
+  const idx = raw.indexOf(CR_PHOTOS_LOG_MARKER);
+  if (idx === -1) return { text: raw, photoUrls: [] };
+  const before = raw.slice(0, idx).trim();
+  const urlsPart = raw.slice(idx + CR_PHOTOS_LOG_MARKER.length).trim();
+  const photoUrls = urlsPart.split(",").map(u => u.trim()).filter(Boolean);
+  return { text: before, photoUrls };
+}
+
+function openCrChecklistModal(data) {
+  crChecklistData = data || {};
+  crChecklistAnswers = {};
+  crChecklistPhotoUrls = [];
+
+  let modal = document.getElementById("cr-checklist-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "cr-checklist-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title" id="cr-checklist-title">Pour ne rien oublier</div>
+        <div class="mail-choice-subtitle" id="cr-checklist-message"></div>
+
+        <div id="cr-checklist-items" class="cr-checklist-items"></div>
+
+        <div id="cr-checklist-photos-section" style="display:none;margin-top:16px;">
+          <div class="field-label">Photos (facultatif)</div>
+          <div id="cr-checklist-photo-thumbs" class="cr-checklist-thumbs"></div>
+          <!-- 2 entrées distinctes plutôt qu'un seul input générique :
+               "capture=environment" force l'appareil photo direct sur
+               mobile (Android en tient compte ; iOS l'ignore et ouvre son
+               propre menu, mais le bouton reste cohérent visuellement).
+               L'input "Choisir" (sans capture, multiple) ouvre la
+               photothèque avec sélection multiple, y compris sur desktop. -->
+          <input type="file" id="cr-checklist-camera-input" accept="image/*" capture="environment" style="display:none;" onchange="handleCrChecklistPhotoSelect(event)" />
+          <input type="file" id="cr-checklist-photo-input" accept="image/*" multiple style="display:none;" onchange="handleCrChecklistPhotoSelect(event)" />
+          <div class="cr-checklist-photo-btn-row">
+            <button class="sheet-btn" type="button" id="cr-checklist-camera-btn" style="flex:1;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-checklist-camera-input').click()">📷 Prendre une photo</button>
+            <button class="sheet-btn" type="button" id="cr-checklist-add-photo-btn" style="flex:1;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-checklist-photo-input').click()">🖼️ Choisir</button>
+          </div>
+        </div>
+
+        <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="submitCrChecklist()">🗒️ Rédiger</button>
+        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeCrChecklistModal()">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById("cr-checklist-title").textContent = crChecklistData.title || "Pour ne rien oublier";
+  const messageEl = document.getElementById("cr-checklist-message");
+  if (messageEl) {
+    messageEl.textContent = crChecklistData.message || "";
+    messageEl.style.display = crChecklistData.message ? "block" : "none";
+  }
+
+  const items = Array.isArray(crChecklistData.items) ? crChecklistData.items : [];
+  const itemsWrap = document.getElementById("cr-checklist-items");
+  if (itemsWrap) {
+    itemsWrap.innerHTML = items.map(item => {
+      const id = String(item.id != null ? item.id : "");
+      const label = item.label || id;
+      return (
+        '<div class="cr-checklist-row">' +
+          '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
+          '<div class="cr-checklist-toggle-group">' +
+            '<button type="button" class="cr-checklist-toggle" data-item="' + escapeHtmlForPrint(id) + '" data-value="oui" onclick="setCrChecklistAnswer(this)">Oui</button>' +
+            '<button type="button" class="cr-checklist-toggle" data-item="' + escapeHtmlForPrint(id) + '" data-value="non" onclick="setCrChecklistAnswer(this)">Non</button>' +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  const photosSection = document.getElementById("cr-checklist-photos-section");
+  if (photosSection) photosSection.style.display = crChecklistData.photos_allowed ? "block" : "none";
+  renderCrChecklistPhotoThumbs();
+
+  modal.style.display = "flex";
+}
+
+// Clique sur "Oui" ou "Non" : un 2e clic sur le même bouton désélectionne
+// (= "passer", l'item n'apparaît alors dans aucune réponse, comme
+// spécifié : "rien coché = ignorer").
+function setCrChecklistAnswer(btn) {
+  const itemId = btn.getAttribute("data-item");
+  const value = btn.getAttribute("data-value");
+  if (crChecklistAnswers[itemId] === value) {
+    delete crChecklistAnswers[itemId];
+  } else {
+    crChecklistAnswers[itemId] = value;
+  }
+  document.querySelectorAll('.cr-checklist-toggle[data-item="' + CSS.escape(itemId) + '"]').forEach(el => {
+    el.classList.toggle("active", crChecklistAnswers[itemId] === el.getAttribute("data-value"));
+  });
+}
+
+async function handleCrChecklistPhotoSelect(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = ""; // permet de resélectionner le même fichier ensuite
+  if (!files.length) return;
+
+  const maxPhotos = (crChecklistData && crChecklistData.max_photos) || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+  const remaining = maxPhotos - crChecklistPhotoUrls.length;
+  if (remaining <= 0) {
+    showToast("Maximum " + maxPhotos + " photos", "error");
+    return;
+  }
+
+  const toUpload = files.slice(0, remaining);
+  // Les 2 boutons (caméra + choisir) partagent ce même handler : on
+  // désactive les deux pendant l'envoi pour éviter un double clic qui
+  // dépasserait le quota pendant qu'un 1er lot est encore en cours.
+  const addBtn = document.getElementById("cr-checklist-add-photo-btn");
+  const cameraBtn = document.getElementById("cr-checklist-camera-btn");
+  const originalAddLabel = addBtn ? addBtn.innerHTML : "";
+  const originalCameraLabel = cameraBtn ? cameraBtn.innerHTML : "";
+  if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = "⏳"; }
+  if (cameraBtn) { cameraBtn.disabled = true; cameraBtn.innerHTML = "⏳"; }
+
+  for (let i = 0; i < toUpload.length; i++) {
+    try {
+      const url = await uploadCrChecklistPhoto(toUpload[i]);
+      if (url) crChecklistPhotoUrls.push(url);
+    } catch (e) {
+      console.error("Erreur upload photo compte rendu:", e);
+      showToast("Impossible d'envoyer une photo", "error");
+    }
+  }
+
+  renderCrChecklistPhotoThumbs();
+  if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = originalAddLabel; }
+  if (cameraBtn) { cameraBtn.disabled = false; cameraBtn.innerHTML = originalCameraLabel; }
+}
+
+// Chemin exigé côté backend : {user_id}/{timestamp}-{n}.ext — pour que
+// chaque utilisateur ait son propre dossier dans le bucket public
+// "cr-photos" et que les fichiers ne s'écrasent jamais entre eux.
+async function uploadCrChecklistPhoto(file) {
+  const userId = currentUser && currentUser.id;
+  if (!userId) throw new Error("Utilisateur non identifié");
+  const ext = (file.name && file.name.includes(".")) ? file.name.split(".").pop().toLowerCase() : "jpg";
+  const path = userId + "/" + Date.now() + "-" + Math.floor(Math.random() * 1000) + "." + ext;
+
+  const { error } = await supabaseClient.storage.from("cr-photos").upload(path, file, {
+    contentType: file.type || "image/jpeg",
+    upsert: false
+  });
+  if (error) throw error;
+
+  const { data: urlData } = supabaseClient.storage.from("cr-photos").getPublicUrl(path);
+  return urlData && urlData.publicUrl;
+}
+
+function renderCrChecklistPhotoThumbs() {
+  const wrap = document.getElementById("cr-checklist-photo-thumbs");
+  if (!wrap) return;
+  wrap.innerHTML = crChecklistPhotoUrls.map((url, i) =>
+    '<div class="cr-checklist-thumb">' +
+      '<img src="' + url + '" alt="" />' +
+      '<button type="button" class="cr-checklist-thumb-remove" onclick="removeCrChecklistPhoto(' + i + ')">✕</button>' +
+    "</div>"
+  ).join("");
+}
+
+function removeCrChecklistPhoto(index) {
+  crChecklistPhotoUrls.splice(index, 1);
+  renderCrChecklistPhotoThumbs();
+}
+
+function closeCrChecklistModal() {
+  const modal = document.getElementById("cr-checklist-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function submitCrChecklist() {
+  if (!crChecklistData) return;
+  const data = crChecklistData;
+  const instruction = data.original_instruction || "";
+  // checklist_answers reste un objet même vide ("passer sans rien cocher") :
+  // le backend en a besoin pour ne pas reboucler sur la même checklist.
+  const formAnswers = Object.assign({}, data.form_answers || {}, {
+    checklist_answers: Object.assign({}, crChecklistAnswers),
+    checklist_items: Array.isArray(data.items) ? data.items : [],
+    photo_urls: crChecklistPhotoUrls.slice()
+  });
+  const photoUrlsSnapshot = crChecklistPhotoUrls.slice();
+
+  closeCrChecklistModal();
+
+  callSimpleAgent(
+    "redaction",
+    REDACTION_WEBHOOK_URL,
+    instruction,
+    null,
+    window.currentRequestId,
+    { form_answers: formAnswers },
+    {
+      onSuccess: (respData, content) => {
+        // Le backend renvoie normalement les mêmes photo_urls dans sa
+        // réponse ("Succès : photo_urls à afficher sous le texte du CR") ;
+        // au cas où il les omettrait, on retombe sur celles envoyées.
+        const photoUrls = Array.isArray(respData.photo_urls) ? respData.photo_urls : photoUrlsSnapshot;
+        openCompteRenduResultModal(Object.assign({}, respData, { photo_urls: photoUrls }), content);
+        saveActionLog(
+          "notes",
+          appendCrPhotosToLogText(
+            "Compte rendu\nOBJET: " + (formAnswers.sujet || "") + "\n\n" + (content || ""),
+            photoUrls
+          ),
+          "success"
+        );
+      },
+      onNeedsForm: respData => {
+        showToast(respData.brief || respData.message || "Une information manque encore.", "error");
+      },
+      // Rare mais possible en théorie (2e checklist demandée) : même popup.
+      onNeedsChecklist: respData => {
+        openCrChecklistModal(respData);
+      }
+    }
+  );
+}
+
+window.openCrChecklistModal = openCrChecklistModal;
+window.setCrChecklistAnswer = setCrChecklistAnswer;
+window.handleCrChecklistPhotoSelect = handleCrChecklistPhotoSelect;
+window.removeCrChecklistPhoto = removeCrChecklistPhoto;
+window.closeCrChecklistModal = closeCrChecklistModal;
+window.submitCrChecklist = submitCrChecklist;
+
 function submitCompteRendu() {
   if (!crPoints.length) {
     showToast("Ajoutez au moins un point avant de créer le compte rendu", "error");
@@ -12391,6 +12759,12 @@ function submitCompteRendu() {
           data.brief || data.message || "Complétez les informations ci-dessous puis recréez le compte rendu.",
           "error"
         );
+      },
+      // Avant de rédiger, l'agent peut demander une checklist métier
+      // (ex: "Portail motorisé ?") + des photos, pour ne rien inventer
+      // dans le texte tant que ce n'est pas confirmé (voir submitCrChecklist).
+      onNeedsChecklist: data => {
+        openCrChecklistModal(data);
       }
     }
   );
@@ -22595,6 +22969,26 @@ async function callSimpleAgent(
         return;
       }
 
+      // Compte rendu uniquement : avant de rédiger, l'agent peut demander
+      // une checklist métier (ex: "Portail motorisé ?") + jusqu'à quelques
+      // photos, pour ne rien inventer dans le texte tant que ce n'est pas
+      // confirmé "oui". V1 : pas d'analyse vision, juste des URLs de photos
+      // stockées (Supabase Storage) et jointes au 2e appel — voir
+      // openCrChecklistModal / submitCrChecklist.
+      if (agentName === "redaction" && data.reason === "needs_checklist" && Array.isArray(data.items)) {
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
+        pushConversationHistory(instruction, data.message || data.title || "Checklist de précisions");
+        pendingClarifyAgent = { agentName, webhookUrl };
+        if (handlers && typeof handlers.onNeedsChecklist === "function") {
+          handlers.onNeedsChecklist(data);
+        }
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        await saveActionLog(agentName, instruction, "error");
+        return;
+      }
+
       // Idem : on préserve le contexte pour que la prochaine dictée puisse
       // compléter l'info manquante plutôt que forcer à tout redire.
       pushConversationHistory(instruction, message);
@@ -23909,13 +24303,17 @@ if (objetMatch && objetMatch[1]) {
   const log = currentHistoryLogs[index];
   if (!log) return;
 
-  const cleanText = (log.action || "")
+  const withoutPrefix = (log.action || "")
   .replace(/^Compte rendu\s*/i, "")
   .replace(/OBJET\s*:\s*.+/i, "")
   .trim();
 
+  // Les éventuelles photos jointes (checklist métier) sont stockées sur une
+  // ligne finale invisible du texte du log — voir appendCrPhotosToLogText.
+  const { text: cleanText, photoUrls } = extractCrPhotosFromLogText(withoutPrefix);
+
   openCompteRenduResultModal(
-    { title: getNoteTitle(log.action || "") },
+    { title: getNoteTitle(log.action || ""), photo_urls: photoUrls },
     cleanText || "Compte rendu vide",
     { skipCloseConfirm: true, historyLogId: log.id }
   );
