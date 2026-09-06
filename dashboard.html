@@ -11606,7 +11606,7 @@ function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames
           '<div class="cr-checklist-text-input-row">' +
             '<input type="text" class="cr-checklist-text-input" data-item="' + escapeHtmlForPrint(id) + '" value="' + escapeHtmlForPrint(value) + '" placeholder="Répondez ici, ou dictez avec le micro" oninput="' + textFnNames.input + '(this)" />' +
             '<button type="button" class="cr-checklist-text-mic-btn" data-item="' + escapeHtmlForPrint(id) + '" onclick="' + textFnNames.mic + '(this)" aria-label="Dicter">🎙️</button>' +
-            '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="var wrap=this.closest(\'.cr-checklist-text-input-row\'); var inp=wrap&&wrap.querySelector(\'.cr-checklist-text-input\'); if(inp) inp.blur();" aria-label="Valider">✓</button>' +
+            '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="confirmChecklistTextAnswer(this, \'' + textFnNames.input + '\')" aria-label="Valider">✓</button>' +
           "</div>" +
         "</div>";
       branchAnswer = hasValue ? "oui" : null;
@@ -11740,6 +11740,25 @@ function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleF
     freshInput.setSelectionRange(pos, pos);
   }
 }
+
+// Clic sur le bouton "✓ Valider" d'un champ texte de checklist : le champ
+// étant déjà enregistré en direct à chaque frappe/dictée (voir
+// handleChecklistTextInput), ce bouton ne sert pas à "envoyer" une 2e fois
+// vers un serveur (toujours 0 nouvel appel backend) — il RE-synchronise
+// explicitement l'état (au cas où, filet de sécurité), ferme le clavier, et
+// surtout donne un retour visuel clair : sans ce toast, cliquer "Valider"
+// ne produisait rien de perceptible et donnait l'impression d'un bouton
+// cassé.
+function confirmChecklistTextAnswer(btn, inputFnName) {
+  const wrap = btn.closest(".cr-checklist-text-input-row");
+  const input = wrap && wrap.querySelector(".cr-checklist-text-input");
+  if (!input) return;
+  const handler = window[inputFnName];
+  if (typeof handler === "function") handler(input);
+  input.blur();
+  showToast("Réponse enregistrée", "success");
+}
+window.confirmChecklistTextAnswer = confirmChecklistTextAnswer;
 
 let crChecklistTextRecognition = null;
 
