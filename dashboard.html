@@ -12083,12 +12083,18 @@ function closeCompteRenduModal() {
   if (micBtn) micBtn.classList.remove("is-recording");
 }
 
-// Bouton "Annuler" : si des points ont déjà été ajoutés, on ne ferme pas
-// tout de suite — on demande confirmation, puisque tout serait perdu.
-// Rien à perdre (liste vide) -> ferme directement, pas besoin d'enrober
-// une liste vide d'une confirmation inutile.
+// Bouton "Annuler" : si l'utilisateur a déjà commencé quoi que ce soit
+// (Sujet tapé, point ajouté, OU une seule réponse cochée sur la checklist
+// live), on ne ferme pas tout de suite — on demande confirmation, puisque
+// ce serait perdu. Rien à perdre (formulaire encore totalement vierge) ->
+// ferme directement, pas besoin d'enrober un formulaire vide d'une
+// confirmation inutile.
 function requestCloseCompteRendu() {
-  if (!crPoints.length) {
+  const sujetInput = document.getElementById("cr-field-sujet");
+  const hasSujet = !!(sujetInput && sujetInput.value.trim());
+  const hasChecklistAnswers = Object.keys(crLiveChecklistAnswers).length > 0;
+
+  if (!crPoints.length && !hasSujet && !hasChecklistAnswers) {
     closeCompteRenduModal();
     return;
   }
@@ -12097,9 +12103,14 @@ function requestCloseCompteRendu() {
   const confirmView = document.getElementById("cr-confirm-view");
   const subtitle = document.getElementById("cr-confirm-subtitle");
   if (subtitle) {
+    // Le message reste précis quand des points existent (c'est le contenu
+    // le plus "lourd" à retaper) ; sinon (Sujet seul et/ou réponses
+    // checklist seules, sans point dicté) un message générique suffit.
     subtitle.textContent = crPoints.length > 1
       ? `Les ${crPoints.length} points déjà ajoutés seront perdus.`
-      : "Le point déjà ajouté sera perdu.";
+      : crPoints.length === 1
+        ? "Le point déjà ajouté sera perdu."
+        : "Le compte rendu en cours sera perdu.";
   }
   if (mainView) mainView.style.display = "none";
   if (confirmView) confirmView.style.display = "block";
