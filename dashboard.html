@@ -1137,6 +1137,67 @@ select.field-input {
   object-fit: cover;
   border-radius: 10px;
   border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+/* Aperçu plein écran d'une photo du compte rendu (miniature cliquée) +
+   actions natives Enregistrer/Partager — voir openCrPhotoLightbox. Placé
+   au-dessus de #cr-result-modal (z-index 999 comme les autres popups
+   .mail-choice-box), jamais au-dessus de l'overlay d'onboarding (900000+). */
+.cr-photo-lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  align-items: center;
+  justify-content: center;
+}
+.cr-photo-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+}
+.cr-photo-lightbox-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: min(92vw, 640px);
+  max-height: 90vh;
+  padding: 0 16px;
+}
+.cr-photo-lightbox-content img {
+  max-width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.cr-photo-lightbox-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+.cr-photo-lightbox-actions .sheet-btn {
+  flex: 1;
+}
+.cr-photo-lightbox-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cr-checklist-items {
@@ -1310,6 +1371,13 @@ select.field-input {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.cr-photos-hint {
+  font-size: 11px;
+  color: var(--clarity-text-tertiary);
+  text-align: center;
+  margin: 6px 0 0;
+  opacity: .75;
 }
 
 .cr-result-actions-row {
@@ -11437,7 +11505,7 @@ const CR_PREVIEW_SUJET_MIN_LENGTH = 12;
 const CR_LIVE_CHECKLIST_MIN_ITEMS = 3;
 // Partagé avec la popup de checklist "après coup" (openCrChecklistModal,
 // plus bas dans le fichier) : une seule définition, utilisée par les deux.
-const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 3;
+const CR_CHECKLIST_MAX_PHOTOS_DEFAULT = 8;
 let crPreviewCallCount = 0;
 let crPreviewSujetFired = false;
 let crPreviewPointsBaseline = 0;
@@ -11445,7 +11513,11 @@ let crPreviewPointsDebounceTimer = null;
 let crLiveChecklistItems = [];
 let crLiveChecklistAnswers = {};
 let crLiveChecklistPhotoUrls = [];
-let crLiveChecklistPhotosAllowed = false;
+// true par défaut : le bouton "Ajouter des photos" doit être visible dès
+// l'ouverture de la popup, sans attendre la réponse de l'aperçu checklist
+// (voir renderCrLiveChecklistPhotosSection) — seule une réponse explicite
+// du backend avec photos_allowed=false le masquera ensuite.
+let crLiveChecklistPhotosAllowed = true;
 let crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
 // Ids des questions "texte" déjà validées (bouton ✓) : une fois validée, la
 // ligne se cache complètement (même logique que les questions Oui/Non une
@@ -11460,7 +11532,7 @@ function resetCrLivePreviewState() {
   crLiveChecklistItems = [];
   crLiveChecklistAnswers = {};
   crLiveChecklistPhotoUrls = [];
-  crLiveChecklistPhotosAllowed = false;
+  crLiveChecklistPhotosAllowed = true;
   crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
   crLiveChecklistConfirmedTextIds = new Set();
 }
@@ -11890,7 +11962,10 @@ function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
   }
 
   crLiveChecklistItems = items;
-  crLiveChecklistPhotosAllowed = photosAllowed;
+  // photosAllowed n'est pris en compte que s'il est explicitement fourni :
+  // undefined (aperçu qui ne renvoie pas cette info) ne doit pas faire
+  // disparaître le bouton "Ajouter des photos" déjà visible par défaut.
+  if (typeof photosAllowed === "boolean") crLiveChecklistPhotosAllowed = photosAllowed;
   crLiveChecklistMaxPhotos = maxPhotos || CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
 
   const validIds = new Set(collectChecklistIds(items));
@@ -11902,6 +11977,7 @@ function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
   });
 
   renderCrLiveChecklistPanel();
+  renderCrLiveChecklistPhotosSection();
 }
 
 function renderCrLiveChecklistPanel() {
@@ -11918,11 +11994,17 @@ function renderCrLiveChecklistPanel() {
     itemsWrap.innerHTML = renderChecklistTree(crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds);
   }
 
+  panel.style.display = "block";
+}
+
+// Indépendante de renderCrLiveChecklistPanel : la section photos est visible
+// dès l'ouverture de la popup (voir HTML statique du modal), pas seulement
+// une fois qu'un aperçu checklist a répondu — on ne la masque que si le
+// backend indique explicitement photos_allowed=false pour ce métier.
+function renderCrLiveChecklistPhotosSection() {
   const photosSection = document.getElementById("cr-live-checklist-photos-section");
   if (photosSection) photosSection.style.display = crLiveChecklistPhotosAllowed ? "block" : "none";
   renderCrLiveChecklistPhotoThumbs();
-
-  panel.style.display = "block";
 }
 
 function setCrLiveChecklistAnswer(btn) {
@@ -12073,13 +12155,18 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
             <div id="cr-live-checklist-panel" class="cr-live-checklist-panel" style="display:none;">
               <div class="field-label">Pour ne rien oublier</div>
               <div id="cr-live-checklist-items" class="cr-checklist-items"></div>
-              <div id="cr-live-checklist-photos-section" style="display:none;margin-top:14px;">
-                <div class="field-label">Photos (facultatif)</div>
-                <div id="cr-live-checklist-photo-thumbs" class="cr-checklist-thumbs"></div>
-                <input type="file" id="cr-live-checklist-photo-input" accept="image/*" multiple style="display:none;" onchange="handleCrLiveChecklistPhotoSelect(event)">
-                <button class="sheet-btn" type="button" id="cr-live-checklist-add-photo-btn" style="width:100%;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-live-checklist-photo-input').click()">📷 Ajouter des photos</button>
-              </div>
             </div>
+          </div>
+
+          <!-- Contrairement au panneau checklist ci-dessus, visible dès
+               l'ouverture de la popup (pas besoin d'attendre un aperçu en
+               arrière-plan) : voir renderCrLiveChecklistPhotosSection. -->
+          <div id="cr-live-checklist-photos-section" style="display:block;margin-top:14px;">
+            <div class="field-label">Photos (facultatif)</div>
+            <div id="cr-live-checklist-photo-thumbs" class="cr-checklist-thumbs"></div>
+            <input type="file" id="cr-live-checklist-photo-input" accept="image/*" multiple style="display:none;" onchange="handleCrLiveChecklistPhotoSelect(event)">
+            <button class="sheet-btn" type="button" id="cr-live-checklist-add-photo-btn" style="width:100%;justify-content:center;margin-top:6px;" onclick="document.getElementById('cr-live-checklist-photo-input').click()">📷 Ajouter des photos</button>
+            <div class="cr-photos-hint" id="cr-live-checklist-photos-hint">8 photos maximum</div>
           </div>
 
           <div id="cr-optional-active" style="margin-top:14px;"></div>
@@ -12128,6 +12215,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
   updateCrAddPointButtonState();
   renderCrPoints();
   renderCrLiveChecklistPanel();
+  renderCrLiveChecklistPhotosSection();
   // Sujet est le premier champ à remplir (obligatoire, en haut du
   // formulaire) : le curseur doit y démarrer, pas directement dans le
   // champ Point — voir aussi le focus() plus bas.
@@ -12187,8 +12275,9 @@ function requestCloseCompteRendu() {
   const sujetInput = document.getElementById("cr-field-sujet");
   const hasSujet = !!(sujetInput && sujetInput.value.trim());
   const hasChecklistAnswers = Object.keys(crLiveChecklistAnswers).length > 0;
+  const hasPhotos = crLiveChecklistPhotoUrls.length > 0;
 
-  if (!crPoints.length && !hasSujet && !hasChecklistAnswers) {
+  if (!crPoints.length && !hasSujet && !hasChecklistAnswers && !hasPhotos) {
     closeCompteRenduModal();
     return;
   }
@@ -12706,8 +12795,10 @@ function openCompteRenduResultModal(data, content, options = {}) {
   if (photosEl) {
     const photoUrls = crResultPhotoUrls;
     if (photoUrls.length) {
+      // Miniatures cliquables : aperçu plein écran + actions natives
+      // Enregistrer/Partager, voir openCrPhotoLightbox.
       photosEl.innerHTML = photoUrls
-        .map(url => '<img src="' + url + '" alt="" class="cr-result-photo" />')
+        .map((url, i) => '<img src="' + escapeHtmlForPrint(url) + '" alt="" class="cr-result-photo" onclick="openCrPhotoLightbox(' + i + ')" />')
         .join("");
       photosEl.style.display = "flex";
     } else {
@@ -12720,6 +12811,106 @@ function openCompteRenduResultModal(data, content, options = {}) {
   document.getElementById("cr-result-confirm-view").style.display = "none";
   modal.style.display = "flex";
 }
+
+// Miniature cliquée : aperçu plein écran de la photo (mêmes URLs publiques
+// cr-photos, aucun nouvel appel réseau autre que celui de l'image elle-même)
+// avec 2 actions natives, voir downloadCrPhoto/shareCrPhoto ci-dessous.
+let crPhotoLightboxUrl = null;
+
+function openCrPhotoLightbox(index) {
+  const url = crResultPhotoUrls[index];
+  if (!url) return;
+
+  let modal = document.getElementById("cr-photo-lightbox");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "cr-photo-lightbox";
+    modal.className = "cr-photo-lightbox";
+    modal.innerHTML = `
+      <div class="cr-photo-lightbox-backdrop" onclick="closeCrPhotoLightbox()"></div>
+      <div class="cr-photo-lightbox-content">
+        <button type="button" class="cr-photo-lightbox-close" onclick="closeCrPhotoLightbox()" aria-label="Fermer">✕</button>
+        <img id="cr-photo-lightbox-img" src="" alt="" />
+        <div class="cr-photo-lightbox-actions">
+          <button type="button" class="sheet-btn" style="justify-content:center;" onclick="downloadCrPhoto()">💾 Enregistrer</button>
+          <button type="button" class="sheet-btn" style="justify-content:center;" onclick="shareCrPhoto()">📤 Partager</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  crPhotoLightboxUrl = url;
+  document.getElementById("cr-photo-lightbox-img").src = url;
+  modal.style.display = "flex";
+}
+window.openCrPhotoLightbox = openCrPhotoLightbox;
+
+function closeCrPhotoLightbox() {
+  const modal = document.getElementById("cr-photo-lightbox");
+  if (modal) modal.style.display = "none";
+}
+window.closeCrPhotoLightbox = closeCrPhotoLightbox;
+
+// "Enregistrer" : télécharge la photo (même URL publique cr-photos affichée)
+// via un blob converti en lien de téléchargement — fonctionne nativement sur
+// desktop/Android ; sur iOS Safari, ouvre l'image (l'utilisateur peut alors
+// l'enregistrer via le bouton de partage natif du visualiseur).
+async function downloadCrPhoto() {
+  if (!crPhotoLightboxUrl) return;
+  try {
+    const response = await fetch(crPhotoLightboxUrl);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = (crPhotoLightboxUrl.split("/").pop() || "photo.jpg").split("?")[0];
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+  } catch (e) {
+    console.error("Téléchargement photo impossible :", e);
+    showToast("Impossible d'enregistrer la photo", "error");
+  }
+}
+window.downloadCrPhoto = downloadCrPhoto;
+
+// "Partager" : feuille de partage native du système (navigator.share) avec
+// le fichier image quand le navigateur le permet (l'utilisateur y retrouve
+// aussi "Enregistrer l'image" en plus des apps) ; à défaut, partage le lien,
+// puis en dernier recours copie le lien dans le presse-papier.
+async function shareCrPhoto() {
+  if (!crPhotoLightboxUrl) return;
+  try {
+    if (navigator.share) {
+      if (navigator.canShare) {
+        try {
+          const response = await fetch(crPhotoLightboxUrl);
+          const blob = await response.blob();
+          const fileName = (crPhotoLightboxUrl.split("/").pop() || "photo.jpg").split("?")[0];
+          const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;
+          }
+        } catch (e) {
+          // Fichier non partageable (CORS, format...) : on retombe sur le
+          // partage du lien juste en dessous plutôt que d'échouer.
+        }
+      }
+      await navigator.share({ url: crPhotoLightboxUrl });
+    } else {
+      await navigator.clipboard.writeText(crPhotoLightboxUrl);
+      showToast("Lien de la photo copié");
+    }
+  } catch (e) {
+    if (e && e.name === "AbortError") return; // Partage annulé par l'utilisateur
+    console.error("Partage photo impossible :", e);
+    showToast("Impossible de partager la photo", "error");
+  }
+}
+window.shareCrPhoto = shareCrPhoto;
 
 // Réutilise deleteHistoryLog (confirm() + suppression Supabase + toast +
 // rafraîchissement de la liste "Comptes rendus") : pas de logique dupliquée,
@@ -13604,6 +13795,11 @@ function submitCompteRendu() {
     ? "Rédige un compte-rendu. " + pointsSnapshot.map((p, i) => (i + 1) + ". " + p).join(" ")
     : "Rédige un compte-rendu. Sujet : " + sujet;
 
+  // Copie AVANT fermeture/reset du modal : crLiveChecklistPhotoUrls sera
+  // vidé par resetCrLivePreviewState() à la prochaine ouverture, mais on en
+  // a encore besoin ici pour le journaliser une fois la réponse reçue.
+  const photoUrlsSnapshot = crLiveChecklistPhotoUrls.slice();
+
   closeCompteRenduModal();
 
   callSimpleAgent(
@@ -13615,7 +13811,11 @@ function submitCompteRendu() {
     { form_answers: formAnswers },
     {
       onSuccess: (data, content) => {
-        openCompteRenduResultModal(data, content);
+        // Le backend renvoie normalement les mêmes photo_urls dans sa
+        // réponse ; au cas où il les omettrait, on retombe sur celles
+        // envoyées avec la requête (même logique que submitCrChecklist).
+        const photoUrls = Array.isArray(data.photo_urls) ? data.photo_urls : photoUrlsSnapshot;
+        openCompteRenduResultModal(Object.assign({}, data, { photo_urls: photoUrls }), content);
         // callSimpleAgent journalise déjà cette réussite sous agent:"redaction"
         // (nécessaire pour son propre traitement needs_form) — mais le
         // dossier "Comptes rendus" de l'Historique, lui, ne lit QUE les logs
@@ -13623,10 +13823,15 @@ function submitCompteRendu() {
         // simple du compte rendu). Sans ce 2e log dédié, un compte rendu créé
         // via ce nouveau flux multi-points n'apparaissait donc jamais dans
         // ce dossier, même s'il était bien enregistré ailleurs (sous
-        // "Rédaction").
+        // "Rédaction"). Les photos sont ajoutées au même texte de log que la
+        // popup checklist (voir appendCrPhotosToLogText/submitCrChecklist),
+        // pour être relues à l'identique à la réouverture depuis l'Historique.
         saveActionLog(
           "notes",
-          "Compte rendu\nOBJET: " + sujet + "\n\n" + (content || ""),
+          appendCrPhotosToLogText(
+            "Compte rendu\nOBJET: " + sujet + "\n\n" + (content || ""),
+            photoUrls
+          ),
           "success"
         );
       },
