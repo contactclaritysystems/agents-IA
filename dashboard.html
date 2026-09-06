@@ -6891,7 +6891,8 @@ body[data-theme="dark"] .stat-card,
 body[data-theme="dark"] .gmail-section,
 body[data-theme="dark"] .pricing-plan,
 body[data-theme="dark"] .contact-row,
-body[data-theme="dark"] .agent-body {
+body[data-theme="dark"] .agent-body,
+body[data-theme="dark"] .task-item {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 35%, rgba(255, 255, 255, 0) 100%),
     #0a0b0f;
@@ -11446,6 +11447,10 @@ let crLiveChecklistAnswers = {};
 let crLiveChecklistPhotoUrls = [];
 let crLiveChecklistPhotosAllowed = false;
 let crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+// Ids des questions "texte" déjà validées (bouton ✓) : une fois validée, la
+// ligne se cache complètement (même logique que les questions Oui/Non une
+// fois répondues) — voir confirmChecklistTextAnswer / renderChecklistTree.
+let crLiveChecklistConfirmedTextIds = new Set();
 
 function resetCrLivePreviewState() {
   crPreviewCallCount = 0;
@@ -11457,6 +11462,7 @@ function resetCrLivePreviewState() {
   crLiveChecklistPhotoUrls = [];
   crLiveChecklistPhotosAllowed = false;
   crLiveChecklistMaxPhotos = CR_CHECKLIST_MAX_PHOTOS_DEFAULT;
+  crLiveChecklistConfirmedTextIds = new Set();
 }
 
 // Sur le blur du champ Sujet (pas sur chaque frappe) : un seul appel,
@@ -11574,21 +11580,24 @@ async function fetchCrChecklistPreview(instruction, formAnswers) {
 // sur "Portail motorisé ?" s'il n'y a pas de followups_if_non).
 //
 // item.type === "texte" (validé avec Grok) : au lieu de Oui/Non, un petit
-// champ texte + micro apparaît ; contrairement aux questions Oui/Non, sa
-// ligne NE se cache PAS une fois répondue (l'utilisateur doit pouvoir
-// corriger ce qu'il a dicté/tapé). Une réponse texte non vide compte comme
-// la branche "oui" pour révéler d'éventuels followups_if_oui de cet item
-// (ex: "Longueur du portail ?" texte → révèle une sous-question liée).
+// champ texte + micro apparaît. Comme pour les questions Oui/Non, sa ligne
+// se cache une fois validée (bouton ✓, voir confirmChecklistTextAnswer) —
+// tant qu'elle n'est pas validée, elle reste visible et modifiable. Une
+// réponse texte non vide compte comme la branche "oui" pour révéler
+// d'éventuels followups_if_oui de cet item (ex: "Longueur du portail ?"
+// texte → révèle une sous-question liée), qu'elle soit déjà validée ou non.
 //
 // Fonction de rendu PARTAGÉE entre le panneau live et la popup "après
 // coup" (même format d'items des deux côtés) ; idPrefix distingue les ids
 // DOM entre les deux pour éviter toute collision (compte-rendu-modal reste
 // dans le DOM, caché, même quand la popup s'ouvre) ; textFnNames = { input,
-// mic } donne les noms des fonctions globales à appeler depuis le HTML
-// généré (différentes entre panneau live et popup, chacune sait sur quel
-// arbre/quelles réponses/quel conteneur agir).
-function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames) {
-  textFnNames = textFnNames || { input: "handleCrLiveChecklistTextInput", mic: "toggleCrLiveChecklistTextMic" };
+// mic, confirm } donne les noms des fonctions globales à appeler depuis le
+// HTML généré (différentes entre panneau live et popup, chacune sait sur
+// quel arbre/quelles réponses/quel conteneur agir) ; confirmedIds est
+// l'ensemble (Set) des ids de questions texte déjà validées via ✓.
+function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames, confirmedIds) {
+  textFnNames = textFnNames || { input: "handleCrLiveChecklistTextInput", mic: "toggleCrLiveChecklistTextMic", confirm: "confirmCrLiveChecklistTextAnswer" };
+  confirmedIds = confirmedIds || new Set();
 
   return (items || []).map(item => {
     const id = String(item.id != null ? item.id : "");
@@ -11600,13 +11609,14 @@ function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames
     if (isTexte) {
       const value = typeof answer === "string" ? answer : "";
       const hasValue = !!value.trim();
+      const isConfirmed = confirmedIds.has(id);
       rowHtml =
-        '<div class="cr-checklist-row cr-checklist-text-row">' +
+        '<div class="cr-checklist-row cr-checklist-text-row" style="display:' + (isConfirmed ? "none" : "flex") + ';">' +
           '<div class="cr-checklist-label">' + escapeHtmlForPrint(label) + "</div>" +
           '<div class="cr-checklist-text-input-row">' +
             '<input type="text" class="cr-checklist-text-input" data-item="' + escapeHtmlForPrint(id) + '" value="' + escapeHtmlForPrint(value) + '" placeholder="Répondez ici, ou dictez avec le micro" oninput="' + textFnNames.input + '(this)" />' +
             '<button type="button" class="cr-checklist-text-mic-btn" data-item="' + escapeHtmlForPrint(id) + '" onclick="' + textFnNames.mic + '(this)" aria-label="Dicter">🎙️</button>' +
-            '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="confirmChecklistTextAnswer(this, \'' + textFnNames.input + '\')" aria-label="Valider">✓</button>' +
+            '<button type="button" class="cr-checklist-text-confirm-btn" data-item="' + escapeHtmlForPrint(id) + '" style="display:' + (hasValue ? "flex" : "none") + ';" onclick="' + textFnNames.confirm + '(this)" aria-label="Valider">✓</button>' +
           "</div>" +
         "</div>";
       branchAnswer = hasValue ? "oui" : null;
@@ -11629,7 +11639,7 @@ function renderChecklistTree(items, answers, idPrefix, toggleFnName, textFnNames
       branchItems = item.followups_if_non;
     }
     const childrenHtml = branchItems
-      ? '<div class="cr-checklist-children">' + renderChecklistTree(branchItems, answers, idPrefix, toggleFnName, textFnNames) + "</div>"
+      ? '<div class="cr-checklist-children">' + renderChecklistTree(branchItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds) + "</div>"
       : "";
 
     return '<div class="cr-checklist-item-block">' + rowHtml + childrenHtml + "</div>";
@@ -11675,7 +11685,7 @@ function collectChecklistIds(items) {
 // l'ancienne réponse), puis reconstruit tout le conteneur — c'est le plus
 // simple pour rester toujours cohérent avec un arbre à profondeur variable.
 // Jamais de nouvel appel backend ici : tout est dérivé localement.
-function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames) {
+function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames, confirmedIds) {
   const itemId = btn.getAttribute("data-item");
   const value = btn.getAttribute("data-value");
   const node = findChecklistItemById(treeItems, itemId);
@@ -11691,7 +11701,7 @@ function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, c
   }
 
   const container = document.querySelector(containerSelector);
-  if (container) container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames);
+  if (container) container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds);
 }
 
 // Gère la saisie (clavier ou dictée) dans un champ texte de checklist. On
@@ -11701,7 +11711,7 @@ function applyChecklistToggle(btn, treeItems, answers, idPrefix, toggleFnName, c
 // (followups_if_oui) doivent apparaître ou disparaître. Le reste du temps,
 // la valeur tapée par l'utilisateur reste simplement dans `answers`, sans
 // re-rendu — jamais de nouvel appel backend ici non plus.
-function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames) {
+function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleFnName, containerSelector, textFnNames, confirmedIds) {
   const itemId = inputEl.getAttribute("data-item");
   const wasEmpty = !(typeof answers[itemId] === "string" && answers[itemId].trim());
   const isEmptyNow = !inputEl.value.trim();
@@ -11712,6 +11722,10 @@ function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleF
   // n'a pas vraiment répondue.
   if (isEmptyNow) {
     delete answers[itemId];
+    // Filet de sécurité : un champ déjà validé (✓) est normalement caché,
+    // donc pas éditable — mais si jamais il est reremis à vide par un autre
+    // biais, on ne doit pas laisser une case "validée" vide.
+    if (confirmedIds) confirmedIds.delete(itemId);
   } else {
     answers[itemId] = inputEl.value;
   }
@@ -11728,7 +11742,7 @@ function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleF
 
   const container = document.querySelector(containerSelector);
   if (!container) return;
-  container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames);
+  container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds);
 
   // On vient de reconstruire tout le HTML : sans ça, l'utilisateur perdrait
   // le focus au moment précis où il tape sa 1re lettre (ou efface la
@@ -11741,24 +11755,29 @@ function handleChecklistTextInput(inputEl, treeItems, answers, idPrefix, toggleF
   }
 }
 
-// Clic sur le bouton "✓ Valider" d'un champ texte de checklist : le champ
-// étant déjà enregistré en direct à chaque frappe/dictée (voir
-// handleChecklistTextInput), ce bouton ne sert pas à "envoyer" une 2e fois
-// vers un serveur (toujours 0 nouvel appel backend) — il RE-synchronise
-// explicitement l'état (au cas où, filet de sécurité), ferme le clavier, et
-// surtout donne un retour visuel clair : sans ce toast, cliquer "Valider"
-// ne produisait rien de perceptible et donnait l'impression d'un bouton
-// cassé.
-function confirmChecklistTextAnswer(btn, inputFnName) {
+// Clic sur le bouton "✓ Valider" d'un champ texte de checklist : enregistre
+// la réponse (déjà là en direct via handleChecklistTextInput, on la
+// reconfirme quand même par sécurité), marque l'item comme "validé" dans
+// confirmedIds, puis reconstruit le conteneur — ce qui cache complètement
+// la ligne (même comportement qu'une question Oui/Non une fois répondue,
+// voir renderChecklistTree). Jamais de nouvel appel backend ici non plus,
+// et un toast donne un retour visuel clair (sans lui, rien ne se voyait
+// avant que la ligne se cache).
+function confirmChecklistTextAnswer(btn, treeItems, answers, confirmedIds, idPrefix, toggleFnName, containerSelector, textFnNames) {
+  const itemId = btn.getAttribute("data-item");
   const wrap = btn.closest(".cr-checklist-text-input-row");
   const input = wrap && wrap.querySelector(".cr-checklist-text-input");
-  if (!input) return;
-  const handler = window[inputFnName];
-  if (typeof handler === "function") handler(input);
+  if (!input || !input.value.trim()) return; // rien à valider (bouton caché de toute façon dans ce cas)
+
+  answers[itemId] = input.value;
+  confirmedIds.add(itemId);
   input.blur();
+
+  const container = document.querySelector(containerSelector);
+  if (container) container.innerHTML = renderChecklistTree(treeItems, answers, idPrefix, toggleFnName, textFnNames, confirmedIds);
+
   showToast("Réponse enregistrée", "success");
 }
-window.confirmChecklistTextAnswer = confirmChecklistTextAnswer;
 
 let crChecklistTextRecognition = null;
 
@@ -11830,6 +11849,9 @@ function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
   Object.keys(crLiveChecklistAnswers).forEach(id => {
     if (!validIds.has(id)) delete crLiveChecklistAnswers[id];
   });
+  Array.from(crLiveChecklistConfirmedTextIds).forEach(id => {
+    if (!validIds.has(id)) crLiveChecklistConfirmedTextIds.delete(id);
+  });
 
   renderCrLiveChecklistPanel();
 }
@@ -11845,7 +11867,7 @@ function renderCrLiveChecklistPanel() {
 
   const itemsWrap = document.getElementById("cr-live-checklist-items");
   if (itemsWrap) {
-    itemsWrap.innerHTML = renderChecklistTree(crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", CR_LIVE_TEXT_FN_NAMES);
+    itemsWrap.innerHTML = renderChecklistTree(crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds);
   }
 
   const photosSection = document.getElementById("cr-live-checklist-photos-section");
@@ -11856,17 +11878,17 @@ function renderCrLiveChecklistPanel() {
 }
 
 function setCrLiveChecklistAnswer(btn) {
-  applyChecklistToggle(btn, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES);
+  applyChecklistToggle(btn, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds);
 }
 window.setCrLiveChecklistAnswer = setCrLiveChecklistAnswer;
 
 // Noms des fonctions globales à référencer depuis le HTML généré par
 // renderChecklistTree pour les items type "texte" du panneau live (voir
 // pendant CR_POPUP_TEXT_FN_NAMES pour l'équivalent côté popup).
-const CR_LIVE_TEXT_FN_NAMES = { input: "handleCrLiveChecklistTextInput", mic: "toggleCrLiveChecklistTextMic" };
+const CR_LIVE_TEXT_FN_NAMES = { input: "handleCrLiveChecklistTextInput", mic: "toggleCrLiveChecklistTextMic", confirm: "confirmCrLiveChecklistTextAnswer" };
 
 function handleCrLiveChecklistTextInput(inputEl) {
-  handleChecklistTextInput(inputEl, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES);
+  handleChecklistTextInput(inputEl, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds);
 }
 window.handleCrLiveChecklistTextInput = handleCrLiveChecklistTextInput;
 
@@ -11883,6 +11905,11 @@ function toggleCrLiveChecklistTextMic(btn) {
   });
 }
 window.toggleCrLiveChecklistTextMic = toggleCrLiveChecklistTextMic;
+
+function confirmCrLiveChecklistTextAnswer(btn) {
+  confirmChecklistTextAnswer(btn, crLiveChecklistItems, crLiveChecklistAnswers, crLiveChecklistConfirmedTextIds, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES);
+}
+window.confirmCrLiveChecklistTextAnswer = confirmCrLiveChecklistTextAnswer;
 
 async function handleCrLiveChecklistPhotoSelect(event) {
   const files = Array.from(event.target.files || []);
@@ -13085,6 +13112,11 @@ window.sendCrResultByMail = sendCrResultByMail;
 let crChecklistData = null;
 let crChecklistAnswers = {};
 let crChecklistPhotoUrls = [];
+// Toujours réinitialisé vide à l'ouverture de la popup (voir
+// openCrChecklistModal) : même si une question texte a déjà été validée
+// dans le panneau live, la popup "après coup" est la dernière relecture
+// avant "Rédiger" — on la montre donc à nouveau, modifiable.
+let crChecklistConfirmedTextIds = new Set();
 // CR_CHECKLIST_MAX_PHOTOS_DEFAULT est déclaré plus haut (bloc "checklist
 // live"), utilisé dès la constitution de crLiveChecklistMaxPhotos.
 
@@ -13124,6 +13156,7 @@ function openCrChecklistModal(data) {
     if (newIds.has(id)) crChecklistAnswers[id] = crLiveChecklistAnswers[id];
   });
   crChecklistPhotoUrls = crLiveChecklistPhotoUrls.slice();
+  crChecklistConfirmedTextIds = new Set(); // toujours vide ici, voir déclaration plus haut
 
   let modal = document.getElementById("cr-checklist-modal");
   if (!modal) {
@@ -13168,7 +13201,7 @@ function openCrChecklistModal(data) {
   const items = Array.isArray(crChecklistData.items) ? crChecklistData.items : [];
   const itemsWrap = document.getElementById("cr-checklist-items");
   if (itemsWrap) {
-    itemsWrap.innerHTML = renderChecklistTree(items, crChecklistAnswers, "cr-", "setCrChecklistAnswer", CR_POPUP_TEXT_FN_NAMES);
+    itemsWrap.innerHTML = renderChecklistTree(items, crChecklistAnswers, "cr-", "setCrChecklistAnswer", CR_POPUP_TEXT_FN_NAMES, crChecklistConfirmedTextIds);
   }
 
   const photosSection = document.getElementById("cr-checklist-photos-section");
@@ -13183,18 +13216,23 @@ function openCrChecklistModal(data) {
 // (= "passer", l'item n'apparaît alors dans aucune réponse, comme
 // spécifié : "rien coché = ignorer").
 function setCrChecklistAnswer(btn) {
-  applyChecklistToggle(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES);
+  applyChecklistToggle(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES, crChecklistConfirmedTextIds);
 }
 
 // Équivalent popup de CR_LIVE_TEXT_FN_NAMES / handleCrLiveChecklistTextInput
 // / toggleCrLiveChecklistTextMic — même logique, conteneur différent
 // ("#cr-checklist-items" au lieu de "#cr-live-checklist-items").
-const CR_POPUP_TEXT_FN_NAMES = { input: "handleCrChecklistTextInput", mic: "toggleCrChecklistTextMic" };
+const CR_POPUP_TEXT_FN_NAMES = { input: "handleCrChecklistTextInput", mic: "toggleCrChecklistTextMic", confirm: "confirmCrChecklistTextAnswer" };
 
 function handleCrChecklistTextInput(inputEl) {
-  handleChecklistTextInput(inputEl, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES);
+  handleChecklistTextInput(inputEl, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES, crChecklistConfirmedTextIds);
 }
 window.handleCrChecklistTextInput = handleCrChecklistTextInput;
+
+function confirmCrChecklistTextAnswer(btn) {
+  confirmChecklistTextAnswer(btn, (crChecklistData && crChecklistData.items) || [], crChecklistAnswers, crChecklistConfirmedTextIds, "cr-", "setCrChecklistAnswer", "#cr-checklist-items", CR_POPUP_TEXT_FN_NAMES);
+}
+window.confirmCrChecklistTextAnswer = confirmCrChecklistTextAnswer;
 
 function toggleCrChecklistTextMic(btn) {
   const itemId = btn.getAttribute("data-item");
