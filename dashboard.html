@@ -10133,7 +10133,7 @@ body[data-theme="light"]::after {
   </div>
 
   <div id="contact-detail-page"
-    onclick="if (event.target === this) closeContactDetail();">
+    onclick="if (event.target === this) handleContactDetailBackdropClick();">
     <!-- Clic sur le fond flouté (PC, voir #contact-detail-page.open dans le
          CSS min-width:601px) = fermeture, comme les autres popups de
          l'app. Pas de backdrop séparé ici (le flou est appliqué
@@ -10142,9 +10142,12 @@ body[data-theme="light"]::after {
          sur un de ses enfants, pour ne jamais fermer par erreur en
          cliquant dans la carte. Chaque champ modifiable (tag, notes) se
          sauvegarde déjà tout seul (addContactTag, saveContactNotesInternes
-         au blur) : rien à perdre en fermant, pas de garde-fou "modifs non
-         enregistrées" nécessaire. Sans effet sur mobile (page plein écran,
-         la carte couvre tout, il n'y a pas de "fond" cliquable). -->
+         au blur), SAUF un tag en cours de frappe pas encore validé par
+         "+"/Entrée : dans ce cas précis (voir handleContactDetailBackdropClick),
+         on ignore le clic pour ne pas perdre ce texte tapé mais pas encore
+         ajouté, comme pour les autres popups avec du contenu non enregistré.
+         Sans effet sur mobile (page plein écran, la carte couvre tout, il
+         n'y a pas de "fond" cliquable). -->
     <div class="mobile-subpage-header">
       <button class="sheet-btn contact-detail-back-btn"
         type="button"
@@ -12459,7 +12462,7 @@ async function openCompteRenduModal(prefillPoints, preserveHistory = false) {
     modal.id = "compte-rendu-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop"></div>
+      <div class="mail-choice-backdrop" onclick="handleCompteRenduBackdropClick()"></div>
       <div class="mail-choice-box">
         <div id="cr-main-view">
           <div class="mail-choice-title">Compte rendu</div>
@@ -12601,6 +12604,31 @@ function closeCompteRenduModal() {
   if (micBtn) micBtn.classList.remove("is-recording");
 }
 
+// Partagé entre le bouton "Annuler" et le clic sur le fond flouté (voir
+// handleCompteRenduBackdropClick) : vrai dès que quelque chose serait
+// perdu en fermant (Sujet tapé, point ajouté, point en cours de frappe
+// mais pas encore ajouté, réponse checklist, ou photo).
+function crHasUnsavedContent() {
+  const sujetInput = document.getElementById("cr-field-sujet");
+  const hasSujet = !!(sujetInput && sujetInput.value.trim());
+  const hasChecklistAnswers = Object.keys(crLiveChecklistAnswers).length > 0;
+  const hasPhotos = crLiveChecklistPhotoUrls.length > 0;
+  const hasPendingPoint = !!((document.getElementById("cr-point-input")?.value || "").trim());
+  return crPoints.length > 0 || hasSujet || hasChecklistAnswers || hasPhotos || hasPendingPoint;
+}
+
+// Clic sur le fond flouté : ferme directement si le formulaire est encore
+// vierge (rien à perdre), sinon ne fait rien — comme pour l'aperçu Mail,
+// seul le bouton "Annuler" explicite peut alors fermer (avec confirmation,
+// voir requestCloseCompteRendu juste en dessous), jamais un clic accidentel
+// à côté.
+function handleCompteRenduBackdropClick() {
+  if (!crHasUnsavedContent()) {
+    closeCompteRenduModal();
+  }
+}
+window.handleCompteRenduBackdropClick = handleCompteRenduBackdropClick;
+
 // Bouton "Annuler" : si l'utilisateur a déjà commencé quoi que ce soit
 // (Sujet tapé, point ajouté, OU une seule réponse cochée sur la checklist
 // live), on ne ferme pas tout de suite — on demande confirmation, puisque
@@ -12608,12 +12636,7 @@ function closeCompteRenduModal() {
 // ferme directement, pas besoin d'enrober un formulaire vide d'une
 // confirmation inutile.
 function requestCloseCompteRendu() {
-  const sujetInput = document.getElementById("cr-field-sujet");
-  const hasSujet = !!(sujetInput && sujetInput.value.trim());
-  const hasChecklistAnswers = Object.keys(crLiveChecklistAnswers).length > 0;
-  const hasPhotos = crLiveChecklistPhotoUrls.length > 0;
-
-  if (!crPoints.length && !hasSujet && !hasChecklistAnswers && !hasPhotos) {
+  if (!crHasUnsavedContent()) {
     closeCompteRenduModal();
     return;
   }
@@ -20870,6 +20893,20 @@ async function getWritingStyleLabelForContact(key) {
   selectedContactId = null;
   document.getElementById("contact-detail-page").classList.remove("open");
 }
+
+// Clic sur le fond flouté (voir #contact-detail-page dans le HTML) :
+// ferme directement, SAUF si un tag est en cours de frappe dans le champ
+// "Ajouter un tag…" sans avoir encore été validé par "+"/Entrée — dans ce
+// cas précis, on ignore le clic pour ne pas perdre ce texte tapé (tous les
+// autres champs de cette fiche s'enregistrent déjà tout seuls, voir
+// addContactTag/saveContactNotesInternes).
+function handleContactDetailBackdropClick() {
+  const pendingTag = (document.getElementById("contact-tag-input")?.value || "").trim();
+  if (!pendingTag) {
+    closeContactDetail();
+  }
+}
+window.handleContactDetailBackdropClick = handleContactDetailBackdropClick;
 
 function editSelectedContact() {
   if (!selectedContactId) return;
