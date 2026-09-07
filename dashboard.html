@@ -16379,6 +16379,12 @@ function renderWritingStylesList() {
   list.innerHTML = writingStylesCache.map(function (s) {
     const label = (s.label || s.key || "").replace(/</g, "&lt;");
     const example = (s.example_message || "").replace(/</g, "&lt;");
+    // s.id (uuid stable côté backend) sert d'identifiant pour la
+    // suppression (DELETE /styles/{id}) ; s.key reste utilisé pour ouvrir
+    // l'éditeur (voir openWritingStyleEditor). On ne met que l'id, sans le
+    // libellé, dans l'attribut onclick pour éviter tout souci d'échappement
+    // de guillemets — deleteWritingStyle() retrouve le libellé via le cache.
+    const styleId = s.id || "";
     return (
       '<div class="agent-card" style="padding:14px 16px;cursor:pointer;" onclick="openWritingStyleEditor(\'' + s.key + '\')">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
@@ -16388,11 +16394,46 @@ function renderWritingStylesList() {
               ? '<div style="font-size:12.5px;color:var(--clarity-text-tertiary);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + example + '</div>'
               : '') +
           '</div>' +
-          '<span style="font-size:12px;color:var(--clarity-text-tertiary);flex-shrink:0;">Modifier ›</span>' +
+          '<div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">' +
+            '<span style="font-size:12px;color:var(--clarity-text-tertiary);">Modifier ›</span>' +
+            '<button type="button" title="Supprimer ce style" style="border:none;background:transparent;cursor:pointer;font-size:15px;line-height:1;padding:4px;color:var(--clarity-danger);" onclick="event.stopPropagation();deleteWritingStyle(\'' + styleId + '\')">🗑️</button>' +
+          '</div>' +
         '</div>' +
       '</div>'
     );
   }).join("");
+}
+
+async function deleteWritingStyle(id) {
+  if (!id) {
+    showToast("Impossible de supprimer ce style", "error");
+    return;
+  }
+
+  // Le style peut être un style "seed" fourni par défaut : rien n'empêche
+  // sa suppression si l'utilisateur le souhaite, on retrouve juste son
+  // libellé dans le cache pour un message de confirmation clair.
+  const style = writingStylesCache.find(function (s) { return String(s.id) === String(id); });
+  const label = style ? (style.label || style.key || "ce style") : "ce style";
+
+  if (!confirm('Supprimer le style « ' + label + ' » ?')) return;
+
+  try {
+    const response = await fetch(STYLES_API_URL + "/" + id + "?user_id=" + currentUser.id, {
+      method: "DELETE"
+    });
+    const data = await response.json().catch(function () { return null; });
+
+    if (!response.ok || (data && data.success === false)) {
+      showToast((data && data.message) || "Impossible de supprimer ce style", "error");
+      return;
+    }
+
+    await loadWritingStyles();
+    showToast("Style supprimé", "success");
+  } catch (e) {
+    showToast("Erreur réseau", "error");
+  }
 }
 
 function openWritingStyleEditor(key) {
