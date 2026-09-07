@@ -13964,6 +13964,11 @@ function submitCompteRendu() {
     crLiveChecklistConfirmedTextIds.forEach(id => { delete filteredChecklistAnswers[id]; });
     formAnswers.checklist_answers = filteredChecklistAnswers;
     formAnswers.checklist_items = crLiveChecklistItems.slice();
+  }
+  // Indépendant de la checklist (voir CR_CHECKLIST_ENABLED) : la section
+  // "Ajouter des photos" est toujours visible et doit toujours envoyer ses
+  // photos au backend, que la checklist ait ou non renvoyé des questions.
+  if (crLiveChecklistPhotoUrls.length) {
     formAnswers.photo_urls = crLiveChecklistPhotoUrls.slice();
   }
 
@@ -13995,6 +14000,10 @@ function submitCompteRendu() {
     window.currentRequestId,
     { form_answers: formAnswers },
     {
+      // Seul submitCompteRendu() personnalise ce texte (voir callSimpleAgent)
+      // — les autres agents (mail, planning...) gardent "Réflexion en
+      // cours..." par défaut, ce paramètre n'étant pas passé ailleurs.
+      loadingText: "Création du compte rendu...",
       onSuccess: (data, content) => {
         // Le backend renvoie normalement les mêmes photo_urls dans sa
         // réponse ; au cas où il les omettrait, on retombe sur celles
@@ -24112,10 +24121,14 @@ async function callSimpleAgent(
       box.style.display = "";
       setDictationBoxState(box, "info");
       box.style.opacity = "1";
+      // Texte par défaut inchangé pour tous les agents (mail, planning...) ;
+      // seul submitCompteRendu() passe handlers.loadingText pour afficher
+      // "Création du compte rendu..." à la place, même popup/mêmes styles.
+      const loadingText = (handlers && handlers.loadingText) || "Réflexion en cours...";
       box.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
           <img src="${CLARITY_THINKING_LOGO_SRC}" alt="" class="clarity-thinking-logo" style="height:26px;width:auto;display:block;" />
-          <span style="font-size:13.5px;font-weight:800;color:var(--clarity-text);">Réflexion en cours...</span>
+          <span style="font-size:13.5px;font-weight:800;color:var(--clarity-text);">${loadingText}</span>
         </div>
       `;
     }
