@@ -11578,6 +11578,13 @@ let crActiveDictationTargetId = "cr-point-input";
 //   - ces appels sont des aperçus silencieux : jamais d'incrementActions
 //     ni de saveActionLog dessus (voir fetchCrChecklistPreview) — seul le
 //     clic "Créer le compte rendu" doit compter comme 1 action.
+// Checklist "Pour ne rien oublier" désactivée pour le compte rendu : cette
+// fonctionnalité est mise de côté pour un futur agent chantier, pas pour le
+// CR. Tout le code ci-dessous reste en place (demandé ainsi) mais ce
+// drapeau coupe à la fois l'appel réseau /agent/redaction dédié
+// (fetchCrChecklistPreview, needs_checklist) et l'affichage du panneau —
+// repasser à true suffira à tout réactiver le jour venu.
+const CR_CHECKLIST_ENABLED = false;
 const CR_PREVIEW_MAX_CALLS = 3;
 const CR_PREVIEW_SUJET_MIN_LENGTH = 12;
 const CR_LIVE_CHECKLIST_MIN_ITEMS = 3;
@@ -11688,6 +11695,7 @@ function fireCrPointsPreviewCallIfEligible() {
 // autre raison, erreur réseau) : ce n'est qu'un aperçu, jamais montré à
 // l'utilisateur comme un résultat.
 async function fetchCrChecklistPreview(instruction, formAnswers) {
+  if (!CR_CHECKLIST_ENABLED) return;
   try {
     const response = await fetch(REDACTION_WEBHOOK_URL, {
       method: "POST",
@@ -12105,6 +12113,13 @@ function mergeCrLiveChecklistItems(items, photosAllowed, maxPhotos) {
 function renderCrLiveChecklistPanel() {
   const panel = document.getElementById("cr-live-checklist-panel");
   if (!panel) return;
+
+  // Checklist désactivée pour le CR (voir CR_CHECKLIST_ENABLED) : le
+  // panneau ne doit plus jamais s'afficher, quoi qu'il arrive.
+  if (!CR_CHECKLIST_ENABLED) {
+    panel.style.display = "none";
+    return;
+  }
 
   // Le titre "Pour ne rien oublier" fait partie de ce même panneau : il ne
   // doit plus s'afficher une fois que toutes les questions ont une réponse
