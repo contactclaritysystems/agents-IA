@@ -1263,6 +1263,29 @@ select.field-input {
   border-color: var(--clarity-accent, #0091c7);
   color: #fff;
 }
+/* Même cas que ".detail-line strong" plus haut dans ce fichier (voir ce
+   commentaire) : var(--text)/var(--clarity-text) ne s'applique pas de
+   façon fiable ici en thème sombre pour du contenu généré dynamiquement
+   (cause exacte non reproductible). On force donc la valeur RÉELLE du
+   thème sombre (--clarity-text: #f2f3f5, --clarity-text-secondary:
+   #9a9ea8, voir body[data-theme="dark"] plus haut) directement, en ne
+   touchant QUE ce thème — les 3 autres restent inchangés. */
+body[data-theme="dark"] .cr-checklist-label {
+  color: #f2f3f5;
+}
+body[data-theme="dark"] .cr-checklist-children .cr-checklist-label {
+  color: #9a9ea8;
+}
+body[data-theme="dark"] .cr-checklist-text-input {
+  color: #f2f3f5 !important;
+}
+body[data-theme="dark"] .cr-checklist-text-input::placeholder {
+  color: #9a9ea8 !important;
+  opacity: 1 !important;
+}
+body[data-theme="dark"] .cr-point-edit-input {
+  color: #f2f3f5 !important;
+}
 /* Arbre de sous-questions conditionnelles (item.followups_if_oui /
    item.followups_if_non), profondeur illimitée. Chaque question vit dans
    un "item-block" ; une fois répondue, sa ligne se cache (voir JS
