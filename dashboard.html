@@ -85,6 +85,16 @@ body.loading-subscription #actions-count {
   color: var(--clarity-primary-text);
 }
 
+/* Même cas que ".task-title"/".detail-line strong" : --dark (alias de
+   compatibilité vers --clarity-primary) ne suit pas fiablement le thème
+   sombre en pratique — on force la variable directement pour que le
+   texte sélectionné reste visible (et pas juste le texte lui-même, voir
+   le correctif .task-title/.task-due juste au-dessus dans ce fichier). */
+body[data-theme="dark"] ::selection {
+  background: var(--clarity-primary);
+  color: #ffffff;
+}
+
 /* SIDEBAR */
 .nav-item {
   display: flex;
@@ -1613,11 +1623,21 @@ body[data-theme="dark"] .cr-point-edit-input {
 /* La feuille "Autre version" s'ouvre PAR-DESSUS l'aperçu Mail ou Rédaction
    (eux-mêmes déjà à z-index:9999) : sans position:fixed + z-index dédiés
    ici, elle restait dans le flux normal de la page et se retrouvait
-   cachée derrière la popup déjà ouverte au lieu de passer devant. */
+   cachée derrière la popup déjà ouverte au lieu de passer devant.
+   IMPORTANT : rester à 9999 (pas plus) — le toast (voir plus bas dans la
+   feuille de style, "z-index: 10000 !important") doit toujours pouvoir
+   s'afficher AU-DESSUS de cette feuille, sinon un message d'erreur ou de
+   succès déclenché pendant qu'elle est ouverte devient invisible (bug
+   remonté : "je clique sur Appliquer et rien ne se passe" — en réalité
+   un toast s'affichait, juste caché derrière). Le placement de
+   #rewrite-sheet-modal après #mail-preview-modal et
+   #simple-agent-preview-modal dans le HTML garantit qu'elle passe bien
+   au-dessus d'eux malgré le même z-index (ordre du DOM = ordre d'empilement
+   à z-index égal). */
 #rewrite-sheet-modal {
   position: fixed;
   inset: 0;
-  z-index: 10500;
+  z-index: 9999;
 }
 
 .mail-choice-title {
@@ -7105,6 +7125,21 @@ body[data-theme="dark"] .task-item {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.015) 35%, rgba(255, 255, 255, 0) 100%),
     #0a0b0f;
+}
+
+/* Activité récente (fiche contact) illisible en thème sombre : même cas
+   que ".detail-line strong"/".detail-line span" plus haut dans ce
+   fichier — var(--text)/var(--muted) (alias de compatibilité vers
+   --clarity-text/--clarity-text-secondary) ne suivent pas le thème en
+   pratique pour ce contenu injecté dynamiquement (voir loadContactActivity),
+   on force donc les variables directement comme pour les autres cas déjà
+   corrigés. Corrige aussi la sélection de texte invisible signalée : le
+   texte lui-même était trop sombre pour être vu, sélectionné ou non. */
+body[data-theme="dark"] .task-title {
+  color: var(--clarity-text);
+}
+body[data-theme="dark"] .task-due {
+  color: var(--clarity-text-secondary);
 }
 
 body[data-theme="dark"] .agent-card,
@@ -14226,7 +14261,7 @@ window.looksLikeCompteRendu = looksLikeCompteRendu;
 function extractCompteRenduSubject(text) {
   let s = (text || "").trim();
   if (!s) return "";
-  s = s.replace(/^(écris|écrit|ecris|ecrit|fais|fait|rédige|redige|prépare|prepare)(\s*-?\s*moi)?\s+/i, "");
+  s = s.replace(/^(écris|écrit|ecris|ecrit|fais|fait|rédige|redige|prépare|prepare|crée|créé|créer|cree|creer|génère|genere)(\s*-?\s*moi)?\s+/i, "");
   s = s.replace(/^(le|un|mon)\s+compte[\s-]?rendu\s*/i, "");
   s = s.replace(/^compte[\s-]?rendu\s*/i, "");
   s = s.replace(/^(pour|de|sur|concernant|à propos de)\s+/i, "");
@@ -16444,7 +16479,13 @@ async function sendTypedInstruction(instruction, continuing = false) {
       ) {
         hideOrRemoveBox(box);
         unlockAgentButtons();
-        const crSubject = extractCompteRenduSubject(data.instruction || instruction);
+        // Toujours à partir de la dictée/texte BRUT de l'utilisateur
+        // (variable locale "instruction"), jamais de data.instruction : ce
+        // dernier vient de l'orchestrateur et peut être une version
+        // réécrite/enrichie côté backend (ex: "en incluant les détails des
+        // travaux effectués, les matériaux utilisés..."), ce qui polluait
+        // le champ Sujet avec du texte jamais prononcé par l'utilisateur.
+        const crSubject = extractCompteRenduSubject(instruction);
         await openCompteRenduModal();
         if (crSubject) {
           const sujetInput = document.getElementById("cr-field-sujet");
@@ -23508,7 +23549,11 @@ if (
   hideOrRemoveBox(box);
   unlockAgentButtons();
   resetOrchestratorMicButton();
-  const crSubject = extractCompteRenduSubject(data.instruction || instruction);
+  // Toujours à partir de la dictée/texte BRUT de l'utilisateur (variable
+  // locale "instruction"), jamais de data.instruction : voir le même
+  // correctif côté texte (sendTypedInstruction) juste au-dessus dans ce
+  // fichier.
+  const crSubject = extractCompteRenduSubject(instruction);
   await openCompteRenduModal();
   if (crSubject) {
     const sujetInput = document.getElementById("cr-field-sujet");
