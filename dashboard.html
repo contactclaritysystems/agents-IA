@@ -1521,11 +1521,29 @@ body[data-theme="dark"] .cr-point-edit-input {
   opacity: .75;
 }
 
+/* Les 6 actions (Envoyer/PDF/Imprimer/Copier/Supprimer/Fermer) tenaient
+   avant sur 6 lignes (1 bouton par ligne, "Supprimer"/"Fermer" même pas
+   dans ce conteneur) — regroupées ici dans UNE seule rangée qui s'enroule
+   au besoin : 3 par ligne sur mobile (2 lignes pour 6 boutons), jusqu'à
+   tout tenir sur une seule ligne à partir de 601px. Police/padding
+   réduits uniquement ici pour que "Supprimer"/"Imprimer" ne débordent pas
+   à 3 par ligne sur un écran de téléphone. */
 .cr-result-actions-row {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
+}
+
+.cr-result-actions-row button {
+  flex: 1 1 calc(33.33% - 6px);
+  min-width: 0;
+  width: auto !important;
+  font-size: 12px;
+  padding: 9px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (min-width: 601px) {
@@ -1538,15 +1556,10 @@ body[data-theme="dark"] .cr-point-edit-input {
     min-height: 320px;
   }
 
-  .cr-result-actions-row {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-
   .cr-result-actions-row button {
     flex: 1 1 0;
-    min-width: 0;
-    width: auto !important;
+    font-size: 13px;
+    padding: 10px 14px;
   }
 }
 
@@ -13149,14 +13162,19 @@ function openCompteRenduResultModal(data, content, options = {}) {
             </div>
           </div>
 
+          <!-- Les 6 actions tiennent maintenant dans une seule rangée qui
+               s'enroule au besoin (voir CSS .cr-result-actions-row) : 3 par
+               ligne sur mobile (2 lignes pour 6 boutons), jusqu'à tout
+               tenir sur une seule ligne à partir de 601px — au lieu de 6
+               lignes (1 bouton par ligne) auparavant. -->
           <div class="cr-result-actions-row">
-            <button class="save-btn" type="button" style="width:100%;" onclick="sendCrResultByMail()">📧 Envoyer</button>
-            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="downloadCrResultPDF()">📄 PDF</button>
-            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="printCrResult()">🖨️ Imprimer</button>
-            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;" onclick="copyCrResultText()">📋 Copier</button>
+            <button class="save-btn" type="button" onclick="sendCrResultByMail()">📧 Envoyer</button>
+            <button class="sheet-btn" type="button" onclick="downloadCrResultPDF()">📄 PDF</button>
+            <button class="sheet-btn" type="button" onclick="printCrResult()">🖨️ Imprimer</button>
+            <button class="sheet-btn" type="button" onclick="copyCrResultText()">📋 Copier</button>
+            <button class="sheet-btn" type="button" id="cr-result-delete-btn" style="display:none;color:var(--clarity-danger);" onclick="deleteCrResultFromHistory()">🗑️ Supprimer</button>
+            <button class="sheet-btn" type="button" onclick="requestCloseCrResult()">Fermer</button>
           </div>
-          <button class="sheet-btn" type="button" id="cr-result-delete-btn" style="display:none;width:100%;justify-content:center;margin-top:8px;color:var(--clarity-danger);" onclick="deleteCrResultFromHistory()">🗑️ Supprimer</button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="requestCloseCrResult()">Fermer</button>
         </div>
 
         <div id="cr-result-confirm-view" style="display:none;">
@@ -13174,7 +13192,10 @@ function openCompteRenduResultModal(data, content, options = {}) {
   crResultHistoryLogId = options.historyLogId || null;
 
   const deleteBtn = document.getElementById("cr-result-delete-btn");
-  if (deleteBtn) deleteBtn.style.display = crResultHistoryLogId ? "block" : "none";
+  // "inline-flex" (pas "block") : ce bouton est maintenant un enfant flex
+  // de .cr-result-actions-row (voir CSS) au même titre que les autres —
+  // "block" cassait le centrage interne icône+texte du bouton lui-même.
+  if (deleteBtn) deleteBtn.style.display = crResultHistoryLogId ? "inline-flex" : "none";
 
   document.getElementById("cr-result-title").textContent = data.title || "Compte rendu";
   document.getElementById("cr-result-content").innerHTML = renderCrMarkdownToHtml(content || "");
@@ -13259,10 +13280,18 @@ window.closeCrPhotoLightbox = closeCrPhotoLightbox;
 
 // "Enregistrer" : télécharge la photo (même URL publique cr-photos affichée)
 // via un blob converti en lien de téléchargement — fonctionne nativement sur
-// desktop/Android ; sur iOS Safari, ouvre l'image (l'utilisateur peut alors
-// l'enregistrer via le bouton de partage natif du visualiseur).
+// desktop/Android. Sur iOS, Safari IGNORE l'attribut "download" d'un lien
+// (limitation connue de WebKit, pas un bug ici) : le clic ne déclenchait
+// donc rien de visible, exactement le symptôme remonté. Seule façon
+// d'obtenir un vrai "Enregistrer l'image" sur iOS : passer par la feuille
+// de partage native (shareCrPhoto, qui propose déjà cette option) — on
+// bascule donc dessus automatiquement sur iOS, plutôt que de retirer le
+// bouton (il continue de fonctionner tel quel sur desktop/Android).
 async function downloadCrPhoto() {
   if (!crPhotoLightboxUrl) return;
+  if (isIOSDevice()) {
+    return shareCrPhoto();
+  }
   try {
     const response = await fetch(crPhotoLightboxUrl);
     const blob = await response.blob();
