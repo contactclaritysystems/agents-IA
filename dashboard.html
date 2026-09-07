@@ -12500,6 +12500,15 @@ function updateCrAddPointButtonState() {
   const btn = document.getElementById("cr-add-point-btn");
   const textarea = document.getElementById("cr-point-input");
   if (btn) btn.disabled = !(textarea && textarea.value.trim());
+
+  // Filet de sécurité : "Créer le compte rendu" ne dépend que du Sujet
+  // (voir updateCrCreateButtonState), rattaché à son propre oninput — mais
+  // un remplissage du Sujet qui ne déclenche pas cet évènement (collage
+  // programmatique, autofill, dictée qui écrit directement dans le champ
+  // sans passer par une vraie frappe clavier) pouvait laisser le bouton
+  // grisé alors que le Sujet est bel et bien rempli. On revérifie donc ici
+  // aussi, à chaque interaction avec le champ Point, pour rattraper ce cas.
+  updateCrCreateButtonState();
 }
 window.updateCrAddPointButtonState = updateCrAddPointButtonState;
 
@@ -16317,7 +16326,17 @@ async function sendTypedInstruction(instruction, continuing = false) {
         await openCompteRenduModal();
         if (crSubject) {
           const sujetInput = document.getElementById("cr-field-sujet");
-          if (sujetInput) sujetInput.value = crSubject;
+          if (sujetInput) {
+            sujetInput.value = crSubject;
+            // Affectation directe de .value : ne déclenche PAS l'évènement
+            // "input" du champ (contrairement à une vraie frappe/collage
+            // utilisateur), donc updateCrCreateButtonState() — rattachée à
+            // cet évènement — ne s'exécutait jamais ici. Résultat : le
+            // Sujet était bien rempli à l'écran mais "Créer le compte
+            // rendu" restait grisé tant que l'utilisateur ne retouchait pas
+            // lui-même un champ. On appelle donc la fonction nous-mêmes.
+            updateCrCreateButtonState();
+          }
         }
         return;
       }
@@ -23128,7 +23147,15 @@ if (
   await openCompteRenduModal();
   if (crSubject) {
     const sujetInput = document.getElementById("cr-field-sujet");
-    if (sujetInput) sujetInput.value = crSubject;
+    if (sujetInput) {
+      sujetInput.value = crSubject;
+      // Même correctif que côté texte (voir sendTypedInstruction) :
+      // l'affectation directe de .value ne déclenche pas l'évènement
+      // "input" dont dépend updateCrCreateButtonState() — sans cet appel
+      // explicite, "Créer le compte rendu" restait grisé bien que le Sujet
+      // soit déjà rempli (cas voix, via le micro général).
+      updateCrCreateButtonState();
+    }
   }
   return;
 }
