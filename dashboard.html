@@ -11787,6 +11787,34 @@ function collectChecklistIds(items) {
   return ids;
 }
 
+// Reste-t-il au moins UNE ligne encore visible dans l'arbre (question pas
+// encore répondue, ou réponse texte pas encore validée) ? Une question
+// répondue/validée cache sa propre ligne (voir renderChecklistTree) mais
+// peut révéler des enfants pas encore répondus — il faut donc redescendre
+// dans la branche choisie avant de conclure qu'il n'y a plus rien à
+// afficher. Sert à masquer tout le panneau "Pour ne rien oublier" (titre
+// inclus) une fois que TOUTES les questions ont une réponse, plutôt que de
+// laisser le titre affiché au-dessus d'une liste vide.
+function checklistTreeHasVisibleRows(items, answers, confirmedIds) {
+  return (items || []).some(function (item) {
+    const id = String(item.id != null ? item.id : "");
+    const isTexte = item.type === "texte";
+    const answer = answers[id];
+
+    if (isTexte) {
+      const isConfirmed = confirmedIds && confirmedIds.has(id);
+      if (!isConfirmed) return true;
+      const hasValue = typeof answer === "string" && !!answer.trim();
+      const branchItems = hasValue ? item.followups_if_oui : null;
+      return checklistTreeHasVisibleRows(branchItems, answers, confirmedIds);
+    }
+
+    if (!answer) return true;
+    const branchItems = answer === "oui" ? item.followups_if_oui : item.followups_if_non;
+    return checklistTreeHasVisibleRows(branchItems, answers, confirmedIds);
+  });
+}
+
 // Applique un clic Oui/Non : bascule la réponse de l'item cliqué, efface
 // toute réponse résiduelle de ses anciens descendants (l'autre branche ou
 // l'ancienne réponse), puis reconstruit tout le conteneur — c'est le plus
@@ -12035,7 +12063,11 @@ function renderCrLiveChecklistPanel() {
   const panel = document.getElementById("cr-live-checklist-panel");
   if (!panel) return;
 
-  if (!crLiveChecklistItems.length) {
+  // Le titre "Pour ne rien oublier" fait partie de ce même panneau : il ne
+  // doit plus s'afficher une fois que toutes les questions ont une réponse
+  // (voir checklistTreeHasVisibleRows), pas seulement quand la liste est
+  // vide au départ.
+  if (!crLiveChecklistItems.length || !checklistTreeHasVisibleRows(crLiveChecklistItems, crLiveChecklistAnswers, crLiveChecklistConfirmedTextIds)) {
     panel.style.display = "none";
     return;
   }
@@ -12060,6 +12092,10 @@ function renderCrLiveChecklistPhotosSection() {
 
 function setCrLiveChecklistAnswer(btn) {
   applyChecklistToggle(btn, crLiveChecklistItems, crLiveChecklistAnswers, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, crLiveChecklistConfirmedTextIds, true);
+  // Ré-évalue si le panneau (titre "Pour ne rien oublier" inclus) doit
+  // encore être affiché : une réponse peut avoir fait disparaître la
+  // dernière ligne visible, ou au contraire révélé une sous-question.
+  renderCrLiveChecklistPanel();
 }
 window.setCrLiveChecklistAnswer = setCrLiveChecklistAnswer;
 
@@ -12089,6 +12125,9 @@ window.toggleCrLiveChecklistTextMic = toggleCrLiveChecklistTextMic;
 
 function confirmCrLiveChecklistTextAnswer(btn) {
   confirmChecklistTextAnswer(btn, crLiveChecklistItems, crLiveChecklistAnswers, crLiveChecklistConfirmedTextIds, "cr-live-", "setCrLiveChecklistAnswer", "#cr-live-checklist-items", CR_LIVE_TEXT_FN_NAMES, true);
+  // Même raison que dans setCrLiveChecklistAnswer : valider une réponse
+  // texte peut être la dernière ligne visible du panneau.
+  renderCrLiveChecklistPanel();
 }
 window.confirmCrLiveChecklistTextAnswer = confirmCrLiveChecklistTextAnswer;
 
