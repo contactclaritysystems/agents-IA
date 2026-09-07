@@ -1238,6 +1238,10 @@ select.field-input {
   font-size: 14px;
   line-height: 1.4;
   flex: 1 1 auto;
+  /* Même couleur que .field-label ailleurs dans l'app (var(--text)) :
+     explicite plutôt que de compter sur l'héritage, pour ne jamais
+     dépendre d'un fond hérité qui changerait plus haut dans l'arbre. */
+  color: var(--text);
 }
 .cr-checklist-toggle-group {
   display: flex;
@@ -1305,6 +1309,14 @@ select.field-input {
   font-size: 14px;
   color: var(--clarity-text);
   background: var(--card-bg, transparent);
+}
+/* Un champ n'hérite jamais sa couleur de placeholder de "color" : sans
+   cette règle, le navigateur applique son gris par défaut (quasi invisible
+   sur fond sombre) — même variable/opacité que .field-input::placeholder
+   ailleurs dans l'app, pour rester cohérent. */
+.cr-checklist-text-input::placeholder {
+  color: var(--clarity-text-tertiary);
+  opacity: 1;
 }
 .cr-checklist-text-mic-btn {
   flex-shrink: 0;
@@ -12343,7 +12355,7 @@ function renderCrPoints() {
       '<div class="task-item">' +
         '<div class="task-title" style="display:flex;align-items:center;gap:4px;">' +
           '<span style="flex-shrink:0;color:var(--muted);">' + (i + 1) + ".</span>" +
-          '<input type="text" class="cr-point-edit-input" id="cr-point-edit-' + i + '" value="' + p.replace(/"/g, "&quot;") + '" oninput="updateCrPointText(' + i + ', this.value)" style="flex:1;min-width:0;border:none;background:transparent;font:inherit;color:inherit;padding:2px 0;outline:none;border-bottom:1px dashed transparent;">' +
+          '<input type="text" class="cr-point-edit-input" id="cr-point-edit-' + i + '" value="' + p.replace(/"/g, "&quot;") + '" oninput="updateCrPointText(' + i + ', this.value)" style="flex:1;min-width:0;border:none;background:transparent;font:inherit;color:var(--text);padding:2px 0;outline:none;border-bottom:1px dashed transparent;">' +
         "</div>" +
         '<button type="button" class="task-delete" onclick="removeCrPoint(' + i + ')" aria-label="Supprimer">✕</button>' +
       "</div>"
