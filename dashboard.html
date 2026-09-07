@@ -1139,6 +1139,42 @@ select.field-input {
   border: 1px solid var(--line);
   cursor: pointer;
 }
+/* Choix de la taille des photos dans le PDF/l'impression (aucun effet sur
+   les miniatures ci-dessus, ni sur Copier/Envoyer) — voir
+   setCrResultPhotoSize/CR_PHOTO_SIZE_RATIOS. Mêmes pastilles que
+   .cr-checklist-toggle pour rester cohérent avec le reste de la popup. */
+.cr-result-photo-size {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cr-result-photo-size-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cr-result-photo-size-options {
+  display: flex;
+  gap: 6px;
+}
+.cr-photo-size-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+}
+.cr-photo-size-btn.active {
+  background: var(--clarity-accent, #0091c7);
+  border-color: var(--clarity-accent, #0091c7);
+  color: #fff;
+}
 
 /* Aperçu plein écran d'une photo du compte rendu (miniature cliquée) +
    actions natives Enregistrer/Partager — voir openCrPhotoLightbox. Placé
@@ -1282,6 +1318,13 @@ body[data-theme="dark"] .cr-checklist-text-input {
 body[data-theme="dark"] .cr-checklist-text-input::placeholder {
   color: #9a9ea8 !important;
   opacity: 1 !important;
+}
+body[data-theme="dark"] .cr-result-photo-size-label {
+  color: #9a9ea8;
+}
+body[data-theme="dark"] .cr-photo-size-btn {
+  color: #f2f3f5;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 body[data-theme="dark"] .cr-point-edit-input {
   color: #f2f3f5 !important;
@@ -12822,6 +12865,23 @@ async function toggleCrPointDictation() {
 let crResultSkipCloseConfirm = false;
 let crResultHistoryLogId = null;
 let crResultPhotoUrls = [];
+// Taille des photos choisie par l'utilisateur pour le PDF/l'impression
+// (aucun effet sur Copier/Envoyer, qui ne partent que des liens) — voir
+// setCrResultPhotoSize, downloadCrResultPDF, printCrResult.
+let crResultPhotoSize = "medium";
+const CR_PHOTO_SIZE_RATIOS = { small: 0.42, medium: 0.7, large: 1 };
+
+function setCrResultPhotoSize(size) {
+  if (!CR_PHOTO_SIZE_RATIOS[size]) return;
+  crResultPhotoSize = size;
+  const wrap = document.getElementById("cr-result-photo-size");
+  if (wrap) {
+    wrap.querySelectorAll(".cr-photo-size-btn").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-size") === size);
+    });
+  }
+}
+window.setCrResultPhotoSize = setCrResultPhotoSize;
 
 function openCompteRenduResultModal(data, content, options = {}) {
   let modal = document.getElementById("cr-result-modal");
@@ -12844,6 +12904,15 @@ function openCompteRenduResultModal(data, content, options = {}) {
           </div>
 
           <div id="cr-result-photos" class="cr-result-photos" style="display:none;"></div>
+
+          <div id="cr-result-photo-size" class="cr-result-photo-size" style="display:none;">
+            <span class="cr-result-photo-size-label">Taille des photos (PDF/Impression)</span>
+            <div class="cr-result-photo-size-options">
+              <button type="button" class="cr-photo-size-btn" data-size="small" onclick="setCrResultPhotoSize('small')">Petite</button>
+              <button type="button" class="cr-photo-size-btn active" data-size="medium" onclick="setCrResultPhotoSize('medium')">Moyenne</button>
+              <button type="button" class="cr-photo-size-btn" data-size="large" onclick="setCrResultPhotoSize('large')">Grande</button>
+            </div>
+          </div>
 
           <div class="cr-result-actions-row">
             <button class="save-btn" type="button" style="width:100%;" onclick="sendCrResultByMail()">📧 Envoyer</button>
@@ -12880,8 +12949,12 @@ function openCompteRenduResultModal(data, content, options = {}) {
   // publiques cr-photos, aucun nouvel appel à /agent/redaction) dans
   // Copier / Imprimer / PDF / Envoyer, voir plus bas.
   crResultPhotoUrls = Array.isArray(data.photo_urls) ? data.photo_urls.slice() : [];
+  // Repart sur "Moyenne" à chaque nouveau compte rendu (jamais conservé
+  // d'un précédent) — voir CR_PHOTO_SIZE_RATIOS/setCrResultPhotoSize.
+  crResultPhotoSize = "medium";
 
   const photosEl = document.getElementById("cr-result-photos");
+  const photoSizeEl = document.getElementById("cr-result-photo-size");
   if (photosEl) {
     const photoUrls = crResultPhotoUrls;
     if (photoUrls.length) {
@@ -12891,9 +12964,16 @@ function openCompteRenduResultModal(data, content, options = {}) {
         .map((url, i) => '<img src="' + escapeHtmlForPrint(url) + '" alt="" class="cr-result-photo" onclick="openCrPhotoLightbox(' + i + ')" />')
         .join("");
       photosEl.style.display = "flex";
+      if (photoSizeEl) {
+        photoSizeEl.style.display = "flex";
+        photoSizeEl.querySelectorAll(".cr-photo-size-btn").forEach(btn => {
+          btn.classList.toggle("active", btn.getAttribute("data-size") === crResultPhotoSize);
+        });
+      }
     } else {
       photosEl.innerHTML = "";
       photosEl.style.display = "none";
+      if (photoSizeEl) photoSizeEl.style.display = "none";
     }
   }
 
@@ -13239,7 +13319,7 @@ function printCrResult() {
     ".cr-print-back{position:fixed;top:14px;left:14px;background:#0091c7;color:#fff;border:none;border-radius:20px;padding:10px 18px;font-size:14px;font-weight:600;font-family:inherit;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:999;}" +
     "@media print{.cr-print-back{display:none;}}" +
     ".cr-print-photos{margin-top:22px;display:flex;flex-direction:column;gap:14px;}" +
-    ".cr-print-photos img{width:100%;max-width:100%;border-radius:8px;display:block;}" +
+    ".cr-print-photos img{width:" + Math.round((CR_PHOTO_SIZE_RATIOS[crResultPhotoSize] || 1) * 100) + "%;max-width:100%;border-radius:8px;display:block;}" +
     "</style>" +
     "</head><body>" +
     "<button type=\"button\" class=\"cr-print-back\" onclick=\"window.close()\">← Retour</button>" +
@@ -13441,7 +13521,7 @@ async function downloadCrResultPDF() {
           if (format === "JPG") format = "JPEG";
 
           const ratio = dims.height / (dims.width || 1);
-          let imgWidth = maxWidth;
+          let imgWidth = maxWidth * (CR_PHOTO_SIZE_RATIOS[crResultPhotoSize] || 1);
           let imgHeight = imgWidth * ratio;
           const maxImgHeight = pageHeight - 150;
           if (imgHeight > maxImgHeight) {
