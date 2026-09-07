@@ -1176,6 +1176,48 @@ select.field-input {
   color: #fff;
 }
 
+/* "Autre version" (réécriture) — Aperçu Mail et Aperçu Rédaction
+   seulement, jamais le Compte rendu (contrat Grok : /agent/redaction et
+   /agent/mail acceptent rewrite_of / rewrite_of_body+rewrite_of_subject,
+   pas le CR). Mêmes pastilles que .cr-photo-size-btn pour rester cohérent
+   avec le reste de l'app. */
+.rewrite-toggle-btn {
+  margin-top: 10px;
+}
+.rewrite-choices {
+  margin-top: 10px;
+}
+.rewrite-choice-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.rewrite-choice-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+}
+.rewrite-choice-btn:disabled {
+  opacity: .5;
+  cursor: default;
+}
+/* Longueur sélectionnée dans la feuille "Autre version" (voir
+   selectRewriteMode) — même traitement que .cr-photo-size-btn.active. */
+.rewrite-choice-btn.active {
+  background: var(--clarity-accent, #0091c7);
+  border-color: var(--clarity-accent, #0091c7);
+  color: #fff;
+}
+.rewrite-note-input {
+  margin-top: 8px;
+}
+
 /* Aperçu plein écran d'une photo du compte rendu (miniature cliquée) +
    actions natives Enregistrer/Partager — voir openCrPhotoLightbox. Placé
    au-dessus de #cr-result-modal (z-index 999 comme les autres popups
@@ -1325,6 +1367,17 @@ body[data-theme="dark"] .cr-result-photo-size-label {
 body[data-theme="dark"] .cr-photo-size-btn {
   color: #f2f3f5;
   border-color: rgba(255, 255, 255, 0.08);
+}
+body[data-theme="dark"] .rewrite-choice-btn {
+  color: #f2f3f5;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+/* Spécificité : "body[data-theme=dark] .rewrite-choice-btn" (1 attribut +
+   1 classe) l'emporterait sinon sur ".rewrite-choice-btn.active" (2
+   classes) et repasserait le texte en #f2f3f5 même sélectionné — cette
+   règle, plus spécifique dans les deux dimensions, garde le texte blanc. */
+body[data-theme="dark"] .rewrite-choice-btn.active {
+  color: #fff;
 }
 body[data-theme="dark"] .cr-point-edit-input {
   color: #f2f3f5 !important;
@@ -10375,7 +10428,15 @@ body[data-theme="light"]::after {
       <textarea class="field-input" id="preview-mail-body" style="min-height:180px;"></textarea>
     </div>
 
-    <button class="save-btn" onclick="sendPreparedMail()" type="button">
+    <!-- "Autre version" (réécriture) : jamais sur le Compte rendu (voir
+         contrat Grok), seulement Mail et Rédaction. Ouvre la feuille
+         partagée #rewrite-sheet-modal (voir openRewriteSheet) — le
+         destinataire/Cc affichés ci-dessus ne sont jamais touchés. -->
+    <button class="sheet-btn rewrite-toggle-btn" type="button" id="mail-rewrite-toggle-btn" onclick="openRewriteSheet('mail')" style="width:100%;justify-content:center;">
+      ✨ Autre version
+    </button>
+
+    <button class="save-btn" onclick="sendPreparedMail()" type="button" style="margin-top:14px;">
       📤 Envoyer le mail
     </button>
 
@@ -10424,7 +10485,15 @@ body[data-theme="light"]::after {
       <textarea class="field-input" id="simple-agent-result-content"></textarea>
     </div>
 
-    <button class="save-btn" onclick="copySimpleAgentResult()" type="button">
+    <!-- "Autre version" : uniquement pour Rédaction (jamais Assistant, ni
+         Compte rendu qui a sa propre popup) — voir openSimpleAgentPreview,
+         simpleAgentPreviewAgentName. Ouvre la feuille partagée
+         #rewrite-sheet-modal (voir openRewriteSheet). -->
+    <button class="sheet-btn rewrite-toggle-btn" type="button" id="simple-agent-rewrite-toggle-btn" onclick="openRewriteSheet('redaction')" style="width:100%;justify-content:center;display:none;">
+      ✨ Autre version
+    </button>
+
+    <button class="save-btn" onclick="copySimpleAgentResult()" type="button" style="margin-top:14px;">
       📋 Copier le texte
     </button>
 
@@ -10434,6 +10503,49 @@ body[data-theme="light"]::after {
 
     <button class="sheet-btn" onclick="closeSimpleAgentPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
       Fermer
+    </button>
+  </div>
+</div>
+
+  <!-- Feuille "Autre version" partagée entre l'aperçu Mail et l'aperçu
+       Rédaction (jamais le Compte rendu) — voir openRewriteSheet. Longueur
+       et Style d'écriture sont tous les deux facultatifs et indépendants :
+       un changement de style seul suffit à déclencher une réécriture, même
+       sans choisir Plus court/Plus développé/Plus simple. -->
+  <div id="rewrite-sheet-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeRewriteSheet()"></div>
+
+  <div class="mail-choice-box">
+    <div class="mail-choice-title">Autre version</div>
+    <div class="mail-choice-subtitle">Choisissez une longueur et/ou un style, puis appliquez.</div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Longueur <span style="font-weight:400;color:var(--clarity-text-tertiary);">(facultatif)</span></div>
+      <div class="rewrite-choice-options">
+        <button class="rewrite-choice-btn" type="button" data-mode="shorter" onclick="selectRewriteMode('shorter')">Plus court</button>
+        <button class="rewrite-choice-btn" type="button" data-mode="longer" onclick="selectRewriteMode('longer')">Plus développé</button>
+        <button class="rewrite-choice-btn" type="button" data-mode="simpler" onclick="selectRewriteMode('simpler')">Plus simple</button>
+      </div>
+    </div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Style d'écriture <span style="font-weight:400;color:var(--clarity-text-tertiary);">(facultatif)</span></div>
+      <select class="field-input" id="rewrite-sheet-style-select" onchange="updateRewriteApplyButtonState()">
+        <option value="">Ne pas changer</option>
+      </select>
+    </div>
+
+    <div class="field-group" style="margin-top:14px;">
+      <div class="field-label">Préciser <span style="font-weight:400;color:var(--clarity-text-tertiary);">(facultatif)</span></div>
+      <input class="field-input" type="text" id="rewrite-sheet-note" oninput="updateRewriteApplyButtonState()" placeholder="Ex : plus poli, en anglais…">
+    </div>
+
+    <button class="save-btn" type="button" id="rewrite-sheet-apply-btn" onclick="applyRewriteSheet()" disabled style="margin-top:14px;">
+      ✨ Appliquer
+    </button>
+
+    <button class="sheet-btn" onclick="closeRewriteSheet()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+      Annuler
     </button>
   </div>
 </div>
@@ -16400,6 +16512,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
       title,
       content,
       modalTitle: "Clarity",
+      agentName: effectiveAgent,
       // "Poser une autre question" : rouvre la popup avec champ texte +
       // micro (comme le bouton d'action rapide), pas le micro plein écran
       // de l'orchestrateur qui renvoyait l'utilisateur à l'accueil.
@@ -22041,6 +22154,13 @@ updateStatProgresses();
   // rouvrir la carte concernée. Réinitialisé à chaque ouverture de la popup.
   let simpleAgentRelaunch = null;
 
+  // Quel agent a produit ce texte (voir data.agentName, passé par
+  // callSimpleAgent/startSimpleAgentDictation/sendTypedInstruction) : sert
+  // uniquement à savoir si "Autre version" doit apparaître — Rédaction
+  // seulement, jamais Assistant (contrat Grok : /agent/redaction accepte
+  // rewrite_of, mais ce n'est pas le rôle de l'Assistant).
+  let simpleAgentPreviewAgentName = null;
+
   function openSimpleAgentPreview(data) {
   const modal = document.getElementById("simple-agent-preview-modal");
   const title = document.getElementById("simple-agent-modal-title");
@@ -22068,6 +22188,10 @@ updateStatProgresses();
 
   simpleAgentRelaunch = typeof data.onRelaunch === "function" ? data.onRelaunch : null;
   if (relaunchBtn) relaunchBtn.style.display = simpleAgentRelaunch ? "flex" : "none";
+
+  simpleAgentPreviewAgentName = data.agentName || null;
+  const rewriteToggleBtn = document.getElementById("simple-agent-rewrite-toggle-btn");
+  if (rewriteToggleBtn) rewriteToggleBtn.style.display = simpleAgentPreviewAgentName === "redaction" ? "flex" : "none";
 
     requestAnimationFrame(() => {
   const box = modal.querySelector(".mail-choice-box");
@@ -22457,6 +22581,11 @@ function openMailPreview(data, instruction, backTarget, headerTitle) {
     ccSuggestions.innerHTML = "";
   }
 
+  // "Autre version" repart toujours fermé à chaque nouvel aperçu mail —
+  // la feuille elle-même (openRewriteSheet) se réinitialise à chaque
+  // ouverture, donc il suffit ici de s'assurer qu'elle est bien fermée.
+  closeRewriteSheet();
+
   const modal = document.getElementById("mail-preview-modal");
 
   modal.style.display = "block";
@@ -22482,6 +22611,231 @@ function openMailPreview(data, instruction, backTarget, headerTitle) {
     }
   });
 }
+
+// ─── "AUTRE VERSION" (réécriture) — FEUILLE PARTAGÉE MAIL + RÉDACTION ──
+// Une seule feuille (#rewrite-sheet-modal) pour les deux aperçus, jamais le
+// Compte rendu (backend n'a pas ce contrat côté CR). Longueur (Plus court/
+// Plus développé/Plus simple) ET Style d'écriture sont facultatifs et
+// indépendants l'un de l'autre : un changement de style seul suffit à
+// déclencher la réécriture, même sans choisir de longueur — rewrite_mode
+// et style_key ne sont donc envoyés que s'ils ont été explicitement
+// choisis, jamais avec une valeur par défaut.
+// Contrats Grok :
+//   Rédaction (POST /agent/redaction) : rewrite_of + rewrite_mode? +
+//     style_key? + rewrite_note?  → { success, message, content, rewritten }
+//   Mail (POST /agent/mail) : rewrite_of_body + rewrite_of_subject +
+//     rewrite_mode? + style_key? + rewrite_note? + to/to_name (contexte,
+//     jamais modifié) → { success, subject, body, rewritten }
+let rewriteSheetContext = null; // "mail" | "redaction"
+let rewriteSheetSelectedMode = null;
+let rewriteSheetBusy = false;
+
+function openRewriteSheet(context) {
+  rewriteSheetContext = context;
+  rewriteSheetSelectedMode = null;
+  rewriteSheetBusy = false;
+
+  document.querySelectorAll("#rewrite-sheet-modal .rewrite-choice-btn").forEach(btn => {
+    btn.classList.remove("active");
+  });
+  const note = document.getElementById("rewrite-sheet-note");
+  if (note) note.value = "";
+
+  populateRewriteSheetStyles();
+  updateRewriteApplyButtonState();
+
+  const modal = document.getElementById("rewrite-sheet-modal");
+  if (modal) modal.style.display = "block";
+}
+window.openRewriteSheet = openRewriteSheet;
+
+function closeRewriteSheet() {
+  const modal = document.getElementById("rewrite-sheet-modal");
+  if (modal) modal.style.display = "none";
+}
+window.closeRewriteSheet = closeRewriteSheet;
+
+// Même style d'écriture que la fiche contact (voir
+// populateContactWritingStyleSelect) : "Ne pas changer" (valeur "", par
+// défaut) reste distinct de "Aucun style particulier" (valeur "none", un
+// choix actif qui redemande explicitement un texte neutre) — seule une
+// sélection différente de "" part dans le payload (style_key).
+async function populateRewriteSheetStyles() {
+  const select = document.getElementById("rewrite-sheet-style-select");
+  if (!select || !currentUser) return;
+
+  if (!writingStylesCache.length) {
+    try {
+      const response = await fetch(STYLES_API_URL + "/" + currentUser.id + "?t=" + Date.now(), { cache: "no-store" });
+      const data = await response.json();
+      writingStylesCache = (data && data.success && Array.isArray(data.styles)) ? data.styles : [];
+    } catch (e) {
+      // Pas grave si ça échoue : le style reste sur "Ne pas changer".
+    }
+  }
+
+  select.innerHTML =
+    '<option value="">Ne pas changer</option>' +
+    '<option value="none">Aucun style particulier</option>' +
+    writingStylesCache.map(function (s) {
+      return '<option value="' + s.key + '">' + (s.label || s.key).replace(/</g, "&lt;") + "</option>";
+    }).join("");
+  select.value = "";
+}
+
+function selectRewriteMode(mode) {
+  rewriteSheetSelectedMode = rewriteSheetSelectedMode === mode ? null : mode;
+  document.querySelectorAll("#rewrite-sheet-modal .rewrite-choice-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-mode") === rewriteSheetSelectedMode);
+  });
+  updateRewriteApplyButtonState();
+}
+window.selectRewriteMode = selectRewriteMode;
+
+// "Appliquer" ne s'active que si au moins un des 3 champs a effectivement
+// été renseigné — jamais un appel réseau "pour rien" avec un texte
+// identique en retour.
+function updateRewriteApplyButtonState() {
+  const btn = document.getElementById("rewrite-sheet-apply-btn");
+  if (!btn) return;
+  const styleVal = document.getElementById("rewrite-sheet-style-select")?.value || "";
+  const noteVal = document.getElementById("rewrite-sheet-note")?.value.trim() || "";
+  btn.disabled = !(rewriteSheetSelectedMode || styleVal || noteVal);
+}
+window.updateRewriteApplyButtonState = updateRewriteApplyButtonState;
+
+function setRewriteSheetBusy(busy) {
+  rewriteSheetBusy = busy;
+  document.querySelectorAll("#rewrite-sheet-modal .rewrite-choice-btn").forEach(btn => {
+    btn.disabled = busy;
+  });
+  const select = document.getElementById("rewrite-sheet-style-select");
+  if (select) select.disabled = busy;
+  const applyBtn = document.getElementById("rewrite-sheet-apply-btn");
+  if (applyBtn) {
+    applyBtn.textContent = busy ? "✨ Réécriture..." : "✨ Appliquer";
+    if (!busy) updateRewriteApplyButtonState();
+    else applyBtn.disabled = true;
+  }
+}
+
+async function applyRewriteSheet() {
+  if (rewriteSheetBusy) return;
+
+  const styleVal = document.getElementById("rewrite-sheet-style-select")?.value || "";
+  const noteVal = document.getElementById("rewrite-sheet-note")?.value.trim() || "";
+
+  if (!rewriteSheetSelectedMode && !styleVal && !noteVal) {
+    showToast("Choisissez au moins une longueur, un style ou précisez une demande", "error");
+    return;
+  }
+
+  const payload = {
+    user_id: currentUser.id,
+    request_id: crypto.randomUUID()
+  };
+  if (rewriteSheetSelectedMode) payload.rewrite_mode = rewriteSheetSelectedMode;
+  if (styleVal) payload.style_key = styleVal;
+  if (noteVal) payload.rewrite_note = noteVal;
+
+  let webhookUrl;
+  let contentBefore;
+
+  if (rewriteSheetContext === "mail") {
+    const subjectInput = document.getElementById("preview-mail-subject");
+    const bodyInput = document.getElementById("preview-mail-body");
+    contentBefore = bodyInput ? bodyInput.value.trim() : "";
+
+    if (!contentBefore) {
+      showToast("Texte vide", "error");
+      return;
+    }
+
+    webhookUrl = AGENT_MAIL_WEBHOOK_URL;
+    payload.rewrite_of_body = contentBefore;
+    payload.rewrite_of_subject = subjectInput ? subjectInput.value.trim() : "";
+    // Contexte seulement (destinataire jamais modifié par cet appel) —
+    // valeur brute (sans "Nom (email)") comme pour le vrai envoi, voir
+    // rawEmailListFromDisplay dans sendPreparedMail.
+    payload.to = rawEmailListFromDisplay(document.getElementById("preview-mail-to")?.value.trim() || "");
+    payload.to_name = currentPreparedMail ? currentPreparedMail.contact_name || "" : "";
+  } else if (rewriteSheetContext === "redaction") {
+    const contentEl = document.getElementById("simple-agent-result-content");
+    contentBefore = contentEl ? contentEl.value.trim() : "";
+
+    if (!contentBefore) {
+      showToast("Texte vide", "error");
+      return;
+    }
+
+    webhookUrl = REDACTION_WEBHOOK_URL;
+    payload.rewrite_of = contentBefore;
+  } else {
+    return;
+  }
+
+  setRewriteSheetBusy(true);
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await response.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { success: false };
+    }
+
+    if (!response.ok || data.success === false) {
+      showToast(data.message || "Impossible de générer une autre version", "error");
+      return;
+    }
+
+    if (rewriteSheetContext === "mail") {
+      const subjectInput = document.getElementById("preview-mail-subject");
+      const bodyInput = document.getElementById("preview-mail-body");
+      if (subjectInput && typeof data.subject === "string") subjectInput.value = data.subject;
+      if (bodyInput && typeof data.body === "string") bodyInput.value = data.body;
+    } else {
+      const contentEl = document.getElementById("simple-agent-result-content");
+      if (contentEl && typeof data.content === "string") {
+        contentEl.value = data.content;
+        // Même recalcul de hauteur qu'à l'ouverture initiale (voir
+        // openSimpleAgentPreview) : sans ça, une version bien plus longue
+        // ou plus courte laisserait un texte coupé ou un grand vide.
+        contentEl.style.height = "auto";
+        const maxContentHeight = window.innerHeight * 0.45;
+        contentEl.style.height = Math.min(contentEl.scrollHeight, maxContentHeight) + "px";
+        contentEl.scrollTop = 0;
+      }
+    }
+
+    showToast("Nouvelle version prête");
+    closeRewriteSheet();
+
+    // Compte comme une action de rédaction (même famille que le reste des
+    // réécritures), jamais comme un envoi de mail — aucun mail n'est
+    // réellement parti ici.
+    const logParts = [];
+    if (rewriteSheetSelectedMode) logParts.push(rewriteSheetSelectedMode);
+    if (styleVal) logParts.push("style:" + styleVal);
+    await incrementActions();
+    await loadSubscription();
+    await saveActionLog("redaction", "Autre version (" + rewriteSheetContext + ") : " + (logParts.join(", ") || "note seule"), "success");
+    await loadActionCounter();
+  } catch (e) {
+    console.error("Erreur réécriture (" + rewriteSheetContext + "):", e);
+    showToast("Impossible de générer une autre version", "error");
+  } finally {
+    setRewriteSheetBusy(false);
+  }
+}
+window.applyRewriteSheet = applyRewriteSheet;
 
 // Bouton "← Retour" du mail-preview-modal (visible seulement quand
 // mailPreviewBackTarget est défini, cf. openMailPreview) : referme
@@ -23317,6 +23671,7 @@ console.log("MESSAGE =", message);
           content,
           modalTitle: config.modalTitle,
           modalSubtitle: config.modalSubtitle,
+          agentName: config.agent,
           // Comme pour callSimpleAgent() : rouvre la popup texte + micro
           // (bouton d'action rapide), pas le micro plein écran qui
           // renvoyait l'utilisateur à l'accueil.
@@ -24387,6 +24742,7 @@ async function callSimpleAgent(
       title: data.title || "Réponse",
       content,
       modalTitle: "Clarity",
+      agentName: agentName,
       // Rouvre la popup texte + micro (bouton d'action rapide), pas le
       // micro plein écran de l'orchestrateur.
       onRelaunch: () => openQuickTextModal(agentName === "redaction" ? "redaction" : "assistant", true)
