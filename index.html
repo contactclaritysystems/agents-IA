@@ -275,9 +275,14 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
 }
 .proof-in { max-width: 900px; margin: 0 auto; }
 .proof-eye { text-align: center; margin-bottom: 26px; }
-.proof-list { list-style: none; display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+/* flex (au lieu de grid) : avec 4 cartes, la dernière ligne n'a qu'un seul
+   élément — grid l'aurait laissé collé à gauche (colonne 1), alors que
+   flex-wrap + justify-content:center le centre automatiquement, sans avoir
+   à traiter ce cas à part si une 5e carte est ajoutée plus tard. */
+.proof-list { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 18px; }
 .proof-item {
   display: flex; align-items: flex-start; gap: 10px;
+  flex: 0 1 calc((100% - 36px) / 3);
   font-size: .92rem; font-weight: 500; color: var(--text);
   background: rgba(255,255,255,.7); border: 1px solid var(--line);
   border-radius: 16px; padding: 16px 18px; line-height: 1.5;
@@ -496,7 +501,7 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   nav { padding: 0 22px; }
   .atile { flex-basis: calc((100% - 14px) / 2); }
   .steps { grid-template-columns: repeat(3,1fr); }
-  .proof-list { grid-template-columns: 1fr; }
+  .proof-item { flex-basis: 100%; }
   .pgrid { grid-template-columns: 1fr; }
 }
 .mobile-login {
