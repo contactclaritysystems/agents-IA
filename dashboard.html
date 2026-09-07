@@ -13888,6 +13888,16 @@ window.closeCrChecklistModal = closeCrChecklistModal;
 window.submitCrChecklist = submitCrChecklist;
 
 function submitCompteRendu() {
+  // Si l'utilisateur a tapé/dicté un point mais n'a pas cliqué sur
+  // "+ Ajouter ce point" avant "Créer le compte rendu", on l'ajoute nous-
+  // mêmes ici (même logique que addCrPoint()) avant de continuer : il ne
+  // doit pas être obligé de cliquer + d'abord, ni perdre ce dernier point
+  // resté dans le champ.
+  const pendingPointText = (document.getElementById("cr-point-input")?.value || "").trim();
+  if (pendingPointText) {
+    addCrPoint();
+  }
+
   // Sujet = titre du compte rendu, toujours demandé (contrairement aux
   // champs facultatifs ci-dessous, il ne sert à rien d'envoyer un compte
   // rendu sans titre). C'est la SEULE condition qui active le bouton (voir
