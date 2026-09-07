@@ -21243,7 +21243,12 @@ function syncVoiceButtons() {
 // pour ne plus jamais risquer de son manquant sur ces moments-là.
 const VOICE_LINE_NAMES = [
   "mail-envoye",
-  "envoi-annule"
+  "envoi-annule",
+  // Envoi du compte rendu depuis cr-result-modal (voir sendPreparedMail,
+  // isCrResultSend) : nécessite un fichier compte-rendu-envoye.mp3
+  // déposé sur le site (même dossier que mail-envoye.mp3), à faire
+  // enregistrer/héberger côté Grok — ce fichier n'existe pas encore.
+  "compte-rendu-envoye"
 ];
 const voiceAudioCache = {};
 let currentVoiceAudio = null;
@@ -27793,13 +27798,21 @@ function isValidEmailList(value) {
 }
 
   async function sendPreparedMail() {
+    // Capturé ICI, tout en haut : mailPreviewBackTarget est remis à null par
+    // closeMailPreview(false) plus bas (avant même le toast de succès), donc
+    // impossible de s'y fier une fois l'envoi terminé. Sert à distinguer
+    // "Envoyer" depuis la popup résultat du compte rendu (toast + voix
+    // dédiés, voir sendCrResultByMail) d'un vrai envoi de mail classique
+    // (toast + voix inchangés).
+    const isCrResultSend = mailPreviewBackTarget === "cr-result-modal";
+
     // Débloque "mail-envoyé" ICI, tout en haut, en réaction directe et
     // synchrone à ce clic — le son réel n'arrivera que ~550ms plus tard
     // (voir plus bas), largement après tout appel réseau : sans ce
     // laissez-passer pris pendant qu'on est encore "dans" le clic, un
     // éventuel repli <audio> (si Web Audio a un accroc à ce moment-là)
     // risquait d'être bloqué silencieusement par Safari.
-    blessVoiceLine("mail-envoye");
+    blessVoiceLine(isCrResultSend ? "compte-rendu-envoye" : "mail-envoye");
 
     // Les champs affichent "Nom (email@exemple.com)" pour éviter les
     // erreurs de destinataire, mais c'est l'email brut, sans le nom, qui
@@ -27971,7 +27984,7 @@ const payload = {
     // l'animation "Envoi en cours..." un court instant avant de refermer
     // la popup. Le son, lui, n'a aucune raison d'attendre : dès qu'on
     // sait que c'est un succès, on le joue tout de suite.
-    playVoiceLine("mail-envoye");
+    playVoiceLine(isCrResultSend ? "compte-rendu-envoye" : "mail-envoye");
 
 setTimeout(async () => {
   closeMailPreview(false);
@@ -27985,12 +27998,12 @@ setTimeout(async () => {
   const box = document.querySelector(".page-view.active #dictation-box");
   if (box) {
   setDictationBoxState(box, "success");
-  box.innerHTML = "✅ Mail envoyé avec succès";
+  box.innerHTML = isCrResultSend ? "✅ Compte rendu envoyé" : "✅ Mail envoyé avec succès";
 
   autoHideDictationBox(box);
 }
 
-  showToast("Mail envoyé");
+  showToast(isCrResultSend ? "Votre compte rendu est envoyé" : "Mail envoyé");
 
   // Mail vraiment envoyé avec succès : c'est SEULEMENT maintenant que
   // le micro doit redevenir cliquable.
