@@ -1610,6 +1610,16 @@ body[data-theme="dark"] .cr-point-edit-input {
   z-index: 9999;
 }
 
+/* La feuille "Autre version" s'ouvre PAR-DESSUS l'aperçu Mail ou Rédaction
+   (eux-mêmes déjà à z-index:9999) : sans position:fixed + z-index dédiés
+   ici, elle restait dans le flux normal de la page et se retrouvait
+   cachée derrière la popup déjà ouverte au lieu de passer devant. */
+#rewrite-sheet-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+}
+
 .mail-choice-title {
   font-size: 17px;
   font-weight: 800;
@@ -10428,16 +10438,16 @@ body[data-theme="light"]::after {
       <textarea class="field-input" id="preview-mail-body" style="min-height:180px;"></textarea>
     </div>
 
+    <button class="save-btn" onclick="sendPreparedMail()" type="button" style="margin-top:14px;">
+      📤 Envoyer le mail
+    </button>
+
     <!-- "Autre version" (réécriture) : jamais sur le Compte rendu (voir
          contrat Grok), seulement Mail et Rédaction. Ouvre la feuille
          partagée #rewrite-sheet-modal (voir openRewriteSheet) — le
          destinataire/Cc affichés ci-dessus ne sont jamais touchés. -->
-    <button class="sheet-btn rewrite-toggle-btn" type="button" id="mail-rewrite-toggle-btn" onclick="openRewriteSheet('mail')" style="width:100%;justify-content:center;">
+    <button class="sheet-btn rewrite-toggle-btn" type="button" id="mail-rewrite-toggle-btn" onclick="openRewriteSheet('mail')" style="width:100%;justify-content:center;margin-top:10px;">
       ✨ Autre version
-    </button>
-
-    <button class="save-btn" onclick="sendPreparedMail()" type="button" style="margin-top:14px;">
-      📤 Envoyer le mail
     </button>
 
     <button class="sheet-btn" onclick="closeMailPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
@@ -20956,7 +20966,8 @@ const CLARITY_MODAL_IDS = [
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
-  "quick-task-modal", "compte-rendu-modal", "cr-result-modal"
+  "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
+  "rewrite-sheet-modal"
 ];
 
 let clarityScrollLockY = 0;
