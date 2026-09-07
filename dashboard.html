@@ -12242,6 +12242,15 @@ function startChecklistTextDictationFor(inputEl, onDone) {
   let finalText = "";
   crChecklistTextRecognition = recognition;
 
+  // Pas d'icône micro dédiée pour ce champ (contrairement au micro
+  // principal du formulaire) : sans retour, l'utilisateur ne sait pas si
+  // le micro écoute vraiment déjà et peut commencer à parler trop tôt. Le
+  // toast fait ce retour, déclenché seulement au vrai début d'écoute
+  // (onstart), pas juste après l'appel à start() qui est asynchrone.
+  recognition.onstart = function () {
+    showToast("🎙️ Micro prêt");
+  };
+
   recognition.onresult = function (event) {
     let interimText = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -12997,6 +13006,20 @@ async function toggleCrPointDictation() {
 
     crDictationRecognition = recognition;
 
+    // L'icône micro passait "actif" (is-recording) tout de suite après
+    // l'appel à recognition.start(), qui est asynchrone : sur un appareil
+    // lent ou juste après une précédente dictée (bug iOS connu), le micro
+    // n'écoutait pas encore vraiment pendant que l'icône disait déjà le
+    // contraire — l'utilisateur pouvait commencer à parler dans le vide.
+    // On attend maintenant le vrai évènement "onstart" du navigateur.
+    // crMicRetryCount === 0 : seulement la toute première tentative d'une
+    // session (pas les relances silencieuses sur mobile, déjà invisibles).
+    recognition.onstart = function () {
+      if (myGeneration !== crRecognitionGeneration) return;
+      if (micBtn) micBtn.classList.add("is-recording");
+      if (crMicRetryCount === 0) showToast("🎙️ Micro prêt");
+    };
+
     recognition.onresult = function (event) {
       if (myGeneration !== crRecognitionGeneration) return;
       crHasReceivedAnyResult = true;
@@ -13062,7 +13085,6 @@ async function toggleCrPointDictation() {
 
       try {
         recognition.start();
-        if (micBtn) micBtn.classList.add("is-recording");
 
         if (isMobileDevice()) {
           clearTimeout(crWatchdogTimer);
@@ -13258,7 +13280,7 @@ function openCrPhotoLightbox(index) {
         <button type="button" class="cr-photo-lightbox-close" onclick="closeCrPhotoLightbox()" aria-label="Fermer">✕</button>
         <img id="cr-photo-lightbox-img" src="" alt="" />
         <div class="cr-photo-lightbox-actions">
-          <button type="button" class="sheet-btn" style="justify-content:center;" onclick="downloadCrPhoto()">💾 Enregistrer</button>
+          <button type="button" class="sheet-btn" id="cr-photo-lightbox-save-btn" style="justify-content:center;" onclick="downloadCrPhoto()">💾 Enregistrer</button>
           <button type="button" class="sheet-btn" style="justify-content:center;" onclick="shareCrPhoto()">📤 Partager</button>
         </div>
       </div>
@@ -13268,6 +13290,17 @@ function openCrPhotoLightbox(index) {
 
   crPhotoLightboxUrl = url;
   document.getElementById("cr-photo-lightbox-img").src = url;
+
+  // Sur iOS, "Enregistrer" ouvre désormais la même feuille de partage que
+  // "Partager" (voir downloadCrPhoto — Safari ignore l'attribut de
+  // téléchargement direct) : avoir deux boutons identiques prête à
+  // confusion, donc on masque "Enregistrer" et on garde uniquement
+  // "Partager" (qui propose déjà "Enregistrer l'image" dans sa feuille).
+  // Inchangé sur Android/desktop, où "Enregistrer" télécharge vraiment le
+  // fichier directement, contrairement à "Partager".
+  const saveBtn = document.getElementById("cr-photo-lightbox-save-btn");
+  if (saveBtn) saveBtn.style.display = isIOSDevice() ? "none" : "inline-flex";
+
   modal.style.display = "flex";
 }
 window.openCrPhotoLightbox = openCrPhotoLightbox;
@@ -23554,6 +23587,19 @@ progressIcon: "✨",
     rec.maxAlternatives = 1;
     recognition = rec;
 
+    // Le placeholder passait à "Je vous écoute…" juste après l'appel
+    // asynchrone à rec.start(), avant même la confirmation réelle du
+    // navigateur que l'écoute a commencé — sur mobile notamment, où
+    // delayBeforeMic() + le démarrage réel du micro peuvent prendre un peu
+    // de temps, l'utilisateur pouvait commencer à parler dans le vide. On
+    // n'affiche donc ce texte (et le toast, uniquement à la 1re tentative,
+    // pas aux relances silencieuses) qu'au vrai évènement "onstart".
+    rec.onstart = function () {
+      if (myGeneration !== recognitionGeneration) return;
+      if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
+      if (micRetryCount === 0) showToast("🎙️ Micro prêt");
+    };
+
     rec.onresult = function(event) {
       if (myGeneration !== recognitionGeneration) return;
       hasReceivedAnyResult = true;
@@ -23951,7 +23997,6 @@ console.log("MESSAGE =", message);
 
       try {
         rec.start();
-        if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
         clearTimeout(silenceTimer);
         silenceTimer = setTimeout(() => { try { rec.stop(); } catch(e) {} }, 9000);
 
@@ -24429,6 +24474,18 @@ async function toggleQuickMailDictation() {
 
     quickMailDictationRecognition = recognition;
 
+    // Même correctif que la dictée principale du compte rendu (voir
+    // startCrAttempt) : l'icône micro n'affiche "actif" qu'une fois
+    // l'écoute réellement démarrée (onstart), pas juste après l'appel
+    // asynchrone à start() — sinon l'utilisateur peut parler dans le vide
+    // pendant que le micro n'écoute pas encore vraiment. Toast seulement
+    // sur la toute première tentative (pas les relances silencieuses).
+    recognition.onstart = function () {
+      if (myGeneration !== quickMailRecognitionGeneration) return;
+      if (micBtn) micBtn.classList.add("is-recording");
+      if (quickMailMicRetryCount === 0) showToast("🎙️ Micro prêt");
+    };
+
     recognition.onresult = function(event) {
       if (myGeneration !== quickMailRecognitionGeneration) return;
       quickMailHasReceivedAnyResult = true;
@@ -24484,7 +24541,6 @@ async function toggleQuickMailDictation() {
 
       try {
         recognition.start();
-        if (micBtn) micBtn.classList.add("is-recording");
 
         if (isMobileDevice()) {
           clearTimeout(quickMailWatchdogTimer);
@@ -24571,6 +24627,17 @@ async function toggleQuickTextDictation() {
 
     quickTextDictationRecognition = recognition;
 
+    // Même correctif que la dictée principale du compte rendu (voir
+    // startCrAttempt) : l'icône micro n'affiche "actif" qu'une fois
+    // l'écoute réellement démarrée (onstart), pas juste après l'appel
+    // asynchrone à start(). Toast seulement sur la toute première
+    // tentative (pas les relances silencieuses sur mobile).
+    recognition.onstart = function () {
+      if (myGeneration !== quickTextRecognitionGeneration) return;
+      if (micBtn) micBtn.classList.add("is-recording");
+      if (quickTextMicRetryCount === 0) showToast("🎙️ Micro prêt");
+    };
+
     recognition.onresult = function (event) {
       if (myGeneration !== quickTextRecognitionGeneration) return;
       quickTextHasReceivedAnyResult = true;
@@ -24622,7 +24689,6 @@ async function toggleQuickTextDictation() {
 
       try {
         recognition.start();
-        if (micBtn) micBtn.classList.add("is-recording");
 
         if (isMobileDevice()) {
           clearTimeout(quickTextWatchdogTimer);
