@@ -17141,35 +17141,30 @@ function openSmtpConfigModal() {
   }
 }
 
-// Préremplit la popup SMTP depuis la ligne user_integrations existante
-// (provider = smtp, filtrée par user_id — même clé fiable que pour la
-// déconnexion, voir disconnectGmail) au lieu de forcer une resaisie
-// complète à chaque ouverture. Le mot de passe n'est JAMAIS rechargé
-// (on ne réaffiche pas un secret déjà stocké côté backend) : le champ
-// reste vide, avec un indice visuel s'il existe déjà une connexion, pour
-// signaler qu'il n'est pas obligatoire de le retaper si on ne le change
-// pas. S'il n'y a pas de ligne (ou en cas d'erreur) : champs vides.
-//
-// Pour la protection de l'email/mot de passe : pas de popup Face ID/Touch
-// ID custom (tentative précédente rejetée par l'utilisateur — trop
-// intrusif et ça matchait le mauvais compte). On s'appuie à la place sur
-// le gestionnaire de mots de passe natif du navigateur (Safari/Chrome) :
-// les champs #smtp-email / #smtp-password ont les attributs
-// name="username"/"password" + autocomplete="username"/"current-password"
-// (voir HTML du modal), ce qui permet à Safari de proposer nativement les
-// identifiants enregistrés (petite pastille/icône native au clic sur le
-// champ, confirmée par Touch ID/Face ID géré entièrement par le
-// navigateur/Trousseau — pas par notre code).
-async function prefillSmtpConfigFromExistingConnection() {
+// Popup SMTP : tout reste caché à l'ouverture (voir resetSmtpConfigFields).
+// La révélation (serveur, port, sécurité — jamais le mot de passe) ne se
+// déclenche QUE lorsque l'utilisateur interagit avec le champ email ou mot
+// de passe et que le navigateur (Safari/Chrome) y insère une valeur — que
+// ce soit en tapant, ou en choisissant la suggestion native de son
+// gestionnaire de mots de passe (la pastille avec Touch ID/Face ID gérée
+// entièrement par le navigateur/Trousseau, jamais par notre code — voir
+// discussion : un site web ne peut pas recréer cette pastille lui-même,
+// seulement bénéficier de l'autofill natif via les attributs
+// autocomplete="username"/"current-password" déjà posés sur ces champs
+// dans le HTML du modal).
+let smtpNonSecretPrefillDone = false;
+let smtpNonSecretPrefillInFlight = false;
+
+// Etat par défaut, réinitialisé à chaque ouverture de la popup : jamais de
+// valeurs d'une session ou d'un provider précédent qui traînent dans le
+// formulaire, et on réarme la détection d'autofill pour cette ouverture.
+function resetSmtpConfigFields() {
   const emailInput = document.getElementById("smtp-email");
   const hostInput = document.getElementById("smtp-host");
   const portInput = document.getElementById("smtp-port");
   const securitySelect = document.getElementById("smtp-security");
   const passwordInput = document.getElementById("smtp-password");
 
-  // Etat par défaut, réinitialisé à chaque ouverture (avant même de
-  // savoir si une ligne existe) : jamais de valeurs d'une session ou
-  // d'un provider précédent qui traînent dans le formulaire.
   if (emailInput) emailInput.value = "";
   if (hostInput) hostInput.value = "";
   if (portInput) portInput.value = "";
@@ -17179,7 +17174,24 @@ async function prefillSmtpConfigFromExistingConnection() {
     passwordInput.placeholder = "Mot de passe";
   }
 
+  smtpNonSecretPrefillDone = false;
+}
+
+// Va chercher la ligne user_integrations (provider = smtp, filtrée par
+// user_id — même clé fiable que pour la déconnexion, voir disconnectGmail)
+// et remplit serveur/port/sécurité. Le mot de passe n'est JAMAIS rechargé
+// (on ne réaffiche pas un secret déjà stocké côté backend) : le champ
+// reste vide, avec un indice visuel s'il existe déjà une connexion. Le
+// champ email n'est pas touché ici : à cet instant il contient déjà ce que
+// l'utilisateur/le navigateur y a mis (tapé ou autofillé), on ne l'écrase
+// pas.
+async function fetchAndApplySmtpNonSecretPrefill() {
   if (!currentUser || !currentUser.id) return;
+
+  const hostInput = document.getElementById("smtp-host");
+  const portInput = document.getElementById("smtp-port");
+  const securitySelect = document.getElementById("smtp-security");
+  const passwordInput = document.getElementById("smtp-password");
 
   try {
     const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
@@ -17207,21 +17219,68 @@ async function prefillSmtpConfigFromExistingConnection() {
 
     const row = rows[0];
 
-    // "email / account_email" (contrat Grok) : selon la ligne, l'adresse
-    // connectée peut être dans l'un ou l'autre champ — on prend le
-    // premier renseigné.
-    if (emailInput) emailInput.value = row.email || row.account_email || "";
     if (hostInput) hostInput.value = row.smtp_host || "";
     if (portInput) portInput.value = row.smtp_port != null ? String(row.smtp_port) : "";
     if (securitySelect && row.smtp_security) securitySelect.value = row.smtp_security;
 
+    // On ne touche à la valeur du mot de passe que s'il est encore vide :
+    // si c'est justement en tapant dedans que l'utilisateur a déclenché
+    // cette récupération, on ne doit surtout pas effacer ce qu'il est en
+    // train de saisir.
     if (passwordInput) {
-      passwordInput.value = "";
+      if (!passwordInput.value) passwordInput.value = "";
       passwordInput.placeholder = "•••••••• (déjà enregistré)";
     }
   } catch (e) {
     console.error("Préremplissage SMTP impossible :", e);
   }
+}
+
+// Déclenché par un événement "input" natif sur email/mot de passe (frappe
+// manuelle OU autofill du navigateur) : une seule récupération par
+// ouverture de popup (smtpNonSecretPrefillDone), jamais en double si
+// l'utilisateur tape plusieurs caractères.
+async function handleSmtpCredentialFieldInput() {
+  if (smtpNonSecretPrefillDone || smtpNonSecretPrefillInFlight) return;
+  smtpNonSecretPrefillInFlight = true;
+  try {
+    await fetchAndApplySmtpNonSecretPrefill();
+    smtpNonSecretPrefillDone = true;
+  } finally {
+    smtpNonSecretPrefillInFlight = false;
+  }
+}
+
+// Les champs existent déjà dans le HTML statique du modal (pas de rendu
+// dynamique) : on peut brancher les écouteurs une seule fois, dès que le
+// DOM est prêt, sans dépendre de l'ouverture de la popup.
+function bindSmtpCredentialFieldAutofillListeners() {
+  const emailInput = document.getElementById("smtp-email");
+  const passwordInput = document.getElementById("smtp-password");
+
+  if (emailInput && !emailInput.dataset.smtpAutofillBound) {
+    emailInput.addEventListener("input", handleSmtpCredentialFieldInput);
+    emailInput.dataset.smtpAutofillBound = "1";
+  }
+  if (passwordInput && !passwordInput.dataset.smtpAutofillBound) {
+    passwordInput.addEventListener("input", handleSmtpCredentialFieldInput);
+    passwordInput.dataset.smtpAutofillBound = "1";
+  }
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindSmtpCredentialFieldAutofillListeners);
+  } else {
+    bindSmtpCredentialFieldAutofillListeners();
+  }
+}
+
+// Point d'entrée appelé à l'ouverture de la popup (voir openSmtpConfigModal) :
+// remet tout à vide, ne révèle rien tant que l'utilisateur n'a pas
+// interagi avec le champ email/mot de passe (frappe ou autofill natif).
+async function prefillSmtpConfigFromExistingConnection() {
+  resetSmtpConfigFields();
 }
 
   async function saveSmtpConnection() {
