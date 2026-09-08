@@ -17108,12 +17108,25 @@ function connectOutlook() {
   
 function connectProfessionalEmail() {
   closeMailChoiceModal();
+  openSmtpConfigModal();
+}
 
+// Point d'entrée unique pour ouvrir la popup SMTP (depuis Réglages via
+// connectProfessionalEmail, ou depuis le bandeau "Reconnecter" de
+// l'aperçu du mail via reconnectMailProvider) : affiche la popup ET
+// déclenche le préremplissage depuis la ligne user_integrations
+// existante (voir prefillSmtpConfigFromExistingConnection) — pour ne pas
+// forcer une resaisie complète (hébergeur, port...) à chaque connexion/
+// reconnexion (contrat Grok).
+function openSmtpConfigModal() {
   const modal = document.getElementById("smtp-config-modal");
+  if (modal) modal.style.display = "block";
 
-  if (modal) {
-    modal.style.display = "block";
-  }
+  // La popup s'affiche immédiatement ; le préremplissage se termine un
+  // instant plus tard (requête réseau). On renvoie tout de même la
+  // promesse (sans que les appelants aient besoin de l'attendre) pour
+  // rester testable/chaînable si un futur appelant en a besoin.
+  return prefillSmtpConfigFromExistingConnection();
 }
 
   function closeSmtpConfigModal() {
@@ -17121,6 +17134,79 @@ function connectProfessionalEmail() {
 
   if (modal) {
     modal.style.display = "none";
+  }
+}
+
+// Préremplit la popup SMTP depuis la ligne user_integrations existante
+// (provider = smtp, filtrée par user_id — même clé fiable que pour la
+// déconnexion, voir disconnectGmail) au lieu de forcer une resaisie
+// complète à chaque ouverture. Le mot de passe n'est JAMAIS rechargé
+// (on ne réaffiche pas un secret déjà stocké côté backend) : le champ
+// reste vide, avec un indice visuel s'il existe déjà une connexion, pour
+// signaler qu'il n'est pas obligatoire de le retaper si on ne le change
+// pas. S'il n'y a pas de ligne (ou en cas d'erreur) : champs vides,
+// comme avant ce correctif.
+async function prefillSmtpConfigFromExistingConnection() {
+  const emailInput = document.getElementById("smtp-email");
+  const hostInput = document.getElementById("smtp-host");
+  const portInput = document.getElementById("smtp-port");
+  const securitySelect = document.getElementById("smtp-security");
+  const passwordInput = document.getElementById("smtp-password");
+
+  // Etat par défaut, réinitialisé à chaque ouverture (avant même de
+  // savoir si une ligne existe) : jamais de valeurs d'une session ou
+  // d'un provider précédent qui traînent dans le formulaire.
+  if (emailInput) emailInput.value = "";
+  if (hostInput) hostInput.value = "";
+  if (portInput) portInput.value = "";
+  if (securitySelect) securitySelect.value = "starttls";
+  if (passwordInput) {
+    passwordInput.value = "";
+    passwordInput.placeholder = "Mot de passe";
+  }
+
+  if (!currentUser || !currentUser.id) return;
+
+  try {
+    const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+    const rawSession = localStorage.getItem(storageKey);
+    const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+    if (!accessToken) return;
+
+    const response = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/user_integrations?user_id=eq." +
+        encodeURIComponent(currentUser.id) +
+        "&provider=eq.smtp&order=created_at.desc&limit=1",
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken
+        }
+      }
+    );
+
+    if (!response.ok) return;
+
+    const rows = await response.json();
+    if (!rows || rows.length === 0) return;
+
+    const row = rows[0];
+
+    // "email / account_email" (contrat Grok) : selon la ligne, l'adresse
+    // connectée peut être dans l'un ou l'autre champ — on prend le
+    // premier renseigné.
+    if (emailInput) emailInput.value = row.email || row.account_email || "";
+    if (hostInput) hostInput.value = row.smtp_host || "";
+    if (portInput) portInput.value = row.smtp_port != null ? String(row.smtp_port) : "";
+    if (securitySelect && row.smtp_security) securitySelect.value = row.smtp_security;
+
+    if (passwordInput) {
+      passwordInput.value = "";
+      passwordInput.placeholder = "•••••••• (déjà enregistré)";
+    }
+  } catch (e) {
+    console.error("Préremplissage SMTP impossible :", e);
   }
 }
 
@@ -22497,8 +22583,10 @@ async function saveActionLog(agent, action, status) {
       // popup au-dessus de l'aperçu du mail, qui reste donc affiché
       // derrière (voir saveSmtpConnection, qui referme cette popup et
       // masque le bandeau au succès sans jamais toucher au brouillon).
-      const modal = document.getElementById("smtp-config-modal");
-      if (modal) modal.style.display = "block";
+      // openSmtpConfigModal() préremplit aussi la popup depuis la
+      // connexion existante (hébergeur/port déjà enregistrés), pour ne
+      // pas forcer à tout retaper au moment même où on répare la panne.
+      openSmtpConfigModal();
       return;
     }
 
