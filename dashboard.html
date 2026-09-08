@@ -10508,6 +10508,17 @@ body[data-theme="light"]::after {
       <textarea class="field-input" id="preview-mail-body" style="min-height:180px;"></textarea>
     </div>
 
+    <!-- Bandeau "connexion mail expirée" (voir sendPreparedMail /
+         isMailAuthExpiredError) : si l'envoi échoue parce que le token
+         Gmail/Outlook/SMTP a expiré ou a été révoqué, ce mail déjà rédigé
+         ne se ferme jamais tout seul — on prévient l'utilisateur et on lui
+         permet de reconnecter directement d'ici, sans passer par Réglages
+         et sans rien perdre du destinataire/objet/message. -->
+    <div id="mail-auth-banner" style="display:none;margin-top:14px;padding:12px 14px;border-radius:10px;background:rgba(220,53,69,0.1);border:1px solid var(--clarity-danger);align-items:center;gap:10px;flex-wrap:wrap;">
+      <div id="mail-auth-banner-text" style="flex:1;min-width:180px;font-size:13px;font-weight:600;color:var(--clarity-danger);">Connexion Gmail expirée</div>
+      <button type="button" class="sheet-btn" id="mail-auth-reconnect-btn" style="margin:0;white-space:nowrap;" onclick="reconnectMailProvider()">Reconnecter Gmail</button>
+    </div>
+
     <button class="save-btn" onclick="sendPreparedMail()" type="button" style="margin-top:14px;">
       📤 Envoyer le mail
     </button>
@@ -17132,6 +17143,16 @@ console.log("account_email =", currentUser?.email);
       closeSmtpConfigModal();
       renderGmailConnected(result.email || email);
       showToast("Adresse professionnelle connectée");
+
+      // Reconnexion faite depuis le bandeau "Connexion SMTP expirée" de
+      // l'aperçu du mail (voir reconnectMailProvider) : contrairement à
+      // Gmail/Outlook (redirection OAuth plein écran, donc rechargement de
+      // page), ici tout se passe dans une popup — l'aperçu du mail est
+      // resté ouvert derrière tout du long, il faut juste faire
+      // disparaître le bandeau et réactiver "Envoyer" nous-mêmes.
+      if (typeof mailAuthBannerProvider !== "undefined" && mailAuthBannerProvider === "smtp") {
+        hideMailAuthExpiredBanner();
+      }
       return;
     }
 
@@ -22283,6 +22304,129 @@ async function saveActionLog(agent, action, status) {
 
       showToast("Brouillon de mail restauré", "success");
     } catch (e) {}
+  }
+
+  // ─── Bandeau "connexion mail expirée" dans l'aperçu du mail ────────────
+  // Signalé : un envoi qui échoue parce que la connexion Gmail est
+  // périmée/révoquée ne donnait qu'un toast d'erreur générique — rien
+  // n'indiquait qu'il fallait aller se déconnecter/reconnecter dans
+  // Réglages, et l'utilisateur avait dû trouver ça tout seul. Le mail déjà
+  // rédigé ne doit jamais se perdre (pas de nouvelle dictée), et un
+  // bouton "Reconnecter" doit permettre de résoudre ça sans quitter
+  // l'aperçu. Voir sendPreparedMail (branche d'échec) pour l'appel.
+  let mailAuthBannerProvider = null; // "google" | "microsoft" | "smtp" | null
+
+  function mailProviderLabel(provider) {
+    if (provider === "microsoft") return "Outlook";
+    if (provider === "smtp") return "SMTP";
+    return "Gmail";
+  }
+
+  // Heuristique volontairement large : le webhook Make d'envoi réel n'a
+  // pas (encore) de code d'erreur dédié pour "connexion expirée" — en
+  // attendant un champ explicite type data.error_code === "reauth_required"
+  // côté backend, on reconnaît une expiration/révocation de token à partir
+  // du statut HTTP et des mots-clés habituels que renvoient Gmail/Outlook/
+  // SMTP dans ce cas. À simplifier le jour où Grok ajoute ce code dédié.
+  function isMailAuthExpiredError(response, data) {
+    if (data && data.error_code === "reauth_required") return true;
+    if (response && (response.status === 401 || response.status === 403)) return true;
+
+    const haystack = ((data && (data.message || data.error)) || "").toString().toLowerCase();
+    if (!haystack) return false;
+
+    return [
+      "invalid_grant",
+      "invalid_token",
+      "unauthorized",
+      "non autorisé",
+      "non autorise",
+      "token expir",
+      "expiré",
+      "expire",
+      "revoked",
+      "révoqué",
+      "revoque",
+      "reconnect",
+      "reconnex",
+      "authentification",
+      "auth_error",
+      "insufficient"
+    ].some(function (kw) { return haystack.indexOf(kw) !== -1; });
+  }
+
+  function showMailAuthExpiredBanner(provider) {
+    mailAuthBannerProvider = provider;
+
+    const banner = document.getElementById("mail-auth-banner");
+    const text = document.getElementById("mail-auth-banner-text");
+    const btn = document.getElementById("mail-auth-reconnect-btn");
+    const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
+
+    const label = mailProviderLabel(provider);
+    if (text) text.textContent = "Connexion " + label + " expirée";
+    if (btn) btn.textContent = "Reconnecter " + label;
+    if (banner) banner.style.display = "flex";
+
+    // L'envoi reste bloqué tant que la reconnexion n'a pas eu lieu : pas
+    // la peine de laisser retenter un envoi qui échouera pour la même
+    // raison. Le libellé est remis à son état normal (voir sendPreparedMail
+    // qui l'avait passé à "Envoi en cours...").
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.innerHTML = "📤 Envoyer le mail";
+    }
+  }
+
+  function hideMailAuthExpiredBanner() {
+    mailAuthBannerProvider = null;
+
+    const banner = document.getElementById("mail-auth-banner");
+    if (banner) banner.style.display = "none";
+
+    const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
+    if (sendBtn) sendBtn.disabled = false;
+  }
+
+  // Recopie les champs affichés (potentiellement corrigés par
+  // l'utilisateur après l'échec d'envoi) dans currentPreparedMail avant de
+  // les persister : sans ça, une retouche faite juste avant de cliquer
+  // "Reconnecter" pourrait être perdue au retour du redirect OAuth.
+  function syncPreparedMailFromFields() {
+    if (!currentPreparedMail) currentPreparedMail = {};
+    currentPreparedMail.to = document.getElementById("preview-mail-to")?.value || "";
+    currentPreparedMail.cc = document.getElementById("preview-mail-cc")?.value || "";
+    currentPreparedMail.subject = document.getElementById("preview-mail-subject")?.value || "";
+    currentPreparedMail.body = document.getElementById("preview-mail-body")?.value || "";
+  }
+
+  function reconnectMailProvider() {
+    const provider = mailAuthBannerProvider;
+
+    // Gmail/Outlook = redirection OAuth plein écran (connectGmail/
+    // connectOutlook quittent complètement la page) : le brouillon doit
+    // être sauvegardé AVANT de partir. Au retour, restoreMailDraftIfAny()
+    // (appelé depuis handleUser, une fois la reconnexion confirmée)
+    // rouvre automatiquement le même aperçu, To/Cc/Objet/Message inchangés.
+    syncPreparedMailFromFields();
+    saveMailDraftToStorage();
+
+    if (provider === "microsoft") {
+      connectOutlook();
+      return;
+    }
+
+    if (provider === "smtp") {
+      // Pas de redirection ici : la reconnexion SMTP se fait dans une
+      // popup au-dessus de l'aperçu du mail, qui reste donc affiché
+      // derrière (voir saveSmtpConnection, qui referme cette popup et
+      // masque le bandeau au succès sans jamais toucher au brouillon).
+      const modal = document.getElementById("smtp-config-modal");
+      if (modal) modal.style.display = "block";
+      return;
+    }
+
+    connectGmail();
   }
 
   function animateCounter(element, start, end, duration = 1200, formatter = null) {
@@ -28680,7 +28824,32 @@ const payload = {
     }
 
     if (!response.ok || data.success === false) {
+      if (isMailAuthExpiredError(response, data)) {
+        // Connexion mail expirée/révoquée (ex: token Gmail périmé) :
+        // signalé par l'utilisateur — un toast d'erreur générique ne lui
+        // disait pas quoi faire, il avait dû aller se déconnecter/
+        // reconnecter lui-même dans Réglages. L'aperçu reste ouvert, rien
+        // n'est effacé (destinataire/objet/message inchangés), un bandeau
+        // explique le problème et propose de reconnecter directement
+        // d'ici (voir showMailAuthExpiredBanner / reconnectMailProvider).
+        showMailAuthExpiredBanner(connectedProvider);
+
+        if (modalBox) modalBox.classList.remove("sending");
+
+        const boxOnAuthFail = document.querySelector(".page-view.active #dictation-box");
+        if (boxOnAuthFail) boxOnAuthFail.innerHTML = "";
+
+        unlockAgentButtons();
+        resetOrchestratorMicButton();
+        return;
+      }
+
       showToast(data.message || "Erreur envoi mail", "error");
+      if (modalBox) modalBox.classList.remove("sending");
+      if (sendBtn) {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = "📤 Envoyer le mail";
+      }
       // Envoi vraiment échoué : le micro peut redevenir utilisable.
       unlockAgentButtons();
       resetOrchestratorMicButton();
