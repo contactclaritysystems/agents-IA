@@ -10490,16 +10490,6 @@ body[data-theme="light"]::after {
     <div class="mail-choice-title" id="mail-preview-title">Mail prêt à envoyer</div>
     <div class="mail-choice-subtitle" id="mail-preview-subtitle">Vérifiez rapidement avant l’envoi.</div>
 
-    <!-- Bandeau discret de mode test (voir isSmtpTestMode) : uniquement
-         visible avec ?envoi=smtp dans l'URL ou clarity_envoi=smtp en
-         localStorage — jamais en usage normal. Rappelle que l'envoi passe
-         directement par /mail/send (backend), pas par le webhook Make
-         habituel, pour tester la route SMTP directe sans ambiguïté sur ce
-         qui a réellement été utilisé. -->
-    <div id="smtp-test-mode-banner" style="display:none;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:rgba(0,0,0,0.05);font-size:12px;font-weight:600;color:var(--clarity-text-tertiary);">
-      🧪 Envoi test SMTP
-    </div>
-
     <div class="field-group" id="mail-preview-to-group">
       <div class="field-label">Destinataire</div>
       <input class="field-input" id="preview-mail-to" placeholder="exemple@email.com, autre@email.com" oninput="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onfocus="showMailContactSuggestions('preview-mail-to','mail-contact-suggestions')" onblur="hideMailContactSuggestionsDelayed('mail-contact-suggestions')">
@@ -10522,17 +10512,17 @@ body[data-theme="light"]::after {
       <textarea class="field-input" id="preview-mail-body" style="min-height:180px;"></textarea>
     </div>
 
-    <!-- Pièces jointes : trombone visible UNIQUEMENT en mode test SMTP
-         (voir isSmtpTestMode/updateSmtpTestModeUI) — la route /mail/send
-         accepte des pièces jointes (attachments: [{filename, content_b64,
-         mime}]), pas le webhook Make habituel, donc ce bouton n'a pas sa
-         place en usage normal. -->
-    <div id="smtp-test-attachments-group" style="display:none;margin-top:10px;">
-      <input type="file" id="smtp-test-attachment-input" multiple style="display:none;" onchange="handleSmtpAttachmentFilesSelected(this)">
-      <button type="button" class="sheet-btn" id="smtp-test-attach-btn" style="width:auto;padding:8px 14px;" onclick="document.getElementById('smtp-test-attachment-input').click()">
+    <!-- Pièces jointes : visibles pour tout le monde, envoi direct via
+         POST /mail/send (attachments: [{filename, content_b64, mime}]).
+         Le repli ponctuel sur l'ancien webhook Make (reason=use_make ou
+         5xx, voir sendPreparedMail) part volontairement sans pièce jointe
+         — Make ne les accepte pas. -->
+    <div id="mail-attachments-group" style="margin-top:10px;">
+      <input type="file" id="mail-attachment-input" multiple style="display:none;" onchange="handleMailAttachmentFilesSelected(this)">
+      <button type="button" class="sheet-btn" id="mail-attach-btn" style="width:auto;padding:8px 14px;" onclick="document.getElementById('mail-attachment-input').click()">
         📎 Joindre un fichier
       </button>
-      <div id="smtp-test-attachments-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="mail-attachments-list" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;"></div>
     </div>
 
     <!-- Bandeau "connexion mail expirée" (voir sendPreparedMail /
@@ -11004,39 +10994,17 @@ const TASKS_API_URL = "https://clarity-backend-me14.onrender.com/tasks";
 const TASKS_AGENT_URL = "https://clarity-backend-me14.onrender.com/agent/taches";
 const CONTACTS_API_BASE_URL = "https://clarity-backend-me14.onrender.com/contacts";
 const MAILS_SENT_API_URL = "https://clarity-backend-me14.onrender.com/mails/sent";
-// Route directe SMTP (test) : voir isSmtpTestMode ci-dessous — utilisée
-// uniquement quand ?envoi=smtp (URL) ou clarity_envoi=smtp (localStorage)
-// est actif, à la place du webhook Make habituel (sendPreparedMail).
+// Route d'envoi de mail (backend, direct) : utilisée pour TOUS les envois
+// (voir sendPreparedMail) — { user_id, via, to, to_name, subject, body,
+// attachments }. Le webhook Make historique n'est plus utilisé qu'en
+// repli ponctuel (une seule tentative) si le backend répond
+// reason: "use_make" ou une erreur 5xx, voir LEGACY_MAIL_SEND_WEBHOOK_URL.
 const MAIL_SEND_API_URL = "https://clarity-backend-me14.onrender.com/mail/send";
 
-// ─── Mode test "envoi direct SMTP" ──────────────────────────────────────
-// Contrat Grok : ?envoi=smtp dans l'URL OU clarity_envoi=smtp en
-// localStorage active un chemin d'envoi alternatif (POST /mail/send)
-// utilisé pour tester la route SMTP directe, sans passer par le webhook
-// Make habituel. Le paramètre d'URL n'est lu qu'une fois au chargement et
-// aussitôt recopié en localStorage : sans ça, le flag disparaîtrait après
-// un redirect OAuth (reconnexion Gmail/Outlook depuis l'aperçu du mail
-// recharge entièrement la page, sans conserver les paramètres d'URL) et
-// le mode test s'éteindrait tout seul en plein test.
-function initEnvoiTestFlag() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const urlFlag = params.get("envoi");
-    if (urlFlag) {
-      localStorage.setItem("clarity_envoi", urlFlag);
-    }
-  } catch (e) {}
-}
-
-function isSmtpTestMode() {
-  try {
-    return localStorage.getItem("clarity_envoi") === "smtp";
-  } catch (e) {
-    return false;
-  }
-}
-
-initEnvoiTestFlag();
+// Ancien webhook Make d'envoi de mail : conservé UNIQUEMENT comme repli
+// ponctuel (voir sendPreparedMail) quand /mail/send répond
+// reason: "use_make" ou une erreur 5xx — jamais appelé en direct sinon.
+const LEGACY_MAIL_SEND_WEBHOOK_URL = "https://hook.eu1.make.com/hhr4jci9cg9gao5fzhldh2gt376xe5kl";
 
 let currentUser = null;
   document.body.classList.add("loading-subscription");
@@ -22523,14 +22491,10 @@ async function saveActionLog(agent, action, status) {
         });
       }
 
-      // Restauré après un rechargement complet (reconnexion Gmail/Outlook
-      // depuis le bandeau, iOS qui décharge l'onglet...) : le bandeau
-      // "Envoi test SMTP" doit rester exact après ce rechargement (voir
-      // updateSmtpTestModeUI). Les pièces jointes en revanche ne sont
-      // jamais persistées dans le brouillon (voir smtpTestAttachments) :
-      // impossible à restaurer, la liste reste donc vide après ce type de
-      // rechargement — cas rare et acceptable en mode test uniquement.
-      updateSmtpTestModeUI();
+      // Pièces jointes : jamais persistées dans le brouillon (voir
+      // mailAttachments) — impossible à restaurer après un rechargement
+      // complet (reconnexion Gmail/Outlook depuis le bandeau, iOS qui
+      // décharge l'onglet...), la liste reste donc vide dans ce cas.
 
       showToast("Brouillon de mail restauré", "success");
     } catch (e) {}
@@ -22670,34 +22634,20 @@ async function saveActionLog(agent, action, status) {
   // Tableau d'objets { filename, content_b64, mime } — exactement le
   // format attendu par POST /mail/send (voir sendPreparedMail). Remis à
   // zéro à chaque ouverture/fermeture de l'aperçu, jamais persisté dans le
-  // brouillon localStorage (fichiers en base64 potentiellement lourds,
-  // et ce mode n'est de toute façon utilisé qu'en test).
-  let smtpTestAttachments = [];
+  // brouillon localStorage (fichiers en base64 potentiellement lourds).
+  // Le repli ponctuel sur l'ancien webhook Make part volontairement sans
+  // pièce jointe (Make ne les accepte pas).
+  let mailAttachments = [];
 
-  // Affiche/masque le bandeau "Envoi test SMTP" et le bouton trombone
-  // selon le flag (voir isSmtpTestMode) — appelé à chaque ouverture de
-  // l'aperçu (openMailPreview, restoreMailDraftIfAny) pour rester cohérent
-  // même après un rechargement de page (reconnexion OAuth, iOS qui
-  // décharge l'onglet...).
-  function updateSmtpTestModeUI() {
-    const testMode = isSmtpTestMode();
-
-    const banner = document.getElementById("smtp-test-mode-banner");
-    if (banner) banner.style.display = testMode ? "block" : "none";
-
-    const attachGroup = document.getElementById("smtp-test-attachments-group");
-    if (attachGroup) attachGroup.style.display = testMode ? "block" : "none";
-  }
-
-  function renderSmtpAttachmentsList() {
-    const list = document.getElementById("smtp-test-attachments-list");
+  function renderMailAttachmentsList() {
+    const list = document.getElementById("mail-attachments-list");
     if (!list) return;
 
-    list.innerHTML = smtpTestAttachments.map(function (att, index) {
+    list.innerHTML = mailAttachments.map(function (att, index) {
       return (
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
           '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="removeSmtpAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+          '<button type="button" onclick="removeMailAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
         '</div>'
       );
     }).join("");
@@ -22706,7 +22656,7 @@ async function saveActionLog(agent, action, status) {
   // Lit chaque fichier choisi en base64 (FileReader.readAsDataURL renvoie
   // un "data:mime;base64,XXXX" — on ne garde que la partie après la
   // virgule, POST /mail/send attend du base64 pur dans content_b64).
-  function handleSmtpAttachmentFilesSelected(input) {
+  function handleMailAttachmentFilesSelected(input) {
     const files = Array.from(input.files || []);
     input.value = ""; // permet de resélectionner le même fichier plus tard
 
@@ -22715,12 +22665,12 @@ async function saveActionLog(agent, action, status) {
       reader.onload = function () {
         const result = reader.result || "";
         const base64 = result.includes(",") ? result.split(",")[1] : result;
-        smtpTestAttachments.push({
+        mailAttachments.push({
           filename: file.name,
           content_b64: base64,
           mime: file.type || "application/octet-stream"
         });
-        renderSmtpAttachmentsList();
+        renderMailAttachmentsList();
       };
       reader.onerror = function () {
         showToast("Impossible de lire « " + file.name + " »", "error");
@@ -22729,15 +22679,15 @@ async function saveActionLog(agent, action, status) {
     });
   }
 
-  function removeSmtpAttachment(index) {
-    smtpTestAttachments.splice(index, 1);
-    renderSmtpAttachmentsList();
+  function removeMailAttachment(index) {
+    mailAttachments.splice(index, 1);
+    renderMailAttachmentsList();
   }
 
-  function resetSmtpAttachments() {
-    smtpTestAttachments = [];
-    renderSmtpAttachmentsList();
-    const input = document.getElementById("smtp-test-attachment-input");
+  function resetMailAttachments() {
+    mailAttachments = [];
+    renderMailAttachmentsList();
+    const input = document.getElementById("mail-attachment-input");
     if (input) input.value = "";
   }
 
@@ -23130,13 +23080,9 @@ function rawEmailListFromDisplay(value) {
 }
 
 function openMailPreview(data, instruction, backTarget, headerTitle) {
-  // Bandeau "Envoi test SMTP" + trombone : recalculés à chaque ouverture
-  // (pas seulement une fois au chargement) pour rester exacts même si le
-  // flag a changé depuis (ex: activé via Réglages ou une autre page).
   // Nouvel aperçu = nouvelles pièces jointes, jamais celles d'un mail
   // précédent déjà envoyé/annulé.
-  updateSmtpTestModeUI();
-  resetSmtpAttachments();
+  resetMailAttachments();
 
   // Bouton "← Retour" affiché dans #mail-preview-modal uniquement quand un
   // backTarget est explicitement fourni (ex: "support-choice-modal" depuis
@@ -23634,9 +23580,9 @@ if (box) {
 
   clearMailDraftFromStorage();
   currentPreparedMail = null;
-  // Pièces jointes du mode test SMTP (voir smtpTestAttachments) : jamais
-  // conservées d'un mail à l'autre, envoyé ou annulé.
-  resetSmtpAttachments();
+  // Pièces jointes (voir mailAttachments) : jamais conservées d'un mail à
+  // l'autre, envoyé ou annulé.
+  resetMailAttachments();
 
   if (wasCrResultTarget) {
     const crModal = document.getElementById("cr-result-modal");
@@ -28991,13 +28937,6 @@ function isValidEmailList(value) {
     // risquait d'être bloqué silencieusement par Safari.
     blessVoiceLine(isCrResultSend ? "compte-rendu-envoye" : "mail-envoye");
 
-    // Mode test "envoi direct SMTP" (voir isSmtpTestMode/MAIL_SEND_API_URL,
-    // contrat Grok) : contourne volontairement toute la détection Gmail/
-    // Outlook ci-dessous — ce mode teste la route backend /mail/send de
-    // façon isolée, sans dépendre d'une connexion OAuth déjà enregistrée
-    // (souvent absente ou hors-sujet pendant ce test).
-    const smtpTestMode = isSmtpTestMode();
-
     // Vérifié EN TOUT PREMIER, avant même de regarder le contenu du mail :
     // si aucune boîte mail n'est connectée du tout, le vrai problème n'a
     // rien à voir avec le destinataire — dire "Adresse mail vide" ou
@@ -29006,8 +28945,8 @@ function isValidEmailList(value) {
     // "ce contact n'a pas d'adresse"). Lecture directe du cache local
     // (rapide, synchrone) : sendPreparedMail revérifie de toute façon plus
     // loin auprès de Supabase avant l'envoi réel, avec un même bandeau en
-    // repli si jamais ce cache s'avérait périmé. Sauté en mode test SMTP.
-    if (!smtpTestMode) {
+    // repli si jamais ce cache s'avérait périmé.
+    {
       const cachedConnectedEmail = (localStorage.getItem("gmail_" + currentUser.email) || "").trim();
       if (!cachedConnectedEmail) {
         const cachedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "google";
@@ -29091,13 +29030,10 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
 let connectedEmail = "";
 let connectedProvider = "";
 
-// Détection Gmail/Outlook (cache local + revérification Supabase +
-// déduction par domaine) : désormais calculée dans TOUS les cas, y
-// compris en mode test SMTP — nécessaire pour savoir quelle boîte est
-// réellement connectée et choisir "via" (gmail|smtp) dans le payload
-// /mail/send (contrat Grok). Seul le blocage "aucune boîte connectée" (le
-// return plus bas) reste sauté en mode test : ce mode doit pouvoir
-// vérifier /mail/send même sans connexion OAuth enregistrée.
+// Détection Gmail/Outlook/SMTP (cache local + revérification Supabase +
+// déduction par domaine) : nécessaire pour savoir quelle boîte est
+// réellement connectée et choisir "via" (gmail|outlook|smtp|null) dans le
+// payload /mail/send (contrat Grok).
 connectedEmail = localStorage.getItem("gmail_" + currentUser.email) || "";
 connectedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "";
 
@@ -29156,11 +29092,10 @@ if (!connectedProvider && connectedEmail) {
   localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
 }
 
-// Blocage "aucune boîte connectée du tout" : jamais en mode test SMTP
-// (voir commentaire ci-dessus). Hors mode test, comportement inchangé —
-// même bandeau "Reconnecter", aperçu et UI de "sending" nettoyés (cette
-// branche arrivant après leur activation plus haut).
-if (!smtpTestMode && !connectedEmail) {
+// Blocage "aucune boîte connectée du tout" : même bandeau "Reconnecter",
+// aperçu et UI de "sending" nettoyés (cette branche arrivant après leur
+// activation plus haut).
+if (!connectedEmail) {
   showMailAuthExpiredBanner(connectedProvider, { notConnected: true });
 
   if (modalBox) modalBox.classList.remove("sending");
@@ -29175,71 +29110,111 @@ if (!smtpTestMode && !connectedEmail) {
 
 // "via" du payload /mail/send (contrat Grok) : "gmail", "outlook" ou
 // "smtp" selon la boîte réellement connectée (connectedProvider
-// ci-dessus). Absence de connexion (mode test sans boîte enregistrée) :
-// repli sur "smtp" par défaut.
-const smtpTestVia =
+// ci-dessus) — null si le provider n'a pas pu être déterminé.
+const via =
   connectedProvider === "google" ? "gmail" :
   connectedProvider === "microsoft" ? "outlook" :
-  "smtp";
+  connectedProvider === "smtp" ? "smtp" :
+  null;
 
-// Deux routes d'envoi possibles (contrat Grok) : /mail/send (backend,
-// direct) en mode test SMTP, avec un payload minimal + pièces jointes ;
-// le webhook Make habituel sinon, inchangé. "to"/"to_name" de /mail/send
-// n'acceptent qu'un seul destinataire — en pratique ce mode ne sert qu'à
-// tester la route SMTP avec un seul destinataire à la fois, donc seule la
-// première adresse de la liste est utilisée si plusieurs ont été saisies.
-const sendEndpointUrl = smtpTestMode
-  ? MAIL_SEND_API_URL
-  : "https://hook.eu1.make.com/hhr4jci9cg9gao5fzhldh2gt376xe5kl";
+// POST /mail/send (backend, direct) pour TOUS les envois (contrat Grok —
+// plus de flag ?envoi=smtp). "to"/"to_name" n'acceptent qu'un seul
+// destinataire : seule la première adresse de la liste est utilisée si
+// plusieurs ont été saisies (Cc n'est pas supporté par cette route).
+const payload = {
+  user_id: currentUser.id,
+  via,
+  to: to.split(",")[0].trim(),
+  to_name: (currentPreparedMail && currentPreparedMail.contact_name) || "",
+  subject,
+  body,
+  attachments: mailAttachments
+};
 
-const payload = smtpTestMode
-  ? {
-      user_id: currentUser.id,
-      via: smtpTestVia,
-      to: to.split(",")[0].trim(),
-      to_name: (currentPreparedMail && currentPreparedMail.contact_name) || "",
-      subject,
-      body,
-      attachments: smtpTestAttachments
-    }
-  : {
-      user_email: currentUser.email,
-      user_id: currentUser.id,
-      provider: connectedProvider,
-      sender_email: connectedEmail,
-      to,
-      cc,
-      subject,
-      // Confirmé avec Grok : Make transmet ce champ tel quel, et l'envoi
-      // réel (Gmail API) est en texte brut, pas en HTML — convertir les
-      // retours à la ligne en "<br>" ici faisait donc apparaître ce tag en
-      // clair dans le mail reçu au lieu d'un vrai saut de ligne. On envoie
-      // les \n bruts, qu'un mail en texte brut affiche nativement comme des
-      // retours à la ligne. À ne repasser en "<br>" que si l'envoi bascule
-      // un jour en MIME text/html côté backend.
-      body
-    };
+  let response = null;
+  let data = {};
+  let usedLegacyMakeFallback = false;
 
   try {
-    const response = await fetch(sendEndpointUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const text = await response.text();
-    console.log("Réponse Make envoi réel:", text);
-
-    let data = {};
     try {
-      data = JSON.parse(text);
-    } catch (e) {
-      data = { success: response.ok };
+      response = await fetch(MAIL_SEND_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const text = await response.text();
+      console.log("Réponse /mail/send:", text);
+
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        data = { success: response.ok };
+      }
+    } catch (networkErr) {
+      // /mail/send injoignable (backend down, réseau...) : traité comme le
+      // cas "use_make" ci-dessous pour tenter le repli Make une fois,
+      // plutôt que d'abandonner l'envoi immédiatement.
+      console.error("Erreur réseau /mail/send :", networkErr);
+      response = null;
+      data = { reason: "use_make" };
     }
 
-    if (!response.ok || data.success === false) {
+    // Repli ponctuel (UNE seule fois) sur l'ancien webhook Make (contrat
+    // Grok) : uniquement si le backend répond explicitement
+    // reason: "use_make", ou une erreur serveur (5xx) — jamais pour
+    // reauth_required/no_email/autres erreurs métier, qui ont leur propre
+    // traitement ci-dessous. Le repli part sans pièce jointe (Make ne les
+    // accepte pas).
+    const shouldFallbackToLegacyMake =
+      !usedLegacyMakeFallback &&
+      (data.reason === "use_make" || (response && response.status >= 500 && response.status < 600));
+
+    if (shouldFallbackToLegacyMake) {
+      usedLegacyMakeFallback = true;
+      try {
+        const fallbackResponse = await fetch(LEGACY_MAIL_SEND_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            user_email: currentUser.email,
+            user_id: currentUser.id,
+            provider: connectedProvider,
+            sender_email: connectedEmail,
+            to,
+            cc,
+            subject,
+            // Confirmé avec Grok : Make transmet ce champ tel quel, et
+            // l'envoi réel (Gmail API) est en texte brut, pas en HTML —
+            // convertir les retours à la ligne en "<br>" ici faisait donc
+            // apparaître ce tag en clair dans le mail reçu au lieu d'un
+            // vrai saut de ligne. On envoie les \n bruts, qu'un mail en
+            // texte brut affiche nativement comme des retours à la ligne.
+            body
+          })
+        });
+
+        const fallbackText = await fallbackResponse.text();
+        console.log("Réponse repli Make:", fallbackText);
+
+        response = fallbackResponse;
+        try {
+          data = JSON.parse(fallbackText);
+        } catch (e) {
+          data = { success: fallbackResponse.ok };
+        }
+      } catch (fallbackErr) {
+        console.error("Repli Make impossible :", fallbackErr);
+        response = null;
+        data = { success: false, message: "Erreur envoi mail" };
+      }
+    }
+
+    if (!response || !response.ok || data.success === false) {
       // "reason" est le champ désormais confirmé côté backend pour ce cas
       // précis (reauth_required) — isMailAuthExpiredError() reste en repli
       // pour le webhook Make (heuristique sur le message/statut HTTP, en
@@ -29253,17 +29228,8 @@ const payload = smtpTestMode
         // explique le problème et propose de reconnecter directement
         // d'ici (voir showMailAuthExpiredBanner / reconnectMailProvider).
         // Jamais de "flou"/UI bloquée sur ce chemin : la classe "sending"
-        // est retirée ici, tout comme la boîte de dictée en cours. En
-        // mode test SMTP, le bandeau correspond au canal réellement
-        // utilisé pour cet envoi (smtpTestVia) — "gmail" → "Reconnecter
-        // Gmail", "outlook" → "Reconnecter Outlook" (contrat Grok),
-        // jamais "Reconnecter SMTP" par défaut si c'est en fait la
-        // connexion Gmail/Outlook qui a expiré.
-        const smtpTestReconnectProvider =
-          smtpTestVia === "gmail" ? "google" :
-          smtpTestVia === "outlook" ? "microsoft" :
-          "smtp";
-        showMailAuthExpiredBanner(smtpTestMode ? smtpTestReconnectProvider : connectedProvider);
+        // est retirée ici, tout comme la boîte de dictée en cours.
+        showMailAuthExpiredBanner(connectedProvider);
 
         if (modalBox) modalBox.classList.remove("sending");
 
@@ -29280,7 +29246,7 @@ const payload = smtpTestMode
       // pas un problème de connexion. Jamais confondu avec le bandeau
       // "Reconnecter" ci-dessus (voir retour utilisateur/Grok, point 3).
       if (data.reason === "no_email") {
-        showToast(data.message || "Aucune adresse mail pour ce destinataire", "error");
+        showToast(data.message || "Adresse mail manquante pour ce destinataire", "error");
         if (modalBox) modalBox.classList.remove("sending");
         if (sendBtn) {
           sendBtn.disabled = false;
