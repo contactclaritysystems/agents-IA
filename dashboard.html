@@ -28924,89 +28924,94 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
 let connectedEmail = "";
 let connectedProvider = "";
 
-// Toute la détection Gmail/Outlook (cache local + revérification Supabase
-// + déduction par domaine) n'a de sens que pour le webhook Make habituel :
-// le mode test SMTP (voir plus haut) envoie directement à /mail/send,
-// indépendamment de toute connexion OAuth enregistrée.
-if (!smtpTestMode) {
-  connectedEmail = localStorage.getItem("gmail_" + currentUser.email) || "";
-  connectedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "";
+// Détection Gmail/Outlook (cache local + revérification Supabase +
+// déduction par domaine) : désormais calculée dans TOUS les cas, y
+// compris en mode test SMTP — nécessaire pour savoir quelle boîte est
+// réellement connectée et choisir "via" (gmail|smtp) dans le payload
+// /mail/send (contrat Grok). Seul le blocage "aucune boîte connectée" (le
+// return plus bas) reste sauté en mode test : ce mode doit pouvoir
+// vérifier /mail/send même sans connexion OAuth enregistrée.
+connectedEmail = localStorage.getItem("gmail_" + currentUser.email) || "";
+connectedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "";
 
-  // Source de vérité : on revérifie auprès de Supabase avant l'envoi,
-  // pour éviter d'utiliser un ancien provider resté en cache local
-  // (ex: reconnexion Gmail après une ancienne connexion SMTP).
-  try {
-    const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
-    const rawSession = localStorage.getItem(storageKey);
-    const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+// Source de vérité : on revérifie auprès de Supabase avant l'envoi,
+// pour éviter d'utiliser un ancien provider resté en cache local
+// (ex: reconnexion Gmail après une ancienne connexion SMTP).
+try {
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
-    if (accessToken) {
-      const integrationResponse = await fetch(
-        SUPABASE_URL +
-          "/rest/v1/user_integrations?account_email=eq." +
-          encodeURIComponent(currentUser.email) +
-          "&connected=eq.true&order=created_at.desc&limit=1",
-        {
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": "Bearer " + accessToken
-          }
-        }
-      );
-
-      if (integrationResponse.ok) {
-        const integrationData = await integrationResponse.json();
-
-        if (integrationData && integrationData.length > 0) {
-          connectedProvider = integrationData[0].provider;
-          connectedEmail = integrationData[0].email || connectedEmail;
-
-          localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
-          localStorage.setItem("gmail_" + currentUser.email, connectedEmail);
+  if (accessToken) {
+    const integrationResponse = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/user_integrations?account_email=eq." +
+        encodeURIComponent(currentUser.email) +
+        "&connected=eq.true&order=created_at.desc&limit=1",
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken
         }
       }
+    );
+
+    if (integrationResponse.ok) {
+      const integrationData = await integrationResponse.json();
+
+      if (integrationData && integrationData.length > 0) {
+        connectedProvider = integrationData[0].provider;
+        connectedEmail = integrationData[0].email || connectedEmail;
+
+        localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
+        localStorage.setItem("gmail_" + currentUser.email, connectedEmail);
+      }
     }
-  } catch (e) {
-    console.error("Vérification provider Supabase impossible, fallback local :", e);
   }
-
-  if (!connectedProvider) {
-    const emailLower = (connectedEmail || "").toLowerCase();
-
-    if (
-      emailLower.includes("@hotmail.") ||
-      emailLower.includes("@outlook.") ||
-      emailLower.includes("@live.") ||
-      emailLower.includes("@msn.")
-    ) {
-      connectedProvider = "microsoft";
-    } else {
-      connectedProvider = "google";
-    }
-
-    localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
-  }
-
-  // Deuxième filet, après la revérification Supabase ci-dessus (le cache
-  // local avait pu sembler ok au tout début de la fonction, avant même de
-  // valider les champs) : si malgré tout aucune adresse d'envoi n'est
-  // réellement connectée, même bandeau "Reconnecter" — jamais de tentative
-  // d'envoi vouée à l'échec, et jamais de message concernant le destinataire
-  // (l'aperçu et l'UI de "sending" sont ici correctement nettoyés, cette
-  // branche arrivant après leur activation plus haut).
-  if (!connectedEmail) {
-    showMailAuthExpiredBanner(connectedProvider, { notConnected: true });
-
-    if (modalBox) modalBox.classList.remove("sending");
-
-    const boxOnNotConnected = document.querySelector(".page-view.active #dictation-box");
-    if (boxOnNotConnected) boxOnNotConnected.innerHTML = "";
-
-    unlockAgentButtons();
-    resetOrchestratorMicButton();
-    return;
-  }
+} catch (e) {
+  console.error("Vérification provider Supabase impossible, fallback local :", e);
 }
+
+if (!connectedProvider && connectedEmail) {
+  const emailLower = (connectedEmail || "").toLowerCase();
+
+  if (
+    emailLower.includes("@hotmail.") ||
+    emailLower.includes("@outlook.") ||
+    emailLower.includes("@live.") ||
+    emailLower.includes("@msn.")
+  ) {
+    connectedProvider = "microsoft";
+  } else {
+    connectedProvider = "google";
+  }
+
+  localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
+}
+
+// Blocage "aucune boîte connectée du tout" : jamais en mode test SMTP
+// (voir commentaire ci-dessus). Hors mode test, comportement inchangé —
+// même bandeau "Reconnecter", aperçu et UI de "sending" nettoyés (cette
+// branche arrivant après leur activation plus haut).
+if (!smtpTestMode && !connectedEmail) {
+  showMailAuthExpiredBanner(connectedProvider, { notConnected: true });
+
+  if (modalBox) modalBox.classList.remove("sending");
+
+  const boxOnNotConnected = document.querySelector(".page-view.active #dictation-box");
+  if (boxOnNotConnected) boxOnNotConnected.innerHTML = "";
+
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
+  return;
+}
+
+// "via" du payload /mail/send (contrat Grok) : seules deux valeurs
+// supportées par cette route de test, "gmail" ou "smtp" — choisie selon
+// la boîte réellement connectée (connectedProvider ci-dessus). Outlook
+// n'a pas encore de valeur "via" dédiée côté backend : traité comme
+// "smtp" par défaut en attendant, tout comme l'absence de connexion.
+const smtpTestVia = connectedProvider === "google" ? "gmail" : "smtp";
 
 // Deux routes d'envoi possibles (contrat Grok) : /mail/send (backend,
 // direct) en mode test SMTP, avec un payload minimal + pièces jointes ;
@@ -29021,6 +29026,7 @@ const sendEndpointUrl = smtpTestMode
 const payload = smtpTestMode
   ? {
       user_id: currentUser.id,
+      via: smtpTestVia,
       to: to.split(",")[0].trim(),
       to_name: (currentPreparedMail && currentPreparedMail.contact_name) || "",
       subject,
@@ -29078,8 +29084,12 @@ const payload = smtpTestMode
         // explique le problème et propose de reconnecter directement
         // d'ici (voir showMailAuthExpiredBanner / reconnectMailProvider).
         // Jamais de "flou"/UI bloquée sur ce chemin : la classe "sending"
-        // est retirée ici, tout comme la boîte de dictée en cours.
-        showMailAuthExpiredBanner(smtpTestMode ? "smtp" : connectedProvider);
+        // est retirée ici, tout comme la boîte de dictée en cours. En
+        // mode test SMTP, le bandeau correspond au canal réellement
+        // utilisé pour cet envoi (smtpTestVia) — "gmail" → "Reconnecter
+        // Gmail" (contrat Grok), jamais "Reconnecter SMTP" par défaut si
+        // c'est en fait la connexion Gmail qui a expiré.
+        showMailAuthExpiredBanner(smtpTestMode ? (smtpTestVia === "gmail" ? "google" : "smtp") : connectedProvider);
 
         if (modalBox) modalBox.classList.remove("sending");
 
