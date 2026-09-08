@@ -17418,7 +17418,7 @@ async function checkGmailStatus() {
   
 async function disconnectGmail() {
   const email = currentUser?.email;
-  if (!email) return;
+  if (!email || !currentUser?.id) return;
 
   const provider =
     localStorage.getItem("mail_provider_" + email) || "google";
@@ -17429,13 +17429,19 @@ async function disconnectGmail() {
   renderGmailDisconnected();
   showToast("Compte mail déconnecté");
 
+  // Filtre sur user_id (pas account_email) : contrat Grok, suite au bug
+  // Outlook où une ligne user_integrations pouvait avoir account_email
+  // renseigné mais user_id NULL — un filtre sur account_email risquait de
+  // ne matcher aucune ligne (ou la mauvaise) dans ce genre de cas, alors
+  // que user_id + provider est la clé fiable pour cibler LA ligne de CET
+  // utilisateur pour CE provider.
   const { error } = await supabaseClient
     .from("user_integrations")
     .update({
       connected: false,
       updated_at: new Date().toISOString()
     })
-    .eq("account_email", email)
+    .eq("user_id", currentUser.id)
     .eq("provider", provider);
 
   if (error) console.error(error);
