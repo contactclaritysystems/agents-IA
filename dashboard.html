@@ -29006,12 +29006,14 @@ if (!smtpTestMode && !connectedEmail) {
   return;
 }
 
-// "via" du payload /mail/send (contrat Grok) : seules deux valeurs
-// supportées par cette route de test, "gmail" ou "smtp" — choisie selon
-// la boîte réellement connectée (connectedProvider ci-dessus). Outlook
-// n'a pas encore de valeur "via" dédiée côté backend : traité comme
-// "smtp" par défaut en attendant, tout comme l'absence de connexion.
-const smtpTestVia = connectedProvider === "google" ? "gmail" : "smtp";
+// "via" du payload /mail/send (contrat Grok) : "gmail", "outlook" ou
+// "smtp" selon la boîte réellement connectée (connectedProvider
+// ci-dessus). Absence de connexion (mode test sans boîte enregistrée) :
+// repli sur "smtp" par défaut.
+const smtpTestVia =
+  connectedProvider === "google" ? "gmail" :
+  connectedProvider === "microsoft" ? "outlook" :
+  "smtp";
 
 // Deux routes d'envoi possibles (contrat Grok) : /mail/send (backend,
 // direct) en mode test SMTP, avec un payload minimal + pièces jointes ;
@@ -29087,9 +29089,14 @@ const payload = smtpTestMode
         // est retirée ici, tout comme la boîte de dictée en cours. En
         // mode test SMTP, le bandeau correspond au canal réellement
         // utilisé pour cet envoi (smtpTestVia) — "gmail" → "Reconnecter
-        // Gmail" (contrat Grok), jamais "Reconnecter SMTP" par défaut si
-        // c'est en fait la connexion Gmail qui a expiré.
-        showMailAuthExpiredBanner(smtpTestMode ? (smtpTestVia === "gmail" ? "google" : "smtp") : connectedProvider);
+        // Gmail", "outlook" → "Reconnecter Outlook" (contrat Grok),
+        // jamais "Reconnecter SMTP" par défaut si c'est en fait la
+        // connexion Gmail/Outlook qui a expiré.
+        const smtpTestReconnectProvider =
+          smtpTestVia === "gmail" ? "google" :
+          smtpTestVia === "outlook" ? "microsoft" :
+          "smtp";
+        showMailAuthExpiredBanner(smtpTestMode ? smtpTestReconnectProvider : connectedProvider);
 
         if (modalBox) modalBox.classList.remove("sending");
 
