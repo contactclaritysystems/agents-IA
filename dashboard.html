@@ -10407,6 +10407,8 @@ body[data-theme="light"]::after {
         class="field-input"
         id="smtp-email"
         type="email"
+        name="username"
+        autocomplete="username"
         placeholder="contact@entreprise.fr"
       >
     </div>
@@ -10447,6 +10449,8 @@ body[data-theme="light"]::after {
         class="field-input"
         id="smtp-password"
         type="password"
+        name="password"
+        autocomplete="current-password"
         placeholder="Mot de passe"
       >
     </div>
@@ -17137,112 +17141,6 @@ function openSmtpConfigModal() {
   }
 }
 
-// ─── Vérification Face ID / Touch ID avant de révéler le préremplissage ──
-// Signalé par l'utilisateur : les infos déjà enregistrées (serveur, port,
-// email) ne doivent JAMAIS s'afficher automatiquement au simple clic sur
-// "SMTP" — une vérification biométrique locale (Face ID/Touch ID) doit
-// être demandée avant, même si le mot de passe lui n'est de toute façon
-// jamais réaffiché. Implémenté avec WebAuthn (navigator.credentials),
-// nativement supporté par Safari sur Mac (Touch ID) et iPhone (Face ID).
-//
-// Important : c'est une vérification LOCALE à l'appareil, pas une
-// authentification vérifiée par un serveur — on ne fait ici que demander
-// au système "cette personne peut-elle déverrouiller cet appareil ?",
-// sans jamais faire vérifier de signature côté backend. C'est suffisant
-// pour ce qu'on protège ici (des réglages déjà présents sur l'appareil
-// de l'utilisateur, jamais un mot de passe), mais ce n'est pas un
-// mécanisme de sécurité serveur — à ne pas réutiliser tel quel pour
-// protéger quelque chose de plus sensible sans revoir la question avec
-// Grok (ça demanderait un vrai flux WebAuthn avec vérification serveur).
-function arrayBufferToBase64Url(buffer) {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function base64UrlToArrayBuffer(base64Url) {
-  const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((base64Url.length + 3) % 4);
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
-}
-
-function smtpBiometricCredentialStorageKey() {
-  return "clarity_smtp_biometric_credential_" + ((currentUser && currentUser.id) || "anon");
-}
-
-async function verifySmtpBiometric() {
-  if (!window.PublicKeyCredential || !navigator.credentials) {
-    return { ok: false, reason: "unsupported" };
-  }
-
-  const credKey = smtpBiometricCredentialStorageKey();
-  const storedId = localStorage.getItem(credKey);
-
-  try {
-    if (!storedId) {
-      // Premher passage sur cet appareil : on crée un identifiant
-      // biométrique local lié à Clarity. La création elle-même exige déjà
-      // Face ID/Touch ID (userVerification: "required") — pas besoin de
-      // revérifier juste après dans la foulée.
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const userIdBytes = new TextEncoder().encode((currentUser && currentUser.id) || "anon");
-
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: "Clarity Systems" },
-          user: {
-            id: userIdBytes,
-            name: (currentUser && currentUser.email) || "utilisateur",
-            displayName: (currentUser && currentUser.email) || "Utilisateur Clarity"
-          },
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7 },
-            { type: "public-key", alg: -257 }
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "required"
-          },
-          timeout: 60000
-        }
-      });
-
-      if (!credential) return { ok: false, reason: "cancelled" };
-
-      localStorage.setItem(credKey, arrayBufferToBase64Url(credential.rawId));
-      return { ok: true };
-    }
-
-    // Identifiant déjà enregistré sur cet appareil : Face ID/Touch ID
-    // redemandé à chaque ouverture, jamais mémorisé "pour la session".
-    const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-    const assertion = await navigator.credentials.get({
-      publicKey: {
-        challenge,
-        allowCredentials: [{
-          id: base64UrlToArrayBuffer(storedId),
-          type: "public-key",
-          transports: ["internal"]
-        }],
-        userVerification: "required",
-        timeout: 60000
-      }
-    });
-
-    return { ok: !!assertion };
-  } catch (e) {
-    // Annulation par l'utilisateur, timeout, appareil sans Face ID/Touch
-    // ID configuré... : dans tous les cas, on ne révèle rien.
-    console.error("Vérification biométrique SMTP impossible/annulée :", e);
-    return { ok: false, reason: "denied" };
-  }
-}
-
 // Préremplit la popup SMTP depuis la ligne user_integrations existante
 // (provider = smtp, filtrée par user_id — même clé fiable que pour la
 // déconnexion, voir disconnectGmail) au lieu de forcer une resaisie
@@ -17250,9 +17148,18 @@ async function verifySmtpBiometric() {
 // (on ne réaffiche pas un secret déjà stocké côté backend) : le champ
 // reste vide, avec un indice visuel s'il existe déjà une connexion, pour
 // signaler qu'il n'est pas obligatoire de le retaper si on ne le change
-// pas. S'il n'y a pas de ligne (ou en cas d'erreur) : champs vides,
-// comme avant ce correctif. Rien de tout ça (même la simple lecture) ne
-// se déclenche avant que verifySmtpBiometric() ait réussi.
+// pas. S'il n'y a pas de ligne (ou en cas d'erreur) : champs vides.
+//
+// Pour la protection de l'email/mot de passe : pas de popup Face ID/Touch
+// ID custom (tentative précédente rejetée par l'utilisateur — trop
+// intrusif et ça matchait le mauvais compte). On s'appuie à la place sur
+// le gestionnaire de mots de passe natif du navigateur (Safari/Chrome) :
+// les champs #smtp-email / #smtp-password ont les attributs
+// name="username"/"password" + autocomplete="username"/"current-password"
+// (voir HTML du modal), ce qui permet à Safari de proposer nativement les
+// identifiants enregistrés (petite pastille/icône native au clic sur le
+// champ, confirmée par Touch ID/Face ID géré entièrement par le
+// navigateur/Trousseau — pas par notre code).
 async function prefillSmtpConfigFromExistingConnection() {
   const emailInput = document.getElementById("smtp-email");
   const hostInput = document.getElementById("smtp-host");
@@ -17273,18 +17180,6 @@ async function prefillSmtpConfigFromExistingConnection() {
   }
 
   if (!currentUser || !currentUser.id) return;
-
-  // Rien n'est lu/révélé tant que la vérification Face ID/Touch ID n'a
-  // pas réussi. Les champs restent dans l'état vide déjà posé ci-dessus.
-  const biometric = await verifySmtpBiometric();
-  if (!biometric.ok) {
-    if (biometric.reason === "unsupported") {
-      showToast("Face ID/Touch ID non disponible sur cet appareil — champs à remplir manuellement", "info");
-    } else {
-      showToast("Vérification Face ID/Touch ID annulée", "info");
-    }
-    return;
-  }
 
   try {
     const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
