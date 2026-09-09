@@ -16167,6 +16167,22 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
     // reconnaît les champs d'une précédente demande (même id/name) et les
     // repréremplit tout seul avec les anciennes réponses, même pour une
     // toute nouvelle demande sans rapport.
+    // Sujet : /agent/redaction peut désormais suggérer un sujet déjà
+    // nettoyé de la formulation de la demande ("crée-moi un compte rendu
+    // pour la remise en état de ce portail" → "Remise en état de ce
+    // portail"), via suggested_subject (racine de la réponse) ou
+    // prefill.sujet (objet imbriqué) — les deux formes sont vérifiées, la
+    // première trouvée gagne. C'est CE texte qui doit apparaître dans le
+    // champ Sujet, jamais data.original_instruction (la phrase brute telle
+    // que dictée) : original_instruction n'est conservé que pour le POST
+    // final (voir pendingRedactionForm.originalInstruction plus haut,
+    // utilisé uniquement par submitRedactionForm).
+    const suggestedSubject = (
+      data.suggested_subject ||
+      (data.prefill && data.prefill.sujet) ||
+      ""
+    ).toString().trim();
+
     fieldsWrap.innerHTML = pendingRedactionForm.fields.map(function (f) {
       const label = (f.label || f.id || "").replace(/</g, "&lt;");
 
@@ -16188,10 +16204,20 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
 
       const placeholder = (f.placeholder || "").replace(/</g, "&lt;").replace(/"/g, "&quot;");
       const uniqueName = "rf_" + f.id + "_" + Math.random().toString(36).slice(2);
+      // "value" + data-cr-suggested-subject : uniquement pour le champ
+      // "sujet", et uniquement si le backend a fourni une suggestion. Le
+      // data-attribute sert de mémoire pour le filet de sécurité
+      // ci-dessous (repasse après le rendu, sans pouvoir s'appuyer sur une
+      // fermeture JS) — il doit retrouver EXACTEMENT cette valeur, jamais
+      // repartir vide comme les autres champs.
+      const isSujetField = f.id === "sujet";
+      const suggestedValueAttr = isSujetField && suggestedSubject
+        ? ' value="' + suggestedSubject.replace(/</g, "&lt;").replace(/"/g, "&quot;") + '" data-cr-suggested-subject="' + suggestedSubject.replace(/</g, "&lt;").replace(/"/g, "&quot;") + '"'
+        : "";
       return (
         '<div class="field-group">' +
           '<div class="field-label">' + label + (f.required ? " *" : "") + "</div>" +
-          '<input class="field-input" type="text" id="redaction-form-field-' + f.id + '" name="' + uniqueName + '" autocomplete="off" data-lpignore="true" placeholder="' + placeholder + '" />' +
+          '<input class="field-input" type="text" id="redaction-form-field-' + f.id + '" name="' + uniqueName + '" autocomplete="off" data-lpignore="true" placeholder="' + placeholder + '"' + suggestedValueAttr + ' />' +
         "</div>"
       );
     }).join("");
@@ -16203,13 +16229,17 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
   modal.style.display = "flex";
 
   // Filet de sécurité si Safari autoremplit quand même juste après
-  // l'insertion dans le DOM : on revide les champs juste après.
+  // l'insertion dans le DOM : on revide les champs juste après — SAUF le
+  // champ Sujet quand /agent/redaction a fourni une suggestion
+  // (data-cr-suggested-subject posé ci-dessus) : celle-ci doit rester
+  // affichée, ce n'est pas un ancien remplissage Safari à effacer.
   if (fieldsWrap) {
     requestAnimationFrame(() => {
       pendingRedactionForm.fields.forEach(function (f) {
         if (f.field_type === "style_select") return;
         const el = document.getElementById("redaction-form-field-" + f.id);
-        if (el) el.value = "";
+        if (!el) return;
+        el.value = el.dataset.crSuggestedSubject || "";
       });
     });
   }
