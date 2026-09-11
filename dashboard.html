@@ -24750,18 +24750,30 @@ console.log("MESSAGE =", message);
         box.innerHTML = config.successText;
         showToast(content || "C'est noté", "success");
 
-        // Contrat Grok : si /agent/planning renvoie un RDV avec
-        // notify_minutes_before déjà un entier (ex: "rappelle-moi 40 min
-        // avant" dicté en même temps que la création/modif du RDV), on
-        // relit la ligne juste après le toast pour rafraîchir le champ
+        // Contrat Grok : après un succès /agent/planning, on relit TOUJOURS
+        // la ligne appointments (source de vérité) pour rafraîchir le champ
         // "Prévenir" de la fiche SI elle est déjà ouverte pour ce RDV —
         // jamais pour "relance", qui n'est pas concerné.
-        if (
-          config.agent === "planning" &&
-          data.appointment &&
-          isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)
-        ) {
-          refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
+        // Important : on ne conditionne PLUS cet appel à la présence de
+        // notify_minutes_before dans la réponse du webhook. La réponse
+        // /agent/planning ne renvoie pas forcément ce champ dans l'objet
+        // "appointment" (même quand la dictée était "rappelle-moi 25 min
+        // avant" et que la colonne a bien été écrite en base) — se fier à
+        // isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)
+        // ici revenait à sauter la relecture dès que le webhook omettait ce
+        // champ, alors que la valeur était déjà correcte en base. On relit
+        // dès qu'on a un id de RDV, point final.
+        // Filet de sécurité supplémentaire : si le webhook ne renvoie même
+        // pas d'id dans "appointment" (objet partiel), on retombe sur le RDV
+        // actuellement ouvert à l'écran — c'est forcément celui visé par la
+        // dictée si une fiche est ouverte pendant qu'on dicte "rappelle-moi
+        // X min avant".
+        if (config.agent === "planning") {
+          const targetApptId =
+            (data.appointment && data.appointment.id) || window.currentOpenAppointmentId || null;
+          if (targetApptId) {
+            refreshAppointmentNotifyDisplayAfterPlanning(targetApptId);
+          }
         }
       } else {
         if (box) hideOrRemoveBox(box);
@@ -25838,12 +25850,21 @@ async function callSimpleAgent(
   maybeShowFirstScheduleNotice();
 
   // Contrat Grok : même règle que côté orchestrateur (voir callAgentGeneric
-  // /sendTypedInstruction) — si /agent/planning renvoie un RDV avec
-  // notify_minutes_before déjà un entier, on relit la ligne juste après le
-  // toast pour rafraîchir "Prévenir" sur la fiche SI elle est déjà ouverte
-  // pour ce même RDV.
-  if (agentName === "planning" && data.appointment && isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)) {
-    refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
+  // /sendTypedInstruction) — après un succès /agent/planning, on relit
+  // TOUJOURS la ligne appointments pour rafraîchir "Prévenir" sur la fiche
+  // SI elle est déjà ouverte pour ce même RDV. On ne conditionne plus cet
+  // appel à la présence de notify_minutes_before dans la réponse du
+  // webhook : ce champ peut être absent de la réponse même quand la valeur
+  // a bien été écrite en base (cas réel observé : "rappelle-moi 25 min
+  // avant" ne mettait jamais à jour "Prévenir" car data.appointment ne
+  // contenait pas notify_minutes_before). On relit dès qu'on a un id, et à
+  // défaut on retombe sur le RDV actuellement ouvert à l'écran.
+  if (agentName === "planning") {
+    const targetApptId =
+      (data.appointment && data.appointment.id) || window.currentOpenAppointmentId || null;
+    if (targetApptId) {
+      refreshAppointmentNotifyDisplayAfterPlanning(targetApptId);
+    }
   }
 
   // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
