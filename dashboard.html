@@ -9624,6 +9624,41 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+<!-- Rappel PAR RENDEZ-VOUS (fiche RDV) : distinct de #notify-offset-modal
+     (qui ne règle que le DÉFAUT global dans Réglages). notify_minutes_before
+     sur la ligne appointments — null = suivre le défaut Réglages, sinon la
+     valeur en minutes prime pour CE rendez-vous précis. Même style visuel
+     (.notify-offset-mode-row) que la popup Réglages ci-dessus. -->
+<div id="appointment-notify-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeAppointmentNotifyModal()"></div>
+  <div class="mail-choice-box" style="max-width:300px;padding:16px;">
+    <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Prévenir</div>
+    <div class="mail-choice-subtitle" style="font-size:12px;">Pour ce rendez-vous uniquement.</div>
+
+    <div id="appointment-notify-mode-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+
+    <div id="appointment-notify-custom-wrap" style="display:none;align-items:center;gap:8px;margin-top:10px;">
+      <input
+        class="field-input"
+        id="appointment-notify-custom-input"
+        type="number"
+        min="0"
+        step="1"
+        style="width:100px;"
+        oninput="updateAppointmentNotifyCustomMinutes(this.value)"
+      >
+      <span style="font-size:13px;color:var(--clarity-text-tertiary);">minutes avant</span>
+    </div>
+
+    <button class="save-btn" type="button" style="width:100%;margin-top:14px;padding:12px;font-size:14px;" onclick="confirmAppointmentNotify()">
+      Valider
+    </button>
+    <button class="sheet-btn" type="button" onclick="closeAppointmentNotifyModal()" style="width:100%;justify-content:center;margin-top:8px;padding:9px;">
+      Annuler
+    </button>
+  </div>
+</div>
+
 <!-- Sous-page Notifications (style iPhone) : Brief du jour, Heure d'envoi,
      e-mail test, Rappels, RDV — tout ce qui était avant en lignes directes
      sur Réglages est regroupé ici derrière une seule entrée. -->
@@ -14946,6 +14981,193 @@ async function confirmNotifyOffset() {
   await saveDigestSettings();
 }
 
+// ─── Rappel PAR RENDEZ-VOUS (fiche RDV, colonne notify_minutes_before) ────
+// Distinct du réglage global ci-dessus (#notify-offset-modal, Réglages →
+// Notifications → Rendez-vous, colonne appointment_offset des préférences
+// digest) : ceci ne concerne QUE le rendez-vous ouvert. null = revenir au
+// défaut Réglages, sinon la valeur en minutes prime pour ce RDV précis
+// (contrat Grok — colonne appointments.notify_minutes_before, déjà
+// écrite/lue par /agent/planning et le cron RDV : rien à faire côté envoi,
+// seule cette fiche doit permettre de la consulter/modifier).
+let pendingAppointmentNotify = null; // { appointmentId, mode, customMinutes }
+
+const APPOINTMENT_NOTIFY_OPTIONS = [
+  { key: "default", label: "Défaut (Réglages)" },
+  { key: "exact0", label: "À l'heure", minutes: 0 },
+  { key: "exact15", label: "15 min avant", minutes: 15 },
+  { key: "exact30", label: "30 min avant", minutes: 30 },
+  { key: "exact60", label: "1 h avant", minutes: 60 },
+  { key: "custom", label: "Personnalisé (minutes)" }
+];
+
+// Texte affiché sur la ligne "Prévenir" de la fiche (pas dans la popup) :
+// null/undefined (colonne absente ou explicitement remise à null) = suit le
+// défaut des Réglages.
+function formatAppointmentNotifyLabel(minutes) {
+  if (minutes === null || minutes === undefined) return "Défaut (Réglages)";
+  return formatAppointmentNotifyMinutesLabel(minutes);
+}
+
+function formatAppointmentNotifyMinutesLabel(minutes) {
+  const n = Number(minutes) || 0;
+  if (n === 0) return "À l'heure";
+  if (n < 60) return n + " min avant";
+  const h = Math.floor(n / 60);
+  const m = n % 60;
+  if (m === 0) return h + " h avant";
+  return h + " h " + String(m).padStart(2, "0") + " avant";
+}
+
+// Retrouve quelle option de la liste correspond à une valeur déjà en base
+// (ex: 30 → "exact30") — une valeur qui ne correspond à aucun préréglage
+// (ex: 45) tombe sur "custom" avec ce nombre déjà rempli, plutôt que de
+// silencieusement retomber sur une des options fixes.
+function appointmentNotifyModeFromMinutes(minutes) {
+  if (minutes === null || minutes === undefined) {
+    return { mode: "default", customMinutes: 60 };
+  }
+  const known = APPOINTMENT_NOTIFY_OPTIONS.find(o => o.minutes === minutes);
+  if (known) return { mode: known.key, customMinutes: 60 };
+  return { mode: "custom", customMinutes: minutes };
+}
+
+function openAppointmentNotifyModal(appointmentId) {
+  const appt = (currentAppointments || []).find(a => String(a.id) === String(appointmentId));
+  const currentMinutes = appt ? (appt.notify_minutes_before ?? null) : null;
+  const parsed = appointmentNotifyModeFromMinutes(currentMinutes);
+
+  pendingAppointmentNotify = {
+    appointmentId,
+    mode: parsed.mode,
+    customMinutes: parsed.customMinutes
+  };
+
+  renderAppointmentNotifyModeList();
+
+  const modal = document.getElementById("appointment-notify-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeAppointmentNotifyModal() {
+  const modal = document.getElementById("appointment-notify-modal");
+  if (modal) modal.style.display = "none";
+  pendingAppointmentNotify = null;
+}
+
+function renderAppointmentNotifyModeList() {
+  const container = document.getElementById("appointment-notify-mode-list");
+  if (!container || !pendingAppointmentNotify) return;
+
+  container.innerHTML = APPOINTMENT_NOTIFY_OPTIONS.map(o => `
+    <button type="button" class="notify-offset-mode-row${o.key === pendingAppointmentNotify.mode ? " active" : ""}" onclick="selectAppointmentNotifyMode('${o.key}')">
+      <span>${o.label}</span>
+      <span class="notify-offset-mode-check">✓</span>
+    </button>
+  `).join("");
+
+  const customWrap = document.getElementById("appointment-notify-custom-wrap");
+  const customInput = document.getElementById("appointment-notify-custom-input");
+  const isCustom = pendingAppointmentNotify.mode === "custom";
+  if (customWrap) customWrap.style.display = isCustom ? "flex" : "none";
+  if (customInput) customInput.value = pendingAppointmentNotify.customMinutes;
+}
+
+function selectAppointmentNotifyMode(key) {
+  if (!pendingAppointmentNotify) return;
+  pendingAppointmentNotify.mode = key;
+  renderAppointmentNotifyModeList();
+  if (key === "custom") {
+    const customInput = document.getElementById("appointment-notify-custom-input");
+    if (customInput) setTimeout(() => customInput.focus(), 60);
+  }
+}
+
+function updateAppointmentNotifyCustomMinutes(value) {
+  if (!pendingAppointmentNotify) return;
+  const n = parseInt(value, 10);
+  pendingAppointmentNotify.customMinutes = (isNaN(n) || n < 0) ? 0 : n;
+}
+
+async function confirmAppointmentNotify() {
+  if (!pendingAppointmentNotify || !currentUser) return;
+
+  const { appointmentId, mode, customMinutes } = pendingAppointmentNotify;
+
+  let minutes;
+  if (mode === "default") {
+    minutes = null;
+  } else if (mode === "custom") {
+    minutes = customMinutes;
+    if (minutes === null || minutes === undefined || isNaN(minutes) || minutes < 0) {
+      showToast("Indiquez un nombre de minutes valide", "error");
+      return;
+    }
+  } else {
+    const opt = APPOINTMENT_NOTIFY_OPTIONS.find(o => o.key === mode);
+    minutes = opt && typeof opt.minutes === "number" ? opt.minutes : null;
+  }
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+
+  if (!accessToken) {
+    showToast("Session expirée");
+    return;
+  }
+
+  try {
+    // Filtré par id ET user_id (contrat Grok) : jamais uniquement par id,
+    // pour ne jamais dépendre de la seule policy RLS.
+    const response = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/appointments?id=eq." + encodeURIComponent(appointmentId) +
+        "&user_id=eq." + encodeURIComponent(currentUser.id),
+      {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type": "application/json",
+          // "return=representation" (voir saveAppointment) : sans le corps
+          // de la ligne modifiée, une policy RLS qui bloque silencieusement
+          // la modification (0 ligne affectée) ressemblerait à un succès.
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({ notify_minutes_before: minutes })
+      }
+    );
+
+    if (!response.ok) {
+      showToast("Erreur sauvegarde", "error");
+      return;
+    }
+
+    const updatedRows = await response.json().catch(() => []);
+    if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+      console.error("confirmAppointmentNotify: 0 ligne modifiée pour id=", appointmentId, "— vérifier la policy RLS UPDATE sur appointments");
+      showToast("Sauvegarde bloquée (droits Supabase)", "error");
+      return;
+    }
+
+    // Reflète immédiatement la nouvelle valeur sans recharger toute la
+    // liste : currentAppointments (source de la fiche si on la rouvre) et
+    // la ligne déjà affichée sur la fiche ouverte doivent toutes les deux
+    // être à jour.
+    const appt = (currentAppointments || []).find(a => String(a.id) === String(appointmentId));
+    if (appt) appt.notify_minutes_before = minutes;
+
+    const valueEl = document.getElementById("appointment-notify-value");
+    if (valueEl) valueEl.textContent = formatAppointmentNotifyLabel(minutes);
+
+    closeAppointmentNotifyModal();
+    showToast("Rappel mis à jour");
+  } catch (e) {
+    console.error("Erreur sauvegarde notify_minutes_before :", e);
+    showToast("Erreur sauvegarde", "error");
+  }
+}
+
 async function openQuickPlanningModal() {
   const allowed = await canUseAgents();
   if (!allowed) return;
@@ -19795,9 +20017,27 @@ function renderAppointment(a) {
         <input class="field-input" id="appointment-title-input" value="${a.title || ""}" placeholder="Motif du rendez-vous" oninput="toggleAppointmentSave()">
       </div>
 
-      <div class="field-group">
+      <div class="field-group" style="margin-bottom:18px;">
         <div class="field-label">Note</div>
         <textarea class="field-input" id="appointment-note-input" style="min-height:110px;" oninput="toggleAppointmentSave()">${a.description || ""}</textarea>
+      </div>
+
+      <!-- Rappel spécifique à CE rendez-vous (notify_minutes_before) :
+           sauvegardé indépendamment du bouton "Enregistrer" ci-dessous
+           (voir confirmAppointmentNotify) — pas besoin de toucher au reste
+           de la fiche pour changer juste le rappel. -->
+      <div class="field-group" style="margin-bottom:18px;">
+        <div class="field-label">Prévenir</div>
+        <button
+          type="button"
+          class="field-input"
+          id="appointment-notify-row"
+          style="display:flex;align-items:center;justify-content:space-between;text-align:left;cursor:pointer;width:100%;"
+          onclick="event.stopPropagation(); openAppointmentNotifyModal('${a.id}')"
+        >
+          <span id="appointment-notify-value">${formatAppointmentNotifyLabel(a.notify_minutes_before)}</span>
+          <span style="opacity:.5;">›</span>
+        </button>
       </div>
 
       <button class="save-btn" id="appointment-save-btn" onclick="saveAppointment('${a.id}')" type="button" disabled style="opacity:.45;margin-top:14px;">
@@ -21417,7 +21657,7 @@ const CLARITY_MODAL_IDS = [
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
-  "notify-offset-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
+  "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal"
 ];
