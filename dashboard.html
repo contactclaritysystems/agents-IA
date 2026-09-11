@@ -15016,6 +15016,21 @@ function formatAppointmentNotifyLabel(minutes) {
   return formatAppointmentNotifyMinutesLabel(minutes);
 }
 
+// Vrai pour toute valeur numérique exploitable, qu'elle soit déjà un
+// nombre JS ou une chaîne numérique ("40") — Postgres/PostgREST peut
+// renvoyer une colonne entière sous forme de chaîne selon son type exact
+// (ex: bigint). Number.isInteger(data.appointment.notify_minutes_before)
+// renverrait silencieusement false pour "40" (Number.isInteger ne
+// convertit jamais les chaînes), ce qui aurait fait sauter la mise à jour
+// du champ "Prévenir" après un succès /agent/planning sans aucune erreur
+// visible. Utiliser CETTE fonction, jamais Number.isInteger direct sur une
+// valeur venant du backend.
+function isPlausibleNotifyMinutesValue(value) {
+  if (value === null || value === undefined || value === "") return false;
+  const n = Number(value);
+  return !isNaN(n) && isFinite(n);
+}
+
 function formatAppointmentNotifyMinutesLabel(minutes) {
   const n = Number(minutes) || 0;
   if (n === 0) return "À l'heure";
@@ -15030,13 +15045,23 @@ function formatAppointmentNotifyMinutesLabel(minutes) {
 // (ex: 30 → "exact30") — une valeur qui ne correspond à aucun préréglage
 // (ex: 45) tombe sur "custom" avec ce nombre déjà rempli, plutôt que de
 // silencieusement retomber sur une des options fixes.
+//
+// Number(minutes) plutôt qu'une comparaison directe (=== 15) : Postgres/
+// PostgREST peut renvoyer une colonne numérique sous forme de chaîne
+// ("15" au lieu de 15) selon son type exact — une comparaison stricte
+// contre le nombre 15 littéral échouerait alors silencieusement et ferait
+// tomber une valeur pourtant standard sur "Personnalisé".
 function appointmentNotifyModeFromMinutes(minutes) {
-  if (minutes === null || minutes === undefined) {
+  if (minutes === null || minutes === undefined || minutes === "") {
     return { mode: "default", customMinutes: 60 };
   }
-  const known = APPOINTMENT_NOTIFY_OPTIONS.find(o => o.minutes === minutes);
+  const numMinutes = Number(minutes);
+  if (isNaN(numMinutes)) {
+    return { mode: "default", customMinutes: 60 };
+  }
+  const known = APPOINTMENT_NOTIFY_OPTIONS.find(o => typeof o.minutes === "number" && o.minutes === numMinutes);
   if (known) return { mode: known.key, customMinutes: 60 };
-  return { mode: "custom", customMinutes: minutes };
+  return { mode: "custom", customMinutes: numMinutes };
 }
 
 function openAppointmentNotifyModal(appointmentId) {
@@ -15211,7 +15236,14 @@ async function refreshAppointmentNotifyDisplayAfterPlanning(appointmentId) {
     const rows = await response.json();
     if (!Array.isArray(rows) || rows.length === 0) return;
 
-    const freshMinutes = rows[0].notify_minutes_before ?? null;
+    // Number(...) : Postgres/PostgREST peut renvoyer cette colonne sous
+    // forme de chaîne selon son type exact — on normalise systématiquement
+    // avant de stocker/afficher, jamais la valeur brute telle quelle.
+    const rawFreshMinutes = rows[0].notify_minutes_before;
+    const freshMinutes =
+      rawFreshMinutes === null || rawFreshMinutes === undefined
+        ? null
+        : Number(rawFreshMinutes);
 
     // Reflété dans currentAppointments (source si la fiche est rouverte
     // plus tard) même si elle n'est pas affichée à l'instant.
@@ -19894,6 +19926,13 @@ async function loadAppointments() {
   // au lieu de disparaître immédiatement — seul "done" part en historique
   // dès qu'il est marqué terminé.
 "&status=in.(scheduled,cancelled)" +
+// Pas de "select=" ici : volontaire. La fiche RDV (openAppointmentDetail)
+// lit "Prévenir" directement depuis les lignes de cette liste — un
+// "select=" restreint aux seules colonnes affichées dans la liste
+// couperait silencieusement notify_minutes_before, et le champ "Prévenir"
+// retomberait sur "Défaut" même si la colonne vaut 40 en base (contrat
+// Grok). Ne JAMAIS ajouter de "select=" ici sans y inclure explicitement
+// notify_minutes_before.
 "&order=appointment_date.asc,appointment_time.asc",
     {
       headers: {
@@ -24720,7 +24759,7 @@ console.log("MESSAGE =", message);
         if (
           config.agent === "planning" &&
           data.appointment &&
-          Number.isInteger(data.appointment.notify_minutes_before)
+          isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)
         ) {
           refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
         }
@@ -25803,7 +25842,7 @@ async function callSimpleAgent(
   // notify_minutes_before déjà un entier, on relit la ligne juste après le
   // toast pour rafraîchir "Prévenir" sur la fiche SI elle est déjà ouverte
   // pour ce même RDV.
-  if (agentName === "planning" && data.appointment && Number.isInteger(data.appointment.notify_minutes_before)) {
+  if (agentName === "planning" && data.appointment && isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)) {
     refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
   }
 
