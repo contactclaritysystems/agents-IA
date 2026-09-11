@@ -15201,6 +15201,115 @@ async function confirmAppointmentNotify() {
   }
 }
 
+// Contrat Grok (nouveau) : après un succès /agent/planning (RDV créé/noté),
+// on n'attend plus que le backend ait lui-même écrit notify_minutes_before
+// pour ce RDV. On relit directement l'instruction dictée par l'utilisateur
+// et, si elle contient un motif du type "X min/minutes/h avant" ou
+// "dans X min/h", on écrit NOUS-MÊMES la colonne via le même PATCH que le
+// champ "Prévenir" (déjà validé), puis on rafraîchit le libellé affiché.
+// Reconnaît par exemple : "rappelle-moi 30 minutes avant",
+// "relance-moi 10 min avant", "préviens-moi 1 heure avant", "dans 45 min".
+function parseDictatedNotifyMinutes(instructionText) {
+  if (!instructionText || typeof instructionText !== "string") return null;
+  const normalized = instructionText.toLowerCase();
+
+  const patterns = [
+    // "X heure(s)/h avant"
+    { regex: /(\d+)\s*(heures?|h)\s*avant/, isHour: true },
+    // "X min(ute)(s) avant"
+    { regex: /(\d+)\s*(minutes?|mins?|min)\s*avant/, isHour: false },
+    // "dans X heure(s)/h"
+    { regex: /dans\s+(\d+)\s*(heures?|h)\b/, isHour: true },
+    // "dans X min(ute)(s)"
+    { regex: /dans\s+(\d+)\s*(minutes?|mins?|min)\b/, isHour: false }
+  ];
+
+  for (const { regex, isHour } of patterns) {
+    const match = normalized.match(regex);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (isNaN(n) || n < 0) continue;
+      return isHour ? n * 60 : n;
+    }
+  }
+  return null;
+}
+
+// PATCH direct de notify_minutes_before, indépendant de la popup "Prévenir"
+// (pas de pendingAppointmentNotify requis) : même requête Supabase que
+// confirmAppointmentNotify (filtrée id + user_id, Prefer: return=representation
+// pour détecter un blocage RLS silencieux), utilisée ici pour appliquer une
+// valeur déduite de la dictée juste après la création/modif d'un RDV.
+async function patchAppointmentNotifyMinutesDirect(appointmentId, minutes) {
+  if (!appointmentId || !currentUser) return false;
+  if (minutes === null || minutes === undefined || isNaN(minutes) || minutes < 0) return false;
+
+  const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+  const rawSession = localStorage.getItem(storageKey);
+  const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+  if (!accessToken) return false;
+
+  try {
+    const response = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/appointments?id=eq." + encodeURIComponent(appointmentId) +
+        "&user_id=eq." + encodeURIComponent(currentUser.id),
+      {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({ notify_minutes_before: minutes })
+      }
+    );
+
+    if (!response.ok) return false;
+
+    const updatedRows = await response.json().catch(() => []);
+    if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+      console.error("patchAppointmentNotifyMinutesDirect: 0 ligne modifiée pour id=", appointmentId, "— vérifier la policy RLS UPDATE sur appointments");
+      return false;
+    }
+
+    // Même reflet immédiat que confirmAppointmentNotify : currentAppointments
+    // (source si la fiche est rouverte plus tard) et la fiche déjà affichée,
+    // si c'est bien celle-ci qui est ouverte.
+    const appt = (currentAppointments || []).find(a => String(a.id) === String(appointmentId));
+    if (appt) appt.notify_minutes_before = minutes;
+
+    if (String(window.currentOpenAppointmentId) === String(appointmentId)) {
+      const valueEl = document.getElementById("appointment-notify-value");
+      if (valueEl) valueEl.textContent = formatAppointmentNotifyLabel(minutes);
+    }
+
+    return true;
+  } catch (e) {
+    console.error("Erreur PATCH notify_minutes_before (dictée) :", e);
+    return false;
+  }
+}
+
+// Point d'entrée appelé juste après le toast de succès /agent/planning.
+// id du RDV visé : data.appointment.id en priorité, sinon le dernier de
+// currentAppointments (RDV venant d'être créé, contrat Grok) — jamais
+// besoin que le webhook renvoie notify_minutes_before dans son body.
+async function applyDictatedAppointmentNotifyIfAny(instructionText, data) {
+  const minutes = parseDictatedNotifyMinutes(instructionText);
+  if (minutes === null) return;
+
+  const appointmentId =
+    (data && data.appointment && data.appointment.id) ||
+    (Array.isArray(currentAppointments) && currentAppointments.length > 0
+      ? currentAppointments[currentAppointments.length - 1].id
+      : null);
+  if (!appointmentId) return;
+
+  await patchAppointmentNotifyMinutesDirect(appointmentId, minutes);
+}
+
 // Contrat Grok : quand /agent/planning répond avec succès et que
 // data.appointment.notify_minutes_before est un entier (ex: "rappelle-moi
 // 40 min avant" dicté en même temps que la création/modif du RDV), le champ
@@ -24750,30 +24859,15 @@ console.log("MESSAGE =", message);
         box.innerHTML = config.successText;
         showToast(content || "C'est noté", "success");
 
-        // Contrat Grok : après un succès /agent/planning, on relit TOUJOURS
-        // la ligne appointments (source de vérité) pour rafraîchir le champ
-        // "Prévenir" de la fiche SI elle est déjà ouverte pour ce RDV —
+        // Contrat Grok (nouveau) : on ne dépend plus du body /agent/planning
+        // pour notify_minutes_before. Après le toast de succès, on relit
+        // NOUS-MÊMES l'instruction dictée ("X min/h avant", "dans X min/h") ;
+        // si elle contient un tel motif, on PATCH directement la colonne
+        // (même requête que le champ "Prévenir") sur le RDV visé par
+        // data.appointment.id, sinon le dernier de currentAppointments —
         // jamais pour "relance", qui n'est pas concerné.
-        // Important : on ne conditionne PLUS cet appel à la présence de
-        // notify_minutes_before dans la réponse du webhook. La réponse
-        // /agent/planning ne renvoie pas forcément ce champ dans l'objet
-        // "appointment" (même quand la dictée était "rappelle-moi 25 min
-        // avant" et que la colonne a bien été écrite en base) — se fier à
-        // isPlausibleNotifyMinutesValue(data.appointment.notify_minutes_before)
-        // ici revenait à sauter la relecture dès que le webhook omettait ce
-        // champ, alors que la valeur était déjà correcte en base. On relit
-        // dès qu'on a un id de RDV, point final.
-        // Filet de sécurité supplémentaire : si le webhook ne renvoie même
-        // pas d'id dans "appointment" (objet partiel), on retombe sur le RDV
-        // actuellement ouvert à l'écran — c'est forcément celui visé par la
-        // dictée si une fiche est ouverte pendant qu'on dicte "rappelle-moi
-        // X min avant".
         if (config.agent === "planning") {
-          const targetApptId =
-            (data.appointment && data.appointment.id) || window.currentOpenAppointmentId || null;
-          if (targetApptId) {
-            refreshAppointmentNotifyDisplayAfterPlanning(targetApptId);
-          }
+          applyDictatedAppointmentNotifyIfAny(instruction, data);
         }
       } else {
         if (box) hideOrRemoveBox(box);
@@ -25849,22 +25943,14 @@ async function callSimpleAgent(
   showToast(content || "C’est noté", "success");
   maybeShowFirstScheduleNotice();
 
-  // Contrat Grok : même règle que côté orchestrateur (voir callAgentGeneric
-  // /sendTypedInstruction) — après un succès /agent/planning, on relit
-  // TOUJOURS la ligne appointments pour rafraîchir "Prévenir" sur la fiche
-  // SI elle est déjà ouverte pour ce même RDV. On ne conditionne plus cet
-  // appel à la présence de notify_minutes_before dans la réponse du
-  // webhook : ce champ peut être absent de la réponse même quand la valeur
-  // a bien été écrite en base (cas réel observé : "rappelle-moi 25 min
-  // avant" ne mettait jamais à jour "Prévenir" car data.appointment ne
-  // contenait pas notify_minutes_before). On relit dès qu'on a un id, et à
-  // défaut on retombe sur le RDV actuellement ouvert à l'écran.
+  // Contrat Grok (nouveau) : même règle que côté orchestrateur (voir
+  // sendTypedInstruction) — on ne dépend plus du body /agent/planning pour
+  // notify_minutes_before. On relit l'instruction dictée et, si elle
+  // contient "X min/h avant" ou "dans X min/h", on PATCH nous-mêmes la
+  // colonne (même requête que le champ "Prévenir") sur data.appointment.id,
+  // sinon le dernier de currentAppointments.
   if (agentName === "planning") {
-    const targetApptId =
-      (data.appointment && data.appointment.id) || window.currentOpenAppointmentId || null;
-    if (targetApptId) {
-      refreshAppointmentNotifyDisplayAfterPlanning(targetApptId);
-    }
+    applyDictatedAppointmentNotifyIfAny(instruction, data);
   }
 
   // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
