@@ -15176,6 +15176,59 @@ async function confirmAppointmentNotify() {
   }
 }
 
+// Contrat Grok : quand /agent/planning répond avec succès et que
+// data.appointment.notify_minutes_before est un entier (ex: "rappelle-moi
+// 40 min avant" dicté en même temps que la création/modif du RDV), le champ
+// "Prévenir" de la fiche de CE rendez-vous — si elle est déjà ouverte —
+// doit refléter cette valeur au lieu de rester sur "Défaut". On ne fait
+// jamais confiance tel quel au champ renvoyé par le webhook pour ça : on
+// relit la ligne appointments juste après le toast (source de vérité,
+// jamais en léger décalage avec ce que le webhook vient d'écrire).
+async function refreshAppointmentNotifyDisplayAfterPlanning(appointmentId) {
+  if (!appointmentId || !currentUser) return;
+
+  try {
+    const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
+    const rawSession = localStorage.getItem(storageKey);
+    const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
+    if (!accessToken) return;
+
+    const response = await fetch(
+      SUPABASE_URL +
+        "/rest/v1/appointments?id=eq." + encodeURIComponent(appointmentId) +
+        "&user_id=eq." + encodeURIComponent(currentUser.id) +
+        "&select=id,notify_minutes_before&limit=1",
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken
+        }
+      }
+    );
+
+    if (!response.ok) return;
+
+    const rows = await response.json();
+    if (!Array.isArray(rows) || rows.length === 0) return;
+
+    const freshMinutes = rows[0].notify_minutes_before ?? null;
+
+    // Reflété dans currentAppointments (source si la fiche est rouverte
+    // plus tard) même si elle n'est pas affichée à l'instant.
+    const appt = (currentAppointments || []).find(a => String(a.id) === String(appointmentId));
+    if (appt) appt.notify_minutes_before = freshMinutes;
+
+    // Ne touche à l'affichage de la fiche QUE si c'est bien CE rendez-vous
+    // qui est actuellement ouvert (jamais la fiche d'un autre RDV).
+    if (String(window.currentOpenAppointmentId) === String(appointmentId)) {
+      const valueEl = document.getElementById("appointment-notify-value");
+      if (valueEl) valueEl.textContent = formatAppointmentNotifyLabel(freshMinutes);
+    }
+  } catch (e) {
+    console.error("Relecture notify_minutes_before après /agent/planning impossible :", e);
+  }
+}
+
 async function openQuickPlanningModal() {
   const allowed = await canUseAgents();
   if (!allowed) return;
@@ -19982,6 +20035,11 @@ function renderAppointment(a) {
   currentAppointmentInitialContact = a.contact_name || "";
   currentAppointmentInitialDate = a.appointment_date || "";
   currentAppointmentInitialTime = a.appointment_time?.slice(0,5) || "";
+  // Retenu pour refreshAppointmentNotifyDisplayAfterPlanning() : permet de
+  // savoir si un succès /agent/planning ultérieur concerne CE rendez-vous
+  // précisément ouvert à l'écran, pour rafraîchir son champ "Prévenir"
+  // sans jamais toucher à la fiche d'un autre RDV par erreur.
+  window.currentOpenAppointmentId = a.id;
 
   const detail = document.getElementById("planning-detail");
   const list = document.getElementById("planning-list");
@@ -24652,6 +24710,20 @@ console.log("MESSAGE =", message);
         setDictationBoxState(box, "success");
         box.innerHTML = config.successText;
         showToast(content || "C'est noté", "success");
+
+        // Contrat Grok : si /agent/planning renvoie un RDV avec
+        // notify_minutes_before déjà un entier (ex: "rappelle-moi 40 min
+        // avant" dicté en même temps que la création/modif du RDV), on
+        // relit la ligne juste après le toast pour rafraîchir le champ
+        // "Prévenir" de la fiche SI elle est déjà ouverte pour ce RDV —
+        // jamais pour "relance", qui n'est pas concerné.
+        if (
+          config.agent === "planning" &&
+          data.appointment &&
+          Number.isInteger(data.appointment.notify_minutes_before)
+        ) {
+          refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
+        }
       } else {
         if (box) hideOrRemoveBox(box);
         openSimpleAgentPreview({
@@ -25725,6 +25797,15 @@ async function callSimpleAgent(
   }
   showToast(content || "C’est noté", "success");
   maybeShowFirstScheduleNotice();
+
+  // Contrat Grok : même règle que côté orchestrateur (voir callAgentGeneric
+  // /sendTypedInstruction) — si /agent/planning renvoie un RDV avec
+  // notify_minutes_before déjà un entier, on relit la ligne juste après le
+  // toast pour rafraîchir "Prévenir" sur la fiche SI elle est déjà ouverte
+  // pour ce même RDV.
+  if (agentName === "planning" && data.appointment && Number.isInteger(data.appointment.notify_minutes_before)) {
+    refreshAppointmentNotifyDisplayAfterPlanning(data.appointment.id);
+  }
 
   // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
   // vient de créer apparaît tout de suite dans la liste, sans attendre un
@@ -30068,6 +30149,10 @@ function closePlanningDetail() {
     const confirmLeave = confirm("Vos modifications ne sont pas enregistrées. Si vous quittez, elles seront perdues.");
     if (!confirmLeave) return;
   }
+
+  // On quitte réellement la fiche : plus aucun RDV "ouvert" pour
+  // refreshAppointmentNotifyDisplayAfterPlanning().
+  window.currentOpenAppointmentId = null;
 
   // Un RDV est toujours atteint via le calendrier désormais : retour au
   // jour d'où on venait, pas à l'ancienne liste chronologique.
