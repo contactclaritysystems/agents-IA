@@ -15201,34 +15201,41 @@ async function confirmAppointmentNotify() {
   }
 }
 
-// Contrat Grok (nouveau) : après un succès /agent/planning (RDV créé/noté),
-// on n'attend plus que le backend ait lui-même écrit notify_minutes_before
-// pour ce RDV. On relit directement l'instruction dictée par l'utilisateur
-// et, si elle contient un motif du type "X min/minutes/h avant" ou
-// "dans X min/h", on écrit NOUS-MÊMES la colonne via le même PATCH que le
+// Contrat Grok (nouveau) : après un succès /agent/planning OU /agent/relance
+// (RDV créé/noté), on n'attend plus que le backend ait lui-même écrit
+// notify_minutes_before pour ce RDV. On relit directement l'instruction
+// dictée par l'utilisateur et, si elle contient un nombre + une unité
+// (min/minutes/mn/h/heure) à proximité d'un mot déclencheur (avant/dans/
+// relance/rappel), on écrit NOUS-MÊMES la colonne via le même PATCH que le
 // champ "Prévenir" (déjà validé), puis on rafraîchit le libellé affiché.
-// Reconnaît par exemple : "rappelle-moi 30 minutes avant",
-// "relance-moi 10 min avant", "préviens-moi 1 heure avant", "dans 45 min".
+// Approche par fenêtre de contexte (plus tolérante à l'ordre des mots et
+// aux fautes de frappe que des regex figées "X avant") — reconnaît entre
+// autres : "rappelle-moi 25 minutes avant", "rapelle moi le 25 minutes
+// avant" (faute de frappe), "relance-moi 30 min avant", "et 30 minutes
+// avant" dictée dans la même phrase que le RDV, "dans 45 min".
+// N'accroche PAS sur un horaire de RDV isolé ("demain 14h avec Paul") tant
+// qu'aucun mot déclencheur ne se trouve dans la fenêtre autour du nombre.
 function parseDictatedNotifyMinutes(instructionText) {
   if (!instructionText || typeof instructionText !== "string") return null;
   const normalized = instructionText.toLowerCase();
 
-  const patterns = [
-    // "X heure(s)/h avant"
-    { regex: /(\d+)\s*(heures?|h)\s*avant/, isHour: true },
-    // "X min(ute)(s) avant"
-    { regex: /(\d+)\s*(minutes?|mins?|min)\s*avant/, isHour: false },
-    // "dans X heure(s)/h"
-    { regex: /dans\s+(\d+)\s*(heures?|h)\b/, isHour: true },
-    // "dans X min(ute)(s)"
-    { regex: /dans\s+(\d+)\s*(minutes?|mins?|min)\b/, isHour: false }
-  ];
+  const numberUnitRegex = /(\d+)\s*(minutes?|mins?|min|mn|heures?|heure|h)\b/g;
+  const contextWords = ["avant", "dans", "relanc", "rappel"];
+  const CONTEXT_WINDOW = 15; // caractères de chaque côté du match
 
-  for (const { regex, isHour } of patterns) {
-    const match = normalized.match(regex);
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (isNaN(n) || n < 0) continue;
+  let match;
+  while ((match = numberUnitRegex.exec(normalized)) !== null) {
+    const n = parseInt(match[1], 10);
+    if (isNaN(n) || n < 0) continue;
+
+    const unit = match[2];
+    const isHour = /^h|heure/.test(unit);
+
+    const windowStart = Math.max(0, match.index - CONTEXT_WINDOW);
+    const windowEnd = Math.min(normalized.length, match.index + match[0].length + CONTEXT_WINDOW);
+    const contextSlice = normalized.slice(windowStart, windowEnd);
+
+    if (contextWords.some(w => contextSlice.includes(w))) {
       return isHour ? n * 60 : n;
     }
   }
@@ -15248,6 +15255,10 @@ async function patchAppointmentNotifyMinutesDirect(appointmentId, minutes) {
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
   if (!accessToken) return false;
+
+  // Debug demandé : voir dans la console Safari si le PATCH part bien,
+  // avec quelles valeurs, avant même l'appel réseau.
+  console.log("notify-patch", minutes, appointmentId);
 
   try {
     const response = await fetch(
@@ -15292,16 +15303,22 @@ async function patchAppointmentNotifyMinutesDirect(appointmentId, minutes) {
   }
 }
 
-// Point d'entrée appelé juste après le toast de succès /agent/planning.
-// id du RDV visé : data.appointment.id en priorité, sinon le dernier de
-// currentAppointments (RDV venant d'être créé, contrat Grok) — jamais
-// besoin que le webhook renvoie notify_minutes_before dans son body.
+// Point d'entrée appelé juste après le toast de succès /agent/planning OU
+// /agent/relance. id du RDV visé, dans cet ordre :
+//   1. data.appointment.id (si le webhook le renvoie)
+//   2. window.currentOpenAppointmentId (fiche actuellement ouverte — le cas
+//      le plus fréquent : l'utilisateur dicte "rappelle-moi X min avant"
+//      alors que la fiche du RDV visé est déjà affichée à l'écran)
+//   3. le dernier de currentAppointments (RDV venant d'être créé, contrat
+//      Grok) — seulement si la liste a déjà été chargée en mémoire
+// Jamais besoin que le webhook renvoie notify_minutes_before dans son body.
 async function applyDictatedAppointmentNotifyIfAny(instructionText, data) {
   const minutes = parseDictatedNotifyMinutes(instructionText);
   if (minutes === null) return;
 
   const appointmentId =
     (data && data.appointment && data.appointment.id) ||
+    window.currentOpenAppointmentId ||
     (Array.isArray(currentAppointments) && currentAppointments.length > 0
       ? currentAppointments[currentAppointments.length - 1].id
       : null);
@@ -17160,7 +17177,16 @@ async function sendTypedInstruction(instruction, continuing = false) {
           SIMPLE_AGENT_WEBHOOKS[data.agent],
           data.instruction,
           box,
-          data.request_id || requestId
+          data.request_id || requestId,
+          null,
+          // rawInstruction : texte BRUT tapé par l'utilisateur, capturé AVANT
+          // l'appel à l'orchestrateur (variable locale "instruction" de
+          // sendTypedInstruction). data.instruction (ci-dessus) est la
+          // version réécrite/nettoyée par l'orchestrateur et peut avoir
+          // perdu des fragments comme "30 min avant" — jamais utiliser
+          // data.instruction pour retrouver un rappel dicté. Transmis via
+          // "handlers" (jamais envoyé au backend, contrairement à "extra").
+          { rawInstruction: instruction }
         );
       }
     } catch (e) {
@@ -24720,7 +24746,15 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
     SIMPLE_AGENT_WEBHOOKS[data.agent],
     data.instruction,
     box,
-    data.request_id || requestId
+    data.request_id || requestId,
+    null,
+    // rawInstruction : texte BRUT dicté par l'utilisateur, capturé AVANT
+    // l'appel à l'orchestrateur (variable locale "instruction" de
+    // startSimpleAgentDictation, ligne où spokenText est assemblé).
+    // data.instruction (ci-dessus) vient de l'orchestrateur et peut avoir
+    // perdu des fragments comme "30 min avant" — jamais utiliser
+    // data.instruction pour retrouver un rappel dicté.
+    { rawInstruction: instruction }
   );
 }
 
@@ -24861,12 +24895,23 @@ console.log("MESSAGE =", message);
 
         // Contrat Grok (nouveau) : on ne dépend plus du body /agent/planning
         // pour notify_minutes_before. Après le toast de succès, on relit
-        // NOUS-MÊMES l'instruction dictée ("X min/h avant", "dans X min/h") ;
-        // si elle contient un tel motif, on PATCH directement la colonne
-        // (même requête que le champ "Prévenir") sur le RDV visé par
-        // data.appointment.id, sinon le dernier de currentAppointments —
-        // jamais pour "relance", qui n'est pas concerné.
-        if (config.agent === "planning") {
+        // NOUS-MÊMES l'instruction dictée BRUTE ("X min/h avant", "dans X
+        // min/h") — jamais data.instruction, qui peut être réécrite/nettoyée
+        // par l'orchestrateur (ex: "30 min avant" retiré). Ici "instruction"
+        // est déjà la variable locale brute (capturée avant tout appel
+        // réseau, cf. plus haut dans cette fonction), donc rien à changer
+        // pour ce flux direct (bouton Planning/Relance dédié, hors
+        // orchestrateur). Si un motif est trouvé, on PATCH directement la
+        // colonne (même requête que le champ "Prévenir") sur le RDV visé par
+        // data.appointment.id, sinon la fiche ouverte, sinon le dernier de
+        // currentAppointments. On tente sur planning ET relance, et aussi
+        // quand l'orchestrateur signale un secondary_intent "relance" en
+        // plus d'un planning — pas seulement quand le toast dit "RDV noté".
+        if (
+          config.agent === "planning" ||
+          config.agent === "relance" ||
+          data.secondary_intent === "relance"
+        ) {
           applyDictatedAppointmentNotifyIfAny(instruction, data);
         }
       } else {
@@ -25945,12 +25990,27 @@ async function callSimpleAgent(
 
   // Contrat Grok (nouveau) : même règle que côté orchestrateur (voir
   // sendTypedInstruction) — on ne dépend plus du body /agent/planning pour
-  // notify_minutes_before. On relit l'instruction dictée et, si elle
-  // contient "X min/h avant" ou "dans X min/h", on PATCH nous-mêmes la
-  // colonne (même requête que le champ "Prévenir") sur data.appointment.id,
-  // sinon le dernier de currentAppointments.
-  if (agentName === "planning") {
-    applyDictatedAppointmentNotifyIfAny(instruction, data);
+  // notify_minutes_before. IMPORTANT : "instruction" (paramètre de cette
+  // fonction) vaut souvent data.instruction — la version réécrite/nettoyée
+  // par l'orchestrateur quand cet appel vient du routage automatique (ex:
+  // dictée générale classée "planning" par le Chef d'Orchestre) — et peut
+  // avoir perdu des fragments comme "30 min avant". On utilise donc en
+  // priorité handlers.rawInstruction (texte BRUT tapé/dicté par
+  // l'utilisateur, transmis par l'appelant AVANT l'appel à l'orchestrateur),
+  // et seulement à défaut ce paramètre "instruction" (cas d'un appel direct,
+  // hors orchestrateur, où il est déjà le texte brut). Motif "X min avant"
+  // ou "dans X min/h", PATCH via le même circuit que le champ "Prévenir",
+  // sur data.appointment.id sinon la fiche ouverte sinon le dernier de
+  // currentAppointments. Sur planning ET relance, et aussi si l'orchestrateur
+  // signale un secondary_intent "relance" en plus d'un planning — pas
+  // seulement "RDV noté".
+  if (
+    agentName === "planning" ||
+    agentName === "relance" ||
+    data.secondary_intent === "relance"
+  ) {
+    const rawInstruction = (handlers && handlers.rawInstruction) || instruction;
+    applyDictatedAppointmentNotifyIfAny(rawInstruction, data);
   }
 
   // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
