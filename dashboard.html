@@ -17244,6 +17244,69 @@ async function startDocumentAnalysis(rawText, box) {
 }
 window.startDocumentAnalysis = startDocumentAnalysis;
 
+// Analyse document V1 (contrat Grok) : "Envoyer par mail" depuis la feuille
+// Document (instruction fixe "Envoie ce document.") OU dictée/texte direct
+// ("envoie ça à Paul" avec fichiers déjà présents, voir
+// textRequestsDirectMailWithAttachment) -> flux MAIL existant (callMailAgent)
+// avec les PJ déjà chargées. Les PJ sont posées dans
+// window.pendingMailAttachmentsPreload, consommées une seule fois par
+// openMailPreview() dès qu'il s'ouvre (choix de contact éventuel géré
+// naturellement : le preload survit jusqu'à ce que l'aperçu mail s'affiche
+// vraiment).
+async function startDocumentMailSend(instructionText, box) {
+  const instruction = (instructionText && instructionText.trim()) ? instructionText.trim() : "Envoie ce document.";
+
+  window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
+    return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
+  });
+
+  const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+  window.currentRequestId = requestId;
+
+  if (!box) {
+    box = document.getElementById("orchestrator-dictation-box");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "orchestrator-dictation-box";
+      box.classList.add("agent-progress-popup");
+      document.body.appendChild(box);
+    }
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  setDictationBoxState(box, "info");
+
+  resetHomeAttachments();
+
+  await callMailAgent(instruction, box, requestId);
+}
+window.startDocumentMailSend = startDocumentMailSend;
+
+// Analyse document V1 (contrat Grok) : "envoie ça à Paul" / "envoie ce
+// document à Sophie" dicté ou tapé alors que des fichiers sont déjà joints
+// -> mail direct (callMailAgent), jamais la feuille Document ni l'analyse
+// par défaut. Même logique que textMentionsRelanceRecipient (verbe d'envoi
+// + destinataire nommé), avec un jeu de verbes orienté envoi plutôt que
+// relance.
+function textRequestsDirectMailWithAttachment(rawText) {
+  if (!rawText || typeof rawText !== "string") return false;
+
+  const normalized = rawText.toLowerCase();
+  const hasMailVerb = /\b(envoie|envoyer|envoies|mail|écris|ecris|dis-lui|dis lui|préviens|previens|message pour)\b/.test(normalized);
+  if (!hasMailVerb) return false;
+
+  const hasClientWord = /\b(le|la|un|une|notre|mon|ma|ce|cette)\s+client(e)?\b/.test(normalized);
+
+  const words = rawText.trim().split(/\s+/);
+  const hasProperName = words.slice(1).some(w => {
+    const cleaned = w.replace(/[.,!?;:]+$/, "");
+    return /^[A-ZÀ-Ý][a-zà-ÿ]+$/.test(cleaned);
+  });
+
+  return hasClientWord || hasProperName;
+}
+window.textRequestsDirectMailWithAttachment = textRequestsDirectMailWithAttachment;
+
 // Équivalent tapé au clavier du flux vocal principal (startOrchestratorDictation) : même
 // payload envoyé au Chef d'Orchestre (conversation_history, last_agent,
 // user_name...), même dispatch vers Mail/Rédaction/Assistant selon la
@@ -17518,14 +17581,20 @@ function submitOrchestratorTypedText() {
   if (!el) return;
   const text = (el.textContent || "").trim();
 
-  // Analyse document V1 (contrat Grok) : fichiers joints -> /agent/assistant
-  // direct, jamais le Chef d'Orchestre. Texte vide autorisé dans ce cas
-  // (instruction par défaut "Analysez ce document.").
+  // Analyse document V1 (contrat Grok) : fichiers joints -> jamais le Chef
+  // d'Orchestre. "envoie ça à Paul" (destinataire nommé + verbe d'envoi) ->
+  // mail direct avec les PJ ; sinon -> /agent/assistant (texte vide
+  // autorisé, instruction par défaut "Analysez ce document.").
   if (homeAttachments.length > 0) {
     el.textContent = "";
     el.blur();
     updateOrchestratorSendButton();
-    startDocumentAnalysis(text);
+    closeDocumentAttachmentSheet();
+    if (textRequestsDirectMailWithAttachment(text)) {
+      startDocumentMailSend(text);
+    } else {
+      startDocumentAnalysis(text);
+    }
     return;
   }
 
@@ -23485,11 +23554,32 @@ async function saveActionLog(agent, action, status) {
     }).join("");
   }
 
+  // Analyse document V1 (contrat Grok) : max 3 fichiers joints depuis
+  // l'accueil.
+  const HOME_ATTACHMENTS_MAX = 3;
+
   function handleHomeAttachmentFilesSelected(input) {
     const files = Array.from(input.files || []);
     input.value = "";
+    if (!files.length) return;
 
-    files.forEach(function (file) {
+    const remainingSlots = HOME_ATTACHMENTS_MAX - homeAttachments.length;
+    if (remainingSlots <= 0) {
+      showToast("3 fichiers maximum", "error");
+      return;
+    }
+    const accepted = files.slice(0, remainingSlots);
+    if (files.length > accepted.length) {
+      showToast("3 fichiers maximum", "error");
+    }
+
+    // Contrat Grok : "après ajout d'un fichier depuis l'accueil" -> la
+    // feuille Document s'ouvre tout de suite (avant même la fin de la
+    // lecture des fichiers) ; les miniatures s'y ajoutent au fur et à
+    // mesure que chaque fichier est lu.
+    openDocumentAttachmentSheet();
+
+    accepted.forEach(function (file) {
       const reader = new FileReader();
       reader.onload = function () {
         const result = reader.result || "";
@@ -23500,6 +23590,7 @@ async function saveActionLog(agent, action, status) {
           mime: file.type || "application/octet-stream"
         });
         renderHomeAttachmentsList();
+        renderDocumentAttachmentSheetList();
       };
       reader.onerror = function () {
         showToast("Impossible de lire « " + file.name + " »", "error");
@@ -23519,6 +23610,103 @@ async function saveActionLog(agent, action, status) {
     const input = document.getElementById("home-attachment-input");
     if (input) input.value = "";
   }
+
+  // ─── Analyse document V1 (contrat Grok) : petite feuille EXISTANTE (même
+  // CSS que reminder-schedule / choix contact — .mail-choice-backdrop /
+  // .mail-choice-box), qui s'ouvre juste après l'ajout d'un fichier depuis
+  // l'accueil. Miniatures + croix pour retirer, trombone pour en ajouter
+  // (jusqu'à HOME_ATTACHMENTS_MAX), et 2 actions : Analyser (bouton
+  // primaire bleu, .save-btn) ou Envoyer par mail (bouton secondaire,
+  // .sheet-btn — même style qu'Annuler/Autre version). Aucun nouveau
+  // thème : classes déjà utilisées partout ailleurs dans l'app.
+  function openDocumentAttachmentSheet() {
+    let modal = document.getElementById("document-attachment-sheet");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "document-attachment-sheet";
+      modal.style.display = "none";
+      modal.innerHTML = `
+        <div class="mail-choice-backdrop" onclick="cancelDocumentAttachmentSheet()"></div>
+        <div class="mail-choice-box">
+          <div class="mail-choice-title">Document</div>
+          <div class="mail-choice-subtitle">Que voulez-vous en faire ?</div>
+
+          <div id="doc-sheet-attachments-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
+
+          <button type="button" class="sheet-btn" id="doc-sheet-attach-btn" style="width:auto;padding:8px 14px;margin-top:10px;" onclick="document.getElementById('home-attachment-input').click()">
+            📎 Joindre un fichier
+          </button>
+
+          <button class="save-btn" type="button" id="doc-sheet-analyze-btn" style="margin-top:16px;" onclick="confirmDocumentAnalysisFromSheet()">
+            Analyser
+          </button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="confirmDocumentMailFromSheet()">
+            Envoyer par mail
+          </button>
+          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelDocumentAttachmentSheet()">
+            Annuler
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    renderDocumentAttachmentSheetList();
+    modal.style.display = "flex";
+  }
+
+  function renderDocumentAttachmentSheetList() {
+    const list = document.getElementById("doc-sheet-attachments-list");
+    if (!list) return;
+
+    list.innerHTML = homeAttachments.map(function (att, index) {
+      return (
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
+          '<button type="button" onclick="removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function removeHomeAttachmentFromSheet(index) {
+    removeHomeAttachment(index);
+    renderDocumentAttachmentSheetList();
+    // Plus aucun fichier : Analyser/Envoyer par mail n'ont plus de sens ;
+    // ferme la feuille comme un Annuler silencieux (pas de toast, ce n'est
+    // pas une annulation de demande, juste un retrait du dernier fichier).
+    if (homeAttachments.length === 0) closeDocumentAttachmentSheet();
+  }
+
+  function closeDocumentAttachmentSheet() {
+    const modal = document.getElementById("document-attachment-sheet");
+    if (modal) modal.style.display = "none";
+  }
+
+  // Fermer fond / Annuler (contrat Grok) : toast "Demande annulée" (même
+  // texte/type que les autres annulations de l'app), fichiers vidés.
+  function cancelDocumentAttachmentSheet() {
+    closeDocumentAttachmentSheet();
+    resetHomeAttachments();
+    showToast("Demande annulée", "error");
+  }
+
+  function confirmDocumentAnalysisFromSheet() {
+    closeDocumentAttachmentSheet();
+    startDocumentAnalysis("");
+  }
+
+  async function confirmDocumentMailFromSheet() {
+    closeDocumentAttachmentSheet();
+    await startDocumentMailSend();
+  }
+
+  window.openDocumentAttachmentSheet = openDocumentAttachmentSheet;
+  window.renderDocumentAttachmentSheetList = renderDocumentAttachmentSheetList;
+  window.removeHomeAttachmentFromSheet = removeHomeAttachmentFromSheet;
+  window.closeDocumentAttachmentSheet = closeDocumentAttachmentSheet;
+  window.cancelDocumentAttachmentSheet = cancelDocumentAttachmentSheet;
+  window.confirmDocumentAnalysisFromSheet = confirmDocumentAnalysisFromSheet;
+  window.confirmDocumentMailFromSheet = confirmDocumentMailFromSheet;
 
   function animateCounter(element, start, end, duration = 1200, formatter = null) {
   if (!element) return;
@@ -23943,6 +24131,17 @@ function openMailPreview(data, instruction, backTarget, headerTitle) {
   // Nouvel aperçu = nouvelles pièces jointes, jamais celles d'un mail
   // précédent déjà envoyé/annulé.
   resetMailAttachments();
+
+  // Analyse document V1 (contrat Grok) : PJ préchargées depuis la feuille
+  // Document ("Envoyer par mail") ou la dictée directe ("envoie ça à
+  // Paul") — voir startDocumentMailSend(). Consommées une seule fois, quel
+  // que soit l'appel à openMailPreview() qui suit (y compris après un
+  // détour par le choix de contact).
+  if (window.pendingMailAttachmentsPreload && window.pendingMailAttachmentsPreload.length) {
+    mailAttachments = window.pendingMailAttachmentsPreload.slice();
+    renderMailAttachmentsList();
+  }
+  window.pendingMailAttachmentsPreload = null;
 
   // Bouton "← Retour" affiché dans #mail-preview-modal uniquement quand un
   // backTarget est explicitement fourni (ex: "support-choice-modal" depuis
@@ -24949,10 +25148,11 @@ progressIcon: "✨",
       const spokenText = (latestText || finalText).trim();
 
       // Analyse document V1 (contrat Grok) : fichiers joints depuis l'accueil
-      // (trombone) -> /agent/assistant direct, jamais le Chef d'Orchestre.
-      // Uniquement pour le micro général de l'accueil (config.agent ===
-      // "orchestrator"), jamais les autres micros dédiés (Rédaction,
-      // Planning...). Texte brut dicté (spokenText), vide autorisé.
+      // (trombone) -> jamais le Chef d'Orchestre. Uniquement pour le micro
+      // général de l'accueil (config.agent === "orchestrator"), jamais les
+      // autres micros dédiés (Rédaction, Planning...). "envoie ça à Paul"
+      // (texte brut dicté) -> mail direct avec les PJ ; sinon -> analyse
+      // document (texte brut dicté, vide autorisé).
       if (config.agent === "orchestrator" && homeAttachments.length > 0) {
         setListeningUI(false);
         if (hasSent) return;
@@ -24960,6 +25160,10 @@ progressIcon: "✨",
         ensureBox();
         box.style.display = "";
         setDictationBoxState(box, "info");
+        closeDocumentAttachmentSheet();
+        if (textRequestsDirectMailWithAttachment(spokenText)) {
+          return startDocumentMailSend(spokenText, box);
+        }
         return startDocumentAnalysis(spokenText, box);
       }
 
