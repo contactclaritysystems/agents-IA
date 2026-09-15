@@ -14484,6 +14484,49 @@ function textMentionsRelanceRecipient(rawText) {
 }
 window.textMentionsRelanceRecipient = textMentionsRelanceRecipient;
 
+// Multi-actions V1 (contrat Grok) : "note-moi un rdv avec Paul demain 14h et
+// préviens-le par mail" doit, APRÈS la création du RDV, enchaîner sur le
+// flux MAIL existant — jamais une nouvelle UI. Détection sur le texte BRUT
+// uniquement (jamais data.instruction, réécrit par l'orchestrateur) :
+// vrai seulement si un mot RDV ET un mot mail/envoi sont TOUS LES DEUX
+// présents. "rappelle-moi 30 min avant" seul (aucun mot RDV) ou "Relance
+// Anthony pour le devis" seul (aucun mot RDV) ne matchent jamais ici — ils
+// sont couverts par d'autres règles (notify_minutes_before / relance V1).
+function textRequestsMailFollowUpAfterPlanning(rawText) {
+  if (!rawText || typeof rawText !== "string") return false;
+
+  const normalized = rawText.toLowerCase();
+  const hasRdvWord = /\b(rdv|rendez-vous)\b/.test(normalized);
+  if (!hasRdvWord) return false;
+
+  const hasMailWord = /\b(envoie|envoyer|mail|message pour|dis-lui|dis lui|préviens|previens|relance)\b/.test(normalized);
+  return hasMailWord;
+}
+window.textRequestsMailFollowUpAfterPlanning = textRequestsMailFollowUpAfterPlanning;
+
+// Point d'entrée appelé juste après le toast de succès /agent/planning
+// (RDV déjà créé — jamais appelé depuis les branches missing_date/
+// missing_time/missing_contact, qui retournent avant d'atteindre ce point,
+// donc le mail n'ouvre jamais avant que le RDV soit vraiment créé). Ordre
+// contrat Grok : RDV d'abord (déjà fait), mail ensuite. On NE ferme PAS le
+// bandeau du RDV avant d'enchaîner : callMailAgent() réutilise le même
+// "box" et met à jour son contenu lui-même (comme le flux mail normal),
+// donc le toast "RDV noté" reste visible le temps que le mail démarre.
+// Nouveau request_id : celui du planning est déjà consommé, il ne faut pas
+// que le polling/les gardes "request_id !== currentRequestId" du flux mail
+// rejettent sa propre réponse.
+async function maybeStartMailFollowUpAfterPlanning(rawInstruction, data, box) {
+  const wantsMail =
+    (data && data.secondary_intent === "mail") ||
+    textRequestsMailFollowUpAfterPlanning(rawInstruction);
+  if (!wantsMail) return;
+
+  const newRequestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+  window.currentRequestId = newRequestId;
+  await callMailAgent(rawInstruction, box, newRequestId);
+}
+window.maybeStartMailFollowUpAfterPlanning = maybeStartMailFollowUpAfterPlanning;
+
 // Ce que dit l'utilisateur en déclenchant la demande ("écris-moi le compte
 // rendu POUR LA REMISE EN ÉTAT DU PORTAIL") correspond quasiment toujours
 // au sujet du compte rendu — on le préremplit donc directement dans le
@@ -25047,6 +25090,17 @@ console.log("MESSAGE =", message);
         ) {
           applyDictatedAppointmentNotifyIfAny(instruction, data);
         }
+
+        // Multi-actions V1 (contrat Grok) : "note-moi un rdv avec Paul...
+        // et envoie-lui un mail" — après le succès du RDV (jamais avant :
+        // on est déjà dans la branche succès, les branches missing_date/
+        // missing_time/missing_contact ont retourné plus haut), on enchaîne
+        // sur le flux MAIL existant si le texte BRUT le demande. On NE
+        // ferme PAS le bandeau "RDV noté" avant — callMailAgent() met à
+        // jour ce même "box" lui-même.
+        if (config.agent === "planning") {
+          maybeStartMailFollowUpAfterPlanning(instruction, data, box);
+        }
       } else {
         if (box) hideOrRemoveBox(box);
         openSimpleAgentPreview({
@@ -26113,37 +26167,54 @@ async function callSimpleAgent(
     lastAgentInfo = { agentName: agentName, webhookUrl: webhookUrl };
 
     if (agentName === "planning" || agentName === "relance" || agentName === "taches") {
+  // rawInstruction calculé une seule fois ici : texte BRUT tapé/dicté par
+  // l'utilisateur (jamais data.instruction, réécrit par l'orchestrateur) —
+  // utilisé à la fois pour notify_minutes_before ET pour la détection
+  // multi-actions RDV+mail ci-dessous.
+  const rawInstruction = (handlers && handlers.rawInstruction) || instruction;
+
+  // Multi-actions V1 (contrat Grok) : "note un rdv avec Paul... et
+  // envoie-lui un mail" doit enchaîner sur le flux MAIL existant juste
+  // après le succès du RDV (jamais avant : on est déjà dans la branche
+  // succès). Uniquement pour "planning" — jamais "relance"/"taches", qui
+  // ne sont pas concernés par ce contrat.
+  const wantsMailFollowUp =
+    agentName === "planning" &&
+    ((data && data.secondary_intent === "mail") || textRequestsMailFollowUpAfterPlanning(rawInstruction));
+
   if (box) {
     setDictationBoxState(box, "success");
-    box.innerHTML = "✅ Réponse prête";
-    autoHideDictationBox(box);
+    if (wantsMailFollowUp) {
+      // On NE ferme PAS le bandeau ici : callMailAgent() reprend ce même
+      // "box" et gère sa propre progression (comme le flux mail normal),
+      // donc pas de "✅ Réponse prête" ni d'auto-hide qui le ferait
+      // disparaître pendant que la recherche de contact démarre.
+    } else {
+      box.innerHTML = "✅ Réponse prête";
+      autoHideDictationBox(box);
+    }
   }
   showToast(content || "C’est noté", "success");
   maybeShowFirstScheduleNotice();
 
   // Contrat Grok (nouveau) : même règle que côté orchestrateur (voir
   // sendTypedInstruction) — on ne dépend plus du body /agent/planning pour
-  // notify_minutes_before. IMPORTANT : "instruction" (paramètre de cette
-  // fonction) vaut souvent data.instruction — la version réécrite/nettoyée
-  // par l'orchestrateur quand cet appel vient du routage automatique (ex:
-  // dictée générale classée "planning" par le Chef d'Orchestre) — et peut
-  // avoir perdu des fragments comme "30 min avant". On utilise donc en
-  // priorité handlers.rawInstruction (texte BRUT tapé/dicté par
-  // l'utilisateur, transmis par l'appelant AVANT l'appel à l'orchestrateur),
-  // et seulement à défaut ce paramètre "instruction" (cas d'un appel direct,
-  // hors orchestrateur, où il est déjà le texte brut). Motif "X min avant"
-  // ou "dans X min/h", PATCH via le même circuit que le champ "Prévenir",
-  // sur data.appointment.id sinon la fiche ouverte sinon le dernier de
-  // currentAppointments. Sur planning ET relance, et aussi si l'orchestrateur
-  // signale un secondary_intent "relance" en plus d'un planning — pas
-  // seulement "RDV noté".
+  // notify_minutes_before. Motif "X min avant" ou "dans X min/h", PATCH via
+  // le même circuit que le champ "Prévenir", sur data.appointment.id sinon
+  // la fiche ouverte sinon le dernier de currentAppointments. Sur planning
+  // ET relance, et aussi si l'orchestrateur signale un secondary_intent
+  // "relance" en plus d'un planning — pas seulement "RDV noté".
   if (
     agentName === "planning" ||
     agentName === "relance" ||
     data.secondary_intent === "relance"
   ) {
-    const rawInstruction = (handlers && handlers.rawInstruction) || instruction;
     applyDictatedAppointmentNotifyIfAny(rawInstruction, data);
+  }
+
+  // Ordre contrat Grok : RDV d'abord (déjà fait ci-dessus), mail ensuite.
+  if (wantsMailFollowUp) {
+    maybeStartMailFollowUpAfterPlanning(rawInstruction, data, box);
   }
 
   // Si l'onglet Tâches est déjà ouvert, la tâche que le chef d'orchestre
