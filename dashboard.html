@@ -14450,6 +14450,40 @@ function looksLikeCompteRendu(text) {
 }
 window.looksLikeCompteRendu = looksLikeCompteRendu;
 
+// Relance client V1 (contrat Grok) : aucune nouvelle UI. "Relance Paul pour
+// le devis" / "relance le client pour la facture" doivent passer par le
+// flux MAIL existant (callMailAgent), pas par l'agent Relance (rappel
+// personnel). On ne se fie qu'au texte BRUT dicté/tapé, jamais à
+// data.instruction (réécrit par l'orchestrateur) : voir le même correctif
+// pour notify_minutes_before plus haut dans ce fichier.
+// Distinction volontaire :
+//   - "relance"/"relancer"/"relance-le"/"relance-lui" + un destinataire
+//     (nom propre ou "le/la/un/une client(e)") -> agent Mail (relance
+//     client = envoi d'un mail à quelqu'un).
+//   - "rappelle-moi"/"fais-moi penser" seul (sans destinataire relance) ->
+//     inchangé, reste l'agent Relance (rappel personnel, pas de mail).
+function textMentionsRelanceRecipient(rawText) {
+  if (!rawText || typeof rawText !== "string") return false;
+
+  const normalized = rawText.toLowerCase();
+  const hasRelanceVerb = /\brelance(r|s|-le|-lui|-la)?\b/.test(normalized);
+  if (!hasRelanceVerb) return false;
+
+  // Destinataire nommément désigné : "le client", "la cliente", "un client",
+  // "notre client"... ou un nom propre (mot capitalisé) ailleurs qu'en tout
+  // début de phrase (qui serait juste la majuscule de début de dictée).
+  const hasClientWord = /\b(le|la|un|une|notre|mon|ma|ce|cette)\s+client(e)?\b/.test(normalized);
+
+  const words = rawText.trim().split(/\s+/);
+  const hasProperName = words.slice(1).some(w => {
+    const cleaned = w.replace(/[.,!?;:]+$/, "");
+    return /^[A-ZÀ-Ý][a-zà-ÿ]+$/.test(cleaned);
+  });
+
+  return hasClientWord || hasProperName;
+}
+window.textMentionsRelanceRecipient = textMentionsRelanceRecipient;
+
 // Ce que dit l'utilisateur en déclenchant la demande ("écris-moi le compte
 // rendu POUR LA REMISE EN ÉTAT DU PORTAIL") correspond quasiment toujours
 // au sujet du compte rendu — on le préremplit donc directement dans le
@@ -17135,6 +17169,20 @@ async function sendTypedInstruction(instruction, continuing = false) {
         setDictationBoxState(box, "info");
         box.innerHTML = "🔎 Recherche du contact...";
         return callMailAgent(data.instruction, box, data.request_id || requestId);
+      }
+
+      // Relance client V1 (contrat Grok) : si l'orchestrateur classe la
+      // demande en "relance" (rappel personnel) alors que le texte BRUT
+      // dicté/tapé désigne un destinataire ("relance Paul...", "relance le
+      // client..."), on force le flux MAIL existant au lieu de l'agent
+      // Relance — aucune nouvelle UI, on réutilise callMailAgent tel quel
+      // (sélecteur contact, aperçu, CC, style d'écriture, PJ, toasts). On se
+      // base sur "instruction" (texte brut de cette fonction), jamais
+      // data.instruction qui peut être réécrit par l'orchestrateur.
+      if (data.agent === "relance" && textMentionsRelanceRecipient(instruction)) {
+        setDictationBoxState(box, "info");
+        box.innerHTML = "🔎 Recherche du contact...";
+        return callMailAgent(instruction, box, data.request_id || requestId);
       }
 
       // Compte rendu demandé via le champ général (pas le bouton dédié) :
@@ -24701,6 +24749,24 @@ if (data.agent === "mail") {
   box,
   data.request_id || requestId
 );
+}
+
+// Relance client V1 (contrat Grok) : même règle que côté texte
+// (sendTypedInstruction) — si l'orchestrateur classe la demande dictée en
+// "relance" (rappel personnel) alors que le texte BRUT désigne un
+// destinataire ("relance Paul...", "relance le client..."), on force le
+// flux MAIL existant au lieu de l'agent Relance. Aucune nouvelle UI :
+// callMailAgent() est réutilisé tel quel (sélecteur contact, aperçu, CC,
+// style d'écriture, PJ, toasts). On se base sur "instruction" (texte brut
+// de cette fonction), jamais data.instruction (réécrit par l'orchestrateur).
+if (data.agent === "relance" && textMentionsRelanceRecipient(instruction)) {
+  setDictationBoxState(box, "info");
+  box.innerHTML = "🔎 Recherche du contact...";
+  return callMailAgent(
+    instruction,
+    box,
+    data.request_id || requestId
+  );
 }
 
 // Compte rendu demandé à la voix via le micro général (pas le bouton
