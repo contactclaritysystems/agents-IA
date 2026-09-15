@@ -21697,30 +21697,71 @@ async function loadContactActivity(contactId) {
     // réellement pu être formatée, plutôt qu'un encart vide.
     const dueDiv = formatted => (formatted ? '<div class="task-due">' + formatted + "</div>" : "");
 
-    const items = [];
+    // Timestamp brut pour trier mails + RDV + rappels ensemble par
+    // récence (toutes sources confondues), pas juste dans l'ordre où le
+    // backend les a renvoyés par type. Une date absente/invalide part en
+    // fin de liste (-Infinity) plutôt que de planter le tri ou de
+    // remonter en haut par erreur.
+    const sortTimestamp = rawDate => {
+      if (!rawDate) return -Infinity;
+      const t = new Date(rawDate).getTime();
+      return isNaN(t) ? -Infinity : t;
+    };
+
+    // Contrat (fiche contact — Activité récente) : liste trop longue sur
+    // certains contacts (ex: "Moi") -> plus de scroll, fiche bloquée. On
+    // limite à 5 activités, les plus récentes en premier, toutes sources
+    // confondues (mails + RDV + rappels déjà renvoyés par le backend —
+    // aucun changement API). Même carte .task-item, même mise en forme
+    // qu'avant ; seul le tri + la limite + le scroll du bloc changent.
+    const allItems = [];
 
     appointments.forEach(a => {
-      const due = formatTaskDueDate(a.date || a.start_at || a.appointment_date || a.scheduled_at);
-      items.push('<div class="task-item"><div class="task-title">📅 ' +
-        (a.title || a.motif || "Rendez-vous").replace(/</g, "&lt;") +
-        "</div>" + dueDiv(due) + "</div>");
+      const rawDate = a.date || a.start_at || a.appointment_date || a.scheduled_at;
+      const due = formatTaskDueDate(rawDate);
+      allItems.push({
+        sortKey: sortTimestamp(rawDate),
+        html: '<div class="task-item"><div class="task-title">📅 ' +
+          (a.title || a.motif || "Rendez-vous").replace(/</g, "&lt;") +
+          "</div>" + dueDiv(due) + "</div>"
+      });
     });
 
     followUps.forEach(f => {
-      const due = formatTaskDueDate(f.reminder_date || f.due_date || f.date);
-      items.push('<div class="task-item"><div class="task-title">⏰ ' +
-        (f.reason || f.title || "Rappel").replace(/</g, "&lt;") +
-        "</div>" + dueDiv(due) + "</div>");
+      const rawDate = f.reminder_date || f.due_date || f.date;
+      const due = formatTaskDueDate(rawDate);
+      allItems.push({
+        sortKey: sortTimestamp(rawDate),
+        html: '<div class="task-item"><div class="task-title">⏰ ' +
+          (f.reason || f.title || "Rappel").replace(/</g, "&lt;") +
+          "</div>" + dueDiv(due) + "</div>"
+      });
     });
 
     mails.forEach(m => {
-      const due = formatTaskDueDate(m.sent_at || m.created_at);
-      items.push('<div class="task-item"><div class="task-title">📧 ' +
-        (m.subject || "Mail envoyé").replace(/</g, "&lt;") +
-        "</div>" + dueDiv(due) + "</div>");
+      const rawDate = m.sent_at || m.created_at;
+      const due = formatTaskDueDate(rawDate);
+      allItems.push({
+        sortKey: sortTimestamp(rawDate),
+        html: '<div class="task-item"><div class="task-title">📧 ' +
+          (m.subject || "Mail envoyé").replace(/</g, "&lt;") +
+          "</div>" + dueDiv(due) + "</div>"
+      });
     });
 
-    list.outerHTML = '<div id="contact-activity-list" style="display:flex;flex-direction:column;gap:8px;">' + items.join("") + "</div>";
+    // Plus récent en premier, puis on ne garde que les 5 premiers — pas de
+    // nouvel onglet ni de bouton "voir tout" pour cette V1. Vaut aussi pour
+    // "Moi" (même composant, aucune règle spéciale ni changement backend).
+    allItems.sort((a, b) => b.sortKey - a.sortKey);
+    const items = allItems.slice(0, 5).map(item => item.html);
+
+    // overflow-y:auto + max-height (220px, alignée sur les autres listes
+    // compactes de l'app — cf. #cr-points-list/.custom-time-list) : la
+    // liste défile dans son propre bloc si jamais elle dépasse, au lieu de
+    // pousser/bloquer le reste de la fiche. Même conteneur qu'avant
+    // (#contact-activity-list), mêmes cartes .task-item, même padding —
+    // seuls overflow-y et max-height sont ajoutés.
+    list.outerHTML = '<div id="contact-activity-list" style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;">' + items.join("") + "</div>";
   } catch (e) {
     console.error("Erreur loadContactActivity:", e);
     list.textContent = "Impossible de charger l'activité récente.";
