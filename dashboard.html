@@ -23410,21 +23410,24 @@ updateStatProgresses();
       subtitle.style.display = "none";
     }
   }
-  // Filet de sécurité définitif contre le doublon "Clarity" : quelle que
-  // soit la source (fallback front sur config.modalTitle, ou même
-  // data.title/data.titre renvoyé tel quel par le backend), ce libellé ne
-  // doit JAMAIS répéter le mot déjà affiché avec le logo en en-tête
-  // (#simple-agent-modal-title). On compare la valeur résolue (insensible
-  // à la casse/espaces) au mot "clarity" et on retombe sur "Réponse" si
-  // ça matche, plutôt que de se fier uniquement aux correctifs des points
-  // d'appel (qui ne couvrent pas un data.title littéralement "Clarity"
-  // envoyé par le backend).
+  // Contrat Grok : sous l'en-tête (logo + "Clarity"), ce libellé ne doit
+  // apparaître QUE s'il porte un vrai titre métier (ex: "Compte rendu",
+  // "Résumé de la semaine"). Un libellé générique — absent, ou qui ne fait
+  // que répéter "Clarity"/"Réponse"/"Résultat" — n'apporte rien et double
+  // visuellement l'en-tête (même logique que "Mail prêt à envoyer", qui
+  // n'a pas de second mot "Message" au-dessus du corps) : on le masque
+  // entièrement plutôt que d'y mettre un texte de remplacement.
   const resolvedResultTitle = (data.title || "").trim();
-  const isDuplicateClarityLabel = resolvedResultTitle.toLowerCase() === "clarity";
+  const isGenericResultLabel = ["", "clarity", "réponse", "reponse", "résultat", "resultat"]
+    .includes(resolvedResultTitle.toLowerCase());
   if (resultTitle) {
-    resultTitle.textContent = (resolvedResultTitle && !isDuplicateClarityLabel)
-      ? resolvedResultTitle
-      : "Réponse";
+    if (isGenericResultLabel) {
+      resultTitle.textContent = "";
+      resultTitle.style.display = "none";
+    } else {
+      resultTitle.textContent = resolvedResultTitle;
+      resultTitle.style.display = "";
+    }
   }
   if (content) content.value = data.content || "";
   if (modal) modal.style.display = "block";
