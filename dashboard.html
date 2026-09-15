@@ -24983,7 +24983,15 @@ console.log("MESSAGE =", message);
         return;
       }
 
-      const title = data.title || data.titre || config.modalTitle;
+      // "Réponse" et non config.modalTitle : config.modalTitle vaut "Clarity"
+      // (même mot que le logo+titre déjà affiché en en-tête de la popup,
+      // #simple-agent-modal-title) — utiliser ce fallback ici affichait
+      // "Clarity" une seconde fois, comme libellé juste en dessous, sur
+      // toute réponse Assistant/Rédaction dictée à la voix sans data.title
+      // ni data.titre. Même règle déjà appliquée côté texte
+      // (sendTypedInstruction) et côté callSimpleAgent : un seul "Clarity",
+      // celui de l'en-tête.
+      const title = data.title || data.titre || "Réponse";
       const content = data.content || data.response || data.message || "";
 
       pushConversationHistory(instruction, content);
