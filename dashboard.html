@@ -22082,7 +22082,14 @@ function deleteSelectedContact() {
  function openAddContactPopup({
     name,
     pendingInstruction,
-    fromAgent = false
+    fromAgent = false,
+    // Analyse document V1 (contrat Grok) : "Envoyer par mail" depuis la
+    // feuille Document, quand le contact doit être créé, ne doit jamais
+    // relancer callMailAgent (pas de texte généré par l'IA) — actionType
+    // "document_mail" fait bifurquer saveContactFromPage() vers l'aperçu
+    // mail vide au lieu de l'agent Mail. "mail" (par défaut) = comportement
+    // inchangé pour tous les autres appelants.
+    actionType = "mail"
 }) {
 
     console.log("openAddContactPopup appelée");
@@ -22090,7 +22097,7 @@ function deleteSelectedContact() {
 
     // On mémorise l'action en attente
     window.pendingAction = {
-        type: "mail",
+        type: actionType,
         instruction: pendingInstruction
     };
 
@@ -23696,9 +23703,21 @@ async function saveActionLog(agent, action, status) {
     startDocumentAnalysis("");
   }
 
+  // Contrat Grok : "Envoyer par mail" depuis la feuille Document NE DOIT
+  // JAMAIS appeler callMailAgent (donc jamais startDocumentMailSend, qui
+  // reste utilisé tel quel pour la dictée directe "envoie ça à Paul" —
+  // voir plus haut). Ici : PJ préchargées, destinataire vide -> flux
+  // choix-contact EXISTANT, puis aperçu mail EXISTANT à champs vides
+  // (objet/corps jamais générés par l'IA, jamais de contact deviné).
   async function confirmDocumentMailFromSheet() {
     closeDocumentAttachmentSheet();
-    await startDocumentMailSend();
+
+    window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
+      return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
+    });
+    resetHomeAttachments();
+
+    await openDocumentMailContactPicker();
   }
 
   window.openDocumentAttachmentSheet = openDocumentAttachmentSheet;
@@ -25756,6 +25775,71 @@ async function openContactPickerForAgent(title, subtitle, instruction, requestId
   if (modal) modal.style.display = "block";
 }
 
+// Analyse document V1 (contrat Grok) : "Envoyer par mail" depuis la feuille
+// Document. Réutilise le même sélecteur de contact que ci-dessus (popup
+// "qui ?", jamais un contact deviné), mais NE PASSE JAMAIS par callMailAgent
+// ensuite — contrairement à openContactPickerForAgent (relais IA), le
+// contact choisi ici ouvre directement l'aperçu mail EXISTANT avec des
+// champs vides (voir selectContactForDocumentMailHandoff /
+// openBlankDocumentMailPreview). window.quickMailIsDocumentHandoff distingue
+// ce flux de window.quickMailIsAgentHandoff dans renderQuickMailContacts()
+// et quickMailAddNewContact().
+async function openDocumentMailContactPicker() {
+  const strayBox = document.getElementById("orchestrator-dictation-box");
+  if (strayBox) strayBox.remove();
+
+  if (!contactsCache || !contactsCache.length) {
+    await loadContacts();
+  }
+
+  window.quickMailIsAgentHandoff = false;
+  window.quickMailIsDocumentHandoff = true;
+
+  const stepContact = document.getElementById("quick-mail-step-contact");
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const search = document.getElementById("quick-mail-search");
+  const titleEl = document.getElementById("quick-mail-title");
+  const subtitleEl = document.getElementById("quick-mail-subtitle");
+  const modal = document.getElementById("quick-mail-modal");
+  const backBtn = document.getElementById("quick-mail-back-btn");
+
+  if (stepContact) stepContact.style.display = "block";
+  if (stepMessage) stepMessage.style.display = "none";
+  if (titleEl) titleEl.textContent = "À qui envoyer ce document ?";
+  if (subtitleEl) subtitleEl.textContent = "Choisissez un contact, ou ajoutez-en un nouveau.";
+  if (search) search.value = "";
+  // Pas de retour en arrière possible ici (pas d'étape précédente propre à
+  // ce flux, contrairement au bouton "Envoyer un mail" manuel).
+  if (backBtn) backBtn.style.display = "none";
+
+  renderQuickMailContacts();
+
+  if (modal) modal.style.display = "block";
+}
+window.openDocumentMailContactPicker = openDocumentMailContactPicker;
+
+// Contact choisi -> ouvre directement l'aperçu mail EXISTANT (champs vides),
+// jamais une régénération IA du contenu.
+function selectContactForDocumentMailHandoff(contact) {
+  const modal = document.getElementById("quick-mail-modal");
+  if (modal) modal.style.display = "none";
+  window.quickMailIsDocumentHandoff = false;
+
+  openBlankDocumentMailPreview(contact && contact.email ? contact.email : "");
+}
+window.selectContactForDocumentMailHandoff = selectContactForDocumentMailHandoff;
+
+// Aperçu mail EXISTANT (openMailPreview), volontairement vide : objet
+// "Document" (pas de texte IA type "dont nous avons discuté..."), corps
+// vide (l'utilisateur écrit/dicte, ou passe par "Autre version" ensuite
+// s'il veut de l'IA — jamais avant), CC vide. Les PJ de la feuille Document
+// sont déjà dans window.pendingMailAttachmentsPreload, consommées par
+// openMailPreview() comme pour les autres flux d'analyse document.
+function openBlankDocumentMailPreview(toEmail) {
+  openMailPreview({ to: toEmail || "", cc: "", subject: "Document", body: "" }, "");
+}
+window.openBlankDocumentMailPreview = openBlankDocumentMailPreview;
+
 // Contact choisi dans ce sélecteur alors qu'on est en relais de l'agent
 // (pas le flux manuel "Envoyer un mail") : on reprend directement la
 // préparation du mail avec l'instruction déjà dictée, pas besoin de la
@@ -25783,7 +25867,22 @@ function selectContactForAgentHandoff(contact) {
 // second cas, on veut repasser par openAddContactPopup() pour que le mail
 // se prépare automatiquement une fois le contact enregistré.
 function quickMailAddNewContact() {
-  if (window.quickMailIsAgentHandoff) {
+  if (window.quickMailIsDocumentHandoff) {
+    // Analyse document V1 (contrat Grok) : même page d'ajout de contact,
+    // mais actionType "document_mail" -> saveContactFromPage() ouvrira
+    // l'aperçu mail vide au lieu d'appeler callMailAgent.
+    const modal = document.getElementById("quick-mail-modal");
+    if (modal) modal.style.display = "none";
+    window.quickMailIsDocumentHandoff = false;
+
+    openAddContactPopup({
+      name: "",
+      pendingInstruction: "",
+      fromAgent: true,
+      newContact: true,
+      actionType: "document_mail"
+    });
+  } else if (window.quickMailIsAgentHandoff) {
     const instruction = window.pendingAgentMailInstruction || "";
     window.pendingAgentMailInstruction = null;
 
@@ -25870,7 +25969,9 @@ function renderQuickMailContacts() {
     `;
 
     card.onclick = () => {
-      if (window.quickMailIsAgentHandoff) {
+      if (window.quickMailIsDocumentHandoff) {
+        selectContactForDocumentMailHandoff(contact);
+      } else if (window.quickMailIsAgentHandoff) {
         selectContactForAgentHandoff(contact);
       } else {
         selectQuickMailContact(contact);
@@ -28695,7 +28796,7 @@ function closeContactPage() {
 
   editingContactId = null;
 
-if (window.pendingAction?.type === "mail") {
+if (window.pendingAction?.type === "mail" || window.pendingAction?.type === "document_mail") {
   const box = document.getElementById("orchestrator-dictation-box");
 
   if (box) {
@@ -28706,6 +28807,10 @@ if (window.pendingAction?.type === "mail") {
   playVoiceLine("envoi-annule");
 
   window.pendingAction = null;
+  // Analyse document V1 : PJ en attente d'un contact tout juste créé —
+  // annulation réelle, on ne les garde pas pour un envoi futur sans lien.
+  window.pendingMailAttachmentsPreload = null;
+  window.quickMailIsDocumentHandoff = false;
 
   // Même bug que cancelContactChoice() : annulation réelle du flux mail,
   // le micro doit redevenir utilisable.
@@ -28740,8 +28845,14 @@ if (window.pendingAction?.type === "mail") {
 
 async function saveContactFromPage() {
   const btn = document.getElementById("contact-save-page-btn");
+  // Analyse document V1 (contrat Grok) : "document_mail" suit la même
+  // UX d'enregistrement (bouton "Enregistrer et continuer →", animation
+  // "✓ Contact enregistré") que le relais Agent Mail classique, mais NE
+  // DOIT JAMAIS appeler callMailAgent ensuite (pas de texte généré par
+  // l'IA) — voir la branche dédiée plus bas.
+  const isDocumentMailAction = window.pendingAction?.type === "document_mail";
   const openedFromMailAgent =
-    window.pendingAction?.type === "mail";
+    window.pendingAction?.type === "mail" || isDocumentMailAction;
 
   // Empêche les doubles clics
   if (btn) {
@@ -28788,6 +28899,38 @@ async function saveContactFromPage() {
       }
 
       await new Promise(resolve => setTimeout(resolve, 700));
+
+      // Analyse document V1 (contrat Grok) : jamais de "🤖 Préparation du
+      // mail..." ni de callMailAgent ici — le contact vient d'être créé,
+      // on ouvre directement l'aperçu mail EXISTANT avec des champs vides
+      // (voir openBlankDocumentMailPreview), PJ déjà en attente dans
+      // window.pendingMailAttachmentsPreload.
+      if (isDocumentMailAction) {
+        window.pendingAction = null;
+        window.contactOpenedFromAgent = false;
+
+        const docSection = document.getElementById("contact-mobile-section");
+        if (docSection) docSection.classList.remove("open");
+
+        const docContactToast = document.getElementById("toast");
+        if (docContactToast) {
+          docContactToast.classList.remove("show");
+          docContactToast.classList.remove("error");
+        }
+
+        showSection(
+          "agents",
+          document.querySelector('.bottom-tab[data-section="agents"]')
+        );
+
+        const newDocContactId = window.lastAddedContactId || null;
+        window.lastAddedContactId = null;
+        const newDocContact = (contactsCache || []).find(c => c.id === newDocContactId);
+
+        openBlankDocumentMailPreview(newDocContact ? newDocContact.email : "");
+
+        return;
+      }
 
       if (btn) {
         btn.innerHTML = "🤖 Préparation du mail...";
