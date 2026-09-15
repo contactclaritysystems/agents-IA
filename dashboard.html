@@ -23410,7 +23410,22 @@ updateStatProgresses();
       subtitle.style.display = "none";
     }
   }
-  if (resultTitle) resultTitle.textContent = data.title || "Résultat";
+  // Filet de sécurité définitif contre le doublon "Clarity" : quelle que
+  // soit la source (fallback front sur config.modalTitle, ou même
+  // data.title/data.titre renvoyé tel quel par le backend), ce libellé ne
+  // doit JAMAIS répéter le mot déjà affiché avec le logo en en-tête
+  // (#simple-agent-modal-title). On compare la valeur résolue (insensible
+  // à la casse/espaces) au mot "clarity" et on retombe sur "Réponse" si
+  // ça matche, plutôt que de se fier uniquement aux correctifs des points
+  // d'appel (qui ne couvrent pas un data.title littéralement "Clarity"
+  // envoyé par le backend).
+  const resolvedResultTitle = (data.title || "").trim();
+  const isDuplicateClarityLabel = resolvedResultTitle.toLowerCase() === "clarity";
+  if (resultTitle) {
+    resultTitle.textContent = (resolvedResultTitle && !isDuplicateClarityLabel)
+      ? resolvedResultTitle
+      : "Réponse";
+  }
   if (content) content.value = data.content || "";
   if (modal) modal.style.display = "block";
 
