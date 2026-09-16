@@ -26106,6 +26106,15 @@ async function submitQuickMail() {
   const fullInstruction =
     "Écris un mail à " + quickMailSelectedContact.full_name + " : " + rawInstruction;
 
+  // Contrat Grok : "Envoyer un mail" ne doit jamais demander le contenu 2
+  // fois. On garde le texte déjà tapé ici pour, si le backend répond quand
+  // même "missing_content" (observé notamment avec le contact système
+  // "Assistance", dont le nom perturbe parfois sa propre détection du
+  // contenu), ne JAMAIS rouvrir "Que voulez-vous dire ?" une 2e fois — voir
+  // la branche dédiée dans callMailAgent, qui réutilise directement ce
+  // texte pour ouvrir l'aperçu mail existant.
+  window.quickMailPendingRawInstruction = rawInstruction;
+
   // On arrête la dictée en cours s'il y en a une : sinon le micro reste
   // actif pendant toute la préparation du mail.
   if (quickMailDictationRecognition) {
@@ -26185,6 +26194,17 @@ function closeQuickMailModal(isCancel = true) {
     playVoiceLine("envoi-annule");
   }
   window.quickMailIsAgentHandoff = false;
+
+  // Contrat Grok (une seule demande de contenu) : une vraie annulation
+  // abandonne aussi le contenu déjà tapé dans "Envoyer un mail" — sinon un
+  // prochain envoi sans rapport avec celui-ci pourrait, par erreur,
+  // réutiliser ce texte au lieu de redemander normalement. isCancel=false
+  // (fermeture juste avant l'envoi, voir submitQuickMail) ne doit PAS
+  // l'effacer : c'est justement ce texte qui doit servir si le backend
+  // répond "missing_content" juste après.
+  if (isCancel) {
+    window.quickMailPendingRawInstruction = null;
+  }
 }
 
 let quickMailDictationRecognition = null;
@@ -27120,6 +27140,33 @@ if (typeof data === "string") {
     if (!data.success && data.reason === "missing_content") {
       hideOrRemoveBox(box);
 
+      // Contrat Grok : une seule demande de contenu. Si ce texte a déjà été
+      // fourni une fois par l'utilisateur (flux manuel "Envoyer un mail",
+      // voir submitQuickMail) — cas typique avec le contact "Assistance",
+      // dont le nom perturbe parfois la détection du contenu côté backend
+      // malgré un message bien tapé — on ne redemande JAMAIS "Que voulez-
+      // vous dire ?" une 2e fois. On réutilise directement ce texte pour
+      // ouvrir l'aperçu mail EXISTANT (même popup que la suite normale du
+      // flux), sans repasser par une nouvelle popup de contenu.
+      if (window.quickMailPendingRawInstruction) {
+        const alreadyProvidedContent = window.quickMailPendingRawInstruction;
+        window.quickMailPendingRawInstruction = null;
+
+        openMailPreview(
+          {
+            to: quickMailSelectedContact ? quickMailSelectedContact.email : "",
+            cc: "",
+            subject: "",
+            body: alreadyProvidedContent
+          },
+          instruction
+        );
+
+        unlockAgentButtons();
+        autoHideDictationBox(box);
+        return "success";
+      }
+
       openMissingContentQuickMail(
         data.contact_id || contactId,
         data.contact_name || data.name || "",
@@ -27168,6 +27215,8 @@ if (box) {
     
     openMailPreview(data, instruction);
 
+    window.quickMailPendingRawInstruction = null;
+
     unlockAgentButtons();
     autoHideDictationBox(box);
 
@@ -27175,6 +27224,8 @@ if (box) {
 
   } catch (error) {
 stopAgentProgressPolling();
+
+    window.quickMailPendingRawInstruction = null;
 
     console.error("Erreur Agent Mail :", error);
 
