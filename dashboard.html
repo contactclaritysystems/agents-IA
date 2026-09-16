@@ -17872,8 +17872,14 @@ window.clearLastResultAttachments = clearLastResultAttachments;
 // trombone de la carte accueil, envoyés dans le même POST /orchestrate
 // ({ instruction, attachments, user_id, ... }). Toujours présent dans le
 // payload (tableau vide sans fichier).
-async function sendTypedInstruction(instruction, continuing = false, attachments = null) {
+// options.fromDictation : appel depuis la fin de la dictée accueil (micro +
+// puces) — le micro a DÉJÀ vérifié l'abonnement et posé le verrou
+// agentIsWorking au démarrage, donc on ne refait ni l'un ni l'autre ici
+// (sinon "Clarity est déjà occupée" et aucun POST). UN seul POST, même
+// chemin que "taper + flèche".
+async function sendTypedInstruction(instruction, continuing = false, attachments = null, options = null) {
   instruction = (instruction || "").trim();
+  const fromDictation = !!(options && options.fromDictation);
   const sentAttachments = Array.isArray(attachments) ? attachments : [];
   // Miniatures de la popup résultat : copie gardée AVANT le POST (jamais
   // dépendante de la réponse). Nouvelle demande -> liste de cette demande ;
@@ -17888,12 +17894,14 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
     return;
   }
 
-  const allowed = await canUseAgents();
-  if (!allowed) return;
+  if (!fromDictation) {
+    const allowed = await canUseAgents();
+    if (!allowed) return;
 
-  if (agentIsWorking) {
-    showToast("Clarity est déjà occupée, patientez un instant", "error");
-    return;
+    if (agentIsWorking) {
+      showToast("Clarity est déjà occupée, patientez un instant", "error");
+      return;
+    }
   }
 
   if (!continuing) {
@@ -17968,6 +17976,12 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       if (data.agent === "mail") {
         setDictationBoxState(box, "info");
         box.innerHTML = "🔎 Recherche du contact...";
+        // "Envoie ça à Anthony" + fichiers joints : les fichiers de CETTE
+        // demande deviennent les PJ de l'aperçu mail existant (même
+        // mécanisme que "Envoyer par mail" de la feuille Document :
+        // window.pendingMailAttachmentsPreload, consommé une seule fois par
+        // openMailPreview, même après un détour par le choix de contact).
+        if (sentAttachments.length) window.pendingMailAttachmentsPreload = sentAttachments.slice();
         return callMailAgent(data.instruction, box, data.request_id || requestId);
       }
 
@@ -17982,6 +17996,7 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       if (data.agent === "relance" && textMentionsRelanceRecipient(instruction)) {
         setDictationBoxState(box, "info");
         box.innerHTML = "🔎 Recherche du contact...";
+        if (sentAttachments.length) window.pendingMailAttachmentsPreload = sentAttachments.slice();
         return callMailAgent(instruction, box, data.request_id || requestId);
       }
 
@@ -26463,7 +26478,9 @@ progressIcon: "✨",
         setListeningUI(false);
         if (hasSent) return;
         hasSent = true;
-        return sendTypedInstruction((spokenText || "").trim() || "Analysez ce document.", false, getHomeCardAttachmentsPayload());
+        // Un seul POST (voir options.fromDictation) : le verrou posé au
+        // démarrage du micro ne doit pas bloquer cet envoi.
+        return sendTypedInstruction((spokenText || "").trim() || "Analysez ce document.", false, getHomeCardAttachmentsPayload(), { fromDictation: true });
       }
 
       // config.instructionPrefix (ex: Compte rendu depuis l'accueil) : force
