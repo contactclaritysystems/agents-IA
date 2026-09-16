@@ -5393,7 +5393,7 @@ body,
 }
 
 .clarity-input-bar.is-recording {
-  align-items: flex-start;
+  align-items: center;
   border-color: var(--clarity-danger);
   border-radius: var(--clarity-radius-md);
   box-shadow: 0 0 0 4px var(--clarity-danger-bg);
@@ -5522,7 +5522,10 @@ body,
    ligne. Même transition de border-radius que le survol/dictée. */
 .clarity-input-bar.has-text {
   border-radius: var(--clarity-radius-md);
-  align-items: flex-end;
+  /* Trombone et flèche centrés verticalement dans le champ, quelle que
+     soit la hauteur du texte (demande explicite, valable pour tous les
+     champs qui les affichent). */
+  align-items: center;
 }
 
 .clarity-input-bar.has-text .clarity-input-placeholder {
@@ -5539,7 +5542,7 @@ body,
    toggleQuickTextDictation en .value) rendu sans bordure ni fond propre. */
 .clarity-input-bar.clarity-input-bar--textarea {
   border-radius: var(--clarity-radius-md);
-  align-items: flex-end;
+  align-items: center;
   cursor: text;
 }
 
