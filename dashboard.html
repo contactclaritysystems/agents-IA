@@ -5342,13 +5342,16 @@ body,
 .clarity-input-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   background: var(--clarity-surface);
   border: 1px solid var(--clarity-border);
   border-radius: var(--clarity-radius-pill);
-  padding: 14px 18px;
+  /* Marges latérales resserrées (18px -> 10px) : le trombone et la flèche
+     sont désormais DANS le champ, un grand retrait de chaque côté ne
+     servait plus qu'à manger de la largeur de saisie. */
+  padding: 12px 10px;
   cursor: pointer;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   transition:
@@ -5824,7 +5827,7 @@ body,
   }
 
   .clarity-input-bar {
-    padding: 14px 18px;
+    padding: 12px 10px;
   }
 
   .clarity-input-placeholder {
