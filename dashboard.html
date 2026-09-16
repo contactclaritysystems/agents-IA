@@ -5342,7 +5342,7 @@ body,
 .clarity-input-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
   background: var(--clarity-surface);
@@ -5351,7 +5351,7 @@ body,
   /* Marges latérales resserrées (18px -> 10px) : le trombone et la flèche
      sont désormais DANS le champ, un grand retrait de chaque côté ne
      servait plus qu'à manger de la largeur de saisie. */
-  padding: 12px 10px;
+  padding: 11px 6px;
   cursor: pointer;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   transition:
@@ -5481,9 +5481,9 @@ body,
    masquée tant qu'il n'y a pas de texte (.is-visible). Aucune couleur
    nouvelle : uniquement les variables des 5 thèmes. */
 .clarity-input-inline-btn {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   border: none;
   border-radius: 50%;
   background: transparent;
@@ -5827,7 +5827,7 @@ body,
   }
 
   .clarity-input-bar {
-    padding: 12px 10px;
+    padding: 11px 6px;
   }
 
   .clarity-input-placeholder {
@@ -10124,7 +10124,7 @@ body[data-theme="light"]::after {
       <div class="clarity-input-row">
       <div class="clarity-input-bar" id="home-input-bar">
         <input type="file" id="home-attachment-input" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleHomeAttachmentFilesSelected(this)">
-        <button class="clarity-input-inline-btn" id="home-attach-btn" onclick="document.getElementById('home-attachment-input').click()" type="button" aria-label="Joindre un fichier">📎</button>
+        <button class="clarity-input-inline-btn" id="home-attach-btn" onclick="openDocumentSheetFromHome()" type="button" aria-label="Joindre un fichier">📎</button>
         <span class="clarity-input-placeholder"
               id="orchestrator-text-input"
               contenteditable="true"
@@ -24394,6 +24394,13 @@ async function saveActionLog(agent, action, status) {
             <div class="mail-choice-title">Document</div>
             <div class="mail-choice-subtitle">Que voulez-vous en faire ?</div>
 
+            <!-- Champ texte (mêmes classes que "Rédiger un texte" /
+                 #quick-text-instruction) : prérempli avec le texte du champ
+                 accueil à l'ouverture depuis le trombone, modifiable. C'est
+                 CE texte qui part : instruction pour Analyser (ou "Analysez
+                 ce document." si vide), corps du mail pour Envoyer par mail. -->
+            <textarea class="field-input" id="doc-sheet-instruction" rows="3" placeholder="Votre demande (facultatif)" style="width:100%;margin-top:12px;resize:vertical;min-height:70px;"></textarea>
+
             <div id="doc-sheet-attachments-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
 
             <button type="button" class="sheet-btn" id="doc-sheet-attach-btn" style="width:auto;padding:8px 14px;margin-top:10px;" onclick="document.getElementById('home-attachment-input').click()">
@@ -24429,7 +24436,33 @@ async function saveActionLog(agent, action, status) {
     // d'une ouverture précédente) — même logique que openSimpleAgentPreview.
     showDocumentSheetMainView();
     renderDocumentAttachmentSheetList();
+    // Préremplissage : texte du champ accueil, seulement si le champ de la
+    // feuille est encore vide (ne jamais écraser ce que l'utilisateur a
+    // déjà modifié dans la feuille, ex. réouverture après ajout d'un fichier).
+    const instructionEl = document.getElementById("doc-sheet-instruction");
+    if (instructionEl && !(instructionEl.value || "").trim()) {
+      const homeInput = document.getElementById("orchestrator-text-input");
+      const homeText = homeInput ? (homeInput.textContent || "").trim() : "";
+      if (homeText) instructionEl.value = homeText;
+    }
     modal.style.display = "flex";
+  }
+
+  // Trombone du champ accueil : ouvre la feuille Document EXISTANTE (pas le
+  // sélecteur de fichier directement) — "Joindre un fichier" y est.
+  function openDocumentSheetFromHome() {
+    openDocumentAttachmentSheet();
+  }
+  window.openDocumentSheetFromHome = openDocumentSheetFromHome;
+
+  function getDocumentSheetInstruction() {
+    const el = document.getElementById("doc-sheet-instruction");
+    return el ? (el.value || "").trim() : "";
+  }
+
+  function resetDocumentSheetInstruction() {
+    const el = document.getElementById("doc-sheet-instruction");
+    if (el) el.value = "";
   }
 
   function showDocumentSheetMainView() {
@@ -24472,12 +24505,13 @@ async function saveActionLog(agent, action, status) {
   // Oui / Annuler que les autres confirmations de l'app) pour ne pas perdre
   // les fichiers sur un clic accidentel ; liste vide -> fermeture directe.
   function cancelDocumentAttachmentSheet() {
-    if (homeAttachments.length > 0) {
+    if (homeAttachments.length > 0 || getDocumentSheetInstruction()) {
       requestCloseDocumentAttachmentSheet();
       return;
     }
     closeDocumentAttachmentSheet();
     resetHomeAttachments();
+    resetDocumentSheetInstruction();
   }
 
   function requestCloseDocumentAttachmentSheet() {
@@ -24497,6 +24531,7 @@ async function saveActionLog(agent, action, status) {
   function confirmCloseDocumentAttachmentSheet() {
     closeDocumentAttachmentSheet();
     resetHomeAttachments();
+    resetDocumentSheetInstruction();
     showToast("Demande annulée", "error");
   }
 
@@ -24511,8 +24546,12 @@ async function saveActionLog(agent, action, status) {
       showToast("Ajoutez un document avant", "error");
       return;
     }
+    const instruction = getDocumentSheetInstruction();
     closeDocumentAttachmentSheet();
-    startDocumentAnalysis("");
+    resetDocumentSheetInstruction();
+    // startDocumentAnalysis -> /agent/assistant, instruction = texte du
+    // champ ou "Analysez ce document." si vide, + attachments.
+    startDocumentAnalysis(instruction);
   }
 
   // Contrat Grok : "Envoyer par mail" depuis la feuille Document NE DOIT
@@ -24533,7 +24572,11 @@ async function saveActionLog(agent, action, status) {
     window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
       return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
     });
+    // Corps du mail = texte du champ de la feuille (peut être vide), repris
+    // tel quel par openBlankDocumentMailPreview — jamais généré par l'IA.
+    window.pendingMailBodyPreload = getDocumentSheetInstruction();
     resetHomeAttachments();
+    resetDocumentSheetInstruction();
 
     await openDocumentMailContactPicker();
   }
@@ -26915,7 +26958,11 @@ window.selectContactForDocumentMailHandoff = selectContactForDocumentMailHandoff
 // sont déjà dans window.pendingMailAttachmentsPreload, consommées par
 // openMailPreview() comme pour les autres flux d'analyse document.
 function openBlankDocumentMailPreview(toEmail) {
-  openMailPreview({ to: toEmail || "", cc: "", subject: "Document", body: "" }, "");
+  // Corps prérempli avec le texte tapé dans la feuille Document (voir
+  // confirmDocumentMailFromSheet), consommé une seule fois ; vide sinon.
+  const body = window.pendingMailBodyPreload || "";
+  window.pendingMailBodyPreload = null;
+  openMailPreview({ to: toEmail || "", cc: "", subject: "Document", body: body }, "");
 }
 window.openBlankDocumentMailPreview = openBlankDocumentMailPreview;
 
