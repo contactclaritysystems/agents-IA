@@ -9812,10 +9812,13 @@ body[data-theme="light"]::after {
 
 <!-- Petite fiche d'info pour l'icône ⓘ à côté de "Réponses vocales" :
      même patron que add-to-home-sheet, pour ne pas alourdir la rangée
-     avec un paragraphe permanent dans la liste. -->
+     avec un paragraphe permanent dans la liste. Cette même feuille est
+     aussi réutilisée (contenu réécrit dynamiquement via #mic-permission-
+     info-content, voir openMicPermissionBlockedSheet()) quand le micro
+     est bloqué au 1er tap ou ne capte rien — jamais une alerte native. -->
 <div id="mic-permission-info-sheet" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closeMicPermissionInfoSheet()"></div>
-  <div class="mail-choice-box" style="max-width:300px;">
+  <div class="mail-choice-box" id="mic-permission-info-content" style="max-width:300px;">
     <div class="mail-choice-title">Micro</div>
     <div class="mail-choice-subtitle">
       Autorisez le micro une fois dans les réglages du téléphone (Safari ou Chrome → Micro). On ne le redemande pas à chaque ouverture.
@@ -12377,7 +12380,7 @@ async function startChecklistTextDictationFor(inputEl, onDone) {
   // jamais un micro qui a l'air prêt mais ne capte rien.
   const micGranted = await requestMicrophoneAccess();
   if (!micGranted) {
-    showToast("Autorisez le micro une fois, puis retapez", "error");
+    handleMicPermissionBlocked(() => startChecklistTextDictationFor(inputEl, onDone));
     return;
   }
 
@@ -13269,7 +13272,7 @@ async function toggleCrPointDictation() {
   (async () => {
     const micGranted = await requestMicrophoneAccess();
     if (!micGranted) {
-      showToast("Autorisez le micro une fois, puis retapez", "error");
+      handleMicPermissionBlocked(() => toggleCrPointDictation());
       return;
     }
     startCrAttempt();
@@ -17743,7 +17746,26 @@ function renderAddToHomeDeviceDetail(key) {
     '<button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeAddToHomeScreenSheet()">Compris</button>';
 }
 
+// Contenu par défaut de la feuille (icône ⓘ des Réglages, simple info,
+// jamais liée à un échec réel du micro) : toujours réécrit à l'ouverture
+// pour effacer un contenu "micro bloqué" laissé par openMicPermissionBlockedSheet()
+// juste avant, sinon l'icône ⓘ pourrait ré-afficher par erreur les 3 étapes
+// + Réessayer d'un précédent refus au lieu du simple paragraphe d'info.
+function renderMicPermissionInfoDefault() {
+  const content = document.getElementById("mic-permission-info-content");
+  if (!content) return;
+  content.innerHTML =
+    '<div class="mail-choice-title">Micro</div>' +
+    '<div class="mail-choice-subtitle">' +
+      'Autorisez le micro une fois dans les réglages du téléphone (Safari ou Chrome → Micro). On ne le redemande pas à chaque ouverture.' +
+    '</div>' +
+    '<button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeMicPermissionInfoSheet()">' +
+      'Compris' +
+    '</button>';
+}
+
 function openMicPermissionInfoSheet() {
+  renderMicPermissionInfoDefault();
   const modal = document.getElementById("mic-permission-info-sheet");
   if (modal) modal.style.display = "flex";
 }
@@ -17751,7 +17773,68 @@ function openMicPermissionInfoSheet() {
 function closeMicPermissionInfoSheet() {
   const modal = document.getElementById("mic-permission-info-sheet");
   if (modal) modal.style.display = "none";
+  // Une fermeture (croix, fond, Fermer) sans passer par Réessayer abandonne
+  // la relance en attente : on ne veut jamais qu'un futur clic sans rapport
+  // sur ce bouton "Réessayer" fantôme relance une action périmée.
+  micPermissionRetryCallback = null;
 }
+
+let micPermissionRetryCallback = null;
+
+// Contrat Grok (micro iOS, 1er usage / testeurs qui n'ont jamais autorisé) :
+// - jamais d'alerte native, jamais de renvoi vers les Réglages AVANT le 1er
+//   tap (voir requestMicrophoneAccess(), appelée seulement APRÈS le tap) ;
+// - si ce 1er tap échoue (permission refusée) OU si l'écoute démarre
+//   vraiment (onstart) mais ne capte rien après ~2s, on réutilise cette même
+//   feuille (jamais une 2e UI) avec la marche à suivre en 3 étapes et un
+//   bouton Réessayer qui relance directement la même action ;
+// - une seule fois par session : au-delà, un simple toast (voir
+//   handleMicPermissionBlocked ci-dessous), pour ne pas harceler quelqu'un
+//   qui a déjà vu l'explication et choisi de ne pas autoriser tout de suite.
+function openMicPermissionBlockedSheet(retryFn) {
+  micPermissionRetryCallback = typeof retryFn === "function" ? retryFn : null;
+  const content = document.getElementById("mic-permission-info-content");
+  if (content) {
+    content.innerHTML =
+      '<div class="mail-choice-title">Autorisez le micro</div>' +
+      '<div class="mail-choice-subtitle">' +
+        '<div>1. Réglages</div>' +
+        '<div>2. Safari ou Clarity</div>' +
+        '<div>3. Micro → Autoriser</div>' +
+      '</div>' +
+      '<button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="retryMicPermissionFromSheet()">' +
+        'Réessayer' +
+      '</button>' +
+      '<button class="sheet-btn" type="button" style="width:100%;margin-top:8px;" onclick="closeMicPermissionInfoSheet()">' +
+        'Fermer' +
+      '</button>';
+  }
+  const modal = document.getElementById("mic-permission-info-sheet");
+  if (modal) modal.style.display = "flex";
+  window.micPermissionSheetShownThisSession = true;
+}
+window.openMicPermissionBlockedSheet = openMicPermissionBlockedSheet;
+
+function retryMicPermissionFromSheet() {
+  const fn = micPermissionRetryCallback;
+  micPermissionRetryCallback = null;
+  closeMicPermissionInfoSheet();
+  if (typeof fn === "function") fn();
+}
+window.retryMicPermissionFromSheet = retryMicPermissionFromSheet;
+
+// Point d'entrée unique appelé partout où le micro se révèle bloqué :
+// la feuille avec la marche à suivre + Réessayer ne s'affiche qu'une fois
+// par session (contrat Grok) — les fois suivantes, un simple toast, sans
+// rouvrir la même feuille à répétition dans la même session.
+function handleMicPermissionBlocked(retryFn) {
+  if (!window.micPermissionSheetShownThisSession) {
+    openMicPermissionBlockedSheet(retryFn);
+  } else {
+    showToast("Autorisez le micro une fois, puis retapez", "error");
+  }
+}
+window.handleMicPermissionBlocked = handleMicPermissionBlocked;
 
 function openSupportChoiceModal() {
   const modal = document.getElementById("support-choice-modal");
@@ -25096,6 +25179,14 @@ progressIcon: "✨",
   let recognitionGeneration = 0;
   let watchdogTimer = null;
   let silenceTimer = null;
+  // Contrat Grok (micro iOS, 1er usage) : distinct du watchdogTimer 8s
+  // ci-dessus, qui gère un bug de reprise différent (relances silencieuses,
+  // jusqu'à ~80s) — ce timer ne surveille QUE la toute première tentative
+  // d'une session (micRetryCount === 0). Si l'écoute démarre vraiment
+  // (onstart) mais que rien n'est capté 2s plus tard, on ne relance pas en
+  // silence : on considère le micro bloqué pour ce testeur et on affiche
+  // la feuille d'aide (Réglages → Safari/Clarity → Micro → Autoriser).
+  let firstAttemptSilenceTimer = null;
   let finalText = "";
   let latestText = "";
   let hasSent = false;
@@ -25182,7 +25273,26 @@ progressIcon: "✨",
     rec.onstart = function () {
       if (myGeneration !== recognitionGeneration) return;
       if (placeholderEl) placeholderEl.textContent = "Je vous écoute…";
-      if (micRetryCount === 0) showToast("🎙️ Micro prêt");
+      if (micRetryCount === 0) {
+        showToast("🎙️ Micro prêt");
+        // Voir déclaration de firstAttemptSilenceTimer plus haut : seulement
+        // sur la toute première tentative, jamais sur les relances internes.
+        clearTimeout(firstAttemptSilenceTimer);
+        firstAttemptSilenceTimer = setTimeout(function () {
+          if (myGeneration !== recognitionGeneration) return;
+          if (hasReceivedAnyResult || hasSent) return;
+          clearTimeout(watchdogTimer);
+          try { rec.onresult = null; rec.onend = null; rec.onerror = null; } catch (e) {}
+          try { rec.abort(); } catch (e) {}
+          try { rec.stop(); } catch (e) {}
+          markMicActivity();
+          recognition = null;
+          unlockAgentButtons();
+          resetMicButton();
+          setListeningUI(false);
+          handleMicPermissionBlocked(() => startSimpleAgentDictation(config, continuing));
+        }, 2000);
+      }
     };
 
     rec.onresult = function(event) {
@@ -25190,6 +25300,7 @@ progressIcon: "✨",
       hasReceivedAnyResult = true;
       clearTimeout(watchdogTimer);
       clearTimeout(silenceTimer);
+      clearTimeout(firstAttemptSilenceTimer);
       silenceTimer = setTimeout(() => { try { rec.stop(); } catch(e) {} }, 9000);
 
       let interimText = "";
@@ -25216,6 +25327,7 @@ progressIcon: "✨",
       markMicActivity();
       clearTimeout(watchdogTimer);
       clearTimeout(silenceTimer);
+      clearTimeout(firstAttemptSilenceTimer);
 
       const spokenText = (latestText || finalText).trim();
 
@@ -25710,7 +25822,7 @@ console.log("MESSAGE =", message);
       unlockAgentButtons();
       resetMicButton();
       setListeningUI(false);
-      showToast("Autorisez le micro une fois, puis retapez", "error");
+      handleMicPermissionBlocked(() => startSimpleAgentDictation(config, continuing));
       return;
     }
     startAttempt();
@@ -26369,7 +26481,7 @@ async function toggleQuickMailDictation() {
   (async () => {
     const micGranted = await requestMicrophoneAccess();
     if (!micGranted) {
-      showToast("Autorisez le micro une fois, puis retapez", "error");
+      handleMicPermissionBlocked(() => toggleQuickMailDictation());
       return;
     }
     startQuickMailAttempt();
@@ -26523,7 +26635,7 @@ async function toggleQuickTextDictation() {
   (async () => {
     const micGranted = await requestMicrophoneAccess();
     if (!micGranted) {
-      showToast("Autorisez le micro une fois, puis retapez", "error");
+      handleMicPermissionBlocked(() => toggleQuickTextDictation());
       return;
     }
     startQuickTextAttempt();
