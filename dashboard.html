@@ -24053,7 +24053,17 @@ async function saveActionLog(agent, action, status) {
     showToast("Demande annulée", "error");
   }
 
+  // Règle générale Clarity : une info obligatoire manquante -> le toast
+  // existant (même style/position/durée que partout ailleurs, jamais une
+  // nouvelle popup, jamais un silence), la feuille/le formulaire en cours
+  // RESTE ouvert, et aucun appel réseau n'est fait. Ici : aucun fichier
+  // joint -> jamais de POST /agent/assistant ni de fermeture de cette
+  // feuille, même règle que "Rédiger un texte" sans texte tapé/dicté.
   function confirmDocumentAnalysisFromSheet() {
+    if (!homeAttachments.length) {
+      showToast("Ajoutez un document avant", "error");
+      return;
+    }
     closeDocumentAttachmentSheet();
     startDocumentAnalysis("");
   }
@@ -24065,6 +24075,12 @@ async function saveActionLog(agent, action, status) {
   // choix-contact EXISTANT, puis aperçu mail EXISTANT à champs vides
   // (objet/corps jamais générés par l'IA, jamais de contact deviné).
   async function confirmDocumentMailFromSheet() {
+    // Même règle que confirmDocumentAnalysisFromSheet ci-dessus (voir
+    // commentaire) : aucun fichier -> toast, feuille ouverte, rien d'autre.
+    if (!homeAttachments.length) {
+      showToast("Ajoutez un document avant", "error");
+      return;
+    }
     closeDocumentAttachmentSheet();
 
     window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
