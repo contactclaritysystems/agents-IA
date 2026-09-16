@@ -18020,13 +18020,19 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       }
 
       if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
+        // Contrat Grok : les fichiers joints partent AUSSI dans ce 2e POST
+        // (/agent/assistant, rédaction...) — le même tableau attachments
+        // (content_b64) que sur /orchestrate. Sans ça, l'orchestrateur
+        // route "assistant" et l'agent reçoit la demande sans la photo.
+        // Le backend renvoie files_received (0 = rien reçu, >= 1 = photo
+        // arrivée) : on le trace pour le diagnostic, jamais bloquant.
         return callSimpleAgent(
           data.agent,
           SIMPLE_AGENT_WEBHOOKS[data.agent],
           data.instruction,
           box,
           data.request_id || requestId,
-          null,
+          sentAttachments.length ? { attachments: sentAttachments } : null,
           // rawInstruction : texte BRUT tapé par l'utilisateur, capturé AVANT
           // l'appel à l'orchestrateur (variable locale "instruction" de
           // sendTypedInstruction). data.instruction (ci-dessus) est la
@@ -27922,6 +27928,13 @@ async function callSimpleAgent(
     let data = {};
     try {
       data = JSON.parse(text);
+      if (extra && Array.isArray(extra.attachments) && extra.attachments.length && data && typeof data.files_received !== "undefined") {
+        if (Number(data.files_received) < 1) {
+          console.warn("[Clarity] " + agentName + " : " + extra.attachments.length + " fichier(s) envoyé(s), files_received = " + data.files_received);
+        } else {
+          console.log("[Clarity] " + agentName + " : files_received = " + data.files_received);
+        }
+      }
     } catch (e) {
       data = { success: false, message: "Réponse Make invalide." };
     }
