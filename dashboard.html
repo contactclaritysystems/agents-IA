@@ -24582,14 +24582,17 @@ window.confirmCloseSimpleAgentPreview = confirmCloseSimpleAgentPreview;
 // (même agent, même webhook), sans aucune mémoire de la question précédente
 // : chaque demande repart de zéro, seule la UX est enchaînée.
 function relaunchSimpleAgent() {
-  // Document en contexte OU réponse de "Poser une question" (assistant) :
-  // la question suivante se pose DANS la popup, sous la réponse (et les
-  // fichiers s'il y en a) — jamais une popup à part qui masquerait la
-  // réponse sur laquelle porte la question.
-  if (window.lastDocumentExtract || simpleAgentPreviewAgentName === "assistant") {
+  // Quelle que soit l'origine de la réponse (analyse document, "Poser une
+  // question", dictée/saisie accueil via l'orchestrateur, "Rédiger un
+  // texte"), la demande suivante se pose DANS la popup, sous la réponse (et
+  // les fichiers s'il y en a) — jamais une popup à part qui masquerait la
+  // réponse sur laquelle porte la question. L'envoi passe par le même flux
+  // que l'ancienne popup (voir submitDocumentFollowUpFromPreview).
+  if (document.getElementById("simple-agent-followup")) {
     openSimpleAgentFollowUp();
     return;
   }
+  // Filet de sécurité si le bloc inline n'existe pas : ancien comportement.
   const fn = simpleAgentRelaunch;
   // false : ne pas effacer window.lastDocumentExtract ici (voir commentaire
   // sur closeSimpleAgentPreview) — sinon "Poser une autre question" sur un
@@ -24618,7 +24621,16 @@ function openSimpleAgentFollowUp() {
   const attachmentsBlock = document.getElementById("simple-agent-followup-attachments-block");
   const hasDocument = !!window.lastDocumentExtract;
   if (attachmentsBlock) attachmentsBlock.style.display = hasDocument ? "block" : "none";
-  if (textarea) textarea.placeholder = hasDocument ? "Votre question sur ce document…" : "Votre question…";
+  // Placeholder : celui de l'ancienne popup correspondante (Rédiger un
+  // texte / Poser une question), ou la variante document.
+  if (textarea) {
+    if (hasDocument) {
+      textarea.placeholder = "Votre question sur ce document…";
+    } else {
+      const kind = simpleAgentPreviewAgentName === "redaction" ? "redaction" : "assistant";
+      textarea.placeholder = (QUICK_TEXT_MODAL_CONFIG[kind] || QUICK_TEXT_MODAL_CONFIG.assistant).placeholder;
+    }
+  }
   if (relaunchBtn) relaunchBtn.style.display = "none";
   if (block) block.style.display = "block";
   if (textarea) setTimeout(() => textarea.focus(), 60);
