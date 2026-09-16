@@ -12128,6 +12128,9 @@ async function submitDocumentFollowUpQuestion(text, newAttachments) {
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
   const sentAttachments = Array.isArray(newAttachments) ? newAttachments : [];
+  // Miniatures : les fichiers ajoutés avec cette question rejoignent la
+  // liste dès l'envoi (voir setLastResultAttachments).
+  if (sentAttachments.length) appendLastResultAttachments(sentAttachments);
 
   await callSimpleAgent(
     "assistant",
@@ -12144,9 +12147,6 @@ async function submitDocumentFollowUpQuestion(text, newAttachments) {
         // Miniatures : celles de l'analyse d'origine (toujours en mémoire)
         // + les fichiers ajoutés avec cette question, pour que l'utilisateur
         // voie tous les fichiers sur lesquels porte désormais la réponse.
-        if (sentAttachments.length) {
-          window.lastDocumentAttachments = (window.lastDocumentAttachments || []).concat(sentAttachments);
-        }
         openSimpleAgentPreview({
           title: data.title || "Réponse",
           content,
@@ -17702,7 +17702,8 @@ async function startDocumentAnalysis(rawText, box) {
   // en attente) — on l'efface ICI, avant même de partir la requête,
   // jamais seulement après coup dans onSuccess.
   window.lastDocumentExtract = null;
-  window.lastDocumentAttachments = null;
+  // Miniatures : fichiers de CETTE requête, mémorisés avant le POST.
+  setLastResultAttachments(attachments);
 
   await callSimpleAgent(
     "assistant",
@@ -17720,7 +17721,6 @@ async function startDocumentAnalysis(rawText, box) {
         // gardés de la même façon pour continuer à afficher leurs miniatures
         // sur une question de suivi (voir submitDocumentFollowUpQuestion).
         window.lastDocumentExtract = data.document_extract || null;
-        window.lastDocumentAttachments = attachments;
         openSimpleAgentPreview({
           title: data.title || "Réponse",
           content,
@@ -17803,6 +17803,34 @@ window.textRequestsDirectMailWithAttachment = textRequestsDirectMailWithAttachme
 // user_name...), même dispatch vers Mail/Rédaction/Assistant selon la
 // réponse. Utilisé pour répondre par écrit à la popup de clarification,
 // mais utilisable plus largement partout où on veut taper au lieu de dicter.
+// ─── window.lastResultAttachments : copie des fichiers ENVOYÉS avec la
+// requête en cours (puces de la carte, feuille Document, trombone du suivi),
+// gardée côté client jusqu'à Fermer la popup résultat — c'est elle qui
+// alimente les miniatures de la popup (openSimpleAgentPreview), sans jamais
+// attendre que le backend renvoie les images. Nouvelle requête -> liste
+// remplacée par les fichiers de CETTE requête ; question de suivi -> les
+// nouveaux fichiers s'ajoutent. window.lastDocumentAttachments reste un
+// alias (même tableau) pour le code existant.
+function setLastResultAttachments(list) {
+  const copy = (Array.isArray(list) ? list : []).map(function (att) {
+    return { filename: att.filename, mime: att.mime, content_b64: att.content_b64 };
+  });
+  window.lastResultAttachments = copy;
+  window.lastDocumentAttachments = copy;
+  return copy;
+}
+function appendLastResultAttachments(list) {
+  const current = Array.isArray(window.lastResultAttachments) ? window.lastResultAttachments : [];
+  return setLastResultAttachments(current.concat(Array.isArray(list) ? list : []));
+}
+function clearLastResultAttachments() {
+  window.lastResultAttachments = null;
+  window.lastDocumentAttachments = null;
+}
+window.setLastResultAttachments = setLastResultAttachments;
+window.appendLastResultAttachments = appendLastResultAttachments;
+window.clearLastResultAttachments = clearLastResultAttachments;
+
 // attachments (facultatif, contrat Grok) : fichiers joints depuis le
 // trombone de la carte accueil, envoyés dans le même POST /orchestrate
 // ({ instruction, attachments, user_id, ... }). Toujours présent dans le
@@ -17810,6 +17838,14 @@ window.textRequestsDirectMailWithAttachment = textRequestsDirectMailWithAttachme
 async function sendTypedInstruction(instruction, continuing = false, attachments = null) {
   instruction = (instruction || "").trim();
   const sentAttachments = Array.isArray(attachments) ? attachments : [];
+  // Miniatures de la popup résultat : copie gardée AVANT le POST (jamais
+  // dépendante de la réponse). Nouvelle demande -> liste de cette demande ;
+  // suite de conversation -> les nouveaux fichiers s'ajoutent aux existants.
+  if (continuing) {
+    if (sentAttachments.length) appendLastResultAttachments(sentAttachments);
+  } else {
+    setLastResultAttachments(sentAttachments);
+  }
   if (!instruction) {
     showToast("Écrivez votre demande avant d'envoyer", "error");
     return;
@@ -18009,6 +18045,11 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
 
     pushConversationHistory(instruction, content);
     pendingClarifyAgent = null;
+
+    // Si l'orchestrateur a analysé des fichiers (puces de la carte) et
+    // renvoie un extrait, on le garde comme contexte document pour les
+    // questions de suivi — même mécanique que startDocumentAnalysis.
+    if (data.document_extract) window.lastDocumentExtract = data.document_extract;
 
     openSimpleAgentPreview({
       title,
@@ -24808,8 +24849,13 @@ updateStatProgresses();
   // sous le texte, voir openDocAttachmentLightbox/openDocAttachmentFile.
   // window.simpleAgentPreviewAttachments sert de source pour ces 2
   // fonctions (index cliqué -> fichier correspondant).
+  // Source des miniatures : les fichiers passés explicitement, sinon la copie
+  // des fichiers envoyés avec la requête (window.lastResultAttachments) —
+  // on n'attend jamais que le backend renvoie les images.
   const attachmentsEl = document.getElementById("simple-agent-attachments");
-  const attachments = Array.isArray(data.attachments) ? data.attachments : [];
+  const attachments = (Array.isArray(data.attachments) && data.attachments.length)
+    ? data.attachments
+    : (Array.isArray(window.lastResultAttachments) ? window.lastResultAttachments : []);
   window.simpleAgentPreviewAttachments = attachments;
   if (attachmentsEl) {
     if (attachments.length) {
@@ -24892,7 +24938,7 @@ function closeSimpleAgentPreview(resetDocumentContext = true) {
   resetSimpleAgentFollowUp();
   if (resetDocumentContext) {
     window.lastDocumentExtract = null;
-    window.lastDocumentAttachments = null;
+    clearLastResultAttachments();
   }
 }
 window.closeSimpleAgentPreview = closeSimpleAgentPreview;
@@ -24983,7 +25029,11 @@ function openSimpleAgentFollowUp() {
   // "Poser une question" sans document : champ + micro seulement.
   const attachBtn = document.getElementById("simple-agent-followup-attach-btn");
   const hasDocument = !!window.lastDocumentExtract;
-  if (attachBtn) attachBtn.style.display = hasDocument ? "flex" : "none";
+  // Trombone toujours disponible dans le suivi : avec document -> même POST
+  // /agent/assistant que document_extract ; sans -> /orchestrate (suite de
+  // conversation) avec attachments. Dans les deux cas les nouveaux fichiers
+  // rejoignent les miniatures (lastResultAttachments).
+  if (attachBtn) attachBtn.style.display = "flex";
   // Placeholder : celui de l'ancienne popup correspondante (Rédiger un
   // texte / Poser une question), ou la variante document.
   if (textarea) {
@@ -25074,9 +25124,10 @@ async function submitDocumentFollowUpFromPreview() {
     if (window.lastDocumentExtract) {
       await submitDocumentFollowUpQuestion(text, getFollowUpAttachments());
     } else {
-      // Même flux que submitQuickText pour une relance "assistant" sans
-      // document : sendTypedInstruction(text, true) (historique conservé).
-      await sendTypedInstruction(text, true);
+      // Même flux que submitQuickText pour une relance sans document :
+      // sendTypedInstruction(text, true) (historique conservé), avec les
+      // fichiers éventuellement ajoutés via le trombone du suivi.
+      await sendTypedInstruction(text, true, getFollowUpAttachments());
     }
   } finally {
     if (submitBtn) submitBtn.disabled = false;
