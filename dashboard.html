@@ -10720,6 +10720,29 @@ body[data-theme="light"]::after {
          Assistant sans document (voir openSimpleAgentPreview). -->
     <div id="simple-agent-attachments" class="cr-result-photos" style="display:none;"></div>
 
+    <!-- Analyse document : "Poser une autre question" n'ouvre plus une popup
+         à part (qui masquait la réponse et les fichiers) — le champ s'ouvre
+         ICI, sous la réponse et les miniatures, pour que l'utilisateur garde
+         sous les yeux ce sur quoi il pose sa question. Mêmes classes/ids
+         de patron que #quick-text-modal (.clarity-input-row / .field-input /
+         .clarity-input-mic / .clarity-mic-hint), même dictée
+         (toggleQuickTextDictation, paramétrée sur ces ids), même envoi
+         (submitDocumentFollowUpQuestion). Masqué tant que le bouton
+         "Poser une autre question" n'a pas été cliqué — voir
+         relaunchSimpleAgent / openSimpleAgentPreview. -->
+    <div id="simple-agent-followup" style="display:none;">
+      <div class="clarity-input-row" style="align-items:center;margin-top:14px;">
+        <textarea class="field-input" id="simple-agent-followup-input" rows="3" placeholder="Votre question sur ce document…" style="flex:1;min-width:0;resize:vertical;min-height:70px;"></textarea>
+        <button class="clarity-input-mic" id="simple-agent-followup-mic-btn" type="button" onclick="toggleQuickTextDictation('simple-agent-followup-mic-btn', 'simple-agent-followup-input')">
+          <span class="mic-stop-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="clarity-mic-hint">🎙️ Parlez lentement et articulez bien pour une meilleure reconnaissance</div>
+      <button class="save-btn" type="button" id="simple-agent-followup-submit-btn" style="width:100%;margin-top:10px;" onclick="submitDocumentFollowUpFromPreview()">
+        Envoyer
+      </button>
+    </div>
+
     <!-- "Autre version" : uniquement pour Rédaction (jamais Assistant, ni
          Compte rendu qui a sa propre popup) — voir openSimpleAgentPreview,
          simpleAgentPreviewAgentName. Ouvre la feuille partagée
@@ -10736,7 +10759,10 @@ body[data-theme="light"]::after {
       🔁 Poser une autre question
     </button>
 
-    <button class="sheet-btn" onclick="closeSimpleAgentPreview()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+    <!-- "Fermer" suit exactement la même règle que le clic sur le fond flou
+         (handleSimpleAgentBackdropClick) : confirmation d'abord si un
+         document reste en contexte, fermeture directe sinon. -->
+    <button class="sheet-btn" onclick="handleSimpleAgentBackdropClick()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
       Fermer
     </button>
   </div>
@@ -24347,6 +24373,10 @@ updateStatProgresses();
   simpleAgentRelaunch = typeof data.onRelaunch === "function" ? data.onRelaunch : null;
   if (relaunchBtn) relaunchBtn.style.display = simpleAgentRelaunch ? "flex" : "none";
 
+  // Champ "autre question" inline : toujours masqué et vide à chaque
+  // (ré)affichage d'une réponse — il ne s'ouvre que sur clic du bouton.
+  resetSimpleAgentFollowUp();
+
   simpleAgentPreviewAgentName = data.agentName || null;
   const rewriteToggleBtn = document.getElementById("simple-agent-rewrite-toggle-btn");
   if (rewriteToggleBtn) rewriteToggleBtn.style.display = simpleAgentPreviewAgentName === "redaction" ? "flex" : "none";
@@ -24391,6 +24421,7 @@ updateStatProgresses();
 function closeSimpleAgentPreview(resetDocumentContext = true) {
   const modal = document.getElementById("simple-agent-preview-modal");
   if (modal) modal.style.display = "none";
+  resetSimpleAgentFollowUp();
   if (resetDocumentContext) {
     window.lastDocumentExtract = null;
     window.lastDocumentAttachments = null;
@@ -24398,7 +24429,8 @@ function closeSimpleAgentPreview(resetDocumentContext = true) {
 }
 window.closeSimpleAgentPreview = closeSimpleAgentPreview;
 
-// Contrat Grok : clic sur le fond flou de CETTE popup précisément — ferme
+// Contrat Grok : clic sur le fond flou de CETTE popup précisément (et
+// bouton "Fermer", même règle) — ferme
 // directement pour toute réponse Assistant SANS document (RDV de la
 // semaine, etc.), mais demande confirmation d'abord si un document reste
 // en contexte (window.lastDocumentExtract rempli), pour ne jamais perdre
@@ -24438,6 +24470,12 @@ window.confirmCloseSimpleAgentPreview = confirmCloseSimpleAgentPreview;
 // (même agent, même webhook), sans aucune mémoire de la question précédente
 // : chaque demande repart de zéro, seule la UX est enchaînée.
 function relaunchSimpleAgent() {
+  // Document en contexte : la question se pose DANS la popup, sous la
+  // réponse et les fichiers (jamais une popup à part qui les masquerait).
+  if (window.lastDocumentExtract) {
+    openSimpleAgentFollowUp();
+    return;
+  }
   const fn = simpleAgentRelaunch;
   // false : ne pas effacer window.lastDocumentExtract ici (voir commentaire
   // sur closeSimpleAgentPreview) — sinon "Poser une autre question" sur un
@@ -24446,6 +24484,73 @@ function relaunchSimpleAgent() {
   closeSimpleAgentPreview(false);
   if (typeof fn === "function") fn();
 }
+
+// Affiche le champ de question inline (#simple-agent-followup) à la place
+// du bouton "Poser une autre question", et met le focus dans le champ.
+function openSimpleAgentFollowUp() {
+  const block = document.getElementById("simple-agent-followup");
+  const relaunchBtn = document.getElementById("simple-agent-relaunch-btn");
+  const textarea = document.getElementById("simple-agent-followup-input");
+  const micBtn = document.getElementById("simple-agent-followup-mic-btn");
+  // Même icône micro que le champ principal (clonée une seule fois), comme
+  // le fait openQuickTextModal pour #quick-text-mic-btn.
+  if (micBtn && !micBtn.querySelector(".mic-icon-img")) {
+    const sourceMicImg = document.querySelector("#orchestrator-dictation-btn .mic-icon-img");
+    if (sourceMicImg) micBtn.prepend(sourceMicImg.cloneNode(true));
+  }
+  if (relaunchBtn) relaunchBtn.style.display = "none";
+  if (block) block.style.display = "block";
+  if (textarea) setTimeout(() => textarea.focus(), 60);
+}
+window.openSimpleAgentFollowUp = openSimpleAgentFollowUp;
+
+// Remet le champ inline à zéro : masqué, vide, dictée coupée, bouton
+// "Poser une autre question" à nouveau visible si la réponse le permet.
+function resetSimpleAgentFollowUp() {
+  const block = document.getElementById("simple-agent-followup");
+  const textarea = document.getElementById("simple-agent-followup-input");
+  const micBtn = document.getElementById("simple-agent-followup-mic-btn");
+  const submitBtn = document.getElementById("simple-agent-followup-submit-btn");
+  const relaunchBtn = document.getElementById("simple-agent-relaunch-btn");
+  if (micBtn && micBtn.classList.contains("is-recording")) {
+    stopQuickTextDictation();
+    micBtn.classList.remove("is-recording");
+  }
+  if (block) block.style.display = "none";
+  if (textarea) textarea.value = "";
+  if (submitBtn) submitBtn.disabled = false;
+  if (relaunchBtn) relaunchBtn.style.display = simpleAgentRelaunch ? "flex" : "none";
+}
+window.resetSimpleAgentFollowUp = resetSimpleAgentFollowUp;
+
+// Envoi de la question inline : même règle Clarity qu'ailleurs — champ vide
+// -> toast existant, popup ouverte, aucun appel API. Sinon même flux que
+// "Poser une autre question" avant (submitDocumentFollowUpQuestion :
+// /agent/assistant + document_extract, payload inchangé). La popup reste
+// affichée (réponse + fichiers visibles) pendant "Réflexion en cours...",
+// puis la nouvelle réponse la remplace via openSimpleAgentPreview. En cas
+// d'échec, le texte tapé est conservé pour réessayer.
+async function submitDocumentFollowUpFromPreview() {
+  const textarea = document.getElementById("simple-agent-followup-input");
+  const submitBtn = document.getElementById("simple-agent-followup-submit-btn");
+  const micBtn = document.getElementById("simple-agent-followup-mic-btn");
+  const text = (textarea ? textarea.value : "").trim();
+  if (!text) {
+    showToast("Écrivez ou dictez votre demande avant d'envoyer", "error");
+    return;
+  }
+  if (micBtn && micBtn.classList.contains("is-recording")) {
+    stopQuickTextDictation();
+    micBtn.classList.remove("is-recording");
+  }
+  if (submitBtn) submitBtn.disabled = true;
+  try {
+    await submitDocumentFollowUpQuestion(text);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+window.submitDocumentFollowUpFromPreview = submitDocumentFollowUpFromPreview;
 
 async function copySimpleAgentResult() {
   const content = document.getElementById("simple-agent-result-content")?.value || "";
@@ -26879,9 +26984,24 @@ let quickTextMicRetryCount = 0;
 let quickTextHasReceivedAnyResult = false;
 const QUICK_TEXT_MIC_MAX_RETRIES = 20;
 
-async function toggleQuickTextDictation() {
-  const micBtn = document.getElementById("quick-text-mic-btn");
-  const textarea = document.getElementById("quick-text-instruction");
+// Arrête proprement la dictée quick-text en cours (s'il y en a une), sans
+// toucher au DOM — partagé par closeQuickTextModal et le champ inline de
+// question sur document (resetSimpleAgentFollowUp).
+function stopQuickTextDictation() {
+  quickTextMicRetryCount = QUICK_TEXT_MIC_MAX_RETRIES;
+  clearTimeout(quickTextWatchdogTimer);
+  if (quickTextDictationRecognition) {
+    try { quickTextDictationRecognition.stop(); } catch (e) {}
+  }
+}
+window.stopQuickTextDictation = stopQuickTextDictation;
+
+// micBtnId / textareaId : par défaut le champ de #quick-text-modal ; le
+// champ inline "autre question" de la popup résultat (#simple-agent-followup)
+// réutilise exactement la même dictée en passant ses propres ids.
+async function toggleQuickTextDictation(micBtnId = "quick-text-mic-btn", textareaId = "quick-text-instruction") {
+  const micBtn = document.getElementById(micBtnId);
+  const textarea = document.getElementById(textareaId);
 
   if (quickTextDictationRecognition) {
     quickTextMicRetryCount = QUICK_TEXT_MIC_MAX_RETRIES;
