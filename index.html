@@ -623,6 +623,19 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   z-index: 999;
   box-shadow: 0 14px 38px rgba(0,0,0,.24);
   -webkit-tap-highlight-color: transparent;
+  /* Cachée par défaut, comme la bulle "Une question ?" : la bulle noire
+     ronde ne doit pas non plus apparaître dès l'arrivée sur la page, sinon
+     elle recrée le même effet de surcharge visuelle que le texte seul.
+     Rendue visible par showChatNudgeOnce() (scroll ou délai de secours). */
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.chatbot-launcher.show {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateY(0);
 }
 .chatbot-window {
   position: fixed;
@@ -1528,17 +1541,22 @@ document.addEventListener('click', function(e) {
     chat.classList.remove('open');
   }
 });
-  // La bulle "Une question ?" n'apparaît plus dès l'arrivée sur la page
-  // (elle venait se rajouter aux CTA déjà présents dans le hero, avant
-  // même que la personne ait vu la démo) : elle attend maintenant que la
-  // personne ait commencé à parcourir la page (scroll), avec un délai de
-  // secours si elle reste sans scroller sur le hero.
+  // Le chatbot (bulle noire ronde + texte "Une question ?") n'apparaît
+  // plus dès l'arrivée sur la page (il venait se rajouter aux CTA déjà
+  // présents dans le hero, avant même que la personne ait vu la démo) :
+  // il attend maintenant que la personne ait commencé à parcourir la page
+  // (scroll), avec un délai de secours si elle reste sans scroller sur le
+  // hero. Les DEUX éléments (bulle ronde ET texte) sont concernés — pas
+  // seulement le texte, sinon la bulle ronde recréerait la même surcharge
+  // visuelle immédiate à elle seule.
   let nudgeShown = false;
   function showChatNudgeOnce() {
     if (nudgeShown) return;
     nudgeShown = true;
     const nudge = document.querySelector('.chatbot-nudge');
+    const launcher = document.querySelector('.chatbot-launcher');
     if (nudge) nudge.classList.add('show');
+    if (launcher) launcher.classList.add('show');
   }
   window.addEventListener('scroll', () => {
     if (window.scrollY > 300) showChatNudgeOnce();
