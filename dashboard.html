@@ -5445,6 +5445,25 @@ body,
   transform: scale(.92);
 }
 
+/* Trombone (joindre un fichier) : partage le gabarit de base de
+   .clarity-input-send (rond, centré) mais doit rester discret, pas un 2e
+   bouton d'action au même titre que "Envoyer" — retour utilisateur : trop
+   gros et le bleu accent (réservé à l'action d'envoi) attire l'oeil pour
+   rien. Fond = var(--clarity-surface), la même variable que la barre
+   elle-même (.clarity-input-bar), donc automatiquement "couleur du champ"
+   sur les 5 thèmes (light/dark/slate/azur/corail) sans règle par thème. */
+#home-attach-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: var(--clarity-surface);
+  font-size: 17px;
+}
+
+#home-attach-btn:active {
+  transform: scale(.92);
+}
+
 @keyframes micBreathe {
   0%, 100% {
     transform: scale(1);
@@ -17345,7 +17364,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
   if (!allowed) return;
 
   if (agentIsWorking) {
-    showToast("Un agent est déjà en cours", "error");
+    showToast("Clarity est déjà occupée, patientez un instant", "error");
     return;
   }
 
@@ -17355,7 +17374,7 @@ async function sendTypedInstruction(instruction, continuing = false) {
     pendingClarifyAgent = null;
   }
 
-  lockAgentButtons(null, "⏳ Agent en cours...");
+  lockAgentButtons(null, "⏳ Clarity en cours...");
 
   let box = document.getElementById("orchestrator-dictation-box");
   if (!box) {
@@ -24804,7 +24823,7 @@ if (box) {
   }
 }
 
-function lockAgentButtons(activeButton = null, message = "⏳ Agent en cours...") {
+function lockAgentButtons(activeButton = null, message = "⏳ Clarity en cours...") {
   agentIsWorking = true;
 
   document.querySelectorAll("#main-agents .save-btn").forEach(btn => {
@@ -25075,7 +25094,7 @@ progressIcon: "✨",
   if (!allowed) return;
 
   if (agentIsWorking) {
-    showToast("Un agent est déjà en cours", "error");
+    showToast("Clarity est déjà occupée, patientez un instant", "error");
     return;
   }
 
@@ -25092,7 +25111,7 @@ progressIcon: "✨",
   }
 
   const btn = document.getElementById(config.buttonId);
-  lockAgentButtons(btn, "⏳ Agent en cours...");
+  lockAgentButtons(btn, "⏳ Clarity en cours...");
 
   const card = document.getElementById(config.cardId);
   const inputBar = card ? card.querySelector(".clarity-input-bar") : null;
@@ -25745,8 +25764,8 @@ console.log("MESSAGE =", message);
       unlockAgentButtons();
       resetMicButton();
       setDictationBoxState(box, "error");
-      box.innerHTML = "✕ Erreur lors de l’envoi à l’agent.";
-      showToast("Erreur agent", "error");
+      box.innerHTML = "✕ Erreur lors de l’envoi à Clarity.";
+      showToast("Erreur Clarity", "error");
       autoHideDictationBox(box);
       await saveActionLog(config.agent, instruction, "error");
     }
@@ -27010,11 +27029,11 @@ async function callSimpleAgent(
     const box2 = box || document.getElementById("orchestrator-dictation-box");
     if (box2) {
       setDictationBoxState(box2, "error");
-      box2.innerHTML = "✕ Erreur lors de l'envoi à l'agent.";
+      box2.innerHTML = "✕ Erreur lors de l'envoi à Clarity.";
       autoHideDictationBox(box2);
     }
 
-    showToast("Erreur agent", "error");
+    showToast("Erreur Clarity", "error");
     await saveActionLog(agentName, instruction, "error");
   }
 }
