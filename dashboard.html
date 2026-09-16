@@ -10738,6 +10738,17 @@ body[data-theme="light"]::after {
         </button>
       </div>
       <div class="clarity-mic-hint">🎙️ Parlez lentement et articulez bien pour une meilleure reconnaissance</div>
+
+      <!-- Trombone (contrat Grok) : nouveaux fichiers envoyés AVEC la
+           question, dans le même POST /agent/assistant que document_extract
+           (attachments non vide) — même liste, mêmes limites et même
+           conversion HEIC que la feuille Document. -->
+      <input type="file" id="simple-agent-followup-file-input" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleFollowUpAttachmentFilesSelected(this)">
+      <div id="simple-agent-followup-attachments-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+      <button type="button" class="sheet-btn" style="width:auto;padding:8px 14px;margin-top:8px;" onclick="document.getElementById('simple-agent-followup-file-input').click()">
+        📎 Joindre un fichier
+      </button>
+
       <button class="save-btn" type="button" id="simple-agent-followup-submit-btn" style="width:100%;margin-top:10px;" onclick="submitDocumentFollowUpFromPreview()">
         Envoyer
       </button>
@@ -10751,7 +10762,11 @@ body[data-theme="light"]::after {
       ✨ Autre version
     </button>
 
-    <button class="save-btn" onclick="copySimpleAgentResult()" type="button" style="margin-top:14px;">
+    <!-- Bouton secondaire (.sheet-btn, même style que Fermer) : "Copier le
+         texte" n'est pas l'action principale de la popup — en bleu il
+         passait pour le bouton principal, surtout à côté du "Envoyer" du
+         champ "autre question". -->
+    <button class="sheet-btn" onclick="copySimpleAgentResult()" type="button" style="width:100%;justify-content:center;margin-top:14px;">
       📋 Copier le texte
     </button>
 
@@ -11914,9 +11929,15 @@ function submitQuickText() {
 // document_extract (contexte du document) et attachments: [] (pas de nouveau
 // fichier), conversation_history géré automatiquement par callSimpleAgent
 // (pushConversationHistory à chaque tour, comme tous les autres agents).
-async function submitDocumentFollowUpQuestion(text) {
+// newAttachments (facultatif, contrat Grok) : fichiers ajoutés via le
+// trombone du champ "autre question" — envoyés dans le MÊME POST que
+// document_extract ; le backend renvoie alors un document_extract enrichi
+// (ancien + "=== FICHIER AJOUTÉ ===" + nouveau) qui remplace l'existant.
+// Sans nouveau fichier : attachments: [] comme avant.
+async function submitDocumentFollowUpQuestion(text, newAttachments) {
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
+  const sentAttachments = Array.isArray(newAttachments) ? newAttachments : [];
 
   await callSimpleAgent(
     "assistant",
@@ -11924,16 +11945,18 @@ async function submitDocumentFollowUpQuestion(text) {
     text,
     null,
     requestId,
-    { document_extract: window.lastDocumentExtract, attachments: [] },
+    { document_extract: window.lastDocumentExtract, attachments: sentAttachments },
     {
       onSuccess: function (data, content) {
         // Le backend peut renvoyer un extract mis à jour/enrichi : on garde
         // celui-ci pour la question suivante, sinon on conserve l'existant.
         if (data.document_extract) window.lastDocumentExtract = data.document_extract;
-        // Les fichiers ne sont pas renvoyés (attachments: [] plus haut) :
-        // on continue d'afficher les mêmes miniatures que l'analyse
-        // d'origine (mêmes fichiers, toujours en mémoire) sur cette
-        // question de suivi.
+        // Miniatures : celles de l'analyse d'origine (toujours en mémoire)
+        // + les fichiers ajoutés avec cette question, pour que l'utilisateur
+        // voie tous les fichiers sur lesquels porte désormais la réponse.
+        if (sentAttachments.length) {
+          window.lastDocumentAttachments = (window.lastDocumentAttachments || []).concat(sentAttachments);
+        }
         openSimpleAgentPreview({
           title: data.title || "Réponse",
           content,
@@ -23974,29 +23997,38 @@ async function saveActionLog(agent, action, status) {
     });
   }
 
-  function addHomeAttachmentFromFile(file) {
+  // onLoaded (facultatif) : destination du fichier lu. Par défaut la liste
+  // de l'accueil / feuille Document (homeAttachments) ; le trombone du champ
+  // "autre question" (followUpAttachments) passe son propre callback pour
+  // réutiliser exactement la même lecture + conversion HEIC.
+  function addHomeAttachmentFromFile(file, onLoaded) {
     if (isHeicFile(file)) {
       convertHeicFileToJpegBlob(file).then(function (jpegBlob) {
         const jpegName = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
-        readFileAsAttachment(jpegBlob, jpegName, "image/jpeg");
+        readFileAsAttachment(jpegBlob, jpegName, "image/jpeg", onLoaded);
       }).catch(function () {
         showToast("Envoyez une photo JPG ou PNG", "error");
       });
       return;
     }
-    readFileAsAttachment(file, file.name, file.type || "application/octet-stream");
+    readFileAsAttachment(file, file.name, file.type || "application/octet-stream", onLoaded);
   }
 
-  function readFileAsAttachment(fileOrBlob, filename, mime) {
+  function readFileAsAttachment(fileOrBlob, filename, mime, onLoaded) {
     const reader = new FileReader();
     reader.onload = function () {
       const result = reader.result || "";
       const base64 = result.includes(",") ? result.split(",")[1] : result;
-      homeAttachments.push({
+      const att = {
         filename: filename,
         content_b64: base64,
         mime: mime
-      });
+      };
+      if (typeof onLoaded === "function") {
+        onLoaded(att);
+        return;
+      }
+      homeAttachments.push(att);
       renderHomeAttachmentsList();
       renderDocumentAttachmentSheetList();
     };
@@ -24017,6 +24049,84 @@ async function saveActionLog(agent, action, status) {
     const input = document.getElementById("home-attachment-input");
     if (input) input.value = "";
   }
+
+  // ─── Fichiers ajoutés avec une question de suivi (trombone du champ
+  // "autre question" de la popup résultat — voir #simple-agent-followup).
+  // Liste séparée de homeAttachments : ces fichiers partent dans le même
+  // POST /agent/assistant que document_extract (contrat Grok : le backend
+  // renvoie un document_extract enrichi "ancien + === FICHIER AJOUTÉ === +
+  // nouveau"). Mêmes limites (5 fichiers, 8 Mo), même lecture/HEIC.
+  let followUpAttachments = [];
+
+  function handleFollowUpAttachmentFilesSelected(input) {
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (!files.length) return;
+
+    const withinSizeLimit = files.filter(function (file) {
+      return file.size <= HOME_ATTACHMENT_MAX_BYTES;
+    });
+    if (withinSizeLimit.length < files.length) {
+      showToast("Fichier trop volumineux (8 Mo maximum) ignoré", "error");
+    }
+    if (!withinSizeLimit.length) return;
+
+    const remainingSlots = HOME_ATTACHMENTS_MAX - followUpAttachments.length;
+    if (remainingSlots <= 0) {
+      showToast("5 fichiers maximum", "error");
+      return;
+    }
+    const accepted = withinSizeLimit.slice(0, remainingSlots);
+    if (withinSizeLimit.length > accepted.length) {
+      showToast("5 fichiers maximum", "error");
+    }
+
+    accepted.forEach(function (file) {
+      addHomeAttachmentFromFile(file, function (att) {
+        followUpAttachments.push(att);
+        renderFollowUpAttachmentsList();
+      });
+    });
+  }
+
+  // Même rendu que la liste de la feuille Document (nom + croix rouge) ; la
+  // croix retire UNIQUEMENT ce fichier, sans rien fermer.
+  function renderFollowUpAttachmentsList() {
+    const list = document.getElementById("simple-agent-followup-attachments-list");
+    if (!list) return;
+    list.innerHTML = followUpAttachments.map(function (att, index) {
+      return (
+        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
+          '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeFollowUpAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function removeFollowUpAttachment(index) {
+    followUpAttachments.splice(index, 1);
+    renderFollowUpAttachmentsList();
+  }
+
+  function resetFollowUpAttachments() {
+    followUpAttachments = [];
+    renderFollowUpAttachmentsList();
+    const input = document.getElementById("simple-agent-followup-file-input");
+    if (input) input.value = "";
+  }
+
+  function getFollowUpAttachments() {
+    return followUpAttachments.map(function (att) {
+      return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
+    });
+  }
+
+  window.handleFollowUpAttachmentFilesSelected = handleFollowUpAttachmentFilesSelected;
+  window.renderFollowUpAttachmentsList = renderFollowUpAttachmentsList;
+  window.removeFollowUpAttachment = removeFollowUpAttachment;
+  window.resetFollowUpAttachments = resetFollowUpAttachments;
+  window.getFollowUpAttachments = getFollowUpAttachments;
 
   // ─── Analyse document V1 (contrat Grok) : petite feuille EXISTANTE (même
   // CSS que reminder-schedule / choix contact — .mail-choice-backdrop /
@@ -24520,6 +24630,7 @@ function resetSimpleAgentFollowUp() {
   if (textarea) textarea.value = "";
   if (submitBtn) submitBtn.disabled = false;
   if (relaunchBtn) relaunchBtn.style.display = simpleAgentRelaunch ? "flex" : "none";
+  resetFollowUpAttachments();
 }
 window.resetSimpleAgentFollowUp = resetSimpleAgentFollowUp;
 
@@ -24545,7 +24656,7 @@ async function submitDocumentFollowUpFromPreview() {
   }
   if (submitBtn) submitBtn.disabled = true;
   try {
-    await submitDocumentFollowUpQuestion(text);
+    await submitDocumentFollowUpQuestion(text, getFollowUpAttachments());
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
