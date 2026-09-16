@@ -12361,7 +12361,7 @@ let crChecklistTextRecognition = null;
 // unique du formulaire principal — chaque champ texte de checklist a son
 // propre bouton micro autonome, ça fonctionne pareil dans le panneau live
 // ET dans la popup, sans dépendre d'un focus "dernier champ cliqué").
-function startChecklistTextDictationFor(inputEl, onDone) {
+async function startChecklistTextDictationFor(inputEl, onDone) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     showToast("La dictée vocale n'est pas compatible avec ce navigateur.", "error");
@@ -12369,6 +12369,15 @@ function startChecklistTextDictationFor(inputEl, onDone) {
   }
   if (crChecklistTextRecognition) {
     try { crChecklistTextRecognition.stop(); } catch (e) {}
+    return;
+  }
+
+  // Bug micro iOS (contrat Grok) : permission demandée explicitement avant
+  // de créer/démarrer SpeechRecognition — refus/pending -> message clair,
+  // jamais un micro qui a l'air prêt mais ne capte rien.
+  const micGranted = await requestMicrophoneAccess();
+  if (!micGranted) {
+    showToast("Autorisez le micro une fois, puis retapez", "error");
     return;
   }
 
@@ -13255,7 +13264,16 @@ async function toggleCrPointDictation() {
   }
 
   stopVoicePlayback();
-  startCrAttempt();
+  // Bug micro iOS (contrat Grok) : permission demandée explicitement avant
+  // la 1re tentative seulement (jamais sur les relances internes ci-dessus).
+  (async () => {
+    const micGranted = await requestMicrophoneAccess();
+    if (!micGranted) {
+      showToast("Autorisez le micro une fois, puis retapez", "error");
+      return;
+    }
+    startCrAttempt();
+  })();
 }
 
 // Une fois le texte généré, on l'affiche dans une popup dédiée — éditable,
@@ -23075,6 +23093,40 @@ function delayBeforeMic() {
   return new Promise(function (resolve) { setTimeout(resolve, 350); });
 }
 
+// Bug micro iOS (contrat Grok) : le toast "🎙️ Micro prêt" ne doit JAMAIS
+// s'afficher au simple tap — seulement quand le micro a RÉELLEMENT été
+// accordé (getUserMedia résolu) ET que la reconnaissance a vraiment démarré
+// (onstart, déjà géré séparément dans chaque moteur de dictée). Sur iOS, un
+// 1er tap peut laisser la permission refusée ou "en attente" (webview/PWA,
+// ou double-tap trop rapide) sans qu'AUCUN évènement recognition ne se
+// déclenche jamais ensuite — l'icône a l'air active mais le micro est mort,
+// sans aucune indication. On demande donc explicitement getUserMedia AVANT
+// de créer/démarrer SpeechRecognition : si ça échoue, l'appelant doit
+// afficher un message clair ("Autorisez le micro une fois, puis retapez")
+// au lieu de laisser croire que la dictée a démarré.
+// N'est appelée qu'une fois par tap utilisateur (1re tentative d'une
+// session), jamais sur les relances silencieuses internes (watchdog iOS) :
+// celles-ci ne sont pas de nouvelles demandes de permission, la ré-appeler
+// à chaque relance n'apporterait rien et pourrait rouvrir inutilement une
+// invite navigateur.
+async function requestMicrophoneAccess() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // Navigateur sans cette API : on laisse SpeechRecognition gérer sa
+    // propre demande de permission, comportement historique inchangé.
+    return true;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Seule la permission nous intéresse ici — SpeechRecognition ouvre sa
+    // propre capture séparément juste après.
+    stream.getTracks().forEach(function (track) { track.stop(); });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+window.requestMicrophoneAccess = requestMicrophoneAccess;
+
 // Traduit les codes d'erreur du Web Speech API en messages compréhensibles.
 // "not-allowed"/"service-not-allowed" = vraiment un refus de permission ;
 // tous les autres cas (audio-capture, network...) ne le sont PAS et ne
@@ -25648,7 +25700,21 @@ console.log("MESSAGE =", message);
     })();
   }
 
-  startAttempt();
+  // Bug micro iOS (contrat Grok) : demande explicite de permission AVANT la
+  // toute 1re tentative (jamais sur les relances internes, gérées dans
+  // startAttempt/attemptFailed ci-dessus). Refus/pending -> message clair,
+  // jamais un micro qui a l'air prêt mais ne capte rien.
+  (async () => {
+    const micGranted = await requestMicrophoneAccess();
+    if (!micGranted) {
+      unlockAgentButtons();
+      resetMicButton();
+      setListeningUI(false);
+      showToast("Autorisez le micro une fois, puis retapez", "error");
+      return;
+    }
+    startAttempt();
+  })();
 }
 
   let quickMailSelectedContact = null;
@@ -26278,7 +26344,16 @@ async function toggleQuickMailDictation() {
 
   // Voir commentaire équivalent dans startSimpleAgentDictation().
   stopVoicePlayback();
-  startQuickMailAttempt();
+  // Bug micro iOS (contrat Grok) : permission demandée explicitement avant
+  // la 1re tentative seulement (jamais sur les relances internes ci-dessus).
+  (async () => {
+    const micGranted = await requestMicrophoneAccess();
+    if (!micGranted) {
+      showToast("Autorisez le micro une fois, puis retapez", "error");
+      return;
+    }
+    startQuickMailAttempt();
+  })();
 }
 
 window.openQuickMailCompose = openQuickMailCompose;
@@ -26423,7 +26498,16 @@ async function toggleQuickTextDictation() {
   }
 
   stopVoicePlayback();
-  startQuickTextAttempt();
+  // Bug micro iOS (contrat Grok) : permission demandée explicitement avant
+  // la 1re tentative seulement (jamais sur les relances internes ci-dessus).
+  (async () => {
+    const micGranted = await requestMicrophoneAccess();
+    if (!micGranted) {
+      showToast("Autorisez le micro une fois, puis retapez", "error");
+      return;
+    }
+    startQuickTextAttempt();
+  })();
 }
 
 window.toggleQuickTextDictation = toggleQuickTextDictation;
