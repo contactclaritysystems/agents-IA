@@ -27246,13 +27246,17 @@ function selectQuickMailContact(contact) {
 
   const stepContact = document.getElementById("quick-mail-step-contact");
   const stepMessage = document.getElementById("quick-mail-step-message");
+  const title = document.getElementById("quick-mail-title");
   const subtitle = document.getElementById("quick-mail-subtitle");
   const selected = document.getElementById("quick-mail-selected-contact");
   const instruction = document.getElementById("quick-mail-instruction");
 
   if (stepContact) stepContact.style.display = "none";
   if (stepMessage) stepMessage.style.display = "block";
-  if (subtitle) subtitle.textContent = "Écrivez votre message.";
+  // Étape 2 : le contact est choisi, le titre change avec l'étape (ne plus
+  // laisser "À qui envoyer ce mail ?" au-dessus du champ message).
+  if (title) title.textContent = "Que voulez-vous lui dire ?";
+  if (subtitle) subtitle.textContent = "Écrivez ou dictez votre message, Clarity le rédige.";
   if (selected) selected.textContent = "À : " + contact.full_name + " (" + contact.email + ")";
   if (instruction) {
     instruction.value = "";
@@ -27265,10 +27269,13 @@ function quickMailBackToContacts() {
 
   const stepContact = document.getElementById("quick-mail-step-contact");
   const stepMessage = document.getElementById("quick-mail-step-message");
+  const title = document.getElementById("quick-mail-title");
   const subtitle = document.getElementById("quick-mail-subtitle");
 
   if (stepMessage) stepMessage.style.display = "none";
   if (stepContact) stepContact.style.display = "block";
+  // Retour à l'étape 1 : titre et sous-titre de l'étape contact.
+  if (title) title.textContent = "À qui envoyer ce mail ?";
   if (subtitle) subtitle.textContent = "Choisissez un contact, ou ajoutez-en un nouveau.";
 }
 
