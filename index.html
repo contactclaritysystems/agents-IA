@@ -1105,7 +1105,7 @@ Bonne journée
   <label>Mot de passe</label>
   <div style="position:relative;">
     <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••••" style="padding-right:44px;"/>
-    <button type="button" onclick="toggleLoginPassword(this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1rem;padding:0;line-height:1;">👁</button>
+    <button type="button" id="toggleLoginPasswordBtn" onclick="toggleLoginPassword(this)" aria-label="Afficher le mot de passe" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);padding:0;line-height:1;display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
 </div>
   <div class="forgot-password">
@@ -1134,7 +1134,7 @@ Bonne journée
   <label>Mot de passe</label>
   <div style="position:relative;">
     <input type="password" id="registerPassword" placeholder="Minimum 8 caractères" style="padding-right:44px;"/>
-    <button type="button" onclick="toggleRegisterPassword(this)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);font-size:1rem;padding:0;line-height:1;">👁</button>
+    <button type="button" id="toggleRegisterPasswordBtn" onclick="toggleRegisterPassword(this)" aria-label="Afficher le mot de passe" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted-2);padding:0;line-height:1;display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
 </div>
       <div id="registerError" class="error" style="display:none;"></div>
@@ -1160,25 +1160,26 @@ function closeBanner() {
   btn.style.color = '#1d1d1f';
   btn.style.boxShadow = '0 2px 8px rgba(0,0,0,.08)';
 }
+// Icônes SVG (même patron que reset-password.html) au lieu des emoji
+// 👁/🙈 : rendu plus "SaaS premium". L'icône est reconstruite en JS à
+// chaque clic, DIRECTEMENT à partir de input.type, pour rester toujours
+// cohérente avec ce que l'utilisateur voit réellement dans le champ.
+const ICON_EYE = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+const ICON_EYE_OFF = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
 function toggleRegisterPassword(btn) {
   const input = document.getElementById('registerPassword');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-  }
+  const willBeVisible = input.type === 'password';
+  input.type = willBeVisible ? 'text' : 'password';
+  btn.innerHTML = willBeVisible ? ICON_EYE_OFF : ICON_EYE;
+  btn.setAttribute('aria-label', willBeVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
 }
-  function toggleLoginPassword(btn) {
+function toggleLoginPassword(btn) {
   const input = document.getElementById('loginPassword');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-  }
+  const willBeVisible = input.type === 'password';
+  input.type = willBeVisible ? 'text' : 'password';
+  btn.innerHTML = willBeVisible ? ICON_EYE_OFF : ICON_EYE;
+  btn.setAttribute('aria-label', willBeVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
 }
 function openModal(e) {
   if (e) e.preventDefault();
