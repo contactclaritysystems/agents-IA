@@ -24009,30 +24009,53 @@ async function saveActionLog(agent, action, status) {
       modal.innerHTML = `
         <div class="mail-choice-backdrop" onclick="cancelDocumentAttachmentSheet()"></div>
         <div class="mail-choice-box">
-          <div class="mail-choice-title">Document</div>
-          <div class="mail-choice-subtitle">Que voulez-vous en faire ?</div>
+          <div id="doc-sheet-main-view">
+            <div class="mail-choice-title">Document</div>
+            <div class="mail-choice-subtitle">Que voulez-vous en faire ?</div>
 
-          <div id="doc-sheet-attachments-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
+            <div id="doc-sheet-attachments-list" style="margin-top:12px;display:flex;flex-direction:column;gap:6px;"></div>
 
-          <button type="button" class="sheet-btn" id="doc-sheet-attach-btn" style="width:auto;padding:8px 14px;margin-top:10px;" onclick="document.getElementById('home-attachment-input').click()">
-            📎 Joindre un fichier
-          </button>
+            <button type="button" class="sheet-btn" id="doc-sheet-attach-btn" style="width:auto;padding:8px 14px;margin-top:10px;" onclick="document.getElementById('home-attachment-input').click()">
+              📎 Joindre un fichier
+            </button>
 
-          <button class="save-btn" type="button" id="doc-sheet-analyze-btn" style="margin-top:16px;" onclick="confirmDocumentAnalysisFromSheet()">
-            Analyser
-          </button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="confirmDocumentMailFromSheet()">
-            Envoyer par mail
-          </button>
-          <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelDocumentAttachmentSheet()">
-            Annuler
-          </button>
+            <button class="save-btn" type="button" id="doc-sheet-analyze-btn" style="margin-top:16px;" onclick="confirmDocumentAnalysisFromSheet()">
+              Analyser
+            </button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="confirmDocumentMailFromSheet()">
+              Envoyer par mail
+            </button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelDocumentAttachmentSheet()">
+              Annuler
+            </button>
+          </div>
+          <!-- Confirmation avant fermeture (Annuler ou fond flou) quand au
+               moins un fichier est encore joint — même patron main-view /
+               confirm-view et mêmes boutons Oui / Annuler que
+               #simple-agent-confirm-view, #cr-confirm-view et
+               #mail-preview-confirm-view. -->
+          <div id="doc-sheet-confirm-view" style="display:none;">
+            <div class="mail-choice-title">Fermer ?</div>
+            <div class="mail-choice-subtitle">Les fichiers ne seront pas analysés.</div>
+            <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="confirmCloseDocumentAttachmentSheet()">Oui</button>
+            <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelCloseDocumentAttachmentSheet()">Annuler</button>
+          </div>
         </div>
       `;
       document.body.appendChild(modal);
     }
+    // Toujours repartir sur la vue principale (jamais sur la confirmation
+    // d'une ouverture précédente) — même logique que openSimpleAgentPreview.
+    showDocumentSheetMainView();
     renderDocumentAttachmentSheetList();
     modal.style.display = "flex";
+  }
+
+  function showDocumentSheetMainView() {
+    const mainView = document.getElementById("doc-sheet-main-view");
+    const confirmView = document.getElementById("doc-sheet-confirm-view");
+    if (confirmView) confirmView.style.display = "none";
+    if (mainView) mainView.style.display = "block";
   }
 
   function renderDocumentAttachmentSheetList() {
@@ -24043,19 +24066,19 @@ async function saveActionLog(agent, action, status) {
       return (
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
           '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="event.stopPropagation(); removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+          '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
         '</div>'
       );
     }).join("");
   }
 
+  // Croix rouge d'un fichier : retire UNIQUEMENT ce fichier de la liste.
+  // La feuille reste ouverte quoi qu'il arrive (même vide, "Joindre un
+  // fichier" reste disponible) : jamais closeDocumentAttachmentSheet, jamais
+  // le handler Annuler ni celui du fond flou depuis cette croix.
   function removeHomeAttachmentFromSheet(index) {
     removeHomeAttachment(index);
     renderDocumentAttachmentSheetList();
-    // Plus aucun fichier : Analyser/Envoyer par mail n'ont plus de sens ;
-    // ferme la feuille comme un Annuler silencieux (pas de toast, ce n'est
-    // pas une annulation de demande, juste un retrait du dernier fichier).
-    if (homeAttachments.length === 0) closeDocumentAttachmentSheet();
   }
 
   function closeDocumentAttachmentSheet() {
@@ -24063,9 +24086,34 @@ async function saveActionLog(agent, action, status) {
     if (modal) modal.style.display = "none";
   }
 
-  // Fermer fond / Annuler (contrat Grok) : toast "Demande annulée" (même
-  // texte/type que les autres annulations de l'app), fichiers vidés.
+  // Fermer fond / Annuler : s'il reste au moins un fichier joint, on demande
+  // d'abord confirmation (vue #doc-sheet-confirm-view, mêmes boutons
+  // Oui / Annuler que les autres confirmations de l'app) pour ne pas perdre
+  // les fichiers sur un clic accidentel ; liste vide -> fermeture directe.
   function cancelDocumentAttachmentSheet() {
+    if (homeAttachments.length > 0) {
+      requestCloseDocumentAttachmentSheet();
+      return;
+    }
+    closeDocumentAttachmentSheet();
+    resetHomeAttachments();
+  }
+
+  function requestCloseDocumentAttachmentSheet() {
+    const mainView = document.getElementById("doc-sheet-main-view");
+    const confirmView = document.getElementById("doc-sheet-confirm-view");
+    if (mainView) mainView.style.display = "none";
+    if (confirmView) confirmView.style.display = "block";
+  }
+
+  // "Annuler" de la confirmation : on revient à la liste, rien n'est perdu.
+  function cancelCloseDocumentAttachmentSheet() {
+    showDocumentSheetMainView();
+  }
+
+  // "Oui" de la confirmation (contrat Grok) : toast "Demande annulée" (même
+  // texte/type que les autres annulations de l'app), fichiers vidés.
+  function confirmCloseDocumentAttachmentSheet() {
     closeDocumentAttachmentSheet();
     resetHomeAttachments();
     showToast("Demande annulée", "error");
@@ -24114,6 +24162,10 @@ async function saveActionLog(agent, action, status) {
   window.removeHomeAttachmentFromSheet = removeHomeAttachmentFromSheet;
   window.closeDocumentAttachmentSheet = closeDocumentAttachmentSheet;
   window.cancelDocumentAttachmentSheet = cancelDocumentAttachmentSheet;
+  window.requestCloseDocumentAttachmentSheet = requestCloseDocumentAttachmentSheet;
+  window.cancelCloseDocumentAttachmentSheet = cancelCloseDocumentAttachmentSheet;
+  window.confirmCloseDocumentAttachmentSheet = confirmCloseDocumentAttachmentSheet;
+  window.showDocumentSheetMainView = showDocumentSheetMainView;
   window.confirmDocumentAnalysisFromSheet = confirmDocumentAnalysisFromSheet;
   window.confirmDocumentMailFromSheet = confirmDocumentMailFromSheet;
 
