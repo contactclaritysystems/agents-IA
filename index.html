@@ -790,6 +790,20 @@ header {
 .step { padding: 18px 20px; }
 .step-n { margin-bottom: 10px; }
 }
+/* PAGE D'ATTERRISSAGE MOBILE (scan QR code) : trop d'éléments répétaient
+   le même message "essai gratuit" avant même la démo (bandeau du haut +
+   badge + bouton du hero + barre collante en bas) — on en retire deux et
+   on resserre l'espace au-dessus, pour que la carte de démo animée
+   (la vraie preuve du produit) arrive plus vite à l'écran. */
+@media (max-width: 600px) {
+  .promo-banner { display: none !important; }
+  nav { top: 18px !important; }
+  .hero { padding: 92px 18px 40px !important; }
+  .hero-trial-badge { margin-bottom: 20px !important; }
+  .hero-vis { margin-top: 24px !important; }
+  .sticky-cta { display: none !important; }
+  body { padding-bottom: 0 !important; }
+}
 </style>
 </head>
 <body>
@@ -1514,10 +1528,22 @@ document.addEventListener('click', function(e) {
     chat.classList.remove('open');
   }
 });
-  setTimeout(() => {
-  const nudge = document.querySelector('.chatbot-nudge');
-  if (nudge) nudge.classList.add('show');
-}, 9000);
+  // La bulle "Une question ?" n'apparaît plus dès l'arrivée sur la page
+  // (elle venait se rajouter aux CTA déjà présents dans le hero, avant
+  // même que la personne ait vu la démo) : elle attend maintenant que la
+  // personne ait commencé à parcourir la page (scroll), avec un délai de
+  // secours si elle reste sans scroller sur le hero.
+  let nudgeShown = false;
+  function showChatNudgeOnce() {
+    if (nudgeShown) return;
+    nudgeShown = true;
+    const nudge = document.querySelector('.chatbot-nudge');
+    if (nudge) nudge.classList.add('show');
+  }
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 300) showChatNudgeOnce();
+  }, { passive: true });
+  setTimeout(showChatNudgeOnce, 15000);
 </script>
 <!-- CHATBOT -->
 <div class="chatbot-nudge" onclick="toggleChatbot()">
