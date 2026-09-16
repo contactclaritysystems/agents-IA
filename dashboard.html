@@ -10667,13 +10667,11 @@ body[data-theme="light"]::after {
   </div>
 
   <div id="mail-preview-modal" style="display:none;">
-  <!-- Backdrop volontairement sans onclick (même règle que
-       compte-rendu-modal, voir requestCloseCompteRendu) : un mail déjà
-       rédigé (souvent après une dictée) ne doit jamais disparaître sur un
-       clic accidentel à côté — seul le bouton "Annuler" explicite peut
-       fermer, et encore, avec confirmation si du contenu existe (voir
-       requestCloseMailPreview). -->
-  <div class="mail-choice-backdrop"></div>
+  <!-- Fond flou = même règle que le bouton Annuler (requestCloseMailPreview) :
+       mail vierge -> fermeture directe ; du contenu (destinataire, objet ou
+       corps) -> confirmation "Abandonner ce mail ?" d'abord, donc jamais
+       de perte sur un clic accidentel à côté. -->
+  <div class="mail-choice-backdrop" onclick="requestCloseMailPreview()"></div>
 
   <div class="mail-choice-box">
     <div id="mail-preview-main-view">
@@ -10878,8 +10876,8 @@ body[data-theme="light"]::after {
        document reste en contexte — voir handleSimpleAgentBackdropClick.
        Mêmes boutons/patron que #cr-confirm-view et #mail-preview-confirm-view. -->
   <div id="simple-agent-confirm-view" style="display:none;">
-    <div class="mail-choice-title">Fermer l'analyse ?</div>
-    <div class="mail-choice-subtitle">Vous ne pourrez plus poser de question sur ce document.</div>
+    <div class="mail-choice-title" id="simple-agent-confirm-title">Fermer l'analyse ?</div>
+    <div class="mail-choice-subtitle" id="simple-agent-confirm-subtitle">Vous ne pourrez plus poser de question sur ce document.</div>
     <button class="save-btn" type="button" style="width:100%;margin-top:14px;" onclick="confirmCloseSimpleAgentPreview()">Oui</button>
     <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelCloseSimpleAgentPreview()">Annuler</button>
   </div>
@@ -10935,7 +10933,7 @@ body[data-theme="light"]::after {
        façons d'y répondre : à l'oral (redicter) ou à l'écrit (champ texte
        qui repart directement au Chef d'Orchestre). -->
   <div id="clarify-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeClarifyModal()"></div>
+  <div class="mail-choice-backdrop" onclick="cancelClarifyModal()"></div>
 
   <div class="mail-choice-box">
     <div class="mail-choice-title" style="display:flex;align-items:center;gap:9px;">
@@ -10963,7 +10961,7 @@ body[data-theme="light"]::after {
       🎙️ Répondre à l'oral
     </button>
 
-    <button class="sheet-btn" onclick="closeClarifyModal()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
+    <button class="sheet-btn" onclick="cancelClarifyModal()" type="button" style="width:100%;justify-content:center;margin-top:10px;">
       Fermer
     </button>
   </div>
@@ -10975,7 +10973,7 @@ body[data-theme="light"]::after {
        formulaire. L'utilisateur ne remplit que ce qu'il sait ; le bouton
        "?" explique chaque champ en mots simples. -->
   <div id="redaction-form-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeRedactionFormModal()"></div>
+  <div class="mail-choice-backdrop" onclick="cancelRedactionFormModal()"></div>
 
   <div class="mail-choice-box">
     <div class="mail-choice-title" style="display:flex;align-items:center;justify-content:space-between;gap:9px;">
@@ -11012,7 +11010,7 @@ body[data-theme="light"]::after {
     <button class="save-btn" type="button" id="redaction-form-submit-btn" style="width:100%;margin-top:14px;" onclick="submitRedactionForm()">
       Rédiger
     </button>
-    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeRedactionFormModal()">
+    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelRedactionFormModal()">
       Annuler
     </button>
   </div>
@@ -11929,7 +11927,7 @@ async function openQuickTextModal(kind, continuing = false) {
     modal.id = "quick-text-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeQuickTextModal()"></div>
+      <div class="mail-choice-backdrop" onclick="cancelQuickTextModal()"></div>
       <div class="mail-choice-box">
         <div class="mail-choice-title" id="quick-text-title"></div>
         <div class="mail-choice-subtitle" id="quick-text-subtitle"></div>
@@ -11943,7 +11941,7 @@ async function openQuickTextModal(kind, continuing = false) {
         <div class="clarity-mic-hint">🎙️ Parlez lentement et articulez bien pour une meilleure reconnaissance</div>
 
         <button class="save-btn" type="button" id="quick-text-submit-btn" style="width:100%;margin-top:14px;" onclick="submitQuickText()"></button>
-        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeQuickTextModal()">
+        <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;" onclick="cancelQuickTextModal()">
           Annuler
         </button>
       </div>
@@ -11977,9 +11975,97 @@ async function openQuickTextModal(kind, continuing = false) {
   setTimeout(() => textarea.focus(), 60);
 }
 
+// ─── Règle générale Clarity (demande explicite d'Anthony) : fermer une
+// popup (bouton Annuler/Fermer OU clic sur le fond flou, même règle pour
+// les deux) ne demande confirmation QUE s'il y a quelque chose à perdre :
+// texte saisi/dicté, fichier joint, réponse de Clarity, demande en cours.
+// Popup encore vierge -> fermeture directe, sans confirmation inutile.
+// Mécanique = le patron main-view / confirm-view déjà utilisé par
+// #cr-confirm-view, #mail-preview-confirm-view, #simple-agent-confirm-view
+// (mêmes boutons Oui .save-btn / Annuler .sheet-btn, même .mail-choice-box),
+// mais générée à la demande dans la .mail-choice-box de la popup concernée
+// pour ne pas dupliquer 7 fois le même bloc HTML. Aucune nouvelle popup.
+function requestModalCloseConfirm(modalId, opts) {
+  opts = opts || {};
+  const modal = document.getElementById(modalId);
+  const box = modal ? modal.querySelector(".mail-choice-box") : null;
+  if (!box) {
+    if (typeof opts.onConfirm === "function") opts.onConfirm();
+    return;
+  }
+  resetModalCloseConfirm(modalId);
+
+  let view = null;
+  for (let i = 0; i < box.children.length; i++) {
+    if (box.children[i].classList.contains("clarity-close-confirm-view")) { view = box.children[i]; break; }
+  }
+  if (!view) {
+    view = document.createElement("div");
+    view.className = "clarity-close-confirm-view";
+    view.style.display = "none";
+    view.innerHTML =
+      '<div class="mail-choice-title"></div>' +
+      '<div class="mail-choice-subtitle"></div>' +
+      '<button class="save-btn" type="button" style="width:100%;margin-top:14px;">Oui</button>' +
+      '<button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:8px;">Annuler</button>';
+    box.appendChild(view);
+  }
+  view.querySelector(".mail-choice-title").textContent = opts.title || "Fermer ?";
+  view.querySelector(".mail-choice-subtitle").textContent = opts.subtitle || "";
+
+  // Masque la vue principale (tous les autres enfants directs visibles de
+  // la box) en mémorisant leur display inline pour le restaurer à l'identique.
+  const hidden = [];
+  Array.from(box.children).forEach(function (child) {
+    if (child === view || child.style.display === "none") return;
+    hidden.push([child, child.style.display]);
+    child.style.display = "none";
+  });
+  const restore = function () {
+    hidden.forEach(function (pair) { pair[0].style.display = pair[1]; });
+    view.style.display = "none";
+    box._closeConfirmRestore = null;
+  };
+  box._closeConfirmRestore = restore;
+  view.querySelector(".save-btn").onclick = function () {
+    restore();
+    if (typeof opts.onConfirm === "function") opts.onConfirm();
+  };
+  view.querySelector(".sheet-btn").onclick = restore;
+  view.style.display = "block";
+}
+
+// À appeler dans la fonction de fermeture de chaque popup concernée : si la
+// popup est fermée (par programme) pendant que la confirmation est affichée,
+// la vue principale est restaurée pour la prochaine ouverture.
+function resetModalCloseConfirm(modalId) {
+  const modal = document.getElementById(modalId);
+  const box = modal ? modal.querySelector(".mail-choice-box") : null;
+  if (box && typeof box._closeConfirmRestore === "function") box._closeConfirmRestore();
+}
+window.requestModalCloseConfirm = requestModalCloseConfirm;
+window.resetModalCloseConfirm = resetModalCloseConfirm;
+
+// Rédiger un texte / Poser une question / Nouvelle tâche : Annuler ou fond
+// flou -> confirmation seulement si du texte a été tapé ou dicté.
+function cancelQuickTextModal() {
+  const textarea = document.getElementById("quick-text-instruction");
+  if (textarea && (textarea.value || "").trim()) {
+    requestModalCloseConfirm("quick-text-modal", {
+      title: "Fermer ?",
+      subtitle: "Votre texte ne sera pas envoyé.",
+      onConfirm: closeQuickTextModal
+    });
+    return;
+  }
+  closeQuickTextModal();
+}
+window.cancelQuickTextModal = cancelQuickTextModal;
+
 function closeQuickTextModal() {
   const modal = document.getElementById("quick-text-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("quick-text-modal");
 
   quickTextMicRetryCount = QUICK_TEXT_MIC_MAX_RETRIES;
   clearTimeout(quickTextWatchdogTimer);
@@ -13011,10 +13097,11 @@ function crHasUnsavedContent() {
 // seul le bouton "Annuler" explicite peut alors fermer (avec confirmation,
 // voir requestCloseCompteRendu juste en dessous), jamais un clic accidentel
 // à côté.
+// Fond flou = exactement la même règle que le bouton Annuler
+// (requestCloseCompteRendu) : formulaire vierge -> fermeture directe, du
+// contenu saisi -> confirmation (et non plus un clic ignoré en silence).
 function handleCompteRenduBackdropClick() {
-  if (!crHasUnsavedContent()) {
-    closeCompteRenduModal();
-  }
+  requestCloseCompteRendu();
 }
 window.handleCompteRenduBackdropClick = handleCompteRenduBackdropClick;
 
@@ -13536,7 +13623,7 @@ function openCompteRenduResultModal(data, content, options = {}) {
     modal.id = "cr-result-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop"></div>
+      <div class="mail-choice-backdrop" onclick="requestCloseCrResult()"></div>
       <div class="mail-choice-box">
         <div id="cr-result-main-view">
           <div class="mail-choice-title" style="display:flex;align-items:center;gap:9px;">
@@ -15859,7 +15946,7 @@ async function openQuickPlanningModal() {
     modal.id = "quick-planning-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeQuickPlanningModal()"></div>
+      <div class="mail-choice-backdrop" onclick="cancelQuickPlanningModal()"></div>
       <div class="mail-choice-box" style="overflow-x:hidden;">
         <div class="mail-choice-title">Planifier un rendez-vous</div>
         <div class="mail-choice-subtitle">Remplissez les infos, c'est noté tout de suite.</div>
@@ -15894,7 +15981,7 @@ async function openQuickPlanningModal() {
           ✓ Noter le rendez-vous
         </button>
 
-        <button class="sheet-btn" type="button" onclick="closeQuickPlanningModal()" style="width:100%;justify-content:center;margin-top:10px;">
+        <button class="sheet-btn" type="button" onclick="cancelQuickPlanningModal()" style="width:100%;justify-content:center;margin-top:10px;">
           Annuler
         </button>
       </div>
@@ -15988,7 +16075,25 @@ function setQuickPlanningQuickSelected(which) {
 function closeQuickPlanningModal() {
   const modal = document.getElementById("quick-planning-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("quick-planning-modal");
 }
+
+// Annuler / fond flou : confirmation seulement si "Avec qui" ou le motif a
+// été rempli (date/heure sont préremplies à l'ouverture, elles ne comptent pas).
+function cancelQuickPlanningModal() {
+  const contact = (document.getElementById("quick-planning-contact")?.value || "").trim();
+  const title = (document.getElementById("quick-planning-title")?.value || "").trim();
+  if (contact || title) {
+    requestModalCloseConfirm("quick-planning-modal", {
+      title: "Fermer ?",
+      subtitle: "Le rendez-vous ne sera pas enregistré.",
+      onConfirm: closeQuickPlanningModal
+    });
+    return;
+  }
+  closeQuickPlanningModal();
+}
+window.cancelQuickPlanningModal = cancelQuickPlanningModal;
 
 async function confirmQuickPlanning() {
   const contact = document.getElementById("quick-planning-contact").value.trim();
@@ -16082,7 +16187,7 @@ async function openQuickReminderModal() {
     modal.id = "quick-reminder-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeQuickReminderModal()"></div>
+      <div class="mail-choice-backdrop" onclick="cancelQuickReminderModal()"></div>
       <div class="mail-choice-box" style="overflow-x:hidden;">
         <div class="mail-choice-title">Créer un rappel</div>
         <div class="mail-choice-subtitle">Remplissez les infos, c'est noté tout de suite.</div>
@@ -16117,7 +16222,7 @@ async function openQuickReminderModal() {
           ✓ Noter le rappel
         </button>
 
-        <button class="sheet-btn" type="button" onclick="closeQuickReminderModal()" style="width:100%;justify-content:center;margin-top:10px;">
+        <button class="sheet-btn" type="button" onclick="cancelQuickReminderModal()" style="width:100%;justify-content:center;margin-top:10px;">
           Annuler
         </button>
       </div>
@@ -16211,7 +16316,24 @@ function setQuickReminderQuickSelected(which) {
 function closeQuickReminderModal() {
   const modal = document.getElementById("quick-reminder-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("quick-reminder-modal");
 }
+
+// Même règle que le rendez-vous : contact ou motif rempli -> confirmation.
+function cancelQuickReminderModal() {
+  const contact = (document.getElementById("quick-reminder-contact")?.value || "").trim();
+  const reason = (document.getElementById("quick-reminder-reason")?.value || "").trim();
+  if (contact || reason) {
+    requestModalCloseConfirm("quick-reminder-modal", {
+      title: "Fermer ?",
+      subtitle: "Le rappel ne sera pas enregistré.",
+      onConfirm: closeQuickReminderModal
+    });
+    return;
+  }
+  closeQuickReminderModal();
+}
+window.cancelQuickReminderModal = cancelQuickReminderModal;
 
 async function confirmQuickReminder() {
   const contact = document.getElementById("quick-reminder-contact").value.trim();
@@ -16932,9 +17054,21 @@ function openClarifyModal(message, brief) {
 // isCancel=false : fermeture interne avant d'enchaîner sur l'envoi de la
 // réponse (submitClarifyReply / retryClarifyByDictation), donc pas de toast
 // "annulé" dans ce cas.
+// Clarity a posé une question de clarification : une demande est en cours,
+// fermer (Annuler ou fond flou) l'annule -> toujours une confirmation.
+function cancelClarifyModal() {
+  requestModalCloseConfirm("clarify-modal", {
+    title: "Fermer ?",
+    subtitle: "Votre demande en cours sera annulée.",
+    onConfirm: function () { closeClarifyModal(); }
+  });
+}
+window.cancelClarifyModal = cancelClarifyModal;
+
 function closeClarifyModal(isCancel = true) {
   const modal = document.getElementById("clarify-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("clarify-modal");
   if (isCancel) {
     pendingClarifyAgent = null;
     showToast("Demande annulée", "error");
@@ -17142,9 +17276,21 @@ function openRedactionFormModal(data, webhookUrl, fallbackInstruction) {
   if (firstInput) setTimeout(() => firstInput.focus(), 60);
 }
 
+// Clarity demande des informations pour rédiger : demande en cours ->
+// toujours une confirmation avant de fermer (Annuler ou fond flou).
+function cancelRedactionFormModal() {
+  requestModalCloseConfirm("redaction-form-modal", {
+    title: "Fermer ?",
+    subtitle: "Votre demande en cours sera annulée.",
+    onConfirm: function () { closeRedactionFormModal(); }
+  });
+}
+window.cancelRedactionFormModal = cancelRedactionFormModal;
+
 function closeRedactionFormModal(isCancel = true) {
   const modal = document.getElementById("redaction-form-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("redaction-form-modal");
   const helpBox = document.getElementById("redaction-form-help");
   if (helpBox) helpBox.style.display = "none";
   const newStyleBox = document.getElementById("redaction-new-style-box");
@@ -24643,17 +24789,24 @@ window.closeSimpleAgentPreview = closeSimpleAgentPreview;
 // la possibilité de "Poser une autre question" sur ce document via un
 // clic accidentel à côté de la popup.
 function handleSimpleAgentBackdropClick() {
-  if (window.lastDocumentExtract) {
-    requestCloseSimpleAgentWithDocument();
-    return;
-  }
-  closeSimpleAgentPreview();
+  // Règle générale : Clarity a répondu (et l'utilisateur a peut-être déjà
+  // commencé une autre question / joint un fichier) -> toujours une
+  // confirmation, bouton Fermer comme fond flou.
+  requestCloseSimpleAgentWithDocument();
 }
 window.handleSimpleAgentBackdropClick = handleSimpleAgentBackdropClick;
 
 function requestCloseSimpleAgentWithDocument() {
   const mainView = document.getElementById("simple-agent-main-view");
   const confirmView = document.getElementById("simple-agent-confirm-view");
+  // Texte selon le contexte : document analysé, ou simple réponse.
+  const titleEl = document.getElementById("simple-agent-confirm-title");
+  const subtitleEl = document.getElementById("simple-agent-confirm-subtitle");
+  const hasDocument = !!window.lastDocumentExtract;
+  if (titleEl) titleEl.textContent = hasDocument ? "Fermer l'analyse ?" : "Fermer ?";
+  if (subtitleEl) subtitleEl.textContent = hasDocument
+    ? "Vous ne pourrez plus poser de question sur ce document."
+    : "Vous ne pourrez plus poser de question sur cette réponse.";
   if (mainView) mainView.style.display = "none";
   if (confirmView) confirmView.style.display = "block";
 }
@@ -27021,10 +27174,30 @@ async function submitQuickMail() {
 // réussi (le mail est en cours, pas annulé) — dans ce cas on ne doit ni
 // afficher de toast d'annulation, ni débloquer le micro prématurément
 // (il ne se débloque qu'au vrai envoi/échec, plus loin dans le flux).
+// Annuler / fond flou : confirmation dès qu'un contact a été choisi (étape
+// message affichée) ou qu'un message a été tapé/dicté ; liste de contacts
+// encore vierge -> fermeture directe.
+function cancelQuickMailModal() {
+  const stepMessage = document.getElementById("quick-mail-step-message");
+  const instruction = (document.getElementById("quick-mail-instruction")?.value || "").trim();
+  const messageStepVisible = !!(stepMessage && stepMessage.style.display !== "none");
+  if (messageStepVisible || instruction) {
+    requestModalCloseConfirm("quick-mail-modal", {
+      title: "Fermer ?",
+      subtitle: "Le mail ne sera pas envoyé.",
+      onConfirm: function () { closeQuickMailModal(); }
+    });
+    return;
+  }
+  closeQuickMailModal();
+}
+window.cancelQuickMailModal = cancelQuickMailModal;
+
 function closeQuickMailModal(isCancel = true) {
   const modal = document.getElementById("quick-mail-modal");
   const box = document.getElementById("quick-mail-status-box");
   quickMailFlowActive = false;
+  resetModalCloseConfirm("quick-mail-modal");
 
   if (quickMailDictationRecognition) {
     try { quickMailDictationRecognition.stop(); } catch(e) {}
@@ -32012,7 +32185,7 @@ async function openQuickTaskModal() {
     modal.id = "quick-task-modal";
     modal.style.display = "none";
     modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeQuickTaskModal()"></div>
+      <div class="mail-choice-backdrop" onclick="cancelQuickTaskModal()"></div>
       <div class="mail-choice-box">
         <div class="mail-choice-title">Nouvelle tâche</div>
         <div class="mail-choice-subtitle">C'est ajouté tout de suite à votre liste.</div>
@@ -32026,7 +32199,7 @@ async function openQuickTaskModal() {
           ✓ Ajouter la tâche
         </button>
 
-        <button class="sheet-btn" type="button" onclick="closeQuickTaskModal()" style="width:100%;justify-content:center;margin-top:10px;">
+        <button class="sheet-btn" type="button" onclick="cancelQuickTaskModal()" style="width:100%;justify-content:center;margin-top:10px;">
           Annuler
         </button>
       </div>
@@ -32046,7 +32219,23 @@ async function openQuickTaskModal() {
 function closeQuickTaskModal() {
   const modal = document.getElementById("quick-task-modal");
   if (modal) modal.style.display = "none";
+  resetModalCloseConfirm("quick-task-modal");
 }
+
+// Annuler / fond flou : confirmation seulement si une tâche a été tapée.
+function cancelQuickTaskModal() {
+  const titre = (document.getElementById("quick-task-input")?.value || "").trim();
+  if (titre) {
+    requestModalCloseConfirm("quick-task-modal", {
+      title: "Fermer ?",
+      subtitle: "La tâche ne sera pas ajoutée.",
+      onConfirm: closeQuickTaskModal
+    });
+    return;
+  }
+  closeQuickTaskModal();
+}
+window.cancelQuickTaskModal = cancelQuickTaskModal;
 
 async function confirmQuickTask() {
   const input = document.getElementById("quick-task-input");
@@ -32913,7 +33102,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 
 <!-- QUICK MAIL COMPOSE (bouton rapide "Envoyer un mail") -->
 <div id="quick-mail-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeQuickMailModal()"></div>
+  <div class="mail-choice-backdrop" onclick="cancelQuickMailModal()"></div>
 
   <div class="mail-choice-box">
 
@@ -32947,7 +33136,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
       </button>
     </div>
 
-    <button class="contact-choice-cancel" onclick="closeQuickMailModal()">
+    <button class="contact-choice-cancel" onclick="cancelQuickMailModal()">
       Annuler
     </button>
 
