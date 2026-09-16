@@ -24430,11 +24430,122 @@ async function saveActionLog(agent, action, status) {
     });
   }
 
+  // PDF trop souvent absent/tronqué côté backend (contrat Grok, PDF fix) :
+  // on rend les 2 premières pages en JPEG (pdf.js, chargé à la demande
+  // comme jsPDF plus haut dans le fichier) et on les ajoute aux pièces
+  // jointes en image/jpeg AVANT le POST /orchestrate et /agent/assistant —
+  // le backend a alors toujours au moins une image lisible, même quand le
+  // PDF original pose problème. Le PDF original n'est gardé EN PLUS que
+  // s'il fait moins de 4 Mo (poids du payload base64 sinon) ; au-delà, on
+  // n'envoie QUE les 2 JPEG, et files_received reste donc >= 1.
+  const PDF_ORIGINAL_MAX_BYTES = 4 * 1024 * 1024;
+  let pdfJsLoadPromise = null;
+  function ensurePdfJsLoaded() {
+    if (window.pdfjsLib) return Promise.resolve();
+    if (pdfJsLoadPromise) return pdfJsLoadPromise;
+    pdfJsLoadPromise = new Promise(function (resolve, reject) {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.onload = function () {
+        try {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          resolve();
+        } catch (e) { reject(e); }
+      };
+      script.onerror = function () { pdfJsLoadPromise = null; reject(new Error("pdf.js load failed")); };
+      document.head.appendChild(script);
+    });
+    return pdfJsLoadPromise;
+  }
+
+  function isPdfFile(file) {
+    const type = (file.type || "").toLowerCase();
+    if (type === "application/pdf") return true;
+    return (file.name || "").toLowerCase().endsWith(".pdf");
+  }
+
+  // Rend les `maxPages` premières pages du PDF en JPEG (canvas), renvoie un
+  // tableau de Blob JPEG dans l'ordre des pages (1 seul élément si le PDF
+  // n'a qu'une page).
+  function renderPdfPagesToJpegBlobs(file, maxPages) {
+    return ensurePdfJsLoaded().then(function () {
+      return file.arrayBuffer();
+    }).then(function (buffer) {
+      return window.pdfjsLib.getDocument({ data: buffer }).promise;
+    }).then(function (pdf) {
+      const pageCount = Math.min(maxPages, pdf.numPages);
+      let chain = Promise.resolve();
+      const blobs = [];
+      for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+        chain = chain.then(function () {
+          return pdf.getPage(pageNum);
+        }).then(function (page) {
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          return page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise.then(function () {
+            return new Promise(function (resolve, reject) {
+              canvas.toBlob(function (blob) {
+                if (!blob) { reject(new Error("Conversion PDF -> JPEG impossible")); return; }
+                resolve(blob);
+              }, "image/jpeg", 0.85);
+            });
+          });
+        }).then(function (blob) {
+          blobs.push(blob);
+        });
+      }
+      return chain.then(function () { return blobs; });
+    });
+  }
+
+  // Point de sortie commun pour un fichier lu (PDF -> page(s) JPEG, ou tout
+  // autre fichier) : même comportement que readFileAsAttachment — onLoaded
+  // si fourni (trombone "autre question"), sinon homeAttachments (feuille
+  // Document) par défaut.
+  function addReadAttachment(att, onLoaded) {
+    if (typeof onLoaded === "function") {
+      onLoaded(att);
+      return;
+    }
+    homeAttachments.push(att);
+    renderDocumentAttachmentSheetList();
+  }
+
+  function addPdfAttachmentFromFile(file, onLoaded) {
+    const baseName = (file.name || "document.pdf").replace(/\.pdf$/i, "");
+    renderPdfPagesToJpegBlobs(file, 2).then(function (jpegBlobs) {
+      if (!jpegBlobs.length) {
+        showToast("Impossible de lire ce PDF, envoyez une capture d'écran", "error");
+        return;
+      }
+      jpegBlobs.forEach(function (blob, idx) {
+        const pageName = baseName + "-page-" + (idx + 1) + ".jpg";
+        readFileAsAttachment(blob, pageName, "image/jpeg", function (att) {
+          addReadAttachment(att, onLoaded);
+        });
+      });
+      if (file.size < PDF_ORIGINAL_MAX_BYTES) {
+        readFileAsAttachment(file, file.name, "application/pdf", function (att) {
+          addReadAttachment(att, onLoaded);
+        });
+      }
+    }).catch(function () {
+      showToast("Impossible de lire ce PDF, envoyez une capture d'écran", "error");
+    });
+  }
+
   // onLoaded (facultatif) : destination du fichier lu. Par défaut la liste
   // de l'accueil / feuille Document (homeAttachments) ; le trombone du champ
   // "autre question" (followUpAttachments) passe son propre callback pour
-  // réutiliser exactement la même lecture + conversion HEIC.
+  // réutiliser exactement la même lecture + conversion HEIC / PDF.
   function addHomeAttachmentFromFile(file, onLoaded) {
+    if (isPdfFile(file)) {
+      addPdfAttachmentFromFile(file, onLoaded);
+      return;
+    }
     if (isHeicFile(file)) {
       convertHeicFileToJpegBlob(file).then(function (jpegBlob) {
         const jpegName = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
