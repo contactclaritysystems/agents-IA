@@ -1675,13 +1675,18 @@ body[data-theme="dark"] .cr-point-edit-input {
   max-width: 460px;
 }
 
-/* La zone de résultat se redimensionne selon le texte (voir JS,
-   openSimpleAgentPreview) : plus de min-height fixe qui laissait un grand
-   vide pour les réponses courtes (2-3 lignes). resize:none car la
-   hauteur est déjà gérée automatiquement. */
+/* Rendu "premium" de la réponse (Analyser un document, Poser une question,
+   Rédiger un texte...) : même traitement que le Compte rendu (.cr-result-rich
+   / renderCrMarkdownToHtml) — titres, sous-titres colorés et puces au lieu
+   d'un seul bloc de texte brut compact, illisible sur une réponse un peu
+   longue. contenteditable reste actif : "Rédiger un texte" doit toujours
+   pouvoir être corrigé à la main avant "Copier le texte". Hauteur libre
+   (div, pas de resize à gérer contrairement à l'ancien textarea).
+   La popup Compte rendu, plus grande, garde ses classes CSS SÉPARÉES
+   (voir #cr-result-content) même si le rendu produit ressemble. */
 #simple-agent-result-content {
   min-height: 60px;
-  resize: none;
+  max-height: 45vh;
   overflow-y: auto;
 }
 
@@ -10851,9 +10856,18 @@ body[data-theme="light"]::after {
     </div>
     <div class="mail-choice-subtitle" id="simple-agent-modal-subtitle" style="display:none;"></div>
 
+    <!-- Historique des questions posées (Analyser un document / Assistant) :
+         voir renderSimpleAgentQuestionsHistory — masqué/vidé tant qu'aucune
+         question n'a été posée, et remis à zéro à la fermeture de la popup
+         (jamais gardé d'une ouverture à l'autre, voir closeSimpleAgentPreview). -->
+    <div class="field-group" id="simple-agent-questions-history" style="display:none;margin-top:12px;">
+      <div class="field-label">Vos questions</div>
+      <div id="simple-agent-questions-history-list"></div>
+    </div>
+
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label" id="simple-agent-result-title">Résultat</div>
-      <textarea class="field-input" id="simple-agent-result-content"></textarea>
+      <div class="field-input cr-result-rich" id="simple-agent-result-content" contenteditable="true"></div>
     </div>
 
     <!-- Analyse document V1 (contrat Grok) : miniatures des fichiers envoyés
@@ -12220,6 +12234,8 @@ async function submitDocumentFollowUpQuestion(text, newAttachments) {
           modalTitle: "Clarity",
           agentName: "assistant",
           attachments: window.lastDocumentAttachments || [],
+          userQuestion: text,
+          appendQuestion: true,
           onRelaunch: () => openQuickTextModal("assistant", true)
         });
       }
@@ -17798,6 +17814,7 @@ async function startDocumentAnalysis(rawText, box) {
           agentName: "assistant",
           // Liste VISIBLE (pas dépliée) : sinon 3 miniatures pour 1 seul PDF.
           attachments: rawAttachments,
+          userQuestion: instruction,
           onRelaunch: () => openQuickTextModal("assistant", true)
         });
       }
@@ -18110,7 +18127,10 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
           // perdu des fragments comme "30 min avant" — jamais utiliser
           // data.instruction pour retrouver un rappel dicté. Transmis via
           // "handlers" (jamais envoyé au backend, contrairement à "extra").
-          { rawInstruction: instruction }
+          // continuing : transmis pour que le popup résultat sache si la
+          // question s'ajoute à l'historique "Vos questions" déjà affiché,
+          // ou en repart à zéro (voir handlers.continuing dans callSimpleAgent).
+          { rawInstruction: instruction, continuing: continuing }
         );
       }
     } catch (e) {
@@ -18169,6 +18189,11 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       content,
       modalTitle: "Clarity",
       agentName: effectiveAgent,
+      // Historique "Vos questions" : uniquement pour l'Assistant (question/
+      // analyse de document), jamais pour Planning/Relance/Rédaction qui
+      // passent aussi par ce même popup générique.
+      userQuestion: effectiveAgent === "assistant" ? instruction : undefined,
+      appendQuestion: continuing,
       // "Poser une autre question" : rouvre la popup avec champ texte +
       // micro (comme le bouton d'action rapide), pas le micro plein écran
       // de l'orchestrateur qui renvoyait l'utilisateur à l'accueil.
@@ -25090,6 +25115,28 @@ updateStatProgresses();
   // rewrite_of, mais ce n'est pas le rôle de l'Assistant).
   let simpleAgentPreviewAgentName = null;
 
+// Affiche la liste "Vos questions" au-dessus de la réponse (voir
+// window.simpleAgentQuestionsHistory, alimenté par openSimpleAgentPreview) —
+// masquée/vidée tant qu'aucune question n'est en mémoire.
+function renderSimpleAgentQuestionsHistory() {
+  const wrap = document.getElementById("simple-agent-questions-history");
+  const list = document.getElementById("simple-agent-questions-history-list");
+  if (!wrap || !list) return;
+  const questions = window.simpleAgentQuestionsHistory || [];
+  if (!questions.length) {
+    wrap.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+  list.innerHTML = questions.map(function (q, i) {
+    return '<div class="mail-choice-subtitle" style="display:block;margin:2px 0;">'
+      + '<strong>Question ' + (i + 1) + ' :</strong> ' + escapeHtmlForPrint(q)
+      + '</div>';
+  }).join("");
+  wrap.style.display = "";
+}
+window.renderSimpleAgentQuestionsHistory = renderSimpleAgentQuestionsHistory;
+
   function openSimpleAgentPreview(data) {
   const modal = document.getElementById("simple-agent-preview-modal");
   const title = document.getElementById("simple-agent-modal-title");
@@ -25111,6 +25158,24 @@ updateStatProgresses();
       subtitle.style.display = "none";
     }
   }
+
+  // Historique des questions (Analyser un document / Assistant) : data.userQuestion
+  // = texte BRUT tapé/dicté par l'utilisateur pour CETTE requête (jamais
+  // data.instruction, réécrit par l'orchestrateur). data.appendQuestion = true
+  // pour une question de suivi ("Poser une autre question") -> s'ajoute à la
+  // liste déjà affichée ; absent/false = nouvelle ouverture -> repart de zéro.
+  // Un agent qui ne fournit pas de userQuestion (Rédaction, etc.) efface la
+  // liste plutôt que de garder celle d'une analyse précédente affichée par
+  // erreur.
+  if (data.userQuestion) {
+    window.simpleAgentQuestionsHistory = data.appendQuestion
+      ? (window.simpleAgentQuestionsHistory || []).concat([data.userQuestion])
+      : [data.userQuestion];
+  } else if (!data.appendQuestion) {
+    window.simpleAgentQuestionsHistory = [];
+  }
+  renderSimpleAgentQuestionsHistory();
+
   // Contrat Grok : sous l'en-tête (logo + "Clarity"), ce libellé ne doit
   // apparaître QUE s'il porte un vrai titre métier (ex: "Compte rendu",
   // "Résumé de la semaine"). Un libellé générique — absent, ou qui ne fait
@@ -25130,7 +25195,9 @@ updateStatProgresses();
       resultTitle.style.display = "";
     }
   }
-  if (content) content.value = data.content || "";
+  // Même rendu "premium" que le Compte rendu (titres, sous-titres colorés,
+  // puces) plutôt qu'un bloc de texte brut compact — voir renderCrMarkdownToHtml.
+  if (content) content.innerHTML = renderCrMarkdownToHtml(data.content || "");
 
   // Analyse document V1 (contrat Grok) : miniatures des fichiers envoyés
   // sous le texte, voir openDocAttachmentLightbox/openDocAttachmentFile.
@@ -25191,22 +25258,13 @@ updateStatProgresses();
     requestAnimationFrame(() => {
   const box = modal.querySelector(".mail-choice-box");
 
-  // Toujours repartir du début du texte : sans ça, le textarea garde
-  // parfois la position de scroll (et la position du curseur) d'un
-  // résultat précédent, et on tombe au milieu/en bas du nouveau texte.
+  // Toujours repartir du début du texte : sans ça, la div gardait parfois
+  // la position de scroll d'un résultat précédent, et on tombait au
+  // milieu/en bas du nouveau texte. Plus de calcul de hauteur ici (voir
+  // #simple-agent-result-content : min-height + max-height 45vh + scroll
+  // interne gèrent déjà ça en CSS) ni de setSelectionRange (spécifique aux
+  // textarea/input, absent d'un div contenteditable).
   if (content) {
-    content.scrollTop = 0;
-    content.setSelectionRange(0, 0);
-
-    // Hauteur adaptée au texte : pas de grand vide pour une réponse
-    // courte (2-3 lignes), et un plafond (45% de l'écran) + scroll
-    // interne pour les réponses longues. Plafond volontairement modeste
-    // (avant : 70%) pour que la popup entière (titre + boutons compris)
-    // reste toujours nettement plus petite que l'écran, sur mobile comme
-    // sur desktop.
-    content.style.height = "auto";
-    const maxContentHeight = window.innerHeight * 0.45;
-    content.style.height = Math.min(content.scrollHeight, maxContentHeight) + "px";
     content.scrollTop = 0;
   }
   if (box) box.scrollTop = 0;
@@ -25232,6 +25290,11 @@ function closeSimpleAgentPreview(resetDocumentContext = true) {
   if (resetDocumentContext) {
     window.lastDocumentExtract = null;
     clearLastResultAttachments();
+    // Vraie fermeture (pas le "Poser une autre question" qui referme puis
+    // rouvre aussitôt) : la liste "Vos questions" ne doit jamais survivre
+    // à une prochaine ouverture.
+    window.simpleAgentQuestionsHistory = [];
+    renderSimpleAgentQuestionsHistory();
   }
 }
 window.closeSimpleAgentPreview = closeSimpleAgentPreview;
@@ -25429,7 +25492,10 @@ async function submitDocumentFollowUpFromPreview() {
 window.submitDocumentFollowUpFromPreview = submitDocumentFollowUpFromPreview;
 
 async function copySimpleAgentResult() {
-  const content = document.getElementById("simple-agent-result-content")?.value || "";
+  // Même reconstruction "texte lisible" que Copier le texte du Compte rendu
+  // (titres en MAJUSCULES, puces "- ", blocs séparés par une ligne vide) —
+  // voir crResultToMailText.
+  const content = crResultToMailText(document.getElementById("simple-agent-result-content"));
 
   if (!content.trim()) {
     showToast("Texte vide", "error");
@@ -25979,7 +26045,10 @@ async function applyRewriteSheet() {
     payload.to_name = currentPreparedMail ? currentPreparedMail.contact_name || "" : "";
   } else if (rewriteSheetContext === "redaction") {
     const contentEl = document.getElementById("simple-agent-result-content");
-    contentBefore = contentEl ? contentEl.value.trim() : "";
+    // Reconstruit le texte brut (titres #/##, puces -) à partir du rendu
+    // riche affiché/édité — voir crResultToPlainText — pour que le backend
+    // reçoive un texte structuré équivalent à ce que l'utilisateur voit.
+    contentBefore = contentEl ? crResultToPlainText(contentEl).trim() : "";
 
     if (!contentBefore) {
       showToast("Texte vide", "error");
@@ -26022,13 +26091,10 @@ async function applyRewriteSheet() {
     } else {
       const contentEl = document.getElementById("simple-agent-result-content");
       if (contentEl && typeof data.content === "string") {
-        contentEl.value = data.content;
-        // Même recalcul de hauteur qu'à l'ouverture initiale (voir
-        // openSimpleAgentPreview) : sans ça, une version bien plus longue
-        // ou plus courte laisserait un texte coupé ou un grand vide.
-        contentEl.style.height = "auto";
-        const maxContentHeight = window.innerHeight * 0.45;
-        contentEl.style.height = Math.min(contentEl.scrollHeight, maxContentHeight) + "px";
+        // Même rendu "premium" qu'à l'ouverture initiale (voir
+        // openSimpleAgentPreview) — la div (contenteditable) grandit avec
+        // son contenu, plus besoin de recalculer une hauteur à la main.
+        contentEl.innerHTML = renderCrMarkdownToHtml(data.content);
         contentEl.scrollTop = 0;
       }
     }
@@ -26895,7 +26961,7 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
     // data.instruction (ci-dessus) vient de l'orchestrateur et peut avoir
     // perdu des fragments comme "30 min avant" — jamais utiliser
     // data.instruction pour retrouver un rappel dicté.
-    { rawInstruction: instruction }
+    { rawInstruction: instruction, continuing: continuing }
   );
 }
 
@@ -27082,6 +27148,10 @@ console.log("MESSAGE =", message);
           modalTitle: config.modalTitle,
           modalSubtitle: config.modalSubtitle,
           agentName: config.agent,
+          // Historique "Vos questions" : uniquement pour l'Assistant, comme
+          // côté texte (sendTypedInstruction) — jamais Rédaction/Planning.
+          userQuestion: config.agent === "assistant" ? instruction : undefined,
+          appendQuestion: continuing,
           // Comme pour callSimpleAgent() : rouvre la popup texte + micro
           // (bouton d'action rapide), pas le micro plein écran qui
           // renvoyait l'utilisateur à l'accueil.
@@ -28407,6 +28477,13 @@ async function callSimpleAgent(
       content,
       modalTitle: "Clarity",
       agentName: agentName,
+      // Historique "Vos questions" : texte BRUT tapé/dicté (handlers.rawInstruction,
+      // jamais "instruction" ici qui peut être la version réécrite par
+      // l'orchestrateur), uniquement pour l'Assistant, et seulement ajouté
+      // à la liste existante si cet appel vient d'une suite de conversation
+      // (handlers.continuing, transmis par sendTypedInstruction/startSimpleAgentDictation).
+      userQuestion: agentName === "assistant" ? ((handlers && handlers.rawInstruction) || instruction) : undefined,
+      appendQuestion: !!(handlers && handlers.continuing),
       // Rouvre la popup texte + micro (bouton d'action rapide), pas le
       // micro plein écran de l'orchestrateur.
       onRelaunch: () => openQuickTextModal(agentName === "redaction" ? "redaction" : "assistant", true)
