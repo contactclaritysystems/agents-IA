@@ -17379,6 +17379,14 @@ async function startDocumentAnalysis(rawText, box) {
   // après envoi).
   resetHomeAttachments();
 
+  // Contrat Grok : un nouvel envoi "Analyser" ne doit JAMAIS pouvoir
+  // renvoyer/réutiliser l'extrait d'une analyse précédente resté en
+  // mémoire (ex: popup pas encore fermée, ou "Poser une autre question"
+  // en attente) — on l'efface ICI, avant même de partir la requête,
+  // jamais seulement après coup dans onSuccess.
+  window.lastDocumentExtract = null;
+  window.lastDocumentAttachments = null;
+
   await callSimpleAgent(
     "assistant",
     ASSISTANT_WEBHOOK_URL,
@@ -23882,23 +23890,76 @@ async function saveActionLog(agent, action, status) {
     openDocumentAttachmentSheet();
 
     accepted.forEach(function (file) {
-      const reader = new FileReader();
-      reader.onload = function () {
-        const result = reader.result || "";
-        const base64 = result.includes(",") ? result.split(",")[1] : result;
-        homeAttachments.push({
-          filename: file.name,
-          content_b64: base64,
-          mime: file.type || "application/octet-stream"
-        });
-        renderHomeAttachmentsList();
-        renderDocumentAttachmentSheetList();
-      };
-      reader.onerror = function () {
-        showToast("Impossible de lire « " + file.name + " »", "error");
-      };
-      reader.readAsDataURL(file);
+      addHomeAttachmentFromFile(file);
     });
+  }
+
+  // Un iPhone envoie très souvent des photos en HEIC (format par défaut de
+  // l'appareil photo iOS) : le backend d'analyse document ne sait pas le
+  // lire, et retombait silencieusement sur l'analyse précédente au lieu
+  // d'échouer clairement. On détecte HEIC/HEIF ici (mime ET extension, le
+  // mime étant parfois vide sur iOS Safari pour ce format) et on convertit
+  // en JPEG côté client (createImageBitmap + canvas, décodage natif du
+  // système d'exploitation — aucune librairie tierce nécessaire) avant de
+  // l'ajouter aux pièces jointes. Si la conversion échoue (navigateur sans
+  // codec HEIC, ex: Chrome/Firefox desktop), on affiche un message clair
+  // au lieu d'ajouter un fichier illisible par le serveur.
+  function isHeicFile(file) {
+    const type = (file.type || "").toLowerCase();
+    if (type === "image/heic" || type === "image/heif") return true;
+    const name = (file.name || "").toLowerCase();
+    return name.endsWith(".heic") || name.endsWith(".heif");
+  }
+
+  function convertHeicFileToJpegBlob(file) {
+    if (typeof createImageBitmap !== "function") {
+      return Promise.reject(new Error("createImageBitmap indisponible"));
+    }
+    return createImageBitmap(file).then(function (bitmap) {
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0);
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (blob) {
+          if (!blob) { reject(new Error("Conversion HEIC impossible")); return; }
+          resolve(blob);
+        }, "image/jpeg", 0.9);
+      });
+    });
+  }
+
+  function addHomeAttachmentFromFile(file) {
+    if (isHeicFile(file)) {
+      convertHeicFileToJpegBlob(file).then(function (jpegBlob) {
+        const jpegName = file.name.replace(/\.(heic|heif)$/i, "") + ".jpg";
+        readFileAsAttachment(jpegBlob, jpegName, "image/jpeg");
+      }).catch(function () {
+        showToast("Envoyez une photo JPG ou PNG", "error");
+      });
+      return;
+    }
+    readFileAsAttachment(file, file.name, file.type || "application/octet-stream");
+  }
+
+  function readFileAsAttachment(fileOrBlob, filename, mime) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const result = reader.result || "";
+      const base64 = result.includes(",") ? result.split(",")[1] : result;
+      homeAttachments.push({
+        filename: filename,
+        content_b64: base64,
+        mime: mime
+      });
+      renderHomeAttachmentsList();
+      renderDocumentAttachmentSheetList();
+    };
+    reader.onerror = function () {
+      showToast("Impossible de lire « " + filename + " »", "error");
+    };
+    reader.readAsDataURL(fileOrBlob);
   }
 
   function removeHomeAttachment(index) {
@@ -23964,7 +24025,7 @@ async function saveActionLog(agent, action, status) {
       return (
         '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
           '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+          '<button type="button" onclick="event.stopPropagation(); removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
         '</div>'
       );
     }).join("");
