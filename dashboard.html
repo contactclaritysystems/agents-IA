@@ -12191,7 +12191,10 @@ function submitQuickText() {
 async function submitDocumentFollowUpQuestion(text, newAttachments) {
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
+  // newAttachments = liste VISIBLE (pas dépliée, voir getFollowUpAttachmentsRaw) :
+  // gardée telle quelle pour les miniatures, dépliée uniquement pour le POST.
   const sentAttachments = Array.isArray(newAttachments) ? newAttachments : [];
+  const payloadAttachments = expandAttachmentsForPayload(sentAttachments);
   // Miniatures : les fichiers ajoutés avec cette question rejoignent la
   // liste dès l'envoi (voir setLastResultAttachments).
   if (sentAttachments.length) appendLastResultAttachments(sentAttachments);
@@ -12202,7 +12205,7 @@ async function submitDocumentFollowUpQuestion(text, newAttachments) {
     text,
     null,
     requestId,
-    { document_extract: window.lastDocumentExtract, attachments: sentAttachments },
+    { document_extract: window.lastDocumentExtract, attachments: payloadAttachments },
     {
       onSuccess: function (data, content) {
         // Le backend peut renvoyer un extract mis à jour/enrichi : on garde
@@ -17735,7 +17738,12 @@ async function saveWritingStyleEditor() {
 async function startDocumentAnalysis(rawText, box) {
   const instruction = (rawText && rawText.trim()) ? rawText.trim() : "Analysez ce document.";
 
-  const attachments = expandAttachmentsForPayload(homeAttachments);
+  // rawAttachments = liste VISIBLE (miniatures popup résultat, voir
+  // setLastResultAttachments) ; attachments = liste DÉPLIÉE pour le POST
+  // (voir expandAttachmentsForPayload) — jamais la même liste pour les deux,
+  // sinon un PDF affiche 2 miniatures (PDF + page JPEG) au lieu d'une seule.
+  const rawAttachments = homeAttachments.slice();
+  const attachments = expandAttachmentsForPayload(rawAttachments);
 
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
@@ -17765,7 +17773,7 @@ async function startDocumentAnalysis(rawText, box) {
   // jamais seulement après coup dans onSuccess.
   window.lastDocumentExtract = null;
   // Miniatures : fichiers de CETTE requête, mémorisés avant le POST.
-  setLastResultAttachments(attachments);
+  setLastResultAttachments(rawAttachments);
 
   await callSimpleAgent(
     "assistant",
@@ -17788,7 +17796,8 @@ async function startDocumentAnalysis(rawText, box) {
           content,
           modalTitle: "Clarity",
           agentName: "assistant",
-          attachments: attachments,
+          // Liste VISIBLE (pas dépliée) : sinon 3 miniatures pour 1 seul PDF.
+          attachments: rawAttachments,
           onRelaunch: () => openQuickTextModal("assistant", true)
         });
       }
@@ -17809,7 +17818,11 @@ window.startDocumentAnalysis = startDocumentAnalysis;
 async function startDocumentMailSend(instructionText, box) {
   const instruction = (instructionText && instructionText.trim()) ? instructionText.trim() : "Envoie ce document.";
 
-  window.pendingMailAttachmentsPreload = expandAttachmentsForPayload(homeAttachments);
+  // Liste VISIBLE (pas dépliée) : l'aperçu mail affiche UNE puce par PDF
+  // joint (miniature page 1), jamais une par page JPEG cachée — le POST
+  // /mail/send déplie mailAttachments lui-même au moment de l'envoi (voir
+  // expandAttachmentsForPayload dans sendPreparedMail).
+  window.pendingMailAttachmentsPreload = homeAttachments.slice();
 
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
@@ -17872,8 +17885,19 @@ window.textRequestsDirectMailWithAttachment = textRequestsDirectMailWithAttachme
 // nouveaux fichiers s'ajoutent. window.lastDocumentAttachments reste un
 // alias (même tableau) pour le code existant.
 function setLastResultAttachments(list) {
+  // Garde isPdf/thumbnailDataUrl/pdfPageAttachments/includeOriginalInPayload
+  // quand présents (PDF joint, voir addPdfAttachmentFromFile) : sans ça, la
+  // popup résultat perdrait la miniature de page 1 et redeviendrait UNE
+  // puce par page JPEG au lieu d'une seule puce pour le PDF.
   const copy = (Array.isArray(list) ? list : []).map(function (att) {
-    return { filename: att.filename, mime: att.mime, content_b64: att.content_b64 };
+    const base = { filename: att.filename, mime: att.mime, content_b64: att.content_b64 };
+    if (att && att.isPdf) {
+      base.isPdf = true;
+      base.thumbnailDataUrl = att.thumbnailDataUrl;
+      base.pdfPageAttachments = att.pdfPageAttachments;
+      base.includeOriginalInPayload = att.includeOriginalInPayload;
+    }
+    return base;
   });
   window.lastResultAttachments = copy;
   window.lastDocumentAttachments = copy;
@@ -17903,7 +17927,15 @@ window.clearLastResultAttachments = clearLastResultAttachments;
 async function sendTypedInstruction(instruction, continuing = false, attachments = null, options = null) {
   instruction = (instruction || "").trim();
   const fromDictation = !!(options && options.fromDictation);
+  // "attachments" ici = liste VISIBLE (puces de la carte/feuille/champ),
+  // jamais déjà dépliée : un PDF y est encore UNE seule entrée (isPdf +
+  // pdfPageAttachments cachées, voir addPdfAttachmentFromFile). On la garde
+  // telle quelle pour les miniatures (lastResultAttachments, aperçu mail
+  // via pendingMailAttachmentsPreload) et on ne la déplie qu'au moment de
+  // construire le corps des POST (payloadAttachments), pour ne jamais
+  // afficher 2 puces (PDF + page JPEG) pour 1 seul fichier joint.
   const sentAttachments = Array.isArray(attachments) ? attachments : [];
+  const payloadAttachments = expandAttachmentsForPayload(sentAttachments);
   // Miniatures de la popup résultat : copie gardée AVANT le POST (jamais
   // dépendante de la réponse). Nouvelle demande -> liste de cette demande ;
   // suite de conversation -> les nouveaux fichiers s'ajoutent aux existants.
@@ -17975,7 +18007,7 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
           user_id: currentUser.id,
           user_name: getUserDisplayName(),
           instruction,
-          attachments: sentAttachments,
+          attachments: payloadAttachments,
           conversation_history: formatConversationHistory(simpleAgentConversationHistory),
           last_agent: lastAgentInfo ? lastAgentInfo.agentName : ""
         })
@@ -18070,7 +18102,7 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
           data.instruction,
           box,
           data.request_id || requestId,
-          sentAttachments.length ? { attachments: sentAttachments } : null,
+          payloadAttachments.length ? { attachments: payloadAttachments } : null,
           // rawInstruction : texte BRUT tapé par l'utilisateur, capturé AVANT
           // l'appel à l'orchestrateur (variable locale "instruction" de
           // sendTypedInstruction). data.instruction (ci-dessus) est la
@@ -18213,7 +18245,9 @@ function submitOrchestratorTypedText() {
   // Puces de la carte (contrat Grok) : fichiers envoyés AVEC le texte à
   // /orchestrate ; texte vide + fichiers -> instruction "Analysez ce
   // document.". Les puces sont vidées après réponse (voir sendTypedInstruction).
-  const attachments = getHomeCardAttachmentsPayload();
+  // Liste VISIBLE (pas dépliée) : sendTypedInstruction s'occupe lui-même de
+  // déplier un PDF pour le POST, sans jamais dupliquer sa puce à l'affichage.
+  const attachments = getHomeCardAttachmentsRaw();
   if (!text && !attachments.length) return;
   const instruction = text || "Analysez ce document.";
   el.textContent = "";
@@ -24336,6 +24370,15 @@ async function saveActionLog(agent, action, status) {
     return expandAttachmentsForPayload(homeCardAttachments);
   }
 
+  // Liste VISIBLE (jamais dépliée) : un PDF y reste UNE seule entrée
+  // (isPdf + thumbnailDataUrl) — à utiliser partout où le résultat sert à
+  // afficher des miniatures après envoi (lastResultAttachments, aperçu
+  // mail), jamais comme payload POST direct (voir getHomeCardAttachmentsPayload
+  // / expandAttachmentsForPayload pour ça).
+  function getHomeCardAttachmentsRaw() {
+    return homeCardAttachments.slice();
+  }
+
   // Mêmes limites (5 fichiers, 8 Mo) et même lecture/conversion HEIC que la
   // feuille Document (addHomeAttachmentFromFile), destination = les puces.
   function handleHomeCardFilesSelected(input) {
@@ -24373,6 +24416,7 @@ async function saveActionLog(agent, action, status) {
   window.removeHomeCardAttachment = removeHomeCardAttachment;
   window.resetHomeCardAttachments = resetHomeCardAttachments;
   window.getHomeCardAttachmentsPayload = getHomeCardAttachmentsPayload;
+  window.getHomeCardAttachmentsRaw = getHomeCardAttachmentsRaw;
   window.handleHomeCardFilesSelected = handleHomeCardFilesSelected;
   window.hasHomeCardAttachments = function () { return homeCardAttachments.length > 0; };
 
@@ -24730,6 +24774,12 @@ async function saveActionLog(agent, action, status) {
     return expandAttachmentsForPayload(followUpAttachments);
   }
 
+  // Liste VISIBLE (jamais dépliée), même logique que getHomeCardAttachmentsRaw.
+  function getFollowUpAttachmentsRaw() {
+    return followUpAttachments.slice();
+  }
+
+  window.getFollowUpAttachmentsRaw = getFollowUpAttachmentsRaw;
   window.handleFollowUpAttachmentFilesSelected = handleFollowUpAttachmentFilesSelected;
   window.renderFollowUpAttachmentsList = renderFollowUpAttachmentsList;
   window.removeFollowUpAttachment = removeFollowUpAttachment;
@@ -24918,7 +24968,8 @@ async function saveActionLog(agent, action, status) {
     }
     closeDocumentAttachmentSheet();
 
-    window.pendingMailAttachmentsPreload = expandAttachmentsForPayload(homeAttachments);
+    // Liste VISIBLE (pas dépliée) — voir startDocumentMailSend.
+    window.pendingMailAttachmentsPreload = homeAttachments.slice();
     // Corps du mail = texte du champ de la feuille (peut être vide), repris
     // tel quel par openBlankDocumentMailPreview — jamais généré par l'IA.
     window.pendingMailBodyPreload = getDocumentSheetInstruction();
@@ -25096,9 +25147,15 @@ updateStatProgresses();
   if (attachmentsEl) {
     if (attachments.length) {
       attachmentsEl.innerHTML = attachments.map(function (att, i) {
-        const isImage = att && att.mime && att.mime.indexOf("image/") === 0;
-        if (isImage) {
-          return '<img src="data:' + att.mime + ';base64,' + att.content_b64 + '" alt="" class="cr-result-photo" onclick="openDocAttachmentLightbox(' + i + ')" />';
+        // PDF joint (isPdf) : UNE miniature = la page 1 déjà rendue
+        // (thumbnailDataUrl), jamais une puce par page — clic ouvre le PDF
+        // d'origine (content_b64 = le vrai PDF ici, pas une page JPEG).
+        const imgSrc = att && att.thumbnailDataUrl
+          ? att.thumbnailDataUrl
+          : (att && att.mime && att.mime.indexOf("image/") === 0 ? 'data:' + att.mime + ';base64,' + att.content_b64 : null);
+        if (imgSrc) {
+          const clickHandler = (att && att.isPdf) ? 'openDocAttachmentFile(' + i + ')' : 'openDocAttachmentLightbox(' + i + ')';
+          return '<img src="' + imgSrc + '" alt="" class="cr-result-photo" onclick="' + clickHandler + '" />';
         }
         return '<div class="cr-result-photo doc-attachment-file" onclick="openDocAttachmentFile(' + i + ')">' +
           '📄<span>' + escapeHtmlForPrint(att && att.filename ? att.filename : "Fichier") + '</span>' +
@@ -25358,12 +25415,12 @@ async function submitDocumentFollowUpFromPreview() {
   if (submitBtn) submitBtn.disabled = true;
   try {
     if (window.lastDocumentExtract) {
-      await submitDocumentFollowUpQuestion(text, getFollowUpAttachments());
+      await submitDocumentFollowUpQuestion(text, getFollowUpAttachmentsRaw());
     } else {
       // Même flux que submitQuickText pour une relance sans document :
       // sendTypedInstruction(text, true) (historique conservé), avec les
       // fichiers éventuellement ajoutés via le trombone du suivi.
-      await sendTypedInstruction(text, true, getFollowUpAttachments());
+      await sendTypedInstruction(text, true, getFollowUpAttachmentsRaw());
     }
   } finally {
     if (submitBtn) submitBtn.disabled = false;
@@ -26661,7 +26718,7 @@ progressIcon: "✨",
         hasSent = true;
         // Un seul POST (voir options.fromDictation) : le verrou posé au
         // démarrage du micro ne doit pas bloquer cet envoi.
-        return sendTypedInstruction((spokenText || "").trim() || "Analysez ce document.", false, getHomeCardAttachmentsPayload(), { fromDictation: true });
+        return sendTypedInstruction((spokenText || "").trim() || "Analysez ce document.", false, getHomeCardAttachmentsRaw(), { fromDictation: true });
       }
 
       // config.instructionPrefix (ex: Compte rendu depuis l'accueil) : force
@@ -32078,7 +32135,10 @@ const payload = {
   to_name: (currentPreparedMail && currentPreparedMail.contact_name) || "",
   subject,
   body,
-  attachments: mailAttachments
+  // mailAttachments = liste VISIBLE (un PDF y est UNE entrée avec ses pages
+  // JPEG cachées, voir addPdfAttachmentFromFile) : dépliée ici, au moment
+  // réel de l'envoi, jamais avant (sinon 2 PJ affichées pour 1 seul fichier).
+  attachments: expandAttachmentsForPayload(mailAttachments)
 };
 
   let response = null;
