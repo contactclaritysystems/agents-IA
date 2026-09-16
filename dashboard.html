@@ -1164,6 +1164,40 @@ select.field-input {
   padding: 4px;
   text-align: center;
 }
+/* Miniatures des fichiers JOINTS (avant envoi) : carte accueil, feuille
+   Document, champ "autre question", PJ mail — même gabarit que les
+   miniatures de résultat (.cr-result-photo / .doc-attachment-file), avec
+   une croix de retrait en badge sur le coin. Voir renderAttachmentThumbs. */
+.attachment-thumb {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+}
+.attachment-thumb .cr-result-photo {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.attachment-thumb-remove {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--clarity-surface);
+  color: var(--clarity-danger);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 .doc-attachment-file span {
   font-size: 9.5px;
   font-weight: 600;
@@ -24141,18 +24175,36 @@ async function saveActionLog(agent, action, status) {
   // pièce jointe (Make ne les accepte pas).
   let mailAttachments = [];
 
-  function renderMailAttachmentsList() {
-    const list = document.getElementById("mail-attachments-list");
+  // ─── Rendu PARTAGÉ des fichiers joints (demande explicite : partout où
+  // on joint un fichier, on voit la miniature de la photo, pas son nom).
+  // Images -> vraie miniature (data URL), clic = lightbox existant
+  // (openMediaLightbox) ; PDF/autres -> même tuile "icône + nom" que la
+  // popup résultat (.doc-attachment-file). Croix en badge : retire
+  // UNIQUEMENT ce fichier (preventDefault + stopPropagation, jamais de
+  // fermeture de feuille). removeFnName = fonction globale (index).
+  function renderAttachmentThumbs(list, attachments, removeFnName) {
     if (!list) return;
-
-    list.innerHTML = mailAttachments.map(function (att, index) {
+    list.classList.add("cr-result-photos");
+    list.style.flexDirection = "row";
+    list.style.flexWrap = "wrap";
+    list.style.gap = "8px";
+    list.innerHTML = (attachments || []).map(function (att, index) {
+      const safeName = String(att.filename || "Fichier").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      const isImage = att && att.mime && att.mime.indexOf("image/") === 0 && att.content_b64;
+      const inner = isImage
+        ? '<img src="data:' + att.mime + ';base64,' + att.content_b64 + '" alt="" class="cr-result-photo" onclick="openMediaLightbox(this.src, \'' + safeName + '\')" />'
+        : '<div class="cr-result-photo doc-attachment-file">📄<span>' + safeName + '</span></div>';
       return (
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="removeMailAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
+        '<div class="attachment-thumb">' + inner +
+          '<button type="button" class="attachment-thumb-remove" aria-label="Retirer" onclick="event.preventDefault(); event.stopPropagation(); ' + removeFnName + '(' + index + ')">✕</button>' +
         '</div>'
       );
     }).join("");
+  }
+  window.renderAttachmentThumbs = renderAttachmentThumbs;
+
+  function renderMailAttachmentsList() {
+    renderAttachmentThumbs(document.getElementById("mail-attachments-list"), mailAttachments, "removeMailAttachment");
   }
 
   // Lit chaque fichier choisi en base64 (FileReader.readAsDataURL renvoie
@@ -24212,14 +24264,7 @@ async function saveActionLog(agent, action, status) {
     const list = document.getElementById("home-attachments-list");
     if (!list) return;
 
-    list.innerHTML = homeCardAttachments.map(function (att, index) {
-      return (
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeHomeCardAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
-        '</div>'
-      );
-    }).join("");
+    renderAttachmentThumbs(list, homeCardAttachments, "removeHomeCardAttachment");
     list.style.display = homeCardAttachments.length ? "flex" : "none";
     updateOrchestratorSendButton();
   }
@@ -24460,14 +24505,7 @@ async function saveActionLog(agent, action, status) {
   function renderFollowUpAttachmentsList() {
     const list = document.getElementById("simple-agent-followup-attachments-list");
     if (!list) return;
-    list.innerHTML = followUpAttachments.map(function (att, index) {
-      return (
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeFollowUpAttachment(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
-        '</div>'
-      );
-    }).join("");
+    renderAttachmentThumbs(list, followUpAttachments, "removeFollowUpAttachment");
   }
 
   function removeFollowUpAttachment(index) {
@@ -24590,14 +24628,7 @@ async function saveActionLog(agent, action, status) {
     const list = document.getElementById("doc-sheet-attachments-list");
     if (!list) return;
 
-    list.innerHTML = homeAttachments.map(function (att, index) {
-      return (
-        '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:rgba(0,0,0,0.04);font-size:12.5px;">' +
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ' + att.filename.replace(/</g, "&lt;") + '</span>' +
-          '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); removeHomeAttachmentFromSheet(' + index + ')" style="border:none;background:transparent;cursor:pointer;color:var(--clarity-danger);font-weight:700;flex-shrink:0;">✕</button>' +
-        '</div>'
-      );
-    }).join("");
+    renderAttachmentThumbs(list, homeAttachments, "removeHomeAttachmentFromSheet");
   }
 
   // Croix rouge d'un fichier : retire UNIQUEMENT ce fichier de la liste.
