@@ -10743,11 +10743,13 @@ body[data-theme="light"]::after {
            question, dans le même POST /agent/assistant que document_extract
            (attachments non vide) — même liste, mêmes limites et même
            conversion HEIC que la feuille Document. -->
-      <input type="file" id="simple-agent-followup-file-input" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleFollowUpAttachmentFilesSelected(this)">
-      <div id="simple-agent-followup-attachments-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
-      <button type="button" class="sheet-btn" style="width:auto;padding:8px 14px;margin-top:8px;" onclick="document.getElementById('simple-agent-followup-file-input').click()">
-        📎 Joindre un fichier
-      </button>
+      <div id="simple-agent-followup-attachments-block">
+        <input type="file" id="simple-agent-followup-file-input" multiple accept="image/*,application/pdf" style="display:none;" onchange="handleFollowUpAttachmentFilesSelected(this)">
+        <div id="simple-agent-followup-attachments-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;"></div>
+        <button type="button" class="sheet-btn" style="width:auto;padding:8px 14px;margin-top:8px;" onclick="document.getElementById('simple-agent-followup-file-input').click()">
+          📎 Joindre un fichier
+        </button>
+      </div>
 
       <button class="save-btn" type="button" id="simple-agent-followup-submit-btn" style="width:100%;margin-top:10px;" onclick="submitDocumentFollowUpFromPreview()">
         Envoyer
@@ -24580,9 +24582,11 @@ window.confirmCloseSimpleAgentPreview = confirmCloseSimpleAgentPreview;
 // (même agent, même webhook), sans aucune mémoire de la question précédente
 // : chaque demande repart de zéro, seule la UX est enchaînée.
 function relaunchSimpleAgent() {
-  // Document en contexte : la question se pose DANS la popup, sous la
-  // réponse et les fichiers (jamais une popup à part qui les masquerait).
-  if (window.lastDocumentExtract) {
+  // Document en contexte OU réponse de "Poser une question" (assistant) :
+  // la question suivante se pose DANS la popup, sous la réponse (et les
+  // fichiers s'il y en a) — jamais une popup à part qui masquerait la
+  // réponse sur laquelle porte la question.
+  if (window.lastDocumentExtract || simpleAgentPreviewAgentName === "assistant") {
     openSimpleAgentFollowUp();
     return;
   }
@@ -24608,6 +24612,13 @@ function openSimpleAgentFollowUp() {
     const sourceMicImg = document.querySelector("#orchestrator-dictation-btn .mic-icon-img");
     if (sourceMicImg) micBtn.prepend(sourceMicImg.cloneNode(true));
   }
+  // Trombone uniquement quand un document est en contexte (contrat Grok :
+  // attachments + document_extract dans le même POST). Pour une simple
+  // "Poser une question" sans document : champ + micro seulement.
+  const attachmentsBlock = document.getElementById("simple-agent-followup-attachments-block");
+  const hasDocument = !!window.lastDocumentExtract;
+  if (attachmentsBlock) attachmentsBlock.style.display = hasDocument ? "block" : "none";
+  if (textarea) textarea.placeholder = hasDocument ? "Votre question sur ce document…" : "Votre question…";
   if (relaunchBtn) relaunchBtn.style.display = "none";
   if (block) block.style.display = "block";
   if (textarea) setTimeout(() => textarea.focus(), 60);
@@ -24656,7 +24667,13 @@ async function submitDocumentFollowUpFromPreview() {
   }
   if (submitBtn) submitBtn.disabled = true;
   try {
-    await submitDocumentFollowUpQuestion(text, getFollowUpAttachments());
+    if (window.lastDocumentExtract) {
+      await submitDocumentFollowUpQuestion(text, getFollowUpAttachments());
+    } else {
+      // Même flux que submitQuickText pour une relance "assistant" sans
+      // document : sendTypedInstruction(text, true) (historique conservé).
+      await sendTypedInstruction(text, true);
+    }
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
