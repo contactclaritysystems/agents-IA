@@ -7547,6 +7547,9 @@ body[data-theme="dark"] .status-row .stat-icon-wrap.purple {
 .help-icon.orange { background: var(--warning-bg); }
 .help-icon.teal { background: rgba(20, 184, 166, .16); }
 .help-icon.pink { background: rgba(236, 72, 153, .14); }
+/* Même cyan que le bouton "Analyser" des actions rapides de l'accueil
+   (.quick-action-icon.cyan) — pas une nouvelle couleur, la même reprise ici. */
+.help-icon.cyan { background: rgba(6, 182, 212, .16); }
 
 body[data-theme="dark"] .help-icon.blue { box-shadow: 0 0 22px 5px rgba(92, 156, 224, 0.32); }
 body[data-theme="dark"] .help-icon.yellow { box-shadow: 0 0 22px 5px rgba(245, 185, 77, 0.32); }
@@ -7555,6 +7558,7 @@ body[data-theme="dark"] .help-icon.green { box-shadow: 0 0 22px 5px rgba(52, 209
 body[data-theme="dark"] .help-icon.orange { box-shadow: 0 0 22px 5px rgba(230, 150, 60, 0.32); }
 body[data-theme="dark"] .help-icon.teal { box-shadow: 0 0 22px 5px rgba(45, 212, 191, 0.32); }
 body[data-theme="dark"] .help-icon.pink { box-shadow: 0 0 22px 5px rgba(236, 72, 153, 0.32); }
+body[data-theme="dark"] .help-icon.cyan { box-shadow: 0 0 22px 5px rgba(6, 182, 212, 0.32); }
 
 /* Remplace le gros bouton bleu plein "Essayer maintenant" (pas assez
    premium, retour utilisateur) par une icône seule, plus grande et
@@ -8111,6 +8115,7 @@ body:not([data-theme="dark"]) .help-icon.purple { box-shadow: 0 0 18px 4px rgba(
 body:not([data-theme="dark"]) .help-icon.green { box-shadow: 0 0 18px 4px rgba(52, 209, 124, 0.28); }
 body:not([data-theme="dark"]) .help-icon.orange { box-shadow: 0 0 18px 4px rgba(230, 150, 60, 0.28); }
 body:not([data-theme="dark"]) .help-icon.teal { box-shadow: 0 0 18px 4px rgba(20, 184, 166, 0.28); }
+body:not([data-theme="dark"]) .help-icon.cyan { box-shadow: 0 0 18px 4px rgba(6, 182, 212, 0.28); }
 
 /* Carte héro d'accueil : même teinte bleu marque que le thème sombre
    (couleur fixe), adaptée en intensité pour un fond clair. */
@@ -11677,6 +11682,20 @@ const HELP_ACTIONS = [
     ready: true
   },
   {
+    id: "analyser",
+    label: "Analyser",
+    icon: "📄",
+    color: "cyan",
+    // "Comment ça marche" en 2 lignes max (pas un intro générique comme le
+    // compte rendu) : où cliquer/joindre, puis quel type de fichier.
+    intro: "Trombone à côté du champ, ou bouton Analyser. Photo ou PDF. Clarity lit et répond.",
+    examples: [
+      "Quels sont les avantages de ce devis ? (+ fichier joint)",
+      "Qu'est-ce que c'est ? (+ photo)"
+    ],
+    ready: true
+  },
+  {
     id: "planning",
     label: "Planning",
     icon: "📅",
@@ -11912,6 +11931,12 @@ function tryHelpActionsExample() {
       break;
     case "relance":
       openQuickReminderModal();
+      break;
+    case "analyser":
+      // Même feuille que le bouton "Analyser" des actions rapides de
+      // l'accueil (openDocumentAttachmentSheet) — rien à pré-remplir, on
+      // ouvre juste la feuille vide, comme Planning/Relance.
+      openDocumentAttachmentSheet();
       break;
     case "taches":
       openQuickTextModal(action.id);
@@ -17708,9 +17733,7 @@ async function saveWritingStyleEditor() {
 async function startDocumentAnalysis(rawText, box) {
   const instruction = (rawText && rawText.trim()) ? rawText.trim() : "Analysez ce document.";
 
-  const attachments = homeAttachments.map(function (att) {
-    return { filename: att.filename, mime: att.mime, content_b64: att.content_b64 };
-  });
+  const attachments = expandAttachmentsForPayload(homeAttachments);
 
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
@@ -17784,9 +17807,7 @@ window.startDocumentAnalysis = startDocumentAnalysis;
 async function startDocumentMailSend(instructionText, box) {
   const instruction = (instructionText && instructionText.trim()) ? instructionText.trim() : "Envoie ce document.";
 
-  window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
-    return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
-  });
+  window.pendingMailAttachmentsPreload = expandAttachmentsForPayload(homeAttachments);
 
   const requestId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
   window.currentRequestId = requestId;
@@ -24211,9 +24232,15 @@ async function saveActionLog(agent, action, status) {
     list.style.gap = "8px";
     list.innerHTML = (attachments || []).map(function (att, index) {
       const safeName = String(att.filename || "Fichier").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-      const isImage = att && att.mime && att.mime.indexOf("image/") === 0 && att.content_b64;
-      const inner = isImage
-        ? '<img src="data:' + att.mime + ';base64,' + att.content_b64 + '" alt="" class="cr-result-photo" onclick="openMediaLightbox(this.src, \'' + safeName + '\')" />'
+      // PDF joint (voir addPdfAttachmentFromFile) : UNE puce, miniature de
+      // la page 1 déjà rendue en JPEG (thumbnailDataUrl) — jamais une puce
+      // par page, jamais l'icône fichier générique tant qu'on a cette
+      // miniature.
+      const imgSrc = att && att.thumbnailDataUrl
+        ? att.thumbnailDataUrl
+        : (att && att.mime && att.mime.indexOf("image/") === 0 && att.content_b64 ? 'data:' + att.mime + ';base64,' + att.content_b64 : null);
+      const inner = imgSrc
+        ? '<img src="' + imgSrc + '" alt="" class="cr-result-photo" onclick="openMediaLightbox(this.src, \'' + safeName + '\')" />'
         : '<div class="cr-result-photo doc-attachment-file">📄<span>' + safeName + '</span></div>';
       return (
         '<div class="attachment-thumb">' + inner +
@@ -24304,9 +24331,7 @@ async function saveActionLog(agent, action, status) {
   }
 
   function getHomeCardAttachmentsPayload() {
-    return homeCardAttachments.map(function (att) {
-      return { filename: att.filename, mime: att.mime, content_b64: att.content_b64 };
-    });
+    return expandAttachmentsForPayload(homeCardAttachments);
   }
 
   // Mêmes limites (5 fichiers, 8 Mo) et même lecture/conversion HEIC que la
@@ -24514,6 +24539,23 @@ async function saveActionLog(agent, action, status) {
     renderDocumentAttachmentSheetList();
   }
 
+  // Lit un Blob JPEG (page rendue) en pièce jointe { filename, mime,
+  // content_b64 } — utilitaire pour construire pdfPageAttachments, jamais
+  // ajouté seul à une liste visible (voir addPdfAttachmentFromFile).
+  function readBlobAsAttachment(blob, filename, mime) {
+    return new Promise(function (resolve) {
+      readFileAsAttachment(blob, filename, mime, resolve);
+    });
+  }
+
+  // UNE seule puce visible dans la carte/feuille/champ pour un PDF joint,
+  // jamais une puce par page rendue : le PDF d'origine (miniature = page 1
+  // rendue), avec les JPEG des pages cachés dans pdfPageAttachments. La
+  // croix de cette puce retire donc tout d'un coup (voir removeHomeCard-
+  // Attachment / removeHomeAttachment / removeFollowUpAttachment, simple
+  // splice — inchangés, un seul élément du tableau à retirer désormais).
+  // expandAttachmentsForPayload() déplie ensuite ce seul élément en 2 ou 3
+  // pièces jointes réelles au moment du POST (voir plus bas).
   function addPdfAttachmentFromFile(file, onLoaded) {
     const baseName = (file.name || "document.pdf").replace(/\.pdf$/i, "");
     renderPdfPagesToJpegBlobs(file, 2).then(function (jpegBlobs) {
@@ -24521,21 +24563,51 @@ async function saveActionLog(agent, action, status) {
         showToast("Impossible de lire ce PDF, envoyez une capture d'écran", "error");
         return;
       }
-      jpegBlobs.forEach(function (blob, idx) {
-        const pageName = baseName + "-page-" + (idx + 1) + ".jpg";
-        readFileAsAttachment(blob, pageName, "image/jpeg", function (att) {
-          addReadAttachment(att, onLoaded);
+      return Promise.all(jpegBlobs.map(function (blob, idx) {
+        return readBlobAsAttachment(blob, baseName + "-page-" + (idx + 1) + ".jpg", "image/jpeg");
+      })).then(function (pageAttachments) {
+        readFileAsAttachment(file, file.name, "application/pdf", function (originalAtt) {
+          const mergedAtt = {
+            filename: originalAtt.filename,
+            mime: "application/pdf",
+            content_b64: originalAtt.content_b64,
+            isPdf: true,
+            // < 4 Mo : PDF original + 2 JPEG envoyés au POST ; >= 4 Mo :
+            // QUE les 2 JPEG (voir expandAttachmentsForPayload).
+            includeOriginalInPayload: file.size < PDF_ORIGINAL_MAX_BYTES,
+            pdfPageAttachments: pageAttachments,
+            thumbnailDataUrl: "data:image/jpeg;base64," + pageAttachments[0].content_b64
+          };
+          addReadAttachment(mergedAtt, onLoaded);
         });
       });
-      if (file.size < PDF_ORIGINAL_MAX_BYTES) {
-        readFileAsAttachment(file, file.name, "application/pdf", function (att) {
-          addReadAttachment(att, onLoaded);
-        });
-      }
     }).catch(function () {
       showToast("Impossible de lire ce PDF, envoyez une capture d'écran", "error");
     });
   }
+
+  // Déplie chaque pièce jointe visible en pièce(s) jointe(s) réelle(s) pour
+  // le POST : un PDF (isPdf) devient ses pages JPEG cachées + le PDF
+  // original SI < 4 Mo (voir addPdfAttachmentFromFile) ; tout le reste part
+  // tel quel. Utilisé partout où une liste d'attachments visible
+  // (homeAttachments / homeCardAttachments / followUpAttachments) est
+  // transformée en payload POST { filename, mime, content_b64 }.
+  function expandAttachmentsForPayload(list) {
+    return (list || []).reduce(function (payload, att) {
+      if (att && att.isPdf) {
+        (att.pdfPageAttachments || []).forEach(function (page) {
+          payload.push({ filename: page.filename, mime: page.mime, content_b64: page.content_b64 });
+        });
+        if (att.includeOriginalInPayload) {
+          payload.push({ filename: att.filename, mime: att.mime, content_b64: att.content_b64 });
+        }
+      } else {
+        payload.push({ filename: att.filename, mime: att.mime, content_b64: att.content_b64 });
+      }
+      return payload;
+    }, []);
+  }
+  window.expandAttachmentsForPayload = expandAttachmentsForPayload;
 
   // onLoaded (facultatif) : destination du fichier lu. Par défaut la liste
   // de l'accueil / feuille Document (homeAttachments) ; le trombone du champ
@@ -24653,9 +24725,7 @@ async function saveActionLog(agent, action, status) {
   }
 
   function getFollowUpAttachments() {
-    return followUpAttachments.map(function (att) {
-      return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
-    });
+    return expandAttachmentsForPayload(followUpAttachments);
   }
 
   window.handleFollowUpAttachmentFilesSelected = handleFollowUpAttachmentFilesSelected;
@@ -24846,9 +24916,7 @@ async function saveActionLog(agent, action, status) {
     }
     closeDocumentAttachmentSheet();
 
-    window.pendingMailAttachmentsPreload = homeAttachments.map(function (att) {
-      return { filename: att.filename, content_b64: att.content_b64, mime: att.mime };
-    });
+    window.pendingMailAttachmentsPreload = expandAttachmentsForPayload(homeAttachments);
     // Corps du mail = texte du champ de la feuille (peut être vide), repris
     // tel quel par openBlankDocumentMailPreview — jamais généré par l'IA.
     window.pendingMailBodyPreload = getDocumentSheetInstruction();
