@@ -13632,6 +13632,18 @@ async function downloadCrPhoto() {
 }
 window.downloadCrPhoto = downloadCrPhoto;
 
+// L'utilisateur qui ferme/glisse pour fermer la feuille de partage native
+// (iOS/Android) n'a rien "raté" — ce n'est pas une erreur, jamais de toast.
+// La plupart des navigateurs rejettent avec un vrai DOMException nommé
+// "AbortError", mais certains (webviews Android notamment) renvoient un
+// message générique du type "Share canceled" sans ce nom précis : on
+// couvre les deux plutôt que de ne reconnaître que le cas standard.
+function isShareCancelled(e) {
+  if (!e) return false;
+  if (e.name === "AbortError") return true;
+  return /abort|cancel/i.test(e.message || "");
+}
+
 // "Partager" : feuille de partage native du système (navigator.share) avec
 // le fichier image quand le navigateur le permet (l'utilisateur y retrouve
 // aussi "Enregistrer l'image" en plus des apps) ; à défaut, partage le lien,
@@ -13655,8 +13667,14 @@ async function shareCrPhoto() {
             return;
           }
         } catch (e) {
-          // Fichier non partageable (CORS, format...) : on retombe sur le
-          // partage du lien juste en dessous plutôt que d'échouer.
+          // Annulation explicite de CETTE feuille de partage (fichier) :
+          // silence total — surtout ne pas retomber sur le partage du lien
+          // juste en dessous, qui rouvrirait une 2e feuille de partage
+          // juste après que l'utilisateur vient d'en fermer une.
+          if (isShareCancelled(e)) return;
+          // Fichier non partageable pour une autre raison (CORS, format...) :
+          // on retombe sur le partage du lien juste en dessous plutôt que
+          // d'échouer.
         }
       }
       if (isDataUrl) {
@@ -13671,7 +13689,7 @@ async function shareCrPhoto() {
       showToast("Lien de la photo copié");
     }
   } catch (e) {
-    if (e && e.name === "AbortError") return; // Partage annulé par l'utilisateur
+    if (isShareCancelled(e)) return; // Partage annulé par l'utilisateur : silence, pas une erreur
     console.error("Partage photo impossible :", e);
     showToast("Impossible de partager la photo", "error");
   }
