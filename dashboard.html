@@ -26888,7 +26888,16 @@ async function applyRewriteSheet() {
     }
 
     webhookUrl = REDACTION_WEBHOOK_URL;
+    // Le backend /agent/redaction répondait "Que souhaitez-vous que je
+    // rédige ?" comme si aucun texte n'était fourni : il attend le texte à
+    // réécrire dans rewrite_of_body (obligatoire, jamais vide — pas
+    // seulement rewrite_of), et instruction en filet de sécurité au cas où
+    // il lit encore ce champ-là pour décider s'il y a quelque chose à
+    // réécrire. rewrite_of reste envoyé aussi pour ne rien casser côté
+    // backend qui l'attendrait déjà.
     payload.rewrite_of = contentBefore;
+    payload.rewrite_of_body = contentBefore;
+    payload.instruction = contentBefore;
   } else {
     return;
   }
