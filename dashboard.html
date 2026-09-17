@@ -20525,6 +20525,18 @@ function initQuickActionsReorder() {
     pressStartY = e.clientY;
     clearPressTimer();
     const pointerId = e.pointerId;
+
+    // Déjà en mode réorganisation (icônes qui tremblent) : on saisit
+    // l'icône immédiatement, sans réattendre un appui long — comme sur
+    // iPhone, une fois le mode "jiggle" actif, chaque icône suivante se
+    // prend d'un simple tap-glisser (retour utilisateur : "pas besoin
+    // de rester appuyé longtemps"). L'appui long ne sert qu'à ENTRER
+    // dans ce mode la première fois.
+    if (reorderMode) {
+      startDrag(btn, e.clientX, e.clientY, pointerId);
+      return;
+    }
+
     pressTimer = setTimeout(function () {
       pressTimer = null;
       startDrag(btn, e.clientX, e.clientY, pointerId);
