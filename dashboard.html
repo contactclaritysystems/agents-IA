@@ -16825,6 +16825,10 @@ async function confirmQuickReminder() {
 // l'utilisateur. Même API/table que les rappels existants
 // (RELANCE_WEBHOOK_URL, voir confirmQuickReminder juste au-dessus), même
 // style de popup que le reste de l'app (.mail-choice-box/.mail-choice-btn).
+// Jour ET heure/minute restent librement modifiables (champs date/heure,
+// mêmes composants "maison" que Créer un rappel) — Demain/Dans 3 jours ne
+// sont que des raccourcis qui préremplissent le champ Jour, jamais une
+// limite à seulement ces deux choix.
 
 function firstNameFromContactName(fullName) {
   const trimmed = (fullName || "").trim();
@@ -16841,9 +16845,7 @@ function relanceQuickDateIso(daysAhead) {
   return d.toISOString().slice(0, 10);
 }
 
-async function createRelanceReminderAfterMail(daysAhead, contactName, subjectText, dayLabel) {
-  const date = relanceQuickDateIso(daysAhead);
-  const time = "09:00";
+async function createRelanceReminderAfterMail(date, time, contactName, subjectText) {
   const firstName = firstNameFromContactName(contactName);
   const displayName = firstName || (contactName || "").trim() || "ce contact";
   const reasonText = "Relancer " + displayName + (subjectText ? " — " + subjectText : "");
@@ -16861,6 +16863,12 @@ async function createRelanceReminderAfterMail(daysAhead, contactName, subjectTex
     request_id: null
   };
 
+  // Libellé du toast à partir du jour/heure réellement choisis (pas
+  // "demain"/"3 jours" en dur, puisque le champ Jour est librement
+  // modifiable) : "20 septembre à 09:00".
+  const [y, m, d] = date.split("-").map(Number);
+  const dayLabel = new Date(y, m - 1, d).toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) + " à " + time;
+
   try {
     const response = await fetch(RELANCE_WEBHOOK_URL, {
       method: "POST",
@@ -16869,7 +16877,7 @@ async function createRelanceReminderAfterMail(daysAhead, contactName, subjectTex
     });
     const data = await response.json();
     if (data.success) {
-      showToast("Rappel noté pour " + dayLabel, "success");
+      showToast("Rappel noté pour le " + dayLabel, "success");
       maybeShowFirstScheduleNotice();
     } else {
       showToast(data.message || "Impossible de créer le rappel", "error");
@@ -16891,6 +16899,42 @@ function dismissRelanceAfterMail() {
 }
 window.dismissRelanceAfterMail = dismissRelanceAfterMail;
 
+function setRelanceAfterMailQuickSelected(which) {
+  const tomorrowBtn = document.getElementById("relance-after-mail-tomorrow");
+  const threeDaysBtn = document.getElementById("relance-after-mail-3days");
+  if (!tomorrowBtn || !threeDaysBtn) return;
+  [tomorrowBtn, threeDaysBtn].forEach(btn => {
+    btn.style.background = "";
+    btn.style.color = "";
+  });
+  const active = which === "tomorrow" ? tomorrowBtn : which === "3days" ? threeDaysBtn : null;
+  if (active) {
+    active.style.background = "var(--dark, #141416)";
+    active.style.color = "var(--clarity-primary-text, #fff)";
+  }
+}
+
+async function confirmRelanceAfterMail(contactName, subjectText) {
+  const dateInput = document.getElementById("relance-after-mail-date");
+  const timeInput = document.getElementById("relance-after-mail-time");
+  const date = dateInput ? dateInput.value : "";
+  const time = timeInput ? timeInput.value : "";
+
+  if (!date || !time) {
+    showToast("Choisissez un jour et une heure", "error");
+    return;
+  }
+
+  if (new Date(`${date}T${time}`).getTime() < Date.now()) {
+    showToast("Choisissez une date dans le futur", "error");
+    return;
+  }
+
+  closeRelanceAfterMailModal();
+  await createRelanceReminderAfterMail(date, time, contactName, subjectText);
+}
+window.confirmRelanceAfterMail = confirmRelanceAfterMail;
+
 // Point d'entrée, appelé une seule fois par envoi réel (voir
 // sendPreparedMail). contactName peut être vide (mail envoyé à une
 // adresse hors carnet) : on retombe alors sur "ce contact" plutôt que de
@@ -16902,29 +16946,70 @@ function offerRelanceAfterMail(contactName, subjectText) {
   const existing = document.getElementById("relance-after-mail-modal");
   if (existing) existing.remove();
 
+  const today = new Date().toISOString().slice(0, 10);
+  const tomorrow = relanceQuickDateIso(1);
+  const in3Days = relanceQuickDateIso(3);
+
   const modal = document.createElement("div");
   modal.id = "relance-after-mail-modal";
   modal.innerHTML = `
     <div class="mail-choice-backdrop" onclick="dismissRelanceAfterMail()"></div>
-    <div class="mail-choice-box">
+    <div class="mail-choice-box" style="overflow-x:hidden;">
       <div class="mail-choice-title">Relancer ${escapeHtmlForPrint(displayName)} ?</div>
       <div class="mail-choice-subtitle">Un simple rappel pour vous, pas un nouveau mail.</div>
-      <div style="display:flex;gap:10px;margin-top:14px;">
-        <button type="button" class="mail-choice-btn" id="relance-after-mail-tomorrow" style="flex:1;justify-content:center;">Demain</button>
-        <button type="button" class="mail-choice-btn" id="relance-after-mail-3days" style="flex:1;justify-content:center;">Dans 3 jours</button>
+      <div style="display:flex;gap:10px;margin-top:14px;min-width:0;">
+        <button type="button" class="mail-choice-btn" id="relance-after-mail-tomorrow" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Demain</button>
+        <button type="button" class="mail-choice-btn" id="relance-after-mail-3days" style="flex:1;justify-content:center;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Dans 3 jours</button>
       </div>
+
+      <div class="field-group" style="margin-top:14px;min-width:0;">
+        <div class="field-label">Jour</div>
+        <input class="field-input" type="date" id="relance-after-mail-date" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+      </div>
+
+      <div class="field-group" style="margin-top:12px;min-width:0;">
+        <div class="field-label">Heure</div>
+        <input class="field-input" type="time" id="relance-after-mail-time" step="60" style="width:100%;max-width:100%;min-width:0;box-sizing:border-box;" />
+      </div>
+
+      <button class="save-btn" type="button" id="relance-after-mail-confirm" style="margin-top:16px;">
+        ✓ Noter le rappel
+      </button>
       <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="dismissRelanceAfterMail()">Non</button>
     </div>
   `;
   document.body.appendChild(modal);
 
-  document.getElementById("relance-after-mail-tomorrow").onclick = async function () {
-    closeRelanceAfterMailModal();
-    await createRelanceReminderAfterMail(1, contactName, subjectText, "demain");
+  const dateInput = document.getElementById("relance-after-mail-date");
+  const timeInput = document.getElementById("relance-after-mail-time");
+  dateInput.min = today;
+  dateInput.value = tomorrow;
+  timeInput.value = "09:00";
+  wireCustomDateInput(dateInput);
+  wireCustomTimeInput(timeInput);
+  refreshCustomDisplay(dateInput);
+  refreshCustomDisplay(timeInput);
+  setRelanceAfterMailQuickSelected("tomorrow");
+
+  document.getElementById("relance-after-mail-tomorrow").onclick = function () {
+    dateInput.value = tomorrow;
+    refreshCustomDisplay(dateInput);
+    setRelanceAfterMailQuickSelected("tomorrow");
   };
-  document.getElementById("relance-after-mail-3days").onclick = async function () {
-    closeRelanceAfterMailModal();
-    await createRelanceReminderAfterMail(3, contactName, subjectText, "dans 3 jours");
+  document.getElementById("relance-after-mail-3days").onclick = function () {
+    dateInput.value = in3Days;
+    refreshCustomDisplay(dateInput);
+    setRelanceAfterMailQuickSelected("3days");
+  };
+  dateInput.addEventListener("change", function () {
+    if (!dateInput.value) dateInput.value = tomorrow;
+    if (dateInput.value === tomorrow) setRelanceAfterMailQuickSelected("tomorrow");
+    else if (dateInput.value === in3Days) setRelanceAfterMailQuickSelected("3days");
+    else setRelanceAfterMailQuickSelected(null);
+  });
+
+  document.getElementById("relance-after-mail-confirm").onclick = function () {
+    confirmRelanceAfterMail(contactName, subjectText);
   };
 }
 window.offerRelanceAfterMail = offerRelanceAfterMail;
@@ -23963,7 +24048,7 @@ const CLARITY_MODAL_IDS = [
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
-  "rewrite-sheet-modal"
+  "rewrite-sheet-modal", "relance-after-mail-modal"
 ];
 
 let clarityScrollLockY = 0;
