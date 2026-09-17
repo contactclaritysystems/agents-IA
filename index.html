@@ -157,6 +157,17 @@ nav.banner-hidden { top: 0; }
   color: #55555c; max-width: 640px; margin: 0 auto 52px;
   line-height: 1.85; animation: fu .7s .16s ease both;
 }
+/* Dernière ligne ("→ votre assistante, toujours dans la poche.") mise en
+   avant comme un slogan : plus grande, en gras, légèrement plus foncée que
+   le reste du paragraphe, et détachée avec un peu plus d'espace au-dessus
+   pour bien la distinguer des deux lignes de contexte qui la précèdent. */
+.hero-sub-slogan {
+  display: block;
+  margin-top: 12px;
+  font-size: 1.12em;
+  font-weight: 700;
+  color: var(--text);
+}
 .hero-btns {
   display: flex; gap: 12px; justify-content: center;
   flex-wrap: wrap; animation: fu .7s .32s ease both;
@@ -857,7 +868,7 @@ header {
 <!-- HERO -->
 <section class="hero">
   <h1>Dictez.<br/><span class="brand-name">Clarity</span> <em>s'occupe du reste.</em></h1>
-  <p class="hero-sub">Un RDV à caler, un mail à envoyer, un rappel à programmer ?<br/>Vous le dites, Clarity s'en charge<br/>→ votre assistante, toujours dans la poche.</p>
+  <p class="hero-sub">Un RDV à caler, un mail à envoyer, un rappel à programmer ?<br/>Vous le dites, Clarity s'en charge<span class="hero-sub-slogan">→ votre assistante, toujours dans la poche.</span></p>
   <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-btns">
     <a href="#" class="btn-dark" onclick="openRegisterFromChat(event)">Commencer l'essai gratuit</a>
@@ -892,7 +903,7 @@ Bonne journée
 <div class="proof">
   <div class="proof-in">
     <div class="proof-eye"><span class="eye rv">Clarity, c'est quoi ?</span></div>
-    <h3 class="proof-title rv">En 3 secondes, elle fait :</h3>
+    <h3 class="proof-title rv">En 3 secondes :</h3>
     <ul class="proof-list">
       <li class="proof-item rv"><span class="proof-check">✓</span>Un mail dicté, prêt à valider</li>
       <li class="proof-item rv"><span class="proof-check">✓</span>Un RDV noté, rappel avant l'heure</li>
@@ -906,9 +917,9 @@ Bonne journée
 </div>
 <!-- AGENTS -->
 <section class="sec" id="agents">
-  <div class="eye rv">Ce que fait Clarity</div>
+  <div class="eye rv">Ses capacités</div>
   <h2 class="stitle rv">Ce que fait <span class="brand-name">Clarity</span>,<br/>aujourd'hui.</h2>
-  <p class="ssub rv">Ce que Clarity sait faire aujourd'hui. Pas une liste de promesses.</p>
+  <p class="ssub rv">Déjà utilisable, pas une liste de promesses.</p>
   <div class="agents-grid rv">
     <div class="atile">
       <span class="atile-ico">✉️</span>
