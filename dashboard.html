@@ -10576,7 +10576,7 @@ body[data-theme="light"]::after {
       <div style="background:#fff; border:1px solid #dadce0; border-radius:10px; padding:14px 15px; margin:14px 0; text-align:center;">
         <div style="display:flex; flex-direction:column; align-items:center; gap:4px; margin-bottom:10px;">
           <span style="font-size:16px; line-height:1;">⚠️</span>
-          <div style="font-size:12px; color:#3c4043; font-weight:700; line-height:1.35;">Google n'a pas validé cette application</div>
+          <div style="font-size:12px; color:#3c4043; font-weight:700; line-height:1.35;">Google n'a pas encore validé cette application</div>
         </div>
         <div style="font-size:11px; color:#5f6368; line-height:1.5; margin-bottom:12px;">
           Vous verrez cet écran chez Google — c'est attendu, voici quoi toucher :
@@ -19260,7 +19260,7 @@ async function goToDictateMailStep() {
   const ONBOARDING_TIPS = [
   {
     title: "⚡ Les actions rapides",
-    text: "En bas de l'accueil, ces raccourcis lancent directement un mail, un texte, une question, un RDV ou un rappel — sans avoir à tout dicter."
+    text: "En bas de l'accueil, ces raccourcis lancent directement l'action choisie — sans avoir à tout dicter."
   },
   {
     title: "📒 Enregistrez vos contacts",
@@ -19781,6 +19781,13 @@ function renderOnboardingBubble(title, text, centered = false, showNextButton = 
     <div class="onboarding-text">${text}</div>
     ${showNextButton ? '<div style="margin-top:14px;"><button type="button" class="save-btn" style="width:100%;" onclick="transitionToTips()">Suivant</button></div>' : ""}
   `;
+
+  // Recalcule immédiatement (pas seulement au prochain resize du clavier)
+  // : nécessaire quand on change d'étape SANS que le clavier ne
+  // bouge (ex: passage à l'étape centrée "Bravo" alors que le clavier
+  // est encore ouvert) — sinon la bulle garderait le "top" en pixels
+  // calculé pour l'ancien ratio (42%) au lieu du nouveau (50%).
+  syncOnboardingBubblePosition();
 }
 
 function positionOnboardingSpotlight(target) {
@@ -19820,6 +19827,31 @@ function positionOnboardingSpotlight(target) {
   ring.style.height = h + "px";
 }
 
+// Bug remonté : sur mobile (constaté sur iPhone/Safari), dès qu'on tape la
+// réponse au clavier plutôt que de la dicter, le clavier virtuel s'ouvre
+// et la bulle d'onboarding ("Testons tout de suite...") remonte tout en
+// haut de l'écran au lieu de rester à sa place. Cause : #onboarding-bubble
+// est positionnée en CSS avec "top:42%" (ou 50% à l'étape centrée
+// "Bravo"), un pourcentage calculé une seule fois par rapport au viewport
+// de mise en page — quand le clavier s'ouvre, le navigateur scrolle la
+// page pour amener le champ actif au-dessus du clavier, mais la bulle
+// (position:fixed) ne suit pas ce recalcul et se retrouve positionnée par
+// rapport à une zone qui n'est plus celle réellement visible à l'écran.
+// window.visualViewport, lui, reflète toujours la zone réellement
+// affichée (hors clavier) : on recalcule donc le "top" en pixels à partir
+// de lui plutôt que de laisser le pourcentage CSS agir seul.
+function syncOnboardingBubblePosition() {
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!bubble || !window.visualViewport) return;
+  if (!onboardingActive || bubble.style.display === "none") return;
+  const vv = window.visualViewport;
+  const ratio = bubble.classList.contains("onboarding-center") ? 0.5 : 0.42;
+  bubble.style.top = (vv.offsetTop + vv.height * ratio) + "px";
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", syncOnboardingBubblePosition);
+  window.visualViewport.addEventListener("scroll", syncOnboardingBubblePosition);
+}
 
 function showOnboardingStep() {
   const config = ONBOARDING_MESSAGES[onboardingStep];
@@ -19995,6 +20027,10 @@ async function startOnboardingIfNeeded() {
   const ring = document.getElementById("onboarding-ring");
   const bubble = document.getElementById("onboarding-bubble");
   const micTag = document.getElementById("onboarding-mic-tag");
+  // Retire le "top" en pixels posé par syncOnboardingBubblePosition() :
+  // la bulle n'est plus utilisée après ce point, mais on évite de laisser
+  // une valeur figée si jamais elle est réaffichée plus tard.
+  if (bubble) bubble.style.top = "";
 
   // Le voile sombre reste actif pendant toute la visite guidée (tips) :
   // on ne le masque plus. Son clip-path est déjà "none" (posé par
@@ -33580,7 +33616,7 @@ window.updateAppointmentStatus = updateAppointmentStatus;
 <nav class="bottom-nav" id="bottomNav">
   <button class="bottom-tab active" onclick="showSection('agents', this)" data-section="agents">
     <span class="bottom-tab-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
-    <span class="bottom-tab-label">Agents</span>
+    <span class="bottom-tab-label">Accueil</span>
   </button>
 
   <button class="bottom-tab" onclick="showSection('contacts', this)" data-section="contacts">
