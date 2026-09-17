@@ -19888,7 +19888,17 @@ function syncOnboardingBubblePosition() {
   const vv = window.visualViewport;
   const centered = bubble.classList.contains("onboarding-center");
   const ratio = centered ? 0.5 : 0.42;
-  let top = vv.offsetTop + vv.height * ratio;
+  const bubbleHeight = bubble.offsetHeight || 0;
+  // ATTENTION : en CSS, #onboarding-bubble a "transform: translate(-50%,
+  // -50%)" — la valeur qu'on écrit dans "top" est donc le CENTRE vertical
+  // de la bulle, pas son bord haut. Tout le calcul ci-dessous raisonne en
+  // bords (top/bottom) pour rester lisible, puis reconvertit en centre
+  // juste avant l'affectation finale à bubble.style.top. Bug vécu quand ce
+  // détail était oublié : la bulle avait l'air correctement "en dessous"
+  // du champ d'après le calcul, mais visuellement son centre retombait
+  // pile sur le champ (la moitié haute de la bulle chevauchait le champ).
+  let centerTop = vv.offsetTop + vv.height * ratio;
+  let top = centerTop - bubbleHeight / 2;
 
   // Bug remonté : une fois le calcul ci-dessus corrigé pour suivre le
   // clavier, la bulle ("Testons tout de suite...") pouvait retomber pile
@@ -19907,7 +19917,6 @@ function syncOnboardingBubblePosition() {
         : target;
       const targetTop = rect.top + vv.offsetTop;
       const targetBottom = rect.bottom + vv.offsetTop;
-      const bubbleHeight = bubble.offsetHeight || 0;
       const gap = 16;
       const overlaps = top < targetBottom + gap && (top + bubbleHeight) > targetTop - gap;
 
@@ -19929,18 +19938,21 @@ function syncOnboardingBubblePosition() {
           top = targetTop - gap - bubbleHeight;
         }
 
-        // Filet de sécurité : ne jamais laisser la bulle sortir de la zone
-        // réellement visible, quel que soit le côté choisi ci-dessus.
-        const minTop = vv.offsetTop;
-        const maxTop = vv.offsetTop + vv.height - bubbleHeight;
-        if (maxTop >= minTop) {
-          top = Math.min(Math.max(top, minTop), maxTop);
-        }
+        // Filet de sécurité : ne jamais laisser la bulle remonter au-dessus
+        // du haut de la zone visible (uniquement ce côté-là : la clamper
+        // aussi côté bas ici réintroduisait le chevauchement avec le champ
+        // dans les cas très serrés — clavier + barre de suggestions sur un
+        // petit écran — puisque ça la forçait à reculer pile dessus. Un
+        // léger débord en bas, derrière le clavier, est un bien moindre mal
+        // que de recacher ce qu'on est en train d'écrire.
+        top = Math.max(top, vv.offsetTop);
       }
     }
   }
 
-  bubble.style.top = top + "px";
+  // Reconversion bord-haut -> centre, pour la valeur réellement écrite en
+  // CSS (voir la note "transform: translate(-50%,-50%)" plus haut).
+  bubble.style.top = (top + bubbleHeight / 2) + "px";
 }
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", syncOnboardingBubblePosition);
