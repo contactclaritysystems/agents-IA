@@ -19776,7 +19776,12 @@ const ONBOARDING_MESSAGES = {
 
   stop_dictation: {
     title: "Parlez maintenant",
-    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."<br><br>Appuyez de nouveau sur le micro une fois terminé.`
+    // Bug remonté : pendant l'enregistrement, le bouton micro devient un
+    // gros carré rouge (voir .clarity-input-mic.is-recording / mic-stop-icon
+    // plus haut dans le fichier) — il n'y a donc plus aucun micro visible à
+    // ce moment-là. "Appuyez de nouveau sur le micro" ne voulait plus rien
+    // dire à l'écran ; on décrit maintenant ce qui est réellement affiché.
+    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."<br><br>Une fois terminé, appuyez sur le bouton rouge pour arrêter l'enregistrement.`
   },
   confirm_send: {
     title: "Vérifiez et envoyez",
@@ -24271,6 +24276,21 @@ async function saveActionLog(agent, action, status) {
           }
         });
       }
+
+      // Bug remonté : après une reconnexion Gmail/Outlook (redirection OAuth
+      // = rechargement complet de la page), handleUser() relance le tour
+      // d'onboarding depuis le tout début (startOnboardingIfNeeded(), avant
+      // cet appel) PUIS restoreMailDraftIfAny() rouvre ici l'aperçu du mail
+      // déjà préparé — mais contrairement à openMailPreview() (chemin normal
+      // d'ouverture de cette popup), cette fonction-ci ne prévenait jamais
+      // onboardingOnEvent("mail_prepared"). Résultat observé : la popup
+      // "Mail prêt à envoyer" s'affiche bien, mais le halo/la bulle restent
+      // bloqués sur l'étape de dictée précédente (visent le petit champ de
+      // saisie au lieu de toute la popup). Même appel que openMailPreview(),
+      // pour que le tour se resynchronise avec ce qui est réellement affiché
+      // — sans effet si le tour n'est pas actif ou pas à une étape de dictée
+      // (onboardingOnEvent gère déjà ces cas).
+      if (modal) onboardingOnEvent("mail_prepared");
 
       // Pièces jointes : jamais persistées dans le brouillon (voir
       // mailAttachments) — impossible à restaurer après un rechargement
