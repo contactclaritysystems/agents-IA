@@ -824,9 +824,23 @@ header {
 #pricing-mobile .pfeats { gap: 6px !important; margin-bottom: 14px !important; }
 #pricing-mobile .pli { font-size: .78rem !important; }
 #pricing-mobile .pname { margin-bottom: 6px !important; }
+/* Demandé : cartes tarifs centrées sur mobile (au lieu d'un contenu calé à
+   gauche dans une grande carte, ce qui faisait "vide"/pas beau vu l'espace
+   inutilisé à droite). .pli reste display:flex (coche + texte) : on centre
+   la paire coche+texte comme un bloc, plutôt que de casser sa mise en page. */
+#pricing-mobile .pcard { text-align: center; }
+#pricing-mobile .pfeats { align-items: center; }
+#pricing-mobile .pli { justify-content: center; text-align: left; }
 .steps { grid-template-columns: 1fr !important; gap: 10px; }
 .step { padding: 18px 20px; }
 .step-n { margin-bottom: 10px; }
+/* Demandé : bloc "En 3 secondes" centré sur mobile — chaque ligne
+   (.proof-item) passe en pleine largeur à cette taille (règle @900px plus
+   haut), ce qui calait la coche + le texte tout à gauche de la carte
+   au lieu d'un rendu équilibré. On centre la paire coche+texte comme un
+   bloc, le texte lui-même restant lisible en aligné à gauche derrière sa
+   coche plutôt que de casser le retour à la ligne. */
+.proof-item { justify-content: center; text-align: left; }
 }
 /* PAGE D'ATTERRISSAGE MOBILE (scan QR code) : trop d'éléments répétaient
    le même message "essai gratuit" avant même la démo (bandeau du haut +
