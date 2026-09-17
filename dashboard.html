@@ -15308,9 +15308,83 @@ function textRequestsMailFollowUpAfterPlanning(rawText) {
   if (!hasRdvWord) return false;
 
   const hasMailWord = /\b(envoie|envoyer|mail|message pour|dis-lui|dis lui|préviens|previens|relance)\b/.test(normalized);
-  return hasMailWord;
+  return hasMailWord || textHasDualMailRdvIntent(rawText);
 }
 window.textRequestsMailFollowUpAfterPlanning = textRequestsMailFollowUpAfterPlanning;
+
+// Multi-intentions V3 (contrat produit, "le chef d'orchestre ne choisit
+// plus au feeling") : détection stricte sur mots-clés, sur le texte BRUT
+// dicté/tapé uniquement (jamais data.instruction, réécrit par
+// l'orchestrateur) — accents ignorés ("écris"/"ecris" équivalents) pour ne
+// pas dépendre de la ponctuation/accentuation de la dictée vocale.
+function stripAccentsForIntentMatch(text) {
+  return (text || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+// A. Mail : au moins un verbe/formule d'envoi (envoie, envoyer, envoi,
+// écris un mail/ecris un mail, mail à, message à) ET un destinataire
+// possible (nom propre ou "le/la/un/une client(e)...", même heuristique
+// que textMentionsRelanceRecipient) — un simple mot "mail" sans
+// destinataire ne suffit pas (ex: une question À PROPOS d'un mail déjà
+// envoyé).
+function textHasMailIntentKeyword(rawText) {
+  if (!rawText || typeof rawText !== "string") return false;
+  const normalized = stripAccentsForIntentMatch(rawText.toLowerCase());
+
+  const hasMailVerb =
+    /\benvoie\b/.test(normalized) ||
+    /\benvoyer\b/.test(normalized) ||
+    /\benvoi\b/.test(normalized) ||
+    /\becris\s+un\s+mail\b/.test(normalized) ||
+    /\bmail\s+a\b/.test(normalized) ||
+    /\bmessage\s+a\b/.test(normalized);
+  if (!hasMailVerb) return false;
+
+  const hasClientWord = /\b(le|la|un|une|notre|mon|ma|ce|cette)\s+client(e)?\b/.test(normalized);
+  const words = rawText.trim().split(/\s+/);
+  const hasProperName = words.slice(1).some(function (w) {
+    const cleaned = w.replace(/[.,!?;:]+$/, "");
+    return /^[A-ZÀ-Ý][a-zà-ÿ]+$/.test(cleaned);
+  });
+  return hasClientWord || hasProperName;
+}
+window.textHasMailIntentKeyword = textHasMailIntentKeyword;
+
+// B. RDV : rdv, rendez-vous, rendez vous, rendez-vous à — simple présence,
+// pas de destinataire requis (contrairement à A).
+function textHasRdvIntentKeyword(rawText) {
+  if (!rawText || typeof rawText !== "string") return false;
+  const normalized = stripAccentsForIntentMatch(rawText.toLowerCase());
+  return /\brdv\b/.test(normalized) || /\brendez[\s-]?vous\b/.test(normalized);
+}
+window.textHasRdvIntentKeyword = textHasRdvIntentKeyword;
+
+// A et B ensemble : les mots-clés décident, jamais l'IA/l'orchestrateur.
+function textHasDualMailRdvIntent(rawText) {
+  return textHasMailIntentKeyword(rawText) && textHasRdvIntentKeyword(rawText);
+}
+window.textHasDualMailRdvIntent = textHasDualMailRdvIntent;
+
+// Point d'entrée du contrat "double intention" : toujours Planning d'abord
+// (créer le RDV — popup seulement si date/heure manquante, même flux que
+// le bouton Planning dédié via callSimpleAgent), jamais Mail seul. Le mail
+// s'enchaîne ensuite automatiquement, MÊME SI Planning a déjà réussi —
+// voir maybeStartMailFollowUpAfterPlanning, appelé depuis callSimpleAgent
+// au succès de l'agent "planning" (jamais "RDV noté" sans suite).
+function startPlanningThenMailFlow(rawInstruction, box, requestId, continuing) {
+  return callSimpleAgent(
+    "planning",
+    PLANNING_WEBHOOK_URL,
+    rawInstruction,
+    box,
+    requestId,
+    null,
+    { rawInstruction: rawInstruction, continuing: !!continuing }
+  );
+}
+window.startPlanningThenMailFlow = startPlanningThenMailFlow;
 
 // Point d'entrée appelé juste après le toast de succès /agent/planning
 // (RDV déjà créé — jamais appelé depuis les branches missing_date/
@@ -18294,6 +18368,16 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       // puces de la carte (en cas d'échec réseau/JSON, elles restent pour
       // réessayer).
       if (sentAttachments.length && typeof resetHomeCardAttachments === "function") resetHomeCardAttachments();
+
+      // Multi-intentions V3 : le texte BRUT tranche AVANT tout, quel que
+      // soit l'agent choisi par /orchestrate — jamais l'IA "au feeling".
+      // Si le texte contient à la fois une intention RDV et une intention
+      // Mail, on force systématiquement Planning d'abord puis Mail ensuite
+      // (voir startPlanningThenMailFlow / textHasDualMailRdvIntent),
+      // même si /orchestrate n'a renvoyé qu'un seul agent.
+      if (textHasDualMailRdvIntent(instruction)) {
+        return startPlanningThenMailFlow(instruction, box, data.request_id || requestId, continuing);
+      }
 
       if (data.agent === "mail") {
         setDictationBoxState(box, "info");
@@ -27713,6 +27797,15 @@ console.log("REPONSE BRUTE :", text);
         if (data.request_id && data.request_id !== window.currentRequestId) {
   console.log("Réponse ignorée :", data.request_id);
   return;
+}
+
+// Multi-intentions V3 : même règle que côté texte (sendTypedInstruction)
+// — le texte BRUT dicté tranche AVANT tout, quel que soit l'agent choisi
+// par /orchestrate. Double intention Mail+RDV -> toujours Planning
+// d'abord, puis Mail ensuite (voir startPlanningThenMailFlow /
+// textHasDualMailRdvIntent), jamais l'IA "au feeling".
+if (textHasDualMailRdvIntent(instruction)) {
+  return startPlanningThenMailFlow(instruction, box, data.request_id || requestId, continuing);
 }
 
 if (data.agent === "mail") {
