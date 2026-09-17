@@ -1031,7 +1031,14 @@ select.field-input {
   #smtp-config-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  /* Doit passer AU-DESSUS de #mail-preview-modal (aussi z-index:9999) :
+     c'est depuis son bandeau "Connexion SMTP expirée" qu'on rouvre ce
+     modal (reconnectMailProvider), l'aperçu du mail restant volontairement
+     affiché derrière (voir ce commentaire). À z-index égal, l'ordre dans
+     le DOM tranche — #mail-preview-modal vient après dans le HTML, donc
+     passait devant et rendait le formulaire SMTP invisible/inerte
+     derrière lui (bug remonté : le bouton "Reconnecter" semblait mort). */
+  z-index: 10000;
   overflow-y: auto;
   padding: 20px;
 }
@@ -19028,33 +19035,54 @@ async function checkGmailStatus() {
   console.log("=== CHECK GMAIL ===");
   console.log("currentUser.email:", currentUser.email);
 
-  const cached = localStorage.getItem("gmail_" + currentUser.email);
-  if (cached) {
-    renderGmailConnected(cached);
-    return;
-  }
+  const cacheKey = "gmail_" + currentUser.email;
+  const providerCacheKey = "mail_provider_" + currentUser.email;
+  const cached = localStorage.getItem(cacheKey);
 
   const storageKey = "sb-vduqkeodewrdwsqwokmu-auth-token";
   const rawSession = localStorage.getItem(storageKey);
   const accessToken = rawSession ? JSON.parse(rawSession)?.access_token : null;
 
+  // Bug remonté : après suppression puis recréation d'un compte avec le
+  // même email (même machine/navigateur), le cache local — indexé par
+  // EMAIL, pas par user_id — affichait immédiatement l'ancienne boîte
+  // comme "connectée" pour le NOUVEAU compte, sans jamais revérifier :
+  // le badge "Messagerie" mentait, alors qu'aucune ligne user_integrations
+  // n'existe pour ce nouveau user_id. On ne fait donc plus confiance au
+  // cache pour décider quoi afficher : on revérifie TOUJOURS auprès de
+  // Supabase, filtré par user_id (clé fiable — même choix que
+  // disconnectGmail — et PAS account_email, qui peut recouper un ancien
+  // compte supprimé partageant le même email) et sans filtrer sur
+  // "provider", puisque Gmail, Outlook et SMTP partagent ce même badge.
+  // Le cache ne sert plus que de repli si la vérification échoue
+  // (coupure réseau...), jamais de raccourci pour l'éviter.
   if (!accessToken) {
-    renderGmailDisconnected();
+    if (cached) { renderGmailConnected(cached); } else { renderGmailDisconnected(); }
     return;
   }
 
-  const response = await fetch(
-    SUPABASE_URL + "/rest/v1/user_integrations?account_email=eq." + encodeURIComponent(currentUser.email) + "&provider=eq.google&connected=eq.true&limit=1",
-    {
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": "Bearer " + accessToken
+  let response;
+  try {
+    response = await fetch(
+      SUPABASE_URL + "/rest/v1/user_integrations?user_id=eq." + encodeURIComponent(currentUser.id) + "&connected=eq.true&order=created_at.desc&limit=1",
+      {
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + accessToken
+        }
       }
-    }
-  );
+    );
+  } catch (e) {
+    console.error("Vérification connexion mail impossible, repli sur le cache local :", e);
+    if (cached) { renderGmailConnected(cached); } else { renderGmailDisconnected(); }
+    return;
+  }
 
   if (!response.ok) {
-    renderGmailDisconnected();
+    // Échec de la requête elle-même (réseau, 5xx...) : on garde l'état en
+    // cache plutôt que d'annoncer à tort "non connecté" pour un simple
+    // souci réseau — mais seulement s'il y en a un à afficher.
+    if (cached) { renderGmailConnected(cached); } else { renderGmailDisconnected(); }
     return;
   }
 
@@ -19062,11 +19090,17 @@ async function checkGmailStatus() {
   console.log("GMAIL DATA:", data);
 
   if (data && data.length > 0 && data[0].email) {
-    localStorage.setItem("gmail_" + currentUser.email, data[0].email);
+    localStorage.setItem(cacheKey, data[0].email);
+    if (data[0].provider) localStorage.setItem(providerCacheKey, data[0].provider);
     renderGmailConnected(data[0].email);
     return;
   }
 
+  // Rien en base pour CE user_id : toute trace en cache (ex: héritée d'un
+  // ancien compte supprimé partageant le même email) doit disparaître,
+  // sinon elle referait mentir le badge au prochain chargement.
+  localStorage.removeItem(cacheKey);
+  localStorage.removeItem(providerCacheKey);
   renderGmailDisconnected();
 }
   
@@ -32294,8 +32328,10 @@ try {
   if (accessToken) {
     const integrationResponse = await fetch(
       SUPABASE_URL +
-        "/rest/v1/user_integrations?account_email=eq." +
-        encodeURIComponent(currentUser.email) +
+        // Filtrage par user_id (fiable) et non account_email (peut être vide
+        // ou collisionner entre un ancien compte supprimé et un nouveau).
+        "/rest/v1/user_integrations?user_id=eq." +
+        encodeURIComponent(currentUser.id) +
         "&connected=eq.true&order=created_at.desc&limit=1",
       {
         headers: {
@@ -32314,6 +32350,14 @@ try {
 
         localStorage.setItem("mail_provider_" + currentUser.email, connectedProvider);
         localStorage.setItem("gmail_" + currentUser.email, connectedEmail);
+      } else {
+        // Rien en base pour ce user_id : pas de connexion réelle (ex.
+        // compte supprimé/recréé). On efface le cache local pour ne pas
+        // proposer un envoi via un provider fantôme.
+        connectedProvider = "";
+        connectedEmail = "";
+        localStorage.removeItem("mail_provider_" + currentUser.email);
+        localStorage.removeItem("gmail_" + currentUser.email);
       }
     }
   }
