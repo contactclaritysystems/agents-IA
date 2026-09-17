@@ -19141,7 +19141,20 @@ function updateOnboardingMicTag() {
 
 function startOnboardingPositionLoop() {
   stopOnboardingPositionLoop();
-    onboardingPositionInterval = setInterval(() => {
+  onboardingPositionInterval = setInterval(onboardingPositionTick, 300);
+  // En plus du sondage toutes les 300ms, on se recale immédiatement sur les
+  // évènements du clavier virtuel (voir onboardingPositionTick / la note
+  // juste avant syncOnboardingBubblePosition plus bas pour le détail du
+  // bug) : sans ça, le halo restait visiblement figé sur l'ancienne
+  // position pendant jusqu'à 300ms à l'ouverture/fermeture du clavier, ce
+  // qui suffisait à donner l'impression d'un écran devenu tout noir/vide.
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", onboardingPositionTick);
+    window.visualViewport.addEventListener("scroll", onboardingPositionTick);
+  }
+}
+
+function onboardingPositionTick() {
     if (!onboardingActive || !onboardingStep || onboardingStep === "done") return;
 
     // Le voile sombre doit rester visible tout du long du tour — dictée,
@@ -19224,11 +19237,13 @@ function startOnboardingPositionLoop() {
     const target = getOnboardingSpotlightTarget(onboardingStep);
     positionOnboardingSpotlight(target);
     updateOnboardingMicTag();
-  }, 300);
-
 }
 
 function stopOnboardingPositionLoop() {
+  if (window.visualViewport) {
+    window.visualViewport.removeEventListener("resize", onboardingPositionTick);
+    window.visualViewport.removeEventListener("scroll", onboardingPositionTick);
+  }
   if (onboardingPositionInterval) {
     clearInterval(onboardingPositionInterval);
     onboardingPositionInterval = null;
@@ -19810,8 +19825,24 @@ function positionOnboardingSpotlight(target) {
     : target;
   const pad = 8;
 
-  const x = rect.left - pad;
-  const y = rect.top - pad;
+  // Bug remonté (voir aussi syncOnboardingBubblePosition un peu plus bas) :
+  // quand le clavier virtuel s'ouvre sur mobile, #onboarding-ring et le
+  // "trou" du voile #onboarding-overlay (tous les deux position:fixed) ne
+  // sont pas repositionnés par le navigateur par rapport à la zone
+  // réellement visible à l'écran — seul window.visualViewport reflète
+  // cette zone. rect.left/rect.top (issus de getBoundingClientRect) restent
+  // corrects par rapport à la page, mais pas forcément par rapport à ce qui
+  // est affiché : on les recale donc avec le décalage du viewport visuel,
+  // exactement comme pour la barre du bas (cf. plus loin, "gap") et la
+  // bulle. Sans ce recalage, le trou du voile pouvait se retrouver
+  // au-dessus de la zone visible : l'utilisateur ne voyait plus alors
+  // qu'un écran entièrement assombri, sans halo ni champ visible.
+  const vv = window.visualViewport;
+  const offsetX = vv ? vv.offsetLeft : 0;
+  const offsetY = vv ? vv.offsetTop : 0;
+
+  const x = rect.left + offsetX - pad;
+  const y = rect.top + offsetY - pad;
   const w = rect.width + pad * 2;
   const h = rect.height + pad * 2;
 
