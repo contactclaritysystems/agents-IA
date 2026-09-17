@@ -818,6 +818,42 @@ select.field-input {
   color: var(--muted-2);
 }
 
+/* Champ mot de passe avec bouton "afficher / masquer" (icône œil) intégré,
+   même style de ligne que les autres icônes SVG de l'app (stroke, pas de
+   remplissage). Le wrapper garde le .field-input pleine largeur inchangé et
+   ajoute juste un bouton positionné en absolu par-dessus, à droite. */
+.field-input-wrap {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.field-input-wrap .field-input {
+  padding-right: 44px;
+}
+
+.field-input-eye-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--muted-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.field-input-eye-btn:hover {
+  color: var(--text);
+}
+
 .field-row {
   display: grid;
   /* minmax(0, Nfr) plutôt que "Nfr" tout court : par défaut une piste de
@@ -1163,6 +1199,40 @@ select.field-input {
   border-radius: 10px;
   border: 1px solid var(--line);
   cursor: pointer;
+}
+
+/* Historique "Vos questions" (Analyser un document / Assistant) : chaque
+   question dans sa propre carte (même patron visuel que .mail-choice-btn :
+   fond glass, bordure, coins arrondis) au lieu d'un simple texte collé au
+   label — pour que la liste respire et se distingue nettement du bloc
+   "Résultat" qui suit, plutôt que de tout lire comme un seul bloc de texte
+   continu. */
+#simple-agent-questions-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simple-agent-question-card {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(var(--clarity-glass-rgb),.75);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.simple-agent-question-card strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Marge nette avant le bloc "Résultat" quand un historique de questions
+   est affiché au-dessus : sans ça, la carte de réponse touchait presque
+   la dernière question, donnant l'impression d'un bloc unique. */
+#simple-agent-questions-history {
+  margin-bottom: 4px;
 }
 /* Miniature "fichier" (PDF ou tout attachement non-image) de la popup
    Analyse document — même gabarit que .cr-result-photo (ci-dessus) mais
@@ -10791,7 +10861,7 @@ body[data-theme="light"]::after {
 
       <div class="field-group">
         <div class="field-label">Sécurité</div>
-        <select class="field-input" id="smtp-security">
+        <select class="field-input" id="smtp-security" onchange="applySmtpSecurityPort()">
           <option value="starttls">STARTTLS</option>
           <option value="ssl">SSL / TLS</option>
         </select>
@@ -10800,14 +10870,29 @@ body[data-theme="light"]::after {
 
     <div class="field-group" style="margin-top:12px;">
       <div class="field-label">Mot de passe de la boîte mail</div>
-      <input
-        class="field-input"
-        id="smtp-password"
-        type="password"
-        name="password"
-        autocomplete="current-password"
-        placeholder="Mot de passe"
-      >
+      <div class="field-input-wrap">
+        <input
+          class="field-input"
+          id="smtp-password"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="Mot de passe"
+        >
+        <button
+          type="button"
+          class="field-input-eye-btn"
+          id="smtp-password-toggle"
+          onclick="toggleSmtpPasswordVisibility()"
+          aria-label="Afficher le mot de passe"
+          aria-pressed="false"
+        >
+          <svg id="smtp-password-eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <button
@@ -11022,7 +11107,7 @@ body[data-theme="light"]::after {
       <div id="simple-agent-questions-history-list"></div>
     </div>
 
-    <div class="field-group" style="margin-top:12px;">
+    <div class="field-group" id="simple-agent-result-group" style="margin-top:20px;">
       <div class="field-label" id="simple-agent-result-title">Résultat</div>
       <div class="field-input cr-result-rich" id="simple-agent-result-content" contenteditable="true"></div>
     </div>
@@ -14259,6 +14344,13 @@ function renderCrMarkdownToHtml(text) {
 // la popup — permet de garder les corrections faites à la main.
 function crResultToPlainText(container) {
   if (!container) return "";
+  // "parts" = un élément par BLOC (titre, paragraphe, ou liste entière —
+  // pas une entrée par puce individuelle), séparés par une ligne vide au
+  // join() final. Sans ça, downloadCrResultPDF() imprimait tout à la
+  // suite au même interligne (entre "Date : ...", "Matériel à prévoir :"
+  // et les puces) : un seul bloc collé, pas aéré/premium. À l'intérieur
+  // d'un même bloc (les puces d'une liste), les lignes restent jointes
+  // par un simple \n — pas d'espace entre puces d'une même liste.
   const parts = [];
 
   container.childNodes.forEach(node => {
@@ -14273,14 +14365,15 @@ function crResultToPlainText(container) {
     } else if (node.classList && node.classList.contains("cr-h2")) {
       parts.push("## " + node.textContent.trim());
     } else if (node.tagName === "UL") {
-      node.querySelectorAll("li").forEach(li => parts.push("- " + li.textContent.trim()));
+      const items = Array.from(node.querySelectorAll("li")).map(li => "- " + li.textContent.trim());
+      if (items.length) parts.push(items.join("\n"));
     } else {
       const t = node.textContent.replace(/ /g, " ").trim();
       if (t) parts.push(t);
     }
   });
 
-  return parts.join("\n");
+  return parts.join("\n\n");
 }
 
 // Version "email/copie" du contenu : contrairement à crResultToPlainText
@@ -18824,9 +18917,56 @@ function resetSmtpConfigFields() {
   if (passwordInput) {
     passwordInput.value = "";
     passwordInput.placeholder = "Mot de passe";
+    passwordInput.type = "password";
+  }
+  const passwordToggle = document.getElementById("smtp-password-toggle");
+  if (passwordToggle) {
+    passwordToggle.setAttribute("aria-label", "Afficher le mot de passe");
+    passwordToggle.setAttribute("aria-pressed", "false");
+  }
+  const eyeIcon = document.getElementById("smtp-password-eye-icon");
+  if (eyeIcon) {
+    eyeIcon.innerHTML =
+      '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>' +
+      '<circle cx="12" cy="12" r="3"></circle>';
   }
 
   smtpNonSecretPrefillDone = false;
+}
+
+// Sécurité SSL/TLS → port 465, STARTTLS → port 587 (ports standards).
+// Le champ Port reste modifiable ensuite : ceci ne fait qu'appliquer le
+// port par défaut de la sécurité choisie, à chaque changement de sélection.
+function applySmtpSecurityPort() {
+  const securitySelect = document.getElementById("smtp-security");
+  const portInput = document.getElementById("smtp-port");
+  if (!securitySelect || !portInput) return;
+  portInput.value = securitySelect.value === "ssl" ? "465" : "587";
+}
+
+// Affiche / masque le mot de passe SMTP en tapant sur l'icône œil, avec
+// l'icône "œil barré" quand le mot de passe est visible (même convention
+// ligne/stroke que le reste de l'app, pas d'emoji).
+function toggleSmtpPasswordVisibility() {
+  const passwordInput = document.getElementById("smtp-password");
+  const toggleBtn = document.getElementById("smtp-password-toggle");
+  const eyeIcon = document.getElementById("smtp-password-eye-icon");
+  if (!passwordInput) return;
+  const willShow = passwordInput.type === "password";
+  passwordInput.type = willShow ? "text" : "password";
+  if (toggleBtn) {
+    toggleBtn.setAttribute("aria-label", willShow ? "Masquer le mot de passe" : "Afficher le mot de passe");
+    toggleBtn.setAttribute("aria-pressed", willShow ? "true" : "false");
+  }
+  if (eyeIcon) {
+    eyeIcon.innerHTML = willShow
+      ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.77 19.77 0 0 1 4.22-5.44"></path>' +
+        '<path d="M9.9 4.24A10.94 10.94 0 0 1 12 5c7 0 11 7 11 7a19.75 19.75 0 0 1-2.16 3.19"></path>' +
+        '<path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>' +
+        '<line x1="1" y1="1" x2="23" y2="23"></line>'
+      : '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>' +
+        '<circle cx="12" cy="12" r="3"></circle>';
+  }
 }
 
 // Va chercher la ligne user_integrations (provider = smtp, filtrée par
@@ -25821,7 +25961,7 @@ function renderSimpleAgentQuestionsHistory() {
     return;
   }
   list.innerHTML = questions.map(function (q, i) {
-    return '<div class="mail-choice-subtitle" style="display:block;margin:2px 0;">'
+    return '<div class="simple-agent-question-card">'
       + '<strong>Question ' + (i + 1) + ' :</strong> ' + escapeHtmlForPrint(q)
       + '</div>';
   }).join("");
