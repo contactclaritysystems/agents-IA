@@ -140,7 +140,7 @@ nav.banner-hidden { top: 0; }
 .hero h1 {
   font-size: clamp(3rem, 7vw, 5.7rem); font-weight: 760;
   line-height: .98; letter-spacing: -.062em;
-  margin-bottom: 34px; animation: fu .7s .08s ease both;
+  margin-bottom: 40px; animation: fu .7s .08s ease both;
 }
 .hero h1 em {
   font-style: normal;
@@ -150,7 +150,11 @@ nav.banner-hidden { top: 0; }
 .brand-name { color: var(--brand); }
 .hero-sub {
   font-size: clamp(1rem, 2vw, 1.22rem); font-weight: 380;
-  color: var(--muted); max-width: 640px; margin: 0 auto 44px;
+  /* Couleur légèrement plus foncée que le gris --muted standard (utilisé
+     ailleurs sur la page) : ce paragraphe est la seule chose ciblée par
+     cette demande, on ne touche donc pas la variable --muted globale qui
+     est réutilisée dans plein d'autres sections. */
+  color: #55555c; max-width: 640px; margin: 0 auto 52px;
   line-height: 1.85; animation: fu .7s .16s ease both;
 }
 .hero-btns {
@@ -180,7 +184,7 @@ nav.banner-hidden { top: 0; }
 }
 .hero-trial-badge {
   display: inline-flex; align-items: center; gap: 8px;
-  margin-top: 4px; margin-bottom: 26px; padding: 9px 20px;
+  margin-top: 4px; margin-bottom: 34px; padding: 9px 20px;
   background: rgba(255,255,255,.85); border: 1px solid var(--line-strong);
   border-radius: 100px; font-size: .86rem; font-weight: 700;
   color: var(--text); letter-spacing: -.005em;
@@ -189,7 +193,7 @@ nav.banner-hidden { top: 0; }
 }
 .hero-trial-badge .htb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
 /* HERO CARD */
-.hero-vis { margin-top: 70px; display: flex; justify-content: center; animation: fu .9s .38s ease both; }
+.hero-vis { margin-top: 80px; display: flex; justify-content: center; animation: fu .9s .38s ease both; }
 .hcard {
   position: relative; background: rgba(255,255,255,.78);
   border: 1px solid rgba(29,29,31,.08); border-radius: 30px;
@@ -274,7 +278,17 @@ input:-webkit-autofill { animation-name: onAutoFillStart; animation-duration: .0
   border-bottom: 1px solid var(--line); padding: 48px 24px;
 }
 .proof-in { max-width: 900px; margin: 0 auto; }
-.proof-eye { text-align: center; margin-bottom: 26px; }
+.proof-eye { text-align: center; margin-bottom: 16px; }
+/* Titre de la section "preuve" : les autres sections de la page (Ce que
+   fait Clarity, Pour qui, Fonctionnement, Tarifs) ont toutes une étiquette
+   + un vrai titre en dessous — cette section n'avait que l'étiquette.
+   Taille intermédiaire entre le corps de texte et les gros titres .stitle,
+   pour rester proportionné à cette bande plus compacte. */
+.proof-title {
+  text-align: center; font-size: clamp(1.4rem, 2.8vw, 1.9rem);
+  font-weight: 760; letter-spacing: -.03em; color: var(--text);
+  margin-bottom: 26px;
+}
 /* flex (au lieu de grid) : avec 4 cartes, la dernière ligne n'a qu'un seul
    élément — grid l'aurait laissé collé à gauche (colonne 1), alors que
    flex-wrap + justify-content:center le centre automatiquement, sans avoir
@@ -812,8 +826,8 @@ header {
   .promo-banner { display: none !important; }
   nav { top: 18px !important; }
   .hero { padding: 92px 18px 40px !important; }
-  .hero-trial-badge { margin-bottom: 20px !important; }
-  .hero-vis { margin-top: 24px !important; }
+  .hero-trial-badge { margin-bottom: 28px !important; }
+  .hero-vis { margin-top: 32px !important; }
   .sticky-cta { display: none !important; }
   body { padding-bottom: 0 !important; }
 }
@@ -843,7 +857,7 @@ header {
 <!-- HERO -->
 <section class="hero">
   <h1>Dictez.<br/><span class="brand-name">Clarity</span> <em>s'occupe du reste.</em></h1>
-  <p class="hero-sub">Un RDV à caler, un mail à envoyer, un rappel à programmer ?<br/>Vous le dites, Clarity s'en charge — votre assistante, toujours dans la poche.</p>
+  <p class="hero-sub">Un RDV à caler, un mail à envoyer, un rappel à programmer ?<br/>Vous le dites, Clarity s'en charge<br/>→ votre assistante, toujours dans la poche.</p>
   <div class="hero-trial-badge"><span class="htb-dot"></span>7 jours gratuits · 100 actions · Sans carte bancaire</div>
   <div class="hero-btns">
     <a href="#" class="btn-dark" onclick="openRegisterFromChat(event)">Commencer l'essai gratuit</a>
@@ -877,7 +891,8 @@ Bonne journée
 <!-- PREUVE EN 3 SECONDES -->
 <div class="proof">
   <div class="proof-in">
-    <div class="proof-eye"><span class="eye rv">En 3 secondes</span></div>
+    <div class="proof-eye"><span class="eye rv">Clarity, c'est quoi ?</span></div>
+    <h3 class="proof-title rv">En 3 secondes, elle fait :</h3>
     <ul class="proof-list">
       <li class="proof-item rv"><span class="proof-check">✓</span>Un mail dicté, prêt à valider</li>
       <li class="proof-item rv"><span class="proof-check">✓</span>Un RDV noté, rappel avant l'heure</li>
@@ -944,7 +959,7 @@ Bonne journée
 <div class="pourqui">
   <div class="pourqui-in">
     <div class="eye rv">Pour qui ?</div>
-    <p class="pourqui-text rv">Utile à tous ceux qui veulent gagner du temps sur les tâches répétitives du quotidien — professionnels ou non.</p>
+    <p class="pourqui-text rv">Utile à tous ceux qui veulent gagner du temps sur les tâches répétitives du quotidien —&nbsp;professionnels ou non.</p>
   </div>
 </div>
 <!-- FONCTIONNEMENT -->
@@ -1086,7 +1101,7 @@ Bonne journée
 <!-- BIENTÔT -->
 <div class="bientot">
   <div class="bientot-in">
-    <p class="bientot-text">Bientôt : devis, prospects, relance client automatique, notes de chantier, Google Agenda, WhatsApp. Une idée ? <a href="mailto:contact@clarity-systems.fr">Écrivez-nous →</a></p>
+    <p class="bientot-text">Bientôt : devis, prospects, relance client automatique, notes de chantier, Google Agenda, WhatsApp.<br/>Une idée ? <a href="mailto:contact@clarity-systems.fr">Écrivez-nous →</a></p>
   </div>
 </div>
 <!-- FOOTER -->
