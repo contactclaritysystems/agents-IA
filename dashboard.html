@@ -5907,6 +5907,16 @@ body,
   visibility: hidden;
 }
 
+/* Empêche la sélection de texte native (mobile) pendant tout le
+   réarrangement des actions rapides — voir enterReorderMode/
+   exitReorderMode. Sans ça, un appui long + glisser pouvait surligner
+   le label "Actions rapides" ou le champ de dictée juste au-dessus. */
+body.qa-reorder-active {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 #quick-mail-contact-list {
   max-height: 50vh;
   overflow-y: auto;
@@ -20497,6 +20507,15 @@ function initQuickActionsReorder() {
       b.style.setProperty("--qa-wiggle-delay", String((i % 4) * 60));
       b.classList.add("qa-wiggle");
     });
+    // Sur mobile, un appui long/glisser peut être interprété par le
+    // navigateur comme le début d'une sélection de texte (retour
+    // utilisateur : "ça fait comme si ça sélectionnait le texte"), même
+    // sur des éléments non-sélectionnables — le label "Actions rapides"
+    // ou le champ de dictée juste au-dessus se retrouvaient surlignés.
+    // On désactive la sélection sur toute la page le temps du
+    // réarrangement (comme le fait iOS lui-même en mode "jiggle"), pas
+    // seulement sur les icônes.
+    document.body.classList.add("qa-reorder-active");
     if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} }
   }
 
@@ -20505,7 +20524,17 @@ function initQuickActionsReorder() {
     reorderMode = false;
     row.classList.remove("quick-actions-reorder-mode");
     getQuickActionButtons(row).forEach(function (b) { b.classList.remove("qa-wiggle"); });
+    document.body.classList.remove("qa-reorder-active");
   }
+
+  // Filet de sécurité en plus du CSS user-select:none ci-dessus : sur
+  // certains navigateurs mobiles, une sélection déjà amorcée par le
+  // geste tactile avant que la classe qa-reorder-active ne s'applique
+  // peut quand même déclencher un "selectstart" — on l'annule tant
+  // qu'on réorganise.
+  document.addEventListener("selectstart", function (e) {
+    if (reorderMode) e.preventDefault();
+  });
 
   // Tant qu'on est en mode réorganisation (ou juste après un glisser),
   // on bloque le clic pour ne pas déclencher l'action de l'icône —
