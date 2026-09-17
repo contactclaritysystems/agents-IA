@@ -5816,6 +5816,12 @@ body,
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .28));
   transition: none;
 }
+/* Garde la place de l'icône en cours de glissement dans la grille (voir
+   startDrag/reorderPlaceholderTo) : un vrai trou vide, comme sur iPhone,
+   tant qu'on n'a pas glissé sur une autre icône. */
+.qa-placeholder {
+  visibility: hidden;
+}
 
 #quick-mail-contact-list {
   max-height: 50vh;
@@ -20380,6 +20386,7 @@ function initQuickActionsReorder() {
 
   let reorderMode = false;
   let dragBtn = null;
+  let dragPlaceholder = null;
   let dragPointerId = null;
   let dragOffsetX = 0;
   let dragOffsetY = 0;
@@ -20461,11 +20468,29 @@ function initQuickActionsReorder() {
     enterReorderMode();
     dragBtn = btn;
     dragPointerId = pointerId;
-    dragOffsetX = clientX - btn.getBoundingClientRect().left;
-    dragOffsetY = clientY - btn.getBoundingClientRect().top;
     const rect = btn.getBoundingClientRect();
+    dragOffsetX = clientX - rect.left;
+    dragOffsetY = clientY - rect.top;
+
+    // Espace réservé invisible, de la même taille, laissé À LA PLACE de
+    // l'icône saisie : sans lui, passer l'icône en position:fixed la
+    // retire aussitôt du flux de la grille CSS, qui se recalcule tout de
+    // suite et décale déjà les autres icônes au moment même de l'appui
+    // long — avant tout glissement (retour utilisateur : "ce n'est pas
+    // comme iPhone"). Sur iPhone l'icône saisie laisse un vrai trou vide
+    // à sa place tant qu'on ne la fait pas glisser sur une autre. C'est
+    // ce placeholder (et non plus l'icône elle-même, qui ne fait que
+    // suivre le doigt) qui représente sa position "logique" dans la
+    // grille pendant tout le glissement — voir reorderPlaceholderTo.
+    dragPlaceholder = document.createElement("div");
+    dragPlaceholder.className = "qa-placeholder";
+    dragPlaceholder.style.width = rect.width + "px";
+    dragPlaceholder.style.height = rect.height + "px";
+    row.insertBefore(dragPlaceholder, btn);
+
     btn.classList.add("qa-dragging");
     btn.style.width = rect.width + "px";
+    btn.style.height = rect.height + "px";
     btn.style.left = rect.left + "px";
     btn.style.top = rect.top + "px";
     try { btn.setPointerCapture(pointerId); } catch (e) {}
@@ -20479,42 +20504,48 @@ function initQuickActionsReorder() {
     const overEl = document.elementFromPoint(clientX, clientY);
     const overBtn = overEl && overEl.closest ? overEl.closest(".quick-action-btn") : null;
     if (overBtn && overBtn !== dragBtn && row.contains(overBtn)) {
-      reorderTo(overBtn);
+      reorderPlaceholderTo(overBtn);
     }
   }
 
-  function reorderTo(overBtn) {
-    const btns = getQuickActionButtons(row);
-    const from = btns.indexOf(dragBtn);
-    const to = btns.indexOf(overBtn);
+  // Déplace le placeholder (jamais l'icône elle-même, suivie en position
+  // fixe) à la place de l'icône survolée : c'est seulement à ce moment,
+  // un vrai survol, que les autres icônes se décalent — comme sur iPhone.
+  function reorderPlaceholderTo(overBtn) {
+    if (!dragPlaceholder) return;
+    const children = Array.prototype.slice.call(row.children);
+    const from = children.indexOf(dragPlaceholder);
+    const to = children.indexOf(overBtn);
     if (from === -1 || to === -1 || from === to) return;
 
-    // FLIP : on relève les positions avant déplacement, on déplace le
-    // noeud dans le DOM, puis on anime chaque bouton affecté de sa
-    // position d'avant vers sa nouvelle position (le bouton glissé,
-    // lui, suit déjà le doigt en position fixe, on ne l'anime pas).
+    // FLIP : on relève les positions avant déplacement (tout sauf le
+    // placeholder et l'icône glissée, qui suit déjà le doigt), on déplace
+    // le placeholder dans le DOM, puis on anime chaque icône affectée de
+    // sa position d'avant vers sa nouvelle position.
     const firstRects = new Map();
-    btns.forEach(function (b) { if (b !== dragBtn) firstRects.set(b, b.getBoundingClientRect()); });
+    children.forEach(function (el) {
+      if (el !== dragPlaceholder && el !== dragBtn) firstRects.set(el, el.getBoundingClientRect());
+    });
 
     if (to < from) {
-      row.insertBefore(dragBtn, overBtn);
+      row.insertBefore(dragPlaceholder, overBtn);
     } else {
-      row.insertBefore(dragBtn, overBtn.nextSibling);
+      row.insertBefore(dragPlaceholder, overBtn.nextSibling);
     }
 
-    getQuickActionButtons(row).forEach(function (b) {
-      if (b === dragBtn) return;
-      const first = firstRects.get(b);
+    Array.prototype.slice.call(row.children).forEach(function (el) {
+      if (el === dragPlaceholder || el === dragBtn) return;
+      const first = firstRects.get(el);
       if (!first) return;
-      const last = b.getBoundingClientRect();
+      const last = el.getBoundingClientRect();
       const dx = first.left - last.left;
       const dy = first.top - last.top;
       if (dx || dy) {
-        b.style.transition = "none";
-        b.style.transform = "translate(" + dx + "px, " + dy + "px)";
+        el.style.transition = "none";
+        el.style.transform = "translate(" + dx + "px, " + dy + "px)";
         requestAnimationFrame(function () {
-          b.style.transition = "transform 0.2s ease";
-          b.style.transform = "";
+          el.style.transition = "transform 0.2s ease";
+          el.style.transform = "";
         });
       }
     });
@@ -20530,6 +20561,16 @@ function initQuickActionsReorder() {
     btn.style.left = "";
     btn.style.top = "";
     btn.style.width = "";
+    btn.style.height = "";
+
+    // L'icône reprend la place exacte laissée par le placeholder (sa
+    // position "logique" pendant le glissement), qui disparaît ensuite.
+    if (dragPlaceholder && dragPlaceholder.parentNode === row) {
+      row.insertBefore(btn, dragPlaceholder);
+      dragPlaceholder.remove();
+    }
+    dragPlaceholder = null;
+
     // Évite qu'un clic fantôme (déclenché par le navigateur au
     // relâchement du pointeur) n'ouvre l'action de l'icône qu'on
     // vient de déplacer.
