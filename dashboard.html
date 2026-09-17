@@ -16818,6 +16818,117 @@ async function confirmQuickReminder() {
   }
 }
 
+// ─── Relance après mail envoyé (contrat produit) ──────────────────────────
+// Une fois qu'un mail est VRAIMENT envoyé (voir sendPreparedMail, jamais à
+// l'ouverture d'un brouillon/aperçu), on propose UNE FOIS un rappel perso
+// "Relancer [prénom] ?" — jamais un second mail, juste un rappel pour
+// l'utilisateur. Même API/table que les rappels existants
+// (RELANCE_WEBHOOK_URL, voir confirmQuickReminder juste au-dessus), même
+// style de popup que le reste de l'app (.mail-choice-box/.mail-choice-btn).
+
+function firstNameFromContactName(fullName) {
+  const trimmed = (fullName || "").trim();
+  if (!trimmed) return "";
+  return trimmed.split(/\s+/)[0];
+}
+
+// Même idiome que "Aujourd'hui/Demain" de openQuickReminderModal
+// (new Date() + setDate + toISOString().slice(0,10)) pour rester cohérent
+// avec le reste de l'app plutôt qu'introduire un 2e calcul de date.
+function relanceQuickDateIso(daysAhead) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return d.toISOString().slice(0, 10);
+}
+
+async function createRelanceReminderAfterMail(daysAhead, contactName, subjectText, dayLabel) {
+  const date = relanceQuickDateIso(daysAhead);
+  const time = "09:00";
+  const firstName = firstNameFromContactName(contactName);
+  const displayName = firstName || (contactName || "").trim() || "ce contact";
+  const reasonText = "Relancer " + displayName + (subjectText ? " — " + subjectText : "");
+
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: reasonText,
+    reason: reasonText,
+    reminder_date: date,
+    reminder_time: time,
+    contact_name: contactName || null,
+    message_context: "",
+    request_id: null
+  };
+
+  try {
+    const response = await fetch(RELANCE_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (data.success) {
+      showToast("Rappel noté pour " + dayLabel, "success");
+      maybeShowFirstScheduleNotice();
+    } else {
+      showToast(data.message || "Impossible de créer le rappel", "error");
+    }
+  } catch (e) {
+    console.error("Erreur création rappel de relance après mail :", e);
+    showToast("Erreur réseau", "error");
+  }
+}
+
+function closeRelanceAfterMailModal() {
+  const modal = document.getElementById("relance-after-mail-modal");
+  if (modal) modal.remove();
+}
+
+function dismissRelanceAfterMail() {
+  closeRelanceAfterMailModal();
+  showToast("Pas de rappel");
+}
+window.dismissRelanceAfterMail = dismissRelanceAfterMail;
+
+// Point d'entrée, appelé une seule fois par envoi réel (voir
+// sendPreparedMail). contactName peut être vide (mail envoyé à une
+// adresse hors carnet) : on retombe alors sur "ce contact" plutôt que de
+// ne rien afficher — le rappel reste utile même sans nom connu.
+function offerRelanceAfterMail(contactName, subjectText) {
+  const firstName = firstNameFromContactName(contactName);
+  const displayName = firstName || (contactName || "").trim() || "ce contact";
+
+  const existing = document.getElementById("relance-after-mail-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "relance-after-mail-modal";
+  modal.innerHTML = `
+    <div class="mail-choice-backdrop" onclick="dismissRelanceAfterMail()"></div>
+    <div class="mail-choice-box">
+      <div class="mail-choice-title">Relancer ${escapeHtmlForPrint(displayName)} ?</div>
+      <div class="mail-choice-subtitle">Un simple rappel pour vous, pas un nouveau mail.</div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button type="button" class="mail-choice-btn" id="relance-after-mail-tomorrow" style="flex:1;justify-content:center;">Demain</button>
+        <button type="button" class="mail-choice-btn" id="relance-after-mail-3days" style="flex:1;justify-content:center;">Dans 3 jours</button>
+      </div>
+      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="dismissRelanceAfterMail()">Non</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  document.getElementById("relance-after-mail-tomorrow").onclick = async function () {
+    closeRelanceAfterMailModal();
+    await createRelanceReminderAfterMail(1, contactName, subjectText, "demain");
+  };
+  document.getElementById("relance-after-mail-3days").onclick = async function () {
+    closeRelanceAfterMailModal();
+    await createRelanceReminderAfterMail(3, contactName, subjectText, "dans 3 jours");
+  };
+}
+window.offerRelanceAfterMail = offerRelanceAfterMail;
+
 let pendingReminderPartial = null;
 
 // Quand un agent "simple" (Planning, Relance...) demande une clarification
@@ -33382,6 +33493,13 @@ ${body}`,
 
   await loadActionCounter();
   onboardingOnEvent("mail_sent");
+
+  // Rappel de relance V1 (contrat produit) : une fois seulement, APRÈS un
+  // mail VRAIMENT envoyé (jamais à l'ouverture d'un brouillon/aperçu — ce
+  // bloc n'est atteint qu'après la confirmation d'envoi réel ci-dessus).
+  // Ce n'est PAS un second mail : juste une proposition de rappel perso
+  // pour l'utilisateur, voir offerRelanceAfterMail.
+  offerRelanceAfterMail(contactName, subject);
 
 }, 550);
 
