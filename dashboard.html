@@ -1022,10 +1022,18 @@ select.field-input {
   box-shadow: 0 22px 80px rgba(0,0,0,.18);
 }
 
-  #mail-choice-modal {
+  /* #mail-choice-modal et #gmail-connect-consent-modal doivent pouvoir
+     s'ouvrir PAR-DESSUS #mail-preview-modal (aussi z-index:9999) : le
+     bandeau "Aucune boîte connectée" de l'aperçu du mail ouvre désormais
+     le choix Gmail/Outlook/SMTP sans fermer l'aperçu derrière (même
+     logique que la reconnexion SMTP ci-dessous, où ce bug de superposition
+     avait déjà été corrigé — voir son commentaire). À z-index égal,
+     #mail-preview-modal viendrait après dans le DOM et passerait devant. */
+  #mail-choice-modal,
+  #gmail-connect-consent-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: 10000;
 }
 
   #smtp-config-modal {
@@ -24617,7 +24625,13 @@ async function saveActionLog(agent, action, status) {
   function mailProviderLabel(provider) {
     if (provider === "microsoft") return "Outlook";
     if (provider === "smtp") return "SMTP";
-    return "Gmail";
+    if (provider === "google") return "Gmail";
+    // Provider inconnu (jamais connecté, ou compte supprimé/recréé) :
+    // on ne déduit JAMAIS "Gmail" par défaut (retour utilisateur — un
+    // SaaS premium doit toujours laisser choisir le canal réel : Gmail,
+    // Outlook ou SMTP pro ne se valent pas et forcer Gmail fait croire
+    // que Clarity ne marche qu'avec Google).
+    return null;
   }
 
   // Champ confirmé côté backend : reason === "reauth_required" (route
@@ -24652,7 +24666,7 @@ async function saveActionLog(agent, action, status) {
   }
 
   function showMailAuthExpiredBanner(provider, options) {
-    mailAuthBannerProvider = provider;
+    mailAuthBannerProvider = provider || null;
 
     const banner = document.getElementById("mail-auth-banner");
     const text = document.getElementById("mail-auth-banner-text");
@@ -24660,15 +24674,35 @@ async function saveActionLog(agent, action, status) {
     const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
 
     const label = mailProviderLabel(provider);
-    // Deux causes distinctes menant au même bandeau/bouton "Reconnecter" :
-    // soit la connexion existait et a expiré/été révoquée (ex: token
-    // Gmail périmé), soit il n'y a jamais eu de compte connecté du tout
-    // (voir sendPreparedMail : aucune adresse d'envoi trouvée). Le libellé
-    // change pour rester honnête sur ce qui s'est vraiment passé, mais le
-    // bouton reste le même dans les deux cas.
+    // Deux causes distinctes menant à ce bandeau : soit la connexion
+    // existait et a expiré/été révoquée (ex: token Gmail périmé — provider
+    // connu), soit il n'y a jamais eu de boîte connectée du tout, ou plus
+    // aucune pour ce compte (voir sendPreparedMail). Dans ce second cas on
+    // ne connaît pas le canal, donc on ne propose JAMAIS "Reconnecter
+    // Gmail" par défaut (retour utilisateur) : le bouton ouvre le choix à
+    // 3 déjà existant (Gmail / Outlook / SMTP pro) plutôt que de forcer
+    // Gmail. Le libellé change pour rester honnête sur ce qui s'est
+    // vraiment passé, l'un et l'autre gardant le brouillon (to/objet/
+    // corps/PJ) intact via syncPreparedMailFromFields + saveMailDraftToStorage.
     const notConnected = !!(options && options.notConnected);
-    if (text) text.textContent = notConnected ? (label + " non connecté") : ("Connexion " + label + " expirée");
-    if (btn) btn.textContent = "Reconnecter " + label;
+
+    if (label) {
+      if (text) text.textContent = notConnected ? (label + " non connecté") : ("Connexion " + label + " expirée");
+      if (btn) {
+        btn.textContent = "Reconnecter " + label;
+        btn.onclick = reconnectMailProvider;
+      }
+    } else {
+      if (text) text.textContent = "Aucune boîte mail connectée";
+      if (btn) {
+        btn.textContent = "Connecter une boîte";
+        btn.onclick = function () {
+          syncPreparedMailFromFields();
+          saveMailDraftToStorage();
+          openMailChoiceModal();
+        };
+      }
+    }
     if (banner) banner.style.display = "flex";
 
     // L'envoi reste bloqué tant que la reconnexion n'a pas eu lieu : pas
@@ -24731,7 +24765,17 @@ async function saveActionLog(agent, action, status) {
       return;
     }
 
-    connectGmail();
+    if (provider === "google") {
+      connectGmail();
+      return;
+    }
+
+    // Filet de sécurité : provider inconnu (ne devrait plus arriver,
+    // showMailAuthExpiredBanner branche déjà ce cas sur le choix à 3 —
+    // voir ce commentaire) — on n'appelle JAMAIS connectGmail() en
+    // silence ici, ça reproduirait le bug remonté (Gmail forcé alors que
+    // l'utilisateur utilise peut-être Outlook ou un SMTP pro).
+    openMailChoiceModal();
   }
 
   // ─── Pièces jointes (mode test SMTP uniquement) ─────────────────────
@@ -32498,7 +32542,12 @@ function isValidEmailList(value) {
     {
       const cachedConnectedEmail = (localStorage.getItem("gmail_" + currentUser.email) || "").trim();
       if (!cachedConnectedEmail) {
-        const cachedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "google";
+        // Pas de "|| google" ici (retour utilisateur) : si le cache local
+        // ne connaît aucun provider, on ne doit jamais prétendre que c'est
+        // Gmail. showMailAuthExpiredBanner("", ...) affiche alors "Aucune
+        // boîte mail connectée" + choix Gmail/Outlook/SMTP, jamais un
+        // "Reconnecter Gmail" en dur.
+        const cachedProvider = localStorage.getItem("mail_provider_" + currentUser.email) || "";
         showMailAuthExpiredBanner(cachedProvider, { notConnected: true });
         return;
       }
