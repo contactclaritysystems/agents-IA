@@ -19133,9 +19133,19 @@ function updateOnboardingMicTag() {
     return;
   }
 
+  // Même recalage que positionOnboardingSpotlight / syncOnboardingBubblePosition
+  // (voir plus bas) : sans ça, l'étiquette "C'est le micro" se retrouvait
+  // trop haute dès que le clavier virtuel ouvrait, puisqu'elle utilisait
+  // directement getBoundingClientRect() sans tenir compte du décalage entre
+  // le viewport de mise en page (auquel elle est ancrée, position:fixed) et
+  // la zone réellement visible à l'écran une fois le clavier ouvert.
+  const vv = window.visualViewport;
+  const offsetX = vv ? vv.offsetLeft : 0;
+  const offsetY = vv ? vv.offsetTop : 0;
+
   tag.style.display = "block";
-  tag.style.left = (rect.left + rect.width / 2) + "px";
-  tag.style.top = (rect.bottom + 8) + "px";
+  tag.style.left = (rect.left + rect.width / 2 + offsetX) + "px";
+  tag.style.top = (rect.bottom + offsetY + 8) + "px";
   tag.style.opacity = "1";
 }
 
@@ -19876,8 +19886,61 @@ function syncOnboardingBubblePosition() {
   if (!bubble || !window.visualViewport) return;
   if (!onboardingActive || bubble.style.display === "none") return;
   const vv = window.visualViewport;
-  const ratio = bubble.classList.contains("onboarding-center") ? 0.5 : 0.42;
-  bubble.style.top = (vv.offsetTop + vv.height * ratio) + "px";
+  const centered = bubble.classList.contains("onboarding-center");
+  const ratio = centered ? 0.5 : 0.42;
+  let top = vv.offsetTop + vv.height * ratio;
+
+  // Bug remonté : une fois le calcul ci-dessus corrigé pour suivre le
+  // clavier, la bulle ("Testons tout de suite...") pouvait retomber pile
+  // sur le champ mis en avant (le halo) — le champ étant proche du haut de
+  // la zone visible restante une fois le clavier ouvert, 42% de cette zone
+  // (désormais réduite) tombe dedans. On calcule donc aussi la position du
+  // halo actuel (même recalage visualViewport que positionOnboardingSpotlight
+  // un peu plus haut) et on décale la bulle au-dessus ou en dessous du
+  // champ dès qu'il y a chevauchement, pour ne jamais cacher ce que
+  // l'utilisateur est en train d'écrire.
+  if (!centered && onboardingStep) {
+    const target = getOnboardingSpotlightTarget(onboardingStep);
+    if (target) {
+      const rect = typeof target.getBoundingClientRect === "function"
+        ? target.getBoundingClientRect()
+        : target;
+      const targetTop = rect.top + vv.offsetTop;
+      const targetBottom = rect.bottom + vv.offsetTop;
+      const bubbleHeight = bubble.offsetHeight || 0;
+      const gap = 16;
+      const overlaps = top < targetBottom + gap && (top + bubbleHeight) > targetTop - gap;
+
+      if (overlaps) {
+        const visibleBottom = vv.offsetTop + vv.height;
+        const spaceBelow = visibleBottom - (targetBottom + gap) - bubbleHeight;
+        const spaceAbove = (targetTop - gap) - bubbleHeight - vv.offsetTop;
+        if (spaceBelow >= 0) {
+          top = targetBottom + gap;
+        } else if (spaceAbove >= 0) {
+          top = targetTop - gap - bubbleHeight;
+        } else if (spaceBelow >= spaceAbove) {
+          // Ni assez de place au-dessus ni en dessous (champ occupant
+          // presque toute la zone visible) : on prend le côté où on déborde
+          // le moins, plutôt que de rester bêtement collée en haut — ce qui
+          // pouvait encore chevaucher un champ très grand.
+          top = targetBottom + gap;
+        } else {
+          top = targetTop - gap - bubbleHeight;
+        }
+
+        // Filet de sécurité : ne jamais laisser la bulle sortir de la zone
+        // réellement visible, quel que soit le côté choisi ci-dessus.
+        const minTop = vv.offsetTop;
+        const maxTop = vv.offsetTop + vv.height - bubbleHeight;
+        if (maxTop >= minTop) {
+          top = Math.min(Math.max(top, minTop), maxTop);
+        }
+      }
+    }
+  }
+
+  bubble.style.top = top + "px";
 }
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", syncOnboardingBubblePosition);
