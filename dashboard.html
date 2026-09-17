@@ -5777,6 +5777,38 @@ body,
   background: var(--clarity-surface);
 }
 
+/* Réorganisation des actions rapides (appui long façon iOS) : mode
+   "jiggle" pendant lequel les icônes tremblent légèrement et ne
+   déclenchent plus leur action au tap, plus le style de l'icône en
+   cours de déplacement (suit le doigt en position fixe). */
+@keyframes qa-wiggle {
+  0% { transform: rotate(-1.4deg); }
+  50% { transform: rotate(1.4deg); }
+  100% { transform: rotate(-1.4deg); }
+}
+.quick-action-btn {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.quick-actions-reorder-mode .quick-action-btn {
+  touch-action: none;
+}
+.quick-action-btn.qa-wiggle {
+  animation: qa-wiggle 0.22s ease-in-out infinite;
+  animation-delay: calc(var(--qa-wiggle-delay, 0) * 1ms);
+}
+.quick-action-btn.qa-dragging {
+  position: fixed;
+  z-index: 9998;
+  animation: none !important;
+  pointer-events: none;
+  transform: scale(1.1);
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .28));
+  transition: none;
+}
+
 #quick-mail-contact-list {
   max-height: 50vh;
   overflow-y: auto;
@@ -20267,6 +20299,239 @@ window.addEventListener("resize", () => {
 
 // ─── USER ────────────────────────────────────────────────
 
+// ============================================================
+// Réorganisation des "Actions rapides" par appui long + glisser,
+// façon iOS SpringBoard : chaque icône peut être déplacée librement
+// dans la grille, pas seulement échangée ligne par ligne. L'ordre
+// choisi est mémorisé en local (par utilisateur, sur cet appareil) —
+// aucune écriture Supabase, donc rien côté backend à toucher.
+// ============================================================
+let quickActionsReorderBound = false;
+
+function quickActionsStorageKey() {
+  const email = (typeof currentUser !== "undefined" && currentUser && currentUser.email) || "guest";
+  return "quick_actions_order_" + email;
+}
+
+function getQuickActionButtons(row) {
+  return Array.prototype.slice.call(row.querySelectorAll(".quick-action-btn"));
+}
+
+function applyQuickActionsSavedOrder(row) {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem(quickActionsStorageKey()) || "null");
+  } catch (e) {
+    saved = null;
+  }
+  if (!Array.isArray(saved) || !saved.length) return;
+
+  const btns = getQuickActionButtons(row);
+  const byId = {};
+  btns.forEach(function (b) { if (b.id) byId[b.id] = b; });
+
+  const ordered = [];
+  saved.forEach(function (id) {
+    if (byId[id]) { ordered.push(byId[id]); delete byId[id]; }
+  });
+  // Boutons absents de l'ordre sauvegardé (nouveaux boutons ajoutés
+  // depuis, ou id renommé) : ajoutés à la fin, dans l'ordre HTML
+  // d'origine, pour ne jamais en faire disparaître un.
+  btns.forEach(function (b) { if (!b.id || byId[b.id]) ordered.push(b); });
+
+  ordered.forEach(function (b) { row.appendChild(b); });
+}
+
+function saveQuickActionsOrder(row) {
+  const ids = getQuickActionButtons(row).map(function (b) { return b.id; }).filter(Boolean);
+  try {
+    localStorage.setItem(quickActionsStorageKey(), JSON.stringify(ids));
+  } catch (e) {
+    console.error("Impossible de sauvegarder l'ordre des actions rapides :", e);
+  }
+}
+
+function initQuickActionsReorder() {
+  const row = document.querySelector(".clarity-quick-row");
+  if (!row) return;
+
+  // Ré-applique l'ordre sauvegardé à chaque appel (ex: reconnexion
+  // avec un autre compte sur le même appareil), mais n'attache les
+  // écouteurs qu'une seule fois : le noeud .clarity-quick-row n'est
+  // jamais recréé, inutile de rebrancher les events à chaque login.
+  applyQuickActionsSavedOrder(row);
+  if (quickActionsReorderBound) return;
+  quickActionsReorderBound = true;
+
+  const LONG_PRESS_MS = 450;
+  const MOVE_CANCEL_PX = 10;
+
+  let pressTimer = null;
+  let pressStartX = 0;
+  let pressStartY = 0;
+
+  let reorderMode = false;
+  let dragBtn = null;
+  let dragPointerId = null;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  function clearPressTimer() {
+    if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  }
+
+  function enterReorderMode() {
+    if (reorderMode) return;
+    reorderMode = true;
+    row.classList.add("quick-actions-reorder-mode");
+    getQuickActionButtons(row).forEach(function (b, i) {
+      b.style.setProperty("--qa-wiggle-delay", String((i % 4) * 60));
+      b.classList.add("qa-wiggle");
+    });
+    if (navigator.vibrate) { try { navigator.vibrate(15); } catch (e) {} }
+  }
+
+  function exitReorderMode() {
+    if (!reorderMode) return;
+    reorderMode = false;
+    row.classList.remove("quick-actions-reorder-mode");
+    getQuickActionButtons(row).forEach(function (b) { b.classList.remove("qa-wiggle"); });
+  }
+
+  // Tant qu'on est en mode réorganisation (ou juste après un glisser),
+  // on bloque le clic pour ne pas déclencher l'action de l'icône —
+  // capturé en amont pour passer avant l'onclick inline du bouton.
+  row.addEventListener("click", function (e) {
+    if (reorderMode || row.dataset.qaSuppressClick === "1") {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      row.dataset.qaSuppressClick = "";
+    }
+  }, true);
+
+  row.addEventListener("pointerdown", function (e) {
+    const btn = e.target.closest(".quick-action-btn");
+    if (!btn) return;
+    pressStartX = e.clientX;
+    pressStartY = e.clientY;
+    clearPressTimer();
+    const pointerId = e.pointerId;
+    pressTimer = setTimeout(function () {
+      pressTimer = null;
+      startDrag(btn, e.clientX, e.clientY, pointerId);
+    }, LONG_PRESS_MS);
+  });
+
+  row.addEventListener("pointermove", function (e) {
+    if (pressTimer) {
+      const dx = e.clientX - pressStartX;
+      const dy = e.clientY - pressStartY;
+      if (Math.sqrt(dx * dx + dy * dy) > MOVE_CANCEL_PX) clearPressTimer();
+    }
+    if (dragBtn && e.pointerId === dragPointerId) {
+      onDragMove(e.clientX, e.clientY);
+    }
+  });
+
+  function finishPointer(e) {
+    clearPressTimer();
+    if (dragBtn && e.pointerId === dragPointerId) endDrag();
+  }
+  row.addEventListener("pointerup", finishPointer);
+  row.addEventListener("pointercancel", finishPointer);
+
+  // Tap en dehors des actions rapides : referme le mode réorganisation
+  // et enregistre l'ordre final, comme sur iOS.
+  document.addEventListener("pointerdown", function (e) {
+    if (!reorderMode) return;
+    if (row.contains(e.target)) return;
+    exitReorderMode();
+    saveQuickActionsOrder(row);
+  });
+
+  function startDrag(btn, clientX, clientY, pointerId) {
+    enterReorderMode();
+    dragBtn = btn;
+    dragPointerId = pointerId;
+    dragOffsetX = clientX - btn.getBoundingClientRect().left;
+    dragOffsetY = clientY - btn.getBoundingClientRect().top;
+    const rect = btn.getBoundingClientRect();
+    btn.classList.add("qa-dragging");
+    btn.style.width = rect.width + "px";
+    btn.style.left = rect.left + "px";
+    btn.style.top = rect.top + "px";
+    try { btn.setPointerCapture(pointerId); } catch (e) {}
+  }
+
+  function onDragMove(clientX, clientY) {
+    if (!dragBtn) return;
+    dragBtn.style.left = (clientX - dragOffsetX) + "px";
+    dragBtn.style.top = (clientY - dragOffsetY) + "px";
+
+    const overEl = document.elementFromPoint(clientX, clientY);
+    const overBtn = overEl && overEl.closest ? overEl.closest(".quick-action-btn") : null;
+    if (overBtn && overBtn !== dragBtn && row.contains(overBtn)) {
+      reorderTo(overBtn);
+    }
+  }
+
+  function reorderTo(overBtn) {
+    const btns = getQuickActionButtons(row);
+    const from = btns.indexOf(dragBtn);
+    const to = btns.indexOf(overBtn);
+    if (from === -1 || to === -1 || from === to) return;
+
+    // FLIP : on relève les positions avant déplacement, on déplace le
+    // noeud dans le DOM, puis on anime chaque bouton affecté de sa
+    // position d'avant vers sa nouvelle position (le bouton glissé,
+    // lui, suit déjà le doigt en position fixe, on ne l'anime pas).
+    const firstRects = new Map();
+    btns.forEach(function (b) { if (b !== dragBtn) firstRects.set(b, b.getBoundingClientRect()); });
+
+    if (to < from) {
+      row.insertBefore(dragBtn, overBtn);
+    } else {
+      row.insertBefore(dragBtn, overBtn.nextSibling);
+    }
+
+    getQuickActionButtons(row).forEach(function (b) {
+      if (b === dragBtn) return;
+      const first = firstRects.get(b);
+      if (!first) return;
+      const last = b.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (dx || dy) {
+        b.style.transition = "none";
+        b.style.transform = "translate(" + dx + "px, " + dy + "px)";
+        requestAnimationFrame(function () {
+          b.style.transition = "transform 0.2s ease";
+          b.style.transform = "";
+        });
+      }
+    });
+  }
+
+  function endDrag() {
+    if (!dragBtn) return;
+    const btn = dragBtn;
+    dragBtn = null;
+    dragPointerId = null;
+    btn.classList.remove("qa-dragging");
+    btn.style.position = "";
+    btn.style.left = "";
+    btn.style.top = "";
+    btn.style.width = "";
+    // Évite qu'un clic fantôme (déclenché par le navigateur au
+    // relâchement du pointeur) n'ouvre l'action de l'icône qu'on
+    // vient de déplacer.
+    row.dataset.qaSuppressClick = "1";
+    saveQuickActionsOrder(row);
+    // Reste en mode réorganisation (jiggle) pour enchaîner d'autres
+    // déplacements — on ne quitte qu'en tapant ailleurs sur l'écran.
+  }
+}
+
 async function handleUser(user) {
   console.log("=== HANDLE USER ===");
   currentUser = user;
@@ -20276,7 +20541,11 @@ async function handleUser(user) {
   const userAvatarEl = document.querySelector(".user-avatar");
   if (userNameEl) userNameEl.textContent = prenom;
   if (userAvatarEl) userAvatarEl.textContent = prenom.substring(0, 2).toUpperCase();
-  
+
+  // Applique l'ordre des actions rapides mémorisé pour cet utilisateur
+  // et (une seule fois) branche l'appui long + glisser pour les réordonner.
+  initQuickActionsReorder();
+
   console.log("avant handleOAuthCallback");
   await handleOAuthCallback();
 
