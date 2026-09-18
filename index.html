@@ -1630,5 +1630,20 @@ document.addEventListener('click', function(e) {
     </div>
   </div>
 </div>
+<!-- TRACKING ATTERRISSAGE ACCUEIL : une seule fois par onglet (sessionStorage),
+     jamais bloquant (fetch async + .catch silencieux, aucun await). -->
+<script>
+(function () {
+  try {
+    if (sessionStorage.getItem("clarity_home_hit")) return;
+    sessionStorage.setItem("clarity_home_hit", "1");
+  } catch (e) {}
+  fetch("https://clarity-backend-me14.onrender.com/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: "home_landing", src: "index" }),
+  }).catch(() => {});
+})();
+</script>
 </body>
 </html>
