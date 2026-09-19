@@ -209,12 +209,13 @@ footer { background: var(--page); border-top: 1px solid var(--line); padding: 44
   <section>
     <h2><span class="h2-n">5</span>Destinataires et sous-traitants</h2>
     <p>Vos données peuvent être transmises aux prestataires suivants, qui interviennent en tant que sous-traitants techniques :</p>
-    <table>
+        <table>
       <tr><th>Supabase</th><td>Hébergement de la base de données et authentification des comptes</td></tr>
       <tr><th>Make (Celonis / Integromat)</th><td>Intermédiaire technique utilisé notamment dans le processus de connexion OAuth Gmail.</td></tr>
       <tr><th>Stripe</th><td>Traitement sécurisé des paiements et de la facturation</td></tr>
       <tr><th>OpenAI</th><td>Traitement du langage naturel nécessaire aux fonctionnalités d'intelligence artificielle de Clarity. Le partage des entrées et sorties de l'API avec OpenAI à des fins d'amélioration ou d'entraînement des modèles est désactivé pour Clarity Systems.</td></tr>
       <tr><th>Google (Gmail)</th><td>Envoi d'emails en votre nom, uniquement si vous connectez votre compte Gmail à un agent</td></tr>
+      <tr><th>Render</th><td>Hébergement et exécution du backend de Clarity, notamment pour le traitement technique des requêtes nécessaires à l'envoi d'e-mails via l'API Gmail.</td></tr>
       <tr><th>GitHub Pages</th><td>Hébergement du site et de l'application</td></tr>
     </table>
     <p>Chacun de ces prestataires est susceptible de traiter des données en dehors de l'Union européenne (notamment aux États-Unis), dans le cadre de garanties appropriées (clauses contractuelles types, ou certification au cadre de protection des données UE-États-Unis selon le prestataire).</p>
