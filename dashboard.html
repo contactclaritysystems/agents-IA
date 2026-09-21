@@ -9603,7 +9603,9 @@ body[data-theme="light"]::after {
   flex-shrink: 0;
 }
 
-/* ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─── */
+/* ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (générique : Brief du jour,
+     Mots du jour, Rappels, Rendez-vous — toutes ces popups partagent ces
+     classes) ─── */
 .time-wheel-wrap {
   position: relative;
   display: flex;
@@ -10035,17 +10037,15 @@ body[data-theme="light"]::after {
   </div>
 
   <div class="settings-group" style="margin-top:14px;">
-    <div class="settings-row" style="cursor:default;">
+    <!-- Même patron que Rappels/Rendez-vous ci-dessous : une seule ligne
+         cliquable (valeur = heure si activé, "Off" sinon), qui ouvre une
+         popup où l'on choisit à la fois l'activation et l'heure (voir
+         openNotifyTimeModal/confirmNotifyTime), plutôt qu'un switch séparé
+         + une ligne d'heure distincte. -->
+    <div class="settings-row" id="digest-row" onclick="openNotifyTimeModal('digest')">
       <span class="settings-row-icon settings-row-icon-blue">🔔</span>
       <div class="settings-row-title">Brief du jour</div>
-      <button type="button" class="settings-toggle active" id="digest-toggle-switch" onclick="setDigestEnabled(!isDigestEnabled())" aria-label="Activer le brief du jour">
-        <span class="settings-toggle-knob"></span>
-      </button>
-    </div>
-    <div class="settings-row" id="digest-time-row" onclick="openDigestTimeModal()">
-      <span class="settings-row-icon settings-row-icon-amber">🕐</span>
-      <div class="settings-row-title">Heure d'envoi</div>
-      <span class="settings-row-value" id="digest-time-display">07:30</span>
+      <span class="settings-row-value" id="digest-row-display">07:30</span>
       <span class="settings-row-chevron">›</span>
     </div>
     <div class="settings-row" id="reminder-offset-row" onclick="openNotifyOffsetModal('reminder')">
@@ -10060,20 +10060,10 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="appointment-offset-display">1 h avant</span>
       <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" style="cursor:default;">
+    <div class="settings-row" id="vocab-row" onclick="openNotifyTimeModal('vocab')">
       <span class="settings-row-icon settings-row-icon-yellow">📚</span>
       <div class="settings-row-title">Mots du jour</div>
-      <button type="button" class="settings-toggle active" id="vocab-toggle-switch" onclick="setVocabEnabled(!isVocabEnabled())" aria-label="Activer les mots du jour">
-        <span class="settings-toggle-knob"></span>
-      </button>
-    </div>
-    <!-- Heure propre aux mots du jour (vocab_time), indépendante de
-         digest_time : même patron que "Heure d'envoi" du brief ci-dessus
-         (bandes déroulantes), visible seulement si le switch est ON. -->
-    <div class="settings-row" id="vocab-time-row" onclick="openVocabTimeModal()">
-      <span class="settings-row-icon settings-row-icon-amber">🕐</span>
-      <div class="settings-row-title">Heure d'envoi</div>
-      <span class="settings-row-value" id="vocab-time-display">19:00</span>
+      <span class="settings-row-value" id="vocab-row-display">19:00</span>
       <span class="settings-row-chevron">›</span>
     </div>
     <div style="padding:2px 16px 14px;">
@@ -10081,6 +10071,36 @@ body[data-theme="light"]::after {
         Une petite habitude qui paie : enrichissez votre vocabulaire jour après jour. Chaque jour, 5 mots nouveaux et 2 à revoir. Lire un mot le matin ne suffit pas : le revoir plus tard aide à s'en souvenir. À vous de le glisser dans une phrase dans la journée.
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Popup unique "Activé (heure) / Off" pour Brief du jour ET Mots du
+     jour : même composant que #notify-offset-modal (Rappels/Rendez-vous),
+     seules les options de la liste et la sémantique de la roue changent
+     (heure absolue au lieu d'un délai). -->
+<div id="notify-time-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeNotifyTimeModal()"></div>
+  <div class="mail-choice-box" style="max-width:300px;padding:16px;">
+    <div class="mail-choice-title" id="notify-time-title" style="font-size:16px;margin-bottom:2px;">Brief du jour</div>
+    <div class="mail-choice-subtitle" style="font-size:12px;">Activé, et à quelle heure ?</div>
+
+    <div id="notify-time-mode-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+
+    <div id="notify-time-wheel-wrap" style="display:none;align-items:center;justify-content:center;">
+      <div class="time-wheel-wrap" style="height:150px;margin-top:8px;">
+        <div class="time-wheel-highlight"></div>
+        <div class="time-wheel-col" id="notify-time-wheel-hours" style="height:150px;"></div>
+        <div class="time-wheel-sep">:</div>
+        <div class="time-wheel-col" id="notify-time-wheel-minutes" style="height:150px;"></div>
+      </div>
+    </div>
+
+    <button class="save-btn" type="button" style="width:100%;margin-top:14px;padding:12px;font-size:14px;" onclick="confirmNotifyTime()">
+      Valider
+    </button>
+    <button class="sheet-btn" type="button" onclick="closeNotifyTimeModal()" style="width:100%;justify-content:center;margin-top:8px;padding:9px;">
+      Annuler
+    </button>
   </div>
 </div>
 
@@ -10245,7 +10265,7 @@ body[data-theme="light"]::after {
      lien de test vit maintenant dans cette fiche. -->
 <div id="notify-help-sheet" style="display:none;">
   <div class="mail-choice-backdrop" onclick="closeNotifyHelpSheet()"></div>
-  <div class="mail-choice-box" style="max-width:320px;">
+  <div class="mail-choice-box" style="max-width:320px;text-align:center;">
     <div class="mail-choice-title">Vous ne recevez pas les mails ?</div>
     <div class="mail-choice-subtitle">
       Les notifications (brief, rappels, rendez-vous, mots du jour) arrivent par e-mail.<br><br>
@@ -15623,6 +15643,12 @@ function isVocabEnabled() {
   return vocabEnabled;
 }
 
+// Libellé affiché sur la ligne (comme formatOffsetLabel pour Rappels/RDV
+// plus bas) : l'heure si activé, "Off" sinon.
+function formatOnOffTimeLabel(enabled, time) {
+  return enabled ? time : "Off";
+}
+
 async function loadDigestSettings() {
   if (!currentUser || !currentUser.id) return;
   try {
@@ -15656,37 +15682,13 @@ async function loadDigestSettings() {
 }
 
 function syncDigestUI() {
-  const toggle = document.getElementById("digest-toggle-switch");
-  if (toggle) toggle.classList.toggle("active", digestEnabled);
-
-  const timeDisplay = document.getElementById("digest-time-display");
-  if (timeDisplay) timeDisplay.textContent = digestTime;
-
-  const timeRow = document.getElementById("digest-time-row");
-  if (timeRow) timeRow.style.display = digestEnabled ? "flex" : "none";
-}
-
-async function setDigestEnabled(enabled) {
-  digestEnabled = enabled;
-  syncDigestUI();
-  await saveDigestSettings();
+  const display = document.getElementById("digest-row-display");
+  if (display) display.textContent = formatOnOffTimeLabel(digestEnabled, digestTime);
 }
 
 function syncVocabUI() {
-  const toggle = document.getElementById("vocab-toggle-switch");
-  if (toggle) toggle.classList.toggle("active", vocabEnabled);
-
-  const timeDisplay = document.getElementById("vocab-time-display");
-  if (timeDisplay) timeDisplay.textContent = vocabTime;
-
-  const timeRow = document.getElementById("vocab-time-row");
-  if (timeRow) timeRow.style.display = vocabEnabled ? "flex" : "none";
-}
-
-async function setVocabEnabled(enabled) {
-  vocabEnabled = enabled;
-  syncVocabUI();
-  await saveVocabSettings();
+  const display = document.getElementById("vocab-row-display");
+  if (display) display.textContent = formatOnOffTimeLabel(vocabEnabled, vocabTime);
 }
 
 // POST immédiat et ISOLÉ des mots du jour (pas mélangé aux 4 réglages
@@ -15715,210 +15717,165 @@ async function saveVocabSettings() {
   }
 }
 
-// ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─────
-// Popup avec 2 colonnes qui défilent (heures / minutes, à la minute près) + un
-// bouton "Valider" — au lieu du <input type="time"> natif, moins agréable à
-// manipuler pour ce réglage précis.
-let pendingDigestHour = 7;
-let pendingDigestMinute = 30;
-const digestTimeWheelScrollTimers = {};
+// ─── POPUP UNIQUE "Activé (heure) / Off" — Brief du jour ET Mots du jour ──
+// Même patron que la popup Rappels/Rendez-vous juste en dessous (une seule
+// ligne cliquable, une liste d'options avec coche, une roue si besoin, un
+// bouton Valider) : on choisit l'activation ET l'heure dans la même popup,
+// au lieu d'un switch séparé + une ligne d'heure distincte.
+let notifyTimeKind = null; // "digest" | "vocab"
+let notifyTimeMode = "on"; // "on" | "off"
+let notifyTimeHoursValue = 7;
+let notifyTimeMinutesValue = 30;
+const notifyTimeWheelScrollTimers = {};
 
-function openDigestTimeModal() {
-  const parts = (digestTime || "07:30").split(":");
+const NOTIFY_TIME_MODE_OPTIONS = [
+  { key: "on", label: "Activé" },
+  { key: "off", label: "Off" }
+];
+
+function openNotifyTimeModal(kind) {
+  notifyTimeKind = kind;
+  const enabled = kind === "digest" ? digestEnabled : vocabEnabled;
+  const time = kind === "digest" ? digestTime : vocabTime;
+  const defaultTime = kind === "digest" ? "07:30" : "19:00";
+
+  notifyTimeMode = enabled ? "on" : "off";
+  const parts = (time || defaultTime).split(":");
   const h = parseInt(parts[0], 10);
   const m = parseInt(parts[1], 10);
-  pendingDigestHour = isNaN(h) ? 7 : h;
-  pendingDigestMinute = isNaN(m) ? 30 : m;
+  notifyTimeHoursValue = isNaN(h) ? parseInt(defaultTime.split(":")[0], 10) : h;
+  notifyTimeMinutesValue = isNaN(m) ? 0 : m;
 
-  let modal = document.getElementById("digest-time-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "digest-time-modal";
-    modal.style.display = "none";
-    modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeDigestTimeModal()"></div>
-      <div class="mail-choice-box" style="max-width:300px;">
-        <div class="mail-choice-title">Heure d'envoi</div>
-        <div class="mail-choice-subtitle">Choisissez l'heure du brief quotidien.</div>
+  const title = document.getElementById("notify-time-title");
+  if (title) title.textContent = kind === "digest" ? "Brief du jour" : "Mots du jour";
 
-        <div class="time-wheel-wrap">
-          <div class="time-wheel-highlight"></div>
-          <div class="time-wheel-col" id="time-wheel-hours"></div>
-          <div class="time-wheel-sep">:</div>
-          <div class="time-wheel-col" id="time-wheel-minutes"></div>
-        </div>
+  renderNotifyTimeModeList();
+  renderNotifyTimeWheelIfNeeded();
 
-        <button class="save-btn" type="button" id="digest-time-validate-btn" style="margin-top:16px;">
-          Valider
-        </button>
+  const modal = document.getElementById("notify-time-modal");
+  if (modal) modal.style.display = "flex";
+}
 
-        <button class="sheet-btn" type="button" onclick="closeDigestTimeModal()" style="width:100%;justify-content:center;margin-top:10px;">
-          Annuler
-        </button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById("digest-time-validate-btn").onclick = confirmDigestTimeModal;
+function closeNotifyTimeModal() {
+  const modal = document.getElementById("notify-time-modal");
+  if (modal) modal.style.display = "none";
+  notifyTimeKind = null;
+}
 
-    buildTimeWheelColumn(document.getElementById("time-wheel-hours"), 0, 23, 1, "hour");
-    buildTimeWheelColumn(document.getElementById("time-wheel-minutes"), 0, 59, 1, "minute");
+function renderNotifyTimeModeList() {
+  const container = document.getElementById("notify-time-mode-list");
+  if (!container) return;
+  container.innerHTML = NOTIFY_TIME_MODE_OPTIONS.map(m => `
+    <button type="button" class="notify-offset-mode-row${m.key === notifyTimeMode ? " active" : ""}" onclick="selectNotifyTimeMode('${m.key}')">
+      <span>${m.label}</span>
+      <span class="notify-offset-mode-check">✓</span>
+    </button>
+  `).join("");
+}
+
+function selectNotifyTimeMode(mode) {
+  notifyTimeMode = mode;
+  renderNotifyTimeModeList();
+  renderNotifyTimeWheelIfNeeded();
+}
+
+function renderNotifyTimeWheelIfNeeded() {
+  const wrap = document.getElementById("notify-time-wheel-wrap");
+  const hoursCol = document.getElementById("notify-time-wheel-hours");
+  const minutesCol = document.getElementById("notify-time-wheel-minutes");
+  if (!wrap || !hoursCol || !minutesCol) return;
+
+  if (notifyTimeMode !== "on") {
+    wrap.style.display = "none";
+    return;
   }
 
-  modal.style.display = "flex";
+  wrap.style.display = "flex";
+  buildNotifyTimeWheelColumn(hoursCol, 0, 23, "hours");
+  buildNotifyTimeWheelColumn(minutesCol, 0, 59, "minutes");
 
-  // Le positionnement du scroll a besoin que le modal soit affiché (layout
-  // calculé) pour que les mesures (clientHeight, offsetTop...) soient justes.
   requestAnimationFrame(() => {
-    scrollWheelColumnTo("time-wheel-hours", pendingDigestHour);
-    scrollWheelColumnTo("time-wheel-minutes", pendingDigestMinute);
+    scrollNotifyTimeWheelTo("notify-time-wheel-hours", notifyTimeHoursValue);
+    scrollNotifyTimeWheelTo("notify-time-wheel-minutes", notifyTimeMinutesValue);
   });
 }
 
-function closeDigestTimeModal() {
-  const modal = document.getElementById("digest-time-modal");
-  if (modal) modal.style.display = "none";
-}
-
-function buildTimeWheelColumn(col, min, max, step, kind) {
+function buildNotifyTimeWheelColumn(col, min, max, kind) {
   let html = "";
-  for (let v = min; v <= max; v += step) {
+  for (let v = min; v <= max; v++) {
     html += '<div class="time-wheel-item" data-value="' + v + '">' + String(v).padStart(2, "0") + "</div>";
   }
   col.innerHTML = html;
 
   col.querySelectorAll(".time-wheel-item").forEach(item => {
     item.addEventListener("click", () => {
-      scrollWheelColumnTo(col.id, parseInt(item.dataset.value, 10));
+      scrollNotifyTimeWheelTo(col.id, parseInt(item.dataset.value, 10));
     });
   });
 
-  // Pas de scroll natif "snap end" fiable partout : on détecte la fin du
-  // défilement nous-mêmes (debounce) pour savoir quel item est au centre.
-  col.addEventListener("scroll", () => {
-    clearTimeout(digestTimeWheelScrollTimers[col.id]);
-    digestTimeWheelScrollTimers[col.id] = setTimeout(() => {
-      updateWheelSelection(col, kind);
+  col.onscroll = () => {
+    clearTimeout(notifyTimeWheelScrollTimers[col.id]);
+    notifyTimeWheelScrollTimers[col.id] = setTimeout(() => {
+      updateNotifyTimeWheelSelection(col, kind);
     }, 90);
-  });
+  };
 }
 
-function updateWheelSelection(col, kind) {
+function scrollNotifyTimeWheelTo(colId, value) {
+  const col = document.getElementById(colId);
+  if (!col) return;
+  const item = col.querySelector('.time-wheel-item[data-value="' + value + '"]');
+  if (!item) return;
+  col.scrollTop = item.offsetTop - (col.clientHeight / 2) + (item.clientHeight / 2);
+  col.querySelectorAll(".time-wheel-item").forEach(i => i.classList.remove("selected"));
+  item.classList.add("selected");
+  if (colId === "notify-time-wheel-hours") notifyTimeHoursValue = value;
+  else notifyTimeMinutesValue = value;
+}
+
+function updateNotifyTimeWheelSelection(col, kind) {
   const items = col.querySelectorAll(".time-wheel-item");
   const colRect = col.getBoundingClientRect();
   const centerY = colRect.top + colRect.height / 2;
 
   let closest = null;
   let closestDist = Infinity;
-
   items.forEach(item => {
     const r = item.getBoundingClientRect();
     const itemCenter = r.top + r.height / 2;
     const dist = Math.abs(itemCenter - centerY);
-    if (dist < closestDist) {
-      closestDist = dist;
-      closest = item;
-    }
+    if (dist < closestDist) { closestDist = dist; closest = item; }
     item.classList.remove("selected");
   });
 
   if (closest) {
     closest.classList.add("selected");
     const value = parseInt(closest.dataset.value, 10);
-    if (kind === "hour") pendingDigestHour = value;
-    else if (kind === "minute") pendingDigestMinute = value;
-    else if (kind === "vocab-hour") pendingVocabHour = value;
-    else if (kind === "vocab-minute") pendingVocabMinute = value;
+    if (kind === "hours") notifyTimeHoursValue = value;
+    else notifyTimeMinutesValue = value;
   }
 }
 
-function scrollWheelColumnTo(colId, value) {
-  const col = document.getElementById(colId);
-  if (!col) return;
-  const item = col.querySelector('.time-wheel-item[data-value="' + value + '"]');
-  if (!item) return;
+async function confirmNotifyTime() {
+  const enabled = notifyTimeMode === "on";
+  const hh = String(notifyTimeHoursValue).padStart(2, "0");
+  const mm = String(notifyTimeMinutesValue).padStart(2, "0");
+  const time = hh + ":" + mm;
+  const kind = notifyTimeKind;
 
-  col.scrollTop = item.offsetTop - (col.clientHeight / 2) + (item.clientHeight / 2);
-  col.querySelectorAll(".time-wheel-item").forEach(i => i.classList.remove("selected"));
-  item.classList.add("selected");
-}
+  closeNotifyTimeModal();
 
-// ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Mots du jour) ─────
-// Même composant que le brief (buildTimeWheelColumn/scrollWheelColumnTo
-// partagés, seul updateWheelSelection ci-dessus distingue les kinds), mais
-// heure et sauvegarde propres à vocab_time — jamais mélangées à digestTime.
-let pendingVocabHour = 19;
-let pendingVocabMinute = 0;
-
-function openVocabTimeModal() {
-  const parts = (vocabTime || "19:00").split(":");
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1], 10);
-  pendingVocabHour = isNaN(h) ? 19 : h;
-  pendingVocabMinute = isNaN(m) ? 0 : m;
-
-  let modal = document.getElementById("vocab-time-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "vocab-time-modal";
-    modal.style.display = "none";
-    modal.innerHTML = `
-      <div class="mail-choice-backdrop" onclick="closeVocabTimeModal()"></div>
-      <div class="mail-choice-box" style="max-width:300px;">
-        <div class="mail-choice-title">Heure d'envoi</div>
-        <div class="mail-choice-subtitle">Choisissez l'heure d'envoi des mots du jour.</div>
-
-        <div class="time-wheel-wrap">
-          <div class="time-wheel-highlight"></div>
-          <div class="time-wheel-col" id="vocab-time-wheel-hours"></div>
-          <div class="time-wheel-sep">:</div>
-          <div class="time-wheel-col" id="vocab-time-wheel-minutes"></div>
-        </div>
-
-        <button class="save-btn" type="button" id="vocab-time-validate-btn" style="margin-top:16px;">
-          Valider
-        </button>
-
-        <button class="sheet-btn" type="button" onclick="closeVocabTimeModal()" style="width:100%;justify-content:center;margin-top:10px;">
-          Annuler
-        </button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    document.getElementById("vocab-time-validate-btn").onclick = confirmVocabTimeModal;
-
-    buildTimeWheelColumn(document.getElementById("vocab-time-wheel-hours"), 0, 23, 1, "vocab-hour");
-    buildTimeWheelColumn(document.getElementById("vocab-time-wheel-minutes"), 0, 59, 1, "vocab-minute");
+  if (kind === "digest") {
+    digestEnabled = enabled;
+    digestTime = time;
+    syncDigestUI();
+    await saveDigestSettings();
+  } else if (kind === "vocab") {
+    vocabEnabled = enabled;
+    vocabTime = time;
+    syncVocabUI();
+    await saveVocabSettings();
   }
-
-  modal.style.display = "flex";
-
-  requestAnimationFrame(() => {
-    scrollWheelColumnTo("vocab-time-wheel-hours", pendingVocabHour);
-    scrollWheelColumnTo("vocab-time-wheel-minutes", pendingVocabMinute);
-  });
-}
-
-function closeVocabTimeModal() {
-  const modal = document.getElementById("vocab-time-modal");
-  if (modal) modal.style.display = "none";
-}
-
-async function confirmVocabTimeModal() {
-  const hh = String(pendingVocabHour).padStart(2, "0");
-  const mm = String(pendingVocabMinute).padStart(2, "0");
-  vocabTime = hh + ":" + mm;
-  closeVocabTimeModal();
-  syncVocabUI();
-  await saveVocabSettings();
-}
-
-async function confirmDigestTimeModal() {
-  const hh = String(pendingDigestHour).padStart(2, "0");
-  const mm = String(pendingDigestMinute).padStart(2, "0");
-  digestTime = hh + ":" + mm;
-  closeDigestTimeModal();
-  syncDigestUI();
-  await saveDigestSettings();
 }
 
 // Envoie TOUJOURS les 4 réglages ensemble (brief + rappels + RDV), même
@@ -24236,10 +24193,10 @@ const CLARITY_MODAL_IDS = [
   "quick-planning-modal", "quick-reminder-modal", "reminder-schedule-modal",
   "planning-schedule-modal", "redaction-form-modal",
   "writing-style-editor-modal",
-  "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
+  "first-schedule-notice-modal", "notify-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
-  "rewrite-sheet-modal", "relance-after-mail-modal", "vocab-time-modal",
+  "rewrite-sheet-modal", "relance-after-mail-modal",
   "notify-help-sheet"
 ];
 
