@@ -17104,6 +17104,14 @@ window.confirmRelanceAfterMail = confirmRelanceAfterMail;
 // adresse hors carnet) : on retombe alors sur "ce contact" plutôt que de
 // ne rien afficher — le rappel reste utile même sans nom connu.
 function offerRelanceAfterMail(contactName, subjectText) {
+  // Pendant la visite guidée (démo), le halo qui met en avant chaque étape
+  // n'est pas prévu pour un popup supplémentaire ouvert par-dessus (voir
+  // aussi textHasDualMailRdvIntent plus haut, même souci) : on saute donc
+  // cette proposition de rappel tant que la démo est en cours. Le mail est
+  // quand même bien envoyé — seule cette popup optionnelle est sautée, elle
+  // reste proposée normalement pour tous les envois hors démo.
+  if (onboardingActive) return;
+
   const firstName = firstNameFromContactName(contactName);
   const displayName = firstName || (contactName || "").trim() || "ce contact";
 
