@@ -1282,6 +1282,23 @@ document.querySelectorAll('.rv').forEach(el => io.observe(el));
 const SUPABASE_URL = "https://vduqkeodewrdwsqwokmu.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkdXFrZW9kZXdyZHdzcXdva211Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTg3OTIsImV4cCI6MjA5NDMzNDc5Mn0.yNq6vHgxtDX3WCFBLUmLwp2kDSgMo4D-SBkZVptw3mo";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Filet de sécurité : si une session Supabase existe déjà (connexion Google
+// déjà traitée par le SDK, ou utilisateur déjà connecté qui revient sur
+// l'accueil), on l'envoie directement vers le tableau de bord au lieu de le
+// laisser bloqué sur cette page sans rien voir se passer.
+(function redirectIfAlreadyAuthenticated() {
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      window.location.href = 'dashboard.html';
+    }
+  });
+  supabaseClient.auth.getSession().then(function (result) {
+    var session = result && result.data && result.data.session;
+    if (session && session.user) {
+      window.location.href = 'dashboard.html';
+    }
+  });
+})();
 // Google (Supabase Auth OAuth) : nécessite que le provider Google soit
 // activé côté Supabase (Auth > Providers) avec un Client ID/Secret Google
 // Cloud valides — configuration à faire une fois, pas dans ce fichier.
