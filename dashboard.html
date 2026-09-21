@@ -10031,6 +10031,7 @@ body[data-theme="light"]::after {
   <div class="mobile-subpage-header">
     <button class="sheet-btn" type="button" onclick="closeNotificationsSubpage()">← Retour</button>
     <div class="section-title">Notifications</div>
+    <button type="button" class="settings-row-info-btn" style="margin-left:auto;" onclick="openNotifyHelpSheet()" aria-label="Vous ne recevez pas les mails ?">?</button>
   </div>
 
   <div class="settings-group" style="margin-top:14px;">
@@ -10046,14 +10047,6 @@ body[data-theme="light"]::after {
       <div class="settings-row-title">Heure d'envoi</div>
       <span class="settings-row-value" id="digest-time-display">07:30</span>
       <span class="settings-row-chevron">›</span>
-    </div>
-    <!-- Ligne principale "E-mail test" retirée : un lien discret suffit,
-         pour ne pas donner l'impression qu'il faut cliquer dessus
-         régulièrement. -->
-    <div style="padding:2px 16px 12px;">
-      <button type="button" id="notify-test-link" onclick="sendNotifyTestEmail(this)" style="background:none;border:none;padding:0;font-size:12.5px;color:var(--clarity-text-secondary);text-decoration:underline;cursor:pointer;font-family:inherit;">
-        Recevoir un e-mail test
-      </button>
     </div>
     <div class="settings-row" id="reminder-offset-row" onclick="openNotifyOffsetModal('reminder')">
       <span class="settings-row-icon settings-row-icon-purple">⏰</span>
@@ -10242,6 +10235,29 @@ body[data-theme="light"]::after {
     </div>
     <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeMicPermissionInfoSheet()">
       Compris
+    </button>
+  </div>
+</div>
+
+<!-- Petite fiche d'info pour le bouton "?" à côté du titre "Notifications" :
+     même patron que mic-permission-info-sheet ci-dessus. Remplace l'ancien
+     lien permanent "Recevoir un e-mail test" (retiré de la liste) — le
+     lien de test vit maintenant dans cette fiche. -->
+<div id="notify-help-sheet" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeNotifyHelpSheet()"></div>
+  <div class="mail-choice-box" style="max-width:320px;">
+    <div class="mail-choice-title">Vous ne recevez pas les mails ?</div>
+    <div class="mail-choice-subtitle">
+      Les notifications (brief, rappels, rendez-vous, mots du jour) arrivent par e-mail.<br><br>
+      Vérifiez les indésirables. Ajoutez l'adresse d'envoi à vos contacts pour les recevoir à coup sûr.
+    </div>
+    <div style="text-align:center;margin-top:4px;">
+      <button type="button" id="notify-help-test-link" onclick="sendNotifyTestEmail(this)" style="background:none;border:none;padding:0;font-size:12.5px;color:var(--clarity-text-secondary);text-decoration:underline;cursor:pointer;font-family:inherit;">
+        Envoyer un e-mail test
+      </button>
+    </div>
+    <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="closeNotifyHelpSheet()">
+      Fermer
     </button>
   </div>
 </div>
@@ -19113,6 +19129,16 @@ function renderMicPermissionInfoDefault() {
     '</button>';
 }
 
+function openNotifyHelpSheet() {
+  const modal = document.getElementById("notify-help-sheet");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeNotifyHelpSheet() {
+  const modal = document.getElementById("notify-help-sheet");
+  if (modal) modal.style.display = "none";
+}
+
 function openMicPermissionInfoSheet() {
   renderMicPermissionInfoDefault();
   const modal = document.getElementById("mic-permission-info-sheet");
@@ -24213,7 +24239,8 @@ const CLARITY_MODAL_IDS = [
   "first-schedule-notice-modal", "digest-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
-  "rewrite-sheet-modal", "relance-after-mail-modal"
+  "rewrite-sheet-modal", "relance-after-mail-modal", "vocab-time-modal",
+  "notify-help-sheet"
 ];
 
 let clarityScrollLockY = 0;
