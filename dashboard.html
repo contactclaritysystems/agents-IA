@@ -20564,7 +20564,7 @@ const ONBOARDING_MESSAGES = {
   dictate_mail: {
     title: "Testons tout de suite",
     text: () => {
-      const base = `Dictez ou écrivez : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."`;
+      const base = `Dictez ou écrivez : "Envoie un mail à ${getOnboardingFirstName()} pour lui dire que son devis est prêt."`;
       if (onboardingMicAlreadyGranted) return base;
       return `Votre navigateur va vous demander d'autoriser le micro — acceptez pour continuer.<br><br>${base}`;
     }
@@ -20577,7 +20577,7 @@ const ONBOARDING_MESSAGES = {
     // plus haut dans le fichier) — il n'y a donc plus aucun micro visible à
     // ce moment-là. "Appuyez de nouveau sur le micro" ne voulait plus rien
     // dire à l'écran ; on décrit maintenant ce qui est réellement affiché.
-    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."<br><br>Une fois terminé, appuyez sur le bouton rouge pour arrêter l'enregistrement.`
+    text: () => `Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui dire que son devis est prêt."<br><br>Une fois terminé, appuyez sur le bouton rouge pour arrêter l'enregistrement.`
   },
   confirm_send: {
     title: "Vérifiez et envoyez",
@@ -20585,7 +20585,7 @@ const ONBOARDING_MESSAGES = {
   },
   retry_dictation: {
     title: "Pas de souci, réessayons",
-    text: () => `Cliquez ici puis dictez ou écrivez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} et demande-lui de passer me voir demain."`
+    text: () => `Cliquez ici puis dictez ou écrivez votre message.<br><br>Exemple : "Envoie un mail à ${getOnboardingFirstName()} pour lui dire que son devis est prêt."`
   },
   done: {
     title: () => `Bravo ${getOnboardingFirstName()} ! 🎉`,
