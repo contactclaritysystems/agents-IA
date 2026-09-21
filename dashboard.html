@@ -3494,6 +3494,31 @@ body[data-theme="dark"] #app-loader {
   transition: opacity .3s ease;
 }
 
+/* Bouton "Déconnexion" affiché uniquement pendant la visite guidée
+   (première connexion) : reste toujours cliquable, au-dessus de tout,
+   pour permettre de quitter la démo à tout moment sans être bloqué. */
+#onboarding-demo-logout-btn {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 900010;
+  background: var(--clarity-surface);
+  color: var(--clarity-text);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
+  white-space: nowrap;
+  cursor: pointer;
+  display: none;
+}
+
+#onboarding-demo-logout-btn.active {
+  display: block;
+}
+
 #onboarding-bubble {
   position: fixed;
   z-index: 900002;
@@ -11513,6 +11538,7 @@ body[data-theme="light"]::after {
   <div id="onboarding-mic-tag">🎙️ C'est le micro</div>
   <div id="onboarding-bubble"></div>
   <div id="onboarding-tips"></div>
+  <button type="button" id="onboarding-demo-logout-btn" onclick="confirmLogout()">Déconnexion</button>
 
 <!-- TOAST -->
 <div class="toast" id="toast"><span class="toast-icon">✓</span><span class="toast-text">Configuration enregistrée</span></div>
@@ -20417,6 +20443,8 @@ async function finishOnboardingTips() {
     tipsBox.style.display = "none";
     tipsBox.innerHTML = "";
   }
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
   await markOnboardingComplete();
 }
 
@@ -20869,6 +20897,8 @@ async function startOnboardingIfNeeded() {
 
   onboardingActive = true;
   startOnboardingPositionLoop();
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.add("active");
 
   const gmailConnected = !!localStorage.getItem("gmail_" + currentUser.email);
 
