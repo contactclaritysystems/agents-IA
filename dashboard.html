@@ -10067,6 +10067,20 @@ body[data-theme="light"]::after {
       <span class="settings-row-value" id="appointment-offset-display">1 h avant</span>
       <span class="settings-row-chevron">›</span>
     </div>
+    <div class="settings-row" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-yellow">📚</span>
+      <div class="settings-row-title">Mots du jour</div>
+      <button type="button" class="settings-toggle" id="vocab-toggle-switch" onclick="setVocabEnabled(!isVocabEnabled())" aria-label="Activer les mots du jour">
+        <span class="settings-toggle-knob"></span>
+      </button>
+    </div>
+    <!-- Ligne d'aide sous le switch, pas de 2e sélecteur d'heure : le brief
+         (digest_time réglé plus haut) sert aussi d'heure d'envoi des mots. -->
+    <div style="padding:2px 16px 14px;">
+      <div style="font-size:12px;line-height:1.5;color:var(--clarity-text-secondary);">
+        Chaque jour, 5 mots nouveaux et 2 à revoir. Lire un mot le matin ne suffit pas : le revoir plus tard aide à s'en souvenir. À vous de le glisser dans une phrase dans la journée.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -10716,6 +10730,15 @@ body[data-theme="light"]::after {
     <div class="agent-desc">Questions et réponses</div>
   </div>
   <div class="agent-status ok">Historique</div>
+</div>
+
+<div class="agent-card history-folder-card" onclick="loadVocabHistory()">
+  <div class="history-folder-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg></div>
+  <div>
+    <div class="agent-name">Mots</div>
+    <div class="agent-desc">Mots du jour reçus</div>
+  </div>
+  <div class="agent-status ok">Voir</div>
 </div>
   </div>
 
@@ -11540,6 +11563,7 @@ const PLANNING_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/agent/pl
 const RELANCE_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/agent/relance";
 const NOTIFY_TEST_WEBHOOK_URL = "https://clarity-backend-me14.onrender.com/notify/test";
 const NOTIFY_SETTINGS_URL = "https://clarity-backend-me14.onrender.com/notify/settings";
+const VOCAB_URL = "https://clarity-backend-me14.onrender.com/vocab";
 // Styles d'écriture (formulaire "message" de Rédaction) : lister/créer un
 // style ("Cousin", "Patron"...) utilisé pour adapter le ton du message.
 const STYLES_API_URL = "https://clarity-backend-me14.onrender.com/styles";
@@ -15559,9 +15583,16 @@ let digestTime = "07:30";
 // (le matin avec le brief) | "off". Défauts confirmés par Grok : "0"/"60".
 let reminderOffset = "0";
 let appointmentOffset = "60";
+// Mots du jour (vocab_enabled) : OFF par défaut, pas d'heure dédiée — envoyé
+// avec le digest_time déjà réglé ci-dessus (pas de 2e sélecteur d'heure).
+let vocabEnabled = false;
 
 function isDigestEnabled() {
   return digestEnabled;
+}
+
+function isVocabEnabled() {
+  return vocabEnabled;
 }
 
 async function loadDigestSettings() {
@@ -15582,12 +15613,16 @@ async function loadDigestSettings() {
       digestTime = s.digest_time || "07:30";
       reminderOffset = s.reminder_offset || "0";
       appointmentOffset = s.appointment_offset || "60";
+      // Mots du jour : OFF par défaut si jamais réglé côté serveur (contrairement
+      // au digest, qui est ON par défaut).
+      vocabEnabled = s.vocab_enabled === true;
     }
   } catch (e) {
     // Pas de réseau : on garde les défauts plutôt que de bloquer le
     // chargement de l'app pour un réglage secondaire.
   }
   syncDigestUI();
+  syncVocabUI();
   syncNotifyOffsetsUI();
 }
 
@@ -15605,6 +15640,17 @@ function syncDigestUI() {
 async function setDigestEnabled(enabled) {
   digestEnabled = enabled;
   syncDigestUI();
+  await saveDigestSettings();
+}
+
+function syncVocabUI() {
+  const toggle = document.getElementById("vocab-toggle-switch");
+  if (toggle) toggle.classList.toggle("active", vocabEnabled);
+}
+
+async function setVocabEnabled(enabled) {
+  vocabEnabled = enabled;
+  syncVocabUI();
   await saveDigestSettings();
 }
 
@@ -15742,9 +15788,9 @@ async function confirmDigestTimeModal() {
   await saveDigestSettings();
 }
 
-// Envoie TOUJOURS les 4 réglages ensemble (brief + rappels + RDV), même
-// quand un seul vient de changer : évite qu'un POST partiel n'écrase les
-// autres côté backend si /notify/settings remplace la ligne entière plutôt
+// Envoie TOUJOURS les 5 réglages ensemble (brief + rappels + RDV + mots du
+// jour), même quand un seul vient de changer : évite qu'un POST partiel
+// n'écrase les autres côté backend si /notify/settings remplace la ligne entière plutôt
 // que de la fusionner.
 async function saveDigestSettings() {
   if (!currentUser || !currentUser.id) return;
@@ -15758,7 +15804,8 @@ async function saveDigestSettings() {
         digest_enabled: digestEnabled,
         digest_time: digestTime,
         reminder_offset: reminderOffset,
-        appointment_offset: appointmentOffset
+        appointment_offset: appointmentOffset,
+        vocab_enabled: vocabEnabled
       })
     });
     const data = await response.json().catch(() => ({}));
@@ -30471,6 +30518,112 @@ if (detail) {
     </div>
   `;
 }).join("");
+}
+
+// ─── Historique > Mots (dossier "Mots du jour") ─────────────────────────
+// UI seulement : pas d'action rapide associée, ne compte pas comme une
+// action. Affichage à plat groupé par date d'envoi (sent_on), sans clic
+// vers un détail (contrairement aux Rendez-vous/Rappels) — tout le contenu
+// utile (mot, définition, synonymes, exemple) tient déjà sur la carte.
+async function loadVocabHistory() {
+  if (!currentUser) return;
+
+  const list = document.getElementById("history-list");
+  if (!list) return;
+
+  window.currentHistorySubPage = "vocab-list";
+
+  const title = document.getElementById("history-detail-title");
+  const detail = document.getElementById("history-detail");
+  const folders = document.getElementById("history-folders");
+
+  if (title) title.textContent = "Mots";
+  if (folders) folders.classList.add("is-hidden");
+  if (detail) {
+    detail.style.display = "block";
+    detail.classList.add("open");
+  }
+
+  list.classList.remove("planning-folder-grid");
+  list.innerHTML = `<div class="info-box">Chargement des mots...</div>`;
+
+  try {
+    const response = await fetch(
+      VOCAB_URL + "?user_id=" + encodeURIComponent(currentUser.id)
+    );
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+      list.innerHTML = `<div class="info-box">Impossible de charger les mots.</div>`;
+      return;
+    }
+
+    const words = data.words || [];
+
+    if (!words.length) {
+      list.innerHTML = `<div class="info-box">Aucun mot pour le moment.</div>`;
+      return;
+    }
+
+    // Regroupement par date d'envoi (sent_on), dates les plus récentes en
+    // premier ; l'ordre des mots au sein d'une même date est conservé tel
+    // que renvoyé par le backend.
+    const groups = [];
+    const groupsByDate = {};
+    words.forEach((w) => {
+      const key = w.sent_on || "";
+      if (!groupsByDate[key]) {
+        groupsByDate[key] = { date: key, items: [] };
+        groups.push(groupsByDate[key]);
+      }
+      groupsByDate[key].items.push(w);
+    });
+    groups.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+
+    list.innerHTML = groups.map((group) => {
+      const heading = group.date ? formatVocabDateHeading(group.date) : "Date inconnue";
+      const cards = group.items.map((w) => {
+        const synonymsText = Array.isArray(w.synonyms)
+          ? w.synonyms.join(", ")
+          : (w.synonyms || "");
+
+        return `
+          <div class="agent-card" style="cursor:default;">
+            <div style="font-weight:700;font-size:14.5px;margin-bottom:4px;">
+              ${escapeHtmlForPrint(w.word || "")}
+            </div>
+            <div class="agent-desc" style="margin-bottom:6px;">
+              ${escapeHtmlForPrint(w.definition || "")}
+            </div>
+            ${synonymsText ? `
+              <div class="agent-desc" style="margin-bottom:4px;">
+                <strong>Synonymes :</strong> ${escapeHtmlForPrint(synonymsText)}
+              </div>
+            ` : ""}
+            ${w.example ? `
+              <div class="agent-desc" style="font-style:italic;">
+                « ${escapeHtmlForPrint(w.example)} »
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="section-title" style="margin-bottom:10px;margin-top:14px;">${heading}</div>
+        ${cards}
+      `;
+    }).join("");
+  } catch (e) {
+    list.innerHTML = `<div class="info-box">Erreur réseau, impossible de charger les mots.</div>`;
+  }
+}
+
+function formatVocabDateHeading(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return dateStr;
+  let label = d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
   function openPastFollowUpDetail(index) {
