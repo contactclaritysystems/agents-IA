@@ -11641,9 +11641,13 @@ if (lbl) lbl.textContent = "Non connecté";
 // d'OAuth sans que Gmail soit connecté, une carte discrète propose de le
 // prévenir dès que l'app sera validée par Google (waitlist via
 // /feature-request, endpoint déjà utilisé par "Une idée, un besoin ?").
+// Google a validé l'app Clarity (vérification OAuth Gmail passée) : l'écran
+// "application non vérifiée" ne s'affiche plus chez Google, donc cette
+// popup d'avertissement n'a plus de raison d'être montrée avant d'y aller.
+// On saute directement à la connexion (voir confirmGmailOAuthConsent), sans
+// supprimer la popup/son HTML au cas où elle redevienne utile plus tard.
 function openGmailConnectConsent() {
-  const modal = document.getElementById("gmail-connect-consent-modal");
-  if (modal) modal.style.display = "block";
+  confirmGmailOAuthConsent();
 }
 
 function closeGmailConnectConsent() {
