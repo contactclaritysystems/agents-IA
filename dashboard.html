@@ -20012,8 +20012,24 @@ function stopOnboardingPositionLoop() {
   }
 }
 
+// Prénom de l'utilisateur, quelle que soit la façon dont il s'est inscrit :
+// - Inscription email/mot de passe : Supabase stocke ce qu'on lui envoie
+//   nous-mêmes dans user_metadata.prenom (voir signUp() côté index.html).
+// - Connexion Google (OAuth) : ce champ n'existe pas, c'est Google qui
+//   fournit les infos, sous forme de given_name / full_name / name dans
+//   user_metadata. On les essaie donc aussi, dans cet ordre, avant de
+//   retomber sur une valeur par défaut.
+function getUserFirstName(user) {
+  const meta = user?.user_metadata || {};
+  const direct = meta.prenom || meta.firstname || meta.given_name;
+  if (direct) return direct;
+  const full = meta.full_name || meta.name;
+  if (full) return String(full).trim().split(/\s+/)[0];
+  return "";
+}
+
 function getOnboardingFirstName() {
-  return currentUser?.user_metadata?.prenom || "vous";
+  return getUserFirstName(currentUser) || "vous";
 }
 
   async function checkMicPermissionGranted() {
@@ -21288,7 +21304,7 @@ async function handleUser(user) {
   console.log("=== HANDLE USER ===");
   currentUser = user;
 
-  const prenom = user.user_metadata?.prenom || "Client";
+  const prenom = getUserFirstName(user) || "Client";
   const userNameEl = document.querySelector(".user-name");
   const userAvatarEl = document.querySelector(".user-avatar");
   if (userNameEl) userNameEl.textContent = prenom;
@@ -23351,7 +23367,7 @@ function unlockProfileFields() {
   const existing = await checkResp.json();
   if (existing && existing.length > 0) return;
 
-  const prenom = currentUser.user_metadata?.prenom || "Client";
+  const prenom = getUserFirstName(currentUser) || "Client";
 
   await fetch(SUPABASE_URL + "/rest/v1/contacts", {
     method: "POST",
@@ -23407,10 +23423,7 @@ async function loadProfile() {
 
     if (!Array.isArray(data) || data.length === 0 || !data[0].config) {
 
-  const firstname =
-    currentUser.user_metadata?.firstname ||
-    currentUser.user_metadata?.prenom ||
-    "";
+  const firstname = getUserFirstName(currentUser);
 
   await supabaseClient
     .from("agent_configs")
@@ -32265,9 +32278,9 @@ return true;
   logout();
 }
 
-  function logout() {
+  async function logout() {
   try {
-    supabaseClient.auth.signOut();
+    await supabaseClient.auth.signOut();
   } catch (e) {
     console.error("Erreur logout:", e);
   }
