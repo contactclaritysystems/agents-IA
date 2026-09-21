@@ -10,7 +10,7 @@
    chaque actualisation, saute directement à cette section — ce n'est pas
    une restauration de scroll, c'est le comportement normal d'une ancre.
    On retire donc le # de l'URL dès le chargement pour repartir en haut. */
-if (window.location.hash) {
+if (window.location.hash && !/access_token|error_description|refresh_token/.test(window.location.hash)) {
   history.replaceState(null, '', window.location.pathname + window.location.search);
 }
 if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
