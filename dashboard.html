@@ -10074,8 +10074,15 @@ body[data-theme="light"]::after {
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
-    <!-- Ligne d'aide sous le switch, pas de 2e sélecteur d'heure : le brief
-         (digest_time réglé plus haut) sert aussi d'heure d'envoi des mots. -->
+    <!-- Heure propre aux mots du jour (vocab_time), indépendante de
+         digest_time : même patron que "Heure d'envoi" du brief ci-dessus
+         (bandes déroulantes), visible seulement si le switch est ON. -->
+    <div class="settings-row" id="vocab-time-row" onclick="openVocabTimeModal()">
+      <span class="settings-row-icon settings-row-icon-amber">🕐</span>
+      <div class="settings-row-title">Heure d'envoi</div>
+      <span class="settings-row-value" id="vocab-time-display">19:00</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
     <div style="padding:2px 16px 14px;">
       <div style="font-size:12px;line-height:1.5;color:var(--clarity-text-secondary);">
         Une petite habitude qui paie : enrichissez votre vocabulaire jour après jour. Chaque jour, 5 mots nouveaux et 2 à revoir. Lire un mot le matin ne suffit pas : le revoir plus tard aide à s'en souvenir. À vous de le glisser dans une phrase dans la journée.
@@ -15587,10 +15594,10 @@ let digestTime = "07:30";
 // (le matin avec le brief) | "off". Défauts confirmés par Grok : "0"/"60".
 let reminderOffset = "0";
 let appointmentOffset = "60";
-// Mots du jour (vocab_enabled) : ON par défaut, comme le brief du jour, pas
-// d'heure dédiée — envoyé avec le digest_time déjà réglé ci-dessus (pas de
-// 2e sélecteur d'heure).
+// Mots du jour (vocab_enabled) : ON par défaut, comme le brief du jour, mais
+// avec sa propre heure d'envoi (vocab_time) indépendante de digest_time.
 let vocabEnabled = true;
+let vocabTime = "19:00";
 
 function isDigestEnabled() {
   return digestEnabled;
@@ -15621,6 +15628,7 @@ async function loadDigestSettings() {
       // Mots du jour : ON par défaut si jamais réglé côté serveur, comme le
       // digest (absent côté serveur -> true, seul un false explicite désactive).
       vocabEnabled = s.vocab_enabled !== false;
+      vocabTime = s.vocab_time || "19:00";
     }
   } catch (e) {
     // Pas de réseau : on garde les défauts plutôt que de bloquer le
@@ -15651,12 +15659,44 @@ async function setDigestEnabled(enabled) {
 function syncVocabUI() {
   const toggle = document.getElementById("vocab-toggle-switch");
   if (toggle) toggle.classList.toggle("active", vocabEnabled);
+
+  const timeDisplay = document.getElementById("vocab-time-display");
+  if (timeDisplay) timeDisplay.textContent = vocabTime;
+
+  const timeRow = document.getElementById("vocab-time-row");
+  if (timeRow) timeRow.style.display = vocabEnabled ? "flex" : "none";
 }
 
 async function setVocabEnabled(enabled) {
   vocabEnabled = enabled;
   syncVocabUI();
-  await saveDigestSettings();
+  await saveVocabSettings();
+}
+
+// POST immédiat et ISOLÉ des mots du jour (pas mélangé aux 4 réglages
+// brief/rappels/RDV de saveDigestSettings ci-dessous) : { user_id,
+// user_email, vocab_enabled, vocab_time } uniquement, à chaque changement du
+// switch ou de l'heure.
+async function saveVocabSettings() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const response = await fetch(NOTIFY_SETTINGS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        user_email: currentUser.email,
+        vocab_enabled: vocabEnabled,
+        vocab_time: vocabTime
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.success === false) {
+      showToast(data.message || "Erreur sauvegarde des mots du jour", "error");
+    }
+  } catch (e) {
+    showToast("Erreur réseau", "error");
+  }
 }
 
 // ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Brief du jour) ─────
@@ -15769,7 +15809,9 @@ function updateWheelSelection(col, kind) {
     closest.classList.add("selected");
     const value = parseInt(closest.dataset.value, 10);
     if (kind === "hour") pendingDigestHour = value;
-    else pendingDigestMinute = value;
+    else if (kind === "minute") pendingDigestMinute = value;
+    else if (kind === "vocab-hour") pendingVocabHour = value;
+    else if (kind === "vocab-minute") pendingVocabMinute = value;
   }
 }
 
@@ -15784,6 +15826,76 @@ function scrollWheelColumnTo(colId, value) {
   item.classList.add("selected");
 }
 
+// ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (Mots du jour) ─────
+// Même composant que le brief (buildTimeWheelColumn/scrollWheelColumnTo
+// partagés, seul updateWheelSelection ci-dessus distingue les kinds), mais
+// heure et sauvegarde propres à vocab_time — jamais mélangées à digestTime.
+let pendingVocabHour = 19;
+let pendingVocabMinute = 0;
+
+function openVocabTimeModal() {
+  const parts = (vocabTime || "19:00").split(":");
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  pendingVocabHour = isNaN(h) ? 19 : h;
+  pendingVocabMinute = isNaN(m) ? 0 : m;
+
+  let modal = document.getElementById("vocab-time-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "vocab-time-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closeVocabTimeModal()"></div>
+      <div class="mail-choice-box" style="max-width:300px;">
+        <div class="mail-choice-title">Heure d'envoi</div>
+        <div class="mail-choice-subtitle">Choisissez l'heure d'envoi des mots du jour.</div>
+
+        <div class="time-wheel-wrap">
+          <div class="time-wheel-highlight"></div>
+          <div class="time-wheel-col" id="vocab-time-wheel-hours"></div>
+          <div class="time-wheel-sep">:</div>
+          <div class="time-wheel-col" id="vocab-time-wheel-minutes"></div>
+        </div>
+
+        <button class="save-btn" type="button" id="vocab-time-validate-btn" style="margin-top:16px;">
+          Valider
+        </button>
+
+        <button class="sheet-btn" type="button" onclick="closeVocabTimeModal()" style="width:100%;justify-content:center;margin-top:10px;">
+          Annuler
+        </button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("vocab-time-validate-btn").onclick = confirmVocabTimeModal;
+
+    buildTimeWheelColumn(document.getElementById("vocab-time-wheel-hours"), 0, 23, 1, "vocab-hour");
+    buildTimeWheelColumn(document.getElementById("vocab-time-wheel-minutes"), 0, 59, 1, "vocab-minute");
+  }
+
+  modal.style.display = "flex";
+
+  requestAnimationFrame(() => {
+    scrollWheelColumnTo("vocab-time-wheel-hours", pendingVocabHour);
+    scrollWheelColumnTo("vocab-time-wheel-minutes", pendingVocabMinute);
+  });
+}
+
+function closeVocabTimeModal() {
+  const modal = document.getElementById("vocab-time-modal");
+  if (modal) modal.style.display = "none";
+}
+
+async function confirmVocabTimeModal() {
+  const hh = String(pendingVocabHour).padStart(2, "0");
+  const mm = String(pendingVocabMinute).padStart(2, "0");
+  vocabTime = hh + ":" + mm;
+  closeVocabTimeModal();
+  syncVocabUI();
+  await saveVocabSettings();
+}
+
 async function confirmDigestTimeModal() {
   const hh = String(pendingDigestHour).padStart(2, "0");
   const mm = String(pendingDigestMinute).padStart(2, "0");
@@ -15793,10 +15905,12 @@ async function confirmDigestTimeModal() {
   await saveDigestSettings();
 }
 
-// Envoie TOUJOURS les 5 réglages ensemble (brief + rappels + RDV + mots du
-// jour), même quand un seul vient de changer : évite qu'un POST partiel
-// n'écrase les autres côté backend si /notify/settings remplace la ligne entière plutôt
-// que de la fusionner.
+// Envoie TOUJOURS les 4 réglages ensemble (brief + rappels + RDV), même
+// quand un seul vient de changer : évite qu'un POST partiel n'écrase les
+// autres côté backend si /notify/settings remplace la ligne entière plutôt
+// que de la fusionner. Les mots du jour (vocab_enabled/vocab_time) ont leur
+// propre sauvegarde isolée, voir saveVocabSettings ci-dessus : ils ne
+// transitent jamais par ce POST-ci.
 async function saveDigestSettings() {
   if (!currentUser || !currentUser.id) return;
   try {
@@ -15809,8 +15923,7 @@ async function saveDigestSettings() {
         digest_enabled: digestEnabled,
         digest_time: digestTime,
         reminder_offset: reminderOffset,
-        appointment_offset: appointmentOffset,
-        vocab_enabled: vocabEnabled
+        appointment_offset: appointmentOffset
       })
     });
     const data = await response.json().catch(() => ({}));
