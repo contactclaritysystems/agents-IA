@@ -10070,7 +10070,7 @@ body[data-theme="light"]::after {
     <div class="settings-row" style="cursor:default;">
       <span class="settings-row-icon settings-row-icon-yellow">📚</span>
       <div class="settings-row-title">Mots du jour</div>
-      <button type="button" class="settings-toggle" id="vocab-toggle-switch" onclick="setVocabEnabled(!isVocabEnabled())" aria-label="Activer les mots du jour">
+      <button type="button" class="settings-toggle active" id="vocab-toggle-switch" onclick="setVocabEnabled(!isVocabEnabled())" aria-label="Activer les mots du jour">
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
@@ -10078,7 +10078,7 @@ body[data-theme="light"]::after {
          (digest_time réglé plus haut) sert aussi d'heure d'envoi des mots. -->
     <div style="padding:2px 16px 14px;">
       <div style="font-size:12px;line-height:1.5;color:var(--clarity-text-secondary);">
-        Chaque jour, 5 mots nouveaux et 2 à revoir. Lire un mot le matin ne suffit pas : le revoir plus tard aide à s'en souvenir. À vous de le glisser dans une phrase dans la journée.
+        Une petite habitude qui paie : enrichissez votre vocabulaire jour après jour. Chaque jour, 5 mots nouveaux et 2 à revoir. Lire un mot le matin ne suffit pas : le revoir plus tard aide à s'en souvenir. À vous de le glisser dans une phrase dans la journée.
       </div>
     </div>
   </div>
@@ -15587,9 +15587,10 @@ let digestTime = "07:30";
 // (le matin avec le brief) | "off". Défauts confirmés par Grok : "0"/"60".
 let reminderOffset = "0";
 let appointmentOffset = "60";
-// Mots du jour (vocab_enabled) : OFF par défaut, pas d'heure dédiée — envoyé
-// avec le digest_time déjà réglé ci-dessus (pas de 2e sélecteur d'heure).
-let vocabEnabled = false;
+// Mots du jour (vocab_enabled) : ON par défaut, comme le brief du jour, pas
+// d'heure dédiée — envoyé avec le digest_time déjà réglé ci-dessus (pas de
+// 2e sélecteur d'heure).
+let vocabEnabled = true;
 
 function isDigestEnabled() {
   return digestEnabled;
@@ -15617,9 +15618,9 @@ async function loadDigestSettings() {
       digestTime = s.digest_time || "07:30";
       reminderOffset = s.reminder_offset || "0";
       appointmentOffset = s.appointment_offset || "60";
-      // Mots du jour : OFF par défaut si jamais réglé côté serveur (contrairement
-      // au digest, qui est ON par défaut).
-      vocabEnabled = s.vocab_enabled === true;
+      // Mots du jour : ON par défaut si jamais réglé côté serveur, comme le
+      // digest (absent côté serveur -> true, seul un false explicite désactive).
+      vocabEnabled = s.vocab_enabled !== false;
     }
   } catch (e) {
     // Pas de réseau : on garde les défauts plutôt que de bloquer le
