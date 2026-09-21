@@ -21355,6 +21355,7 @@ async function handleUser(user) {
   await loadProfile();
   await ensureAssistanceContact();
   await ensureSelfContact();
+  await ensureSubscription();
   await loadActionCounter();
   await loadSubscription();
   await loadDigestSettings();
@@ -32347,6 +32348,53 @@ return true;
 
     console.error('Erreur incrementActions:', e);
 
+  }
+}
+
+// Filet de sécurité : la ligne "subscriptions" (essai 7 jours / 100 actions)
+// n'est aujourd'hui créée QUE par l'inscription email/mot de passe
+// classique (voir signUp() dans index.html — un INSERT direct fait là-bas).
+// Un compte créé via "Continuer avec Google" ne passe jamais par ce chemin
+// et se retrouvait donc sans abonnement : canUseAgents() affichait alors
+// "Abonnement introuvable" et bloquait silencieusement chaque demande
+// tapée/dictée (le champ se vide, mais rien ne se passe ensuite). On
+// vérifie donc ici, à chaque connexion, qu'une ligne existe bien pour cet
+// utilisateur, et on la crée sinon — idempotent, comme ensureSelfContact().
+async function ensureSubscription() {
+  if (!currentUser) return;
+
+  const { data, error } = await supabaseClient
+    .from('subscriptions')
+    .select('user_id')
+    .eq('user_id', currentUser.email)
+    .limit(1);
+
+  if (error) {
+    console.error("Erreur ensureSubscription (lecture):", error);
+    return;
+  }
+
+  if (data && data.length > 0) return;
+
+  const { error: insertError } = await supabaseClient
+    .from('subscriptions')
+    .insert([
+      {
+        user_id: currentUser.email,
+        plan: 'trial',
+        subscription_status: 'trial',
+        actions_used: 0,
+        // Essai aligné sur le plan Starter (100 actions), même valeur que
+        // dans signUp() (index.html).
+        actions_limit: 100,
+        extra_actions: 0,
+        trial_start: new Date(),
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      }
+    ]);
+
+  if (insertError) {
+    console.error("Erreur ensureSubscription (création):", insertError);
   }
 }
 
