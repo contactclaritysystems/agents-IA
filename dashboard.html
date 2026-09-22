@@ -21637,14 +21637,25 @@ function targetedDemoMailPreviewWalkthrough() {
 
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
-        targetedDemoShowHalo(
-          ['#mail-preview-modal .save-btn'],
-          "Aperçu du mail",
-          "Relisez l'aperçu, puis cliquez sur Envoyer — ce mail part pour de vrai."
-        );
+        targetedDemoShowSendHalo();
       }, 2600);
     }, 2600);
   }, 2600);
+}
+
+// Dernière étape de l'aperçu mail (halo sur "Envoyer") — extraite dans sa
+// propre fonction pour pouvoir être rejouée directement après une
+// reconnexion Gmail/Outlook (voir targetedDemoResumeAfterReconnect plus
+// bas), sans rejouer tout targetedDemoMailPreviewWalkthrough depuis le
+// début (Destinataire/Objet/Message ont déjà été montrés avant l'erreur de
+// connexion). Demande explicite : la bulle ne doit plus dire "ce mail part
+// pour de vrai".
+function targetedDemoShowSendHalo() {
+  targetedDemoShowHalo(
+    ['#mail-preview-modal .save-btn'],
+    "Aperçu du mail",
+    "Relisez l'aperçu, puis cliquez sur Envoyer."
+  );
 }
 
 // RDV : demande explicite — on ne montre plus le raccourci "Rendez-vous" ni
@@ -26323,6 +26334,39 @@ async function saveActionLog(agent, action, status) {
     return "clarity_mail_draft_" + (currentUser && currentUser.email ? currentUser.email : "anonymous");
   }
 
+  // ─── Reprise de la démo ciblée après reconnexion Gmail/Outlook ─────────
+  // Voir le commentaire dans reconnectMailProvider() : la redirection OAuth
+  // efface targetedDemoActive/targetedDemoFlow. On les persiste ici et on
+  // les restaure une fois de retour, au même endroit et juste après que
+  // restoreMailDraftIfAny() a rouvert l'aperçu du mail.
+  const TARGETED_DEMO_RESUME_MAX_AGE_MS = 30 * 60 * 1000; // 30 min : le temps d'un aller-retour OAuth, pas plus
+
+  function targetedDemoResumeStorageKey() {
+    return "clarity_demo_resume_" + (currentUser && currentUser.email ? currentUser.email : "anonymous");
+  }
+
+  function targetedDemoResumeAfterReconnect() {
+    try {
+      const key = targetedDemoResumeStorageKey();
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      localStorage.removeItem(key);
+
+      const saved = JSON.parse(raw);
+      if (!saved || saved.flow !== "mail") return;
+      if (!saved.savedAt || Date.now() - saved.savedAt > TARGETED_DEMO_RESUME_MAX_AGE_MS) return;
+
+      // Le contact/l'objet/le message ont déjà été montrés avant l'erreur de
+      // connexion — on ne rejoue pas tout targetedDemoMailPreviewWalkthrough,
+      // juste le dernier halo (Envoyer), une fois l'aperçu bien affiché.
+      targetedDemoActive = true;
+      targetedDemoFlow = "mail";
+      if (typeof targetedDemoShowSendHalo === "function") {
+        targetedDemoShowSendHalo();
+      }
+    } catch (e) {}
+  }
+
   function saveMailDraftToStorage() {
     if (!currentPreparedMail) return;
     try {
@@ -26411,6 +26455,14 @@ async function saveActionLog(agent, action, status) {
       // — sans effet si le tour n'est pas actif ou pas à une étape de dictée
       // (onboardingOnEvent gère déjà ces cas).
       if (modal) onboardingOnEvent("mail_prepared");
+
+      // Même bug, même correctif, pour la démo ciblée (voir
+      // targetedDemoResumeAfterReconnect et le commentaire dans
+      // reconnectMailProvider) : reprend le halo "Envoyer" si la démo
+      // était en cours au moment de la reconnexion Gmail/Outlook.
+      if (modal && typeof targetedDemoResumeAfterReconnect === "function") {
+        targetedDemoResumeAfterReconnect();
+      }
 
       // Pièces jointes : jamais persistées dans le brouillon (voir
       // mailAttachments) — impossible à restaurer après un rechargement
@@ -26563,6 +26615,24 @@ async function saveActionLog(agent, action, status) {
     // rouvre automatiquement le même aperçu, To/Cc/Objet/Message inchangés.
     syncPreparedMailFromFields();
     saveMailDraftToStorage();
+
+    // Bug remonté : pendant la démo ciblée (bouton "Mail"), si la connexion
+    // Gmail/Outlook est expirée au moment d'envoyer, le bandeau bloquait
+    // Envoyer sans aucune issue — reconnecter faisait quitter la page
+    // (redirection OAuth), ce qui efface targetedDemoActive/targetedDemoFlow
+    // (simples variables JS) et la démo restait bloquée/perdue au retour. On
+    // sauvegarde donc ici l'état de la démo AVANT de partir, uniquement pour
+    // Gmail/Outlook (seuls chemins qui rechargent la page en entier — SMTP
+    // reste sur place, voir plus bas). Lu et consommé par
+    // targetedDemoResumeAfterReconnect(), appelée depuis restoreMailDraftIfAny().
+    if ((provider === "microsoft" || provider === "google") && typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail") {
+      try {
+        localStorage.setItem(
+          targetedDemoResumeStorageKey(),
+          JSON.stringify({ flow: "mail", savedAt: Date.now() })
+        );
+      } catch (e) {}
+    }
 
     if (provider === "microsoft") {
       connectOutlook();
