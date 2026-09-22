@@ -20729,7 +20729,23 @@ function positionOnboardingSpotlight(target) {
   const x = rect.left + offsetX - pad;
   const y = rect.top + offsetY - pad;
   const w = rect.width + pad * 2;
-  const h = rect.height + pad * 2;
+  let h = rect.height + pad * 2;
+
+  // Le halo ne doit jamais chevaucher la barre de menu du bas (demande
+  // explicite : il doit rester "entre la bulle d'explication et la barre
+  // du menu") — utile notamment pour les boutons des "Actions rapides",
+  // très proches de cette barre. On raccourcit le bas du halo si besoin
+  // pour qu'il s'arrête juste au-dessus, plutôt que de la recouvrir.
+  const bottomNavEl = document.getElementById("bottomNav");
+  if (bottomNavEl) {
+    const navRect = bottomNavEl.getBoundingClientRect();
+    if (navRect.width > 0 && navRect.height > 0) {
+      const navLimit = navRect.top + offsetY - 6;
+      if (y + h > navLimit) {
+        h = Math.max(navLimit - y, 0);
+      }
+    }
+  }
 
   overlay.style.clipPath =
     "polygon(0% 0%, 0% 100%, " + x + "px 100%, " + x + "px " + y + "px, " +
@@ -21195,7 +21211,10 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
     );
     return;
   }
-  if (attempts > 60) { targetedDemoStop(); return; }
+  // Pas d'abandon automatique : la démo ne doit jamais disparaître toute
+  // seule si l'utilisateur met du temps à agir (demande explicite — seule
+  // la déconnexion ou la fin de la démo y mettent fin), on continue donc
+  // d'attendre indéfiniment.
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForMailPreview(attempts + 1), 300);
 }
 
@@ -21243,7 +21262,7 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
     );
     return;
   }
-  if (attempts > 200) { targetedDemoStop(); return; }
+  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRdvModalOpen(attempts + 1), 300);
 }
 
@@ -21279,7 +21298,7 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
     );
     return;
   }
-  if (attempts > 200) { targetedDemoStop(); return; }
+  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRappelModalOpen(attempts + 1), 300);
 }
 
@@ -21314,7 +21333,7 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
     targetedDemoWaitForCrResult();
     return;
   }
-  if (attempts > 200) { targetedDemoStop(); return; }
+  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
@@ -21326,7 +21345,7 @@ function targetedDemoWaitForCrResult(attempts = 0) {
     targetedDemoOnEvent("cr_created");
     return;
   }
-  if (attempts > 100) { targetedDemoStop(); return; }
+  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 300);
 }
 
