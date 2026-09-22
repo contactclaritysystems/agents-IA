@@ -19944,6 +19944,11 @@ let targetedDemoWaitTimeout = null;
 // targetedDemoShowHalo()/targetedDemoStop() aient toujours quelque chose de
 // propre à nettoyer si un minuteur résiduel traînait encore.
 let targetedDemoCycleTimeout = null;
+// Chaîne des étapes de "remplissage" avant validation (voir
+// targetedDemoRdvWalkthrough/RappelWalkthrough/CrWalkthrough) — minuteur
+// séparé de targetedDemoWaitTimeout pour ne jamais entrer en conflit avec
+// un autre "wait" (ex : targetedDemoWaitForCrResult) actif en parallèle.
+let targetedDemoWalkthroughTimeout = null;
 
 // Étapes où l'utilisateur doit encore appuyer sur le micro pour
 // démarrer : c'est là qu'on montre l'étiquette "C'est le micro", jamais
@@ -21244,6 +21249,54 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
 
+// Étape "confirmer" d'un formulaire structuré (RDV/Rappel/Compte rendu) :
+// dès que l'utilisateur clique sur le bouton de confirmation, le vrai
+// pipeline ferme IMMÉDIATEMENT le formulaire (confirmQuickPlanning() etc.
+// appellent close...Modal() en tout premier, avant même l'appel réseau) et
+// affiche un bandeau de progression (#orchestrator-dictation-box, ex :
+// "⏳ Enregistrement du rendez-vous…") pendant que la requête part vers le
+// backend. Si le halo reste braqué sur le bouton de confirmation pendant ce
+// court laps de temps, sa cible a disparu du DOM : positionOnboardingSpotlight
+// bascule alors le voile en "aucun trou" (clip-path: none), assombrissant
+// TOUT l'écran — bug remonté ("je ne vois plus l'écran du fond"). On
+// bascule donc automatiquement le halo sur le bandeau de progression dès
+// qu'il apparaît (pickVisibleElement retombe naturellement dessus, le
+// bouton de confirmation n'étant plus visible), avec un texte différent
+// pour chaque phase — ce qui répond aussi à la demande explicite de voir le
+// halo suivre "les phrases qui défilent", preuve que Clarity travaille.
+function targetedDemoTrackConfirmAndProgress(confirmSelectors, title1, text1, title2, text2) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
+  }
+  const progressSelectors = ['#orchestrator-dictation-box'];
+  let lastPhase = null;
+
+  const firstTarget = pickVisibleElement(confirmSelectors);
+  if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
+    firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+  }
+
+  const tick = () => {
+    const confirmEl = pickVisibleElement(confirmSelectors);
+    const target = confirmEl || pickVisibleElement(progressSelectors);
+    targetedDemoCurrentTarget = target;
+    positionOnboardingSpotlight(target);
+    const phase = confirmEl ? "confirm" : (target ? "progress" : lastPhase);
+    if (phase && phase !== lastPhase) {
+      lastPhase = phase;
+      if (phase === "confirm") targetedDemoRenderBubble(title1, text1);
+      else targetedDemoRenderBubble(title2, text2);
+    }
+  };
+  tick();
+  targetedDemoPositionInterval = setInterval(tick, 300);
+}
+
 function targetedDemoStop() {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
@@ -21256,6 +21309,10 @@ function targetedDemoStop() {
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
+  }
+  if (targetedDemoWalkthroughTimeout) {
+    clearTimeout(targetedDemoWalkthroughTimeout);
+    targetedDemoWalkthroughTimeout = null;
   }
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
@@ -21274,6 +21331,16 @@ function startTargetedDemoFlow(flow) {
   closeTargetedDemoMenu();
   targetedDemoActive = true;
   targetedDemoFlow = flow;
+
+  // Filet de sécurité (bug remonté) : si on relance une démo depuis "Découvrir
+  // une autre action" alors qu'on n'est plus sur l'accueil (ex : encore sur
+  // Planning après le RDV précédent), le champ/raccourci ciblés par le halo
+  // n'existent pas dans la section affichée -> aucune cible trouvée ->
+  // positionOnboardingSpotlight(Multi) referme le trou du voile (clip-path:
+  // none), assombrissant tout l'écran au lieu de montrer la démo. On revient
+  // donc systématiquement sur l'accueil avant de lancer n'importe quel flux.
+  const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+  showSection("agents", homeBtn);
 
   if (flow === "mail") runTargetedDemoMail();
   else if (flow === "rdv") runTargetedDemoRdv();
@@ -21407,15 +21474,43 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
     const timeInput = document.getElementById("quick-planning-time");
     if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
 
-    targetedDemoShowHalo(
-      ['#quick-planning-confirm'],
-      "À vous de valider",
-      "Cliquez sur « Noter le rendez-vous » pour le voir apparaître dans Planning."
-    );
+    targetedDemoRdvWalkthrough();
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRdvModalOpen(attempts + 1), 300);
+}
+
+// Petit parcours guidé dans le formulaire déjà ouvert : montre d'abord que
+// le nom/motif est rempli, puis que le jour/l'heure sont choisis, avant de
+// terminer sur le bouton de validation (demande explicite : expliquer le
+// remplissage, pas seulement dire "validez"). Le dernier halo bascule tout
+// seul sur le bandeau de progression une fois cliqué (voir
+// targetedDemoTrackConfirmAndProgress).
+function targetedDemoRdvWalkthrough() {
+  targetedDemoShowHalo(
+    ['#quick-planning-contact', '#quick-planning-title'],
+    "On remplit les infos",
+    "Le nom du contact (ou le motif) est déjà rempli, à titre d'exemple."
+  );
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
+    targetedDemoShowHalo(
+      ['#quick-planning-time', '#quick-planning-date'],
+      "Puis le jour et l'heure",
+      "La date et l'heure sont également déjà choisies, à titre d'exemple."
+    );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
+      targetedDemoTrackConfirmAndProgress(
+        ['#quick-planning-confirm'],
+        "À vous de valider",
+        "Cliquez sur « Noter le rendez-vous » pour l'enregistrer.",
+        "Clarity travaille",
+        "Elle enregistre le rendez-vous en direct — quelques secondes de patience."
+      );
+    }, 2600);
+  }, 2600);
 }
 
 // Rappel : même principe que RDV — l'utilisateur clique lui-même sur le
@@ -21448,15 +21543,38 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
     const timeInput = document.getElementById("quick-reminder-time");
     if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
 
-    targetedDemoShowHalo(
-      ['#quick-reminder-confirm'],
-      "À vous de valider",
-      "Cliquez sur « Noter le rappel » pour le voir apparaître dans la liste."
-    );
+    targetedDemoRappelWalkthrough();
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRappelModalOpen(attempts + 1), 300);
+}
+
+// Même principe que targetedDemoRdvWalkthrough().
+function targetedDemoRappelWalkthrough() {
+  targetedDemoShowHalo(
+    ['#quick-reminder-contact', '#quick-reminder-reason'],
+    "On remplit les infos",
+    "Le contact (optionnel) et le motif sont déjà remplis, à titre d'exemple."
+  );
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
+    targetedDemoShowHalo(
+      ['#quick-reminder-time', '#quick-reminder-date'],
+      "Puis le jour et l'heure",
+      "La date et l'heure sont également déjà choisies, à titre d'exemple."
+    );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
+      targetedDemoTrackConfirmAndProgress(
+        ['#quick-reminder-confirm'],
+        "À vous de valider",
+        "Cliquez sur « Noter le rappel » pour l'enregistrer.",
+        "Clarity travaille",
+        "Elle enregistre le rappel en direct — quelques secondes de patience."
+      );
+    }, 2600);
+  }, 2600);
 }
 
 // Compte rendu : l'utilisateur clique lui-même sur le raccourci pour ouvrir
@@ -21486,16 +21604,33 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
       sujetInput.value = "Démo — Visite chantier";
       sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
-    targetedDemoShowHalo(
-      ['#cr-create-btn'],
-      "À vous de valider",
-      "Cliquez sur « Créer le compte rendu » pour voir le résultat généré automatiquement."
-    );
+    targetedDemoCrWalkthrough();
     targetedDemoWaitForCrResult();
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
+}
+
+// Même principe que targetedDemoRdvWalkthrough() : le formulaire Compte
+// rendu n'a qu'un champ obligatoire (Sujet), donc un seul cran avant la
+// validation.
+function targetedDemoCrWalkthrough() {
+  targetedDemoShowHalo(
+    ['#cr-field-sujet'],
+    "Le sujet est prêt",
+    "Le sujet du compte rendu est déjà rempli, à titre d'exemple."
+  );
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+    targetedDemoTrackConfirmAndProgress(
+      ['#cr-create-btn'],
+      "À vous de valider",
+      "Cliquez sur « Créer le compte rendu » pour le générer.",
+      "Clarity rédige",
+      "Elle génère le compte rendu en direct — quelques secondes de patience."
+    );
+  }, 2600);
 }
 
 function targetedDemoWaitForCrResult(attempts = 0) {
