@@ -21640,18 +21640,11 @@ function targetedDemoMailPreviewWalkthrough() {
         targetedDemoShowHalo(
           ['#mail-preview-modal .save-btn'],
           "Aperçu du mail",
-          "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
+          "Relisez l'aperçu, puis cliquez sur Envoyer — ce mail part pour de vrai."
         );
       }, 2600);
     }, 2600);
   }, 2600);
-}
-
-function finishTargetedDemoMailStep() {
-  targetedDemoStop();
-  if (typeof closeMailPreview === "function") closeMailPreview(false);
-  showToast("Exemple terminé — aucun mail n'est parti", "success");
-  showTargetedDemoEndSheet();
 }
 
 // RDV : demande explicite — on ne montre plus le raccourci "Rendez-vous" ni
@@ -21795,6 +21788,14 @@ function targetedDemoOnEvent(event) {
     return;
   }
   if (event === "cr_created" && targetedDemoFlow === "cr") {
+    targetedDemoStop();
+    showTargetedDemoEndSheet();
+    return;
+  }
+  // Demande explicite : le mail doit VRAIMENT partir pendant la démo (voir
+  // sendPreparedMail(), qui n'intercepte plus rien) — cet évènement n'arrive
+  // donc qu'une fois l'envoi réel confirmé côté backend, jamais avant.
+  if (event === "mail_sent" && targetedDemoFlow === "mail") {
     targetedDemoStop();
     showTargetedDemoEndSheet();
   }
@@ -34520,14 +34521,13 @@ function isValidEmailList(value) {
 }
 
   async function sendPreparedMail() {
-    // Démo ciblée (mail) : jamais d'envoi réel ni de vérification de boîte
-    // mail connectée pendant cette démo — on intercepte ICI, avant même la
-    // vérification "boîte mail connectée ?" plus bas, pour être sûr qu'elle
-    // ne s'affiche jamais pendant la démo (voir targetedDemoActive).
-    if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail") {
-      finishTargetedDemoMailStep();
-      return;
-    }
+    // Démo ciblée (mail) : demande explicite — le mail doit VRAIMENT
+    // partir pendant la démo ("c'est ce qui fait le wouaw du client"), donc
+    // plus aucune interception ici : on laisse le flux d'envoi réel se
+    // dérouler normalement, comme pour un envoi hors démo. La démo est
+    // notifiée du succès plus bas (voir targetedDemoOnEvent("mail_sent")),
+    // au même endroit que le hook onboardingOnEvent("mail_sent") déjà
+    // existant, une fois l'envoi réellement confirmé.
 
     // Capturé ICI, tout en haut : mailPreviewBackTarget est remis à null par
     // closeMailPreview(false) plus bas (avant même le toast de succès), donc
@@ -34972,6 +34972,13 @@ ${body}`,
 
   await loadActionCounter();
   onboardingOnEvent("mail_sent");
+
+  // Démo ciblée : le mail vient d'être VRAIMENT envoyé (voir plus haut,
+  // sendPreparedMail() ne l'intercepte plus) — on notifie la démo
+  // seulement maintenant, une fois le succès réel confirmé, jamais avant.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail" && typeof targetedDemoOnEvent === "function") {
+    targetedDemoOnEvent("mail_sent");
+  }
 
   // Rappel de relance V1 (contrat produit) : une fois seulement, APRÈS un
   // mail VRAIMENT envoyé (jamais à l'ouverture d'un brouillon/aperçu — ce
