@@ -21348,7 +21348,14 @@ async function startOnboardingIfNeeded() {
   if (bubble) bubble.style.display = "none";
   if (micTag) micTag.style.display = "none";
 
-  startOnboardingTips();
+  // La mini-visite guidée supplémentaire (Adaptez le ton, Aide, Agent
+  // personnalisé...) passait ici avant d'arriver à la nouvelle démo à 5
+  // boutons — trop d'étapes avant de la voir (retour utilisateur : "je
+  // vois l'envoi du mail directement, je ne vois pas la popup"). On
+  // termine donc directement l'onboarding ici, juste après l'envoi du
+  // mail (écran "Bravo"), et la nouvelle démo ciblée s'ouvre tout de
+  // suite après (voir finishOnboardingTips -> maybeOpenTargetedDemoMenu).
+  finishOnboardingTips();
 }
 
 // Cause réelle du bug "la barre alphabétique bouge/mal placée pendant
