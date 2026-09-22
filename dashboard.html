@@ -17456,6 +17456,15 @@ function openReminderScheduleSheet(data) {
   }
 
   modal.style.display = "flex";
+
+  // Démo : Clarity a besoin d'une précision (date/heure/motif) avant de
+  // pouvoir créer le rappel. Ce popup s'ouvre par-dessus l'ancienne bulle
+  // "Dictez ou écrivez..." qui, elle, reste figée sur le champ initial —
+  // sans ce remplacement, les deux se chevauchaient visuellement. On bascule
+  // donc sur un halo dédié à cette étape.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rappel" && typeof targetedDemoShowReminderScheduleHalo === "function") {
+    targetedDemoShowReminderScheduleHalo();
+  }
 }
 
 // Empêche de choisir une heure déjà passée quand la date sélectionnée est
@@ -17583,6 +17592,14 @@ async function confirmReminderSchedule() {
       maybeShowFirstScheduleNotice();
       if (typeof unlockAgentButtons === "function") unlockAgentButtons();
       if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+      // Démo : ce popup de précision (date/heure/motif manquants) est un
+      // second chemin de création de rappel, distinct de celui déjà branché
+      // plus haut dans ce fichier (confirmQuickReminder) et du succès direct
+      // de callSimpleAgent. Sans ce hook, valider "Noter le rappel" ici ne
+      // faisait jamais avancer/terminer la démo.
+      if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rappel" && typeof targetedDemoOnEvent === "function") {
+        targetedDemoOnEvent("rappel_created");
+      }
     } else {
       showToast(data.message || "Impossible de créer le rappel", "error");
     }
@@ -21782,6 +21799,19 @@ function targetedDemoShowReconnectHalo() {
   );
 }
 
+// Rappel : quand Clarity a besoin d'une précision (date/heure/motif) avant
+// de créer le rappel, ce popup dédié s'ouvre par-dessus le champ de départ.
+// Appelée depuis openReminderScheduleSheet() pour remplacer la bulle
+// initiale ("Dictez ou écrivez...") par un halo sur ce nouveau popup, plutôt
+// que de la laisser figée par-dessus.
+function targetedDemoShowReminderScheduleHalo() {
+  targetedDemoShowHalo(
+    ['#reminder-sheet-confirm'],
+    "Précisez la date",
+    "Vérifiez la date et l'heure, puis validez pour créer le rappel."
+  );
+}
+
 // RDV : demande explicite — on ne montre plus le raccourci "Rendez-vous" ni
 // le formulaire structuré pendant la démo, seulement la dictée/le texte
 // libre. La phrase pré-remplie contient déjà le contact, le jour et
@@ -21940,7 +21970,7 @@ function targetedDemoShowCrResultHalo() {
     if (typeof showSection === "function") showSection("agents", homeBtn);
     targetedDemoStop();
     showTargetedDemoEndSheet();
-  }, 3200);
+  }, 5200);
 }
 
 // Point d'entrée commun pour les résultats obtenus via les formulaires
