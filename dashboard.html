@@ -20981,6 +20981,25 @@ function maybeOpenTargetedDemoMenu() {
 }
 
 function openTargetedDemoMenu() {
+  // Sécurité : quel que soit l'état dans lequel on arrive ici (ex :
+  // connexion mail via SMTP pendant que l'ancien tour affichait encore une
+  // étape), on s'assure qu'aucun reste visuel de l'ancien tour (voile
+  // sombre #onboarding-overlay, halo, bulle) ne puisse rester actif et
+  // recouvrir cette popup — sinon elle s'ouvre bien mais reste invisible
+  // sous le voile (z-index bien plus élevé), et seul le bouton
+  // Déconnexion (encore au-dessus) reste visible à l'écran.
+  onboardingActive = false;
+  onboardingStep = null;
+  if (typeof stopOnboardingPositionLoop === "function") stopOnboardingPositionLoop();
+  const oldOverlay = document.getElementById("onboarding-overlay");
+  const oldRing = document.getElementById("onboarding-ring");
+  const oldBubble = document.getElementById("onboarding-bubble");
+  const oldMicTag = document.getElementById("onboarding-mic-tag");
+  if (oldOverlay) { oldOverlay.classList.remove("active"); oldOverlay.style.clipPath = "none"; }
+  if (oldRing) oldRing.style.display = "none";
+  if (oldBubble) { oldBubble.style.display = "none"; oldBubble.innerHTML = ""; }
+  if (oldMicTag) oldMicTag.style.display = "none";
+
   const existing = document.getElementById("targeted-demo-menu-modal");
   if (existing) existing.remove();
 
