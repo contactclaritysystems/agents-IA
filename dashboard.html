@@ -21205,6 +21205,60 @@ function targetedDemoRenderBubble(title, text) {
   `;
 }
 
+// Demande explicite : une fois que le halo bascule sur le bandeau de
+// progression (les phrases qui défilent, ex : "⏳ Enregistrement du
+// rendez-vous…"), la bulle d'explication doit disparaître — elle ne doit
+// plus jamais rester affichée par-dessus, ce qui cachait le texte en train
+// de défiler ("j'ai toujours la popup devant, cette popup doit
+// disparaître"). On ne la supprime jamais (elle réapparaît intacte à
+// l'étape suivante via targetedDemoRenderBubble), on la masque juste
+// temporairement.
+function targetedDemoSetBubbleVisible(visible) {
+  const bubble = document.getElementById("onboarding-bubble");
+  if (bubble) bubble.style.display = visible ? "block" : "none";
+}
+
+// Cherche le plus proche ancêtre réellement scrollable (overflow-y: auto/
+// scroll ET contenu qui dépasse), sinon retombe sur le scroll de la page —
+// l'app utilise plusieurs conteneurs internes selon l'écran, pas toujours
+// la fenêtre elle-même.
+function targetedDemoFindScrollParent(el) {
+  let node = el && el.parentElement;
+  while (node && node !== document.body && node !== document.documentElement) {
+    const style = window.getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
+}
+
+// Bug remonté : un scrollIntoView({block:"center"}) centre la cible au
+// milieu de l'écran, exactement là où se trouve la bulle d'explication
+// (#onboarding-bubble, fixée à ~42% de la hauteur) — la cible se retrouvait
+// donc à moitié cachée dessous ("je veux voir ce champ plus bas par
+// rapport à la popup"). On vérifie ici le chevauchement réel avec le
+// rectangle de la bulle, et on décale la page vers le bas si besoin pour
+// faire apparaître la cible sous elle, avec une marge.
+function targetedDemoScrollBelowBubble(target) {
+  if (!target || typeof target.getBoundingClientRect !== "function") return;
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!bubble || bubble.style.display === "none") return;
+  const bubbleRect = bubble.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const margin = 16;
+  if (targetRect.top < bubbleRect.bottom + margin) {
+    const delta = (bubbleRect.bottom + margin) - targetRect.top;
+    const scrollParent = targetedDemoFindScrollParent(target);
+    if (scrollParent && typeof scrollParent.scrollBy === "function") {
+      scrollParent.scrollBy({ top: -delta, left: 0, behavior: "auto" });
+    } else {
+      window.scrollBy({ top: -delta, left: 0, behavior: "auto" });
+    }
+  }
+}
+
 function targetedDemoShowHalo(selectors, title, text) {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
@@ -21227,6 +21281,7 @@ function targetedDemoShowHalo(selectors, title, text) {
   const firstTarget = pickVisibleElement(selectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    targetedDemoScrollBelowBubble(firstTarget);
   }
 
   const tick = () => {
@@ -21266,15 +21321,21 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
   const firstTarget = pickVisibleElement(fieldSelectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    targetedDemoScrollBelowBubble(firstTarget);
   }
 
   const tick = () => {
     // Le bandeau de progression est prioritaire dès qu'il est visible : le
     // champ, lui, reste affiché en permanence sur l'accueil, donc c'est sa
     // présence qui indique qu'une demande est en cours de traitement.
-    const target = pickVisibleElement(progressSelectors) || pickVisibleElement(fieldSelectors);
+    const progressTarget = pickVisibleElement(progressSelectors);
+    const target = progressTarget || pickVisibleElement(fieldSelectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
+    // Demande explicite : dès que le halo suit le bandeau de progression
+    // (les phrases qui défilent), la bulle d'explication disparaît — elle
+    // ne doit plus jamais rester affichée par-dessus.
+    targetedDemoSetBubbleVisible(!progressTarget);
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -21303,6 +21364,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
   const firstTarget = pickVisibleElement(selectorsA);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    targetedDemoScrollBelowBubble(firstTarget);
   }
 
   const tick = () => {
@@ -21352,12 +21414,19 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
   const firstTarget = pickVisibleElement(confirmSelectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+    targetedDemoScrollBelowBubble(firstTarget);
   }
 
   const tick = () => {
-    const target = pickVisibleElement(confirmSelectors) || pickVisibleElement(progressSelectors);
+    const confirmTarget = pickVisibleElement(confirmSelectors);
+    const progressTarget = confirmTarget ? null : pickVisibleElement(progressSelectors);
+    const target = confirmTarget || progressTarget;
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
+    // Demande explicite : dès que le halo suit le bandeau de progression
+    // (les phrases qui défilent), la bulle d'explication disparaît — elle
+    // ne doit plus jamais rester affichée par-dessus.
+    targetedDemoSetBubbleVisible(!progressTarget);
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -21483,11 +21552,7 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
   const modal = document.getElementById("mail-preview-modal");
   const open = modal && modal.style.display === "block";
   if (open) {
-    targetedDemoShowHalo(
-      ['#mail-preview-modal .save-btn'],
-      "Aperçu du mail",
-      "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
-    );
+    targetedDemoMailPreviewWalkthrough();
     return;
   }
   // Pas d'abandon automatique : la démo ne doit jamais disparaître toute
@@ -21495,6 +21560,34 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
   // la déconnexion ou la fin de la démo y mettent fin), on continue donc
   // d'attendre indéfiniment.
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForMailPreview(attempts + 1), 300);
+}
+
+// Demande explicite : l'aperçu ne montrait pas que le contact vient d'être
+// retrouvé automatiquement, ni que l'objet/le message ont été rédigés à
+// partir de la demande — on l'explique d'abord, avant de terminer sur
+// "Envoyer" (même principe que targetedDemoRdvWalkthrough à l'origine).
+function targetedDemoMailPreviewWalkthrough() {
+  targetedDemoShowHalo(
+    ['#mail-preview-to-group'],
+    "Le contact est retrouvé",
+    "Clarity a retrouvé l'adresse du contact automatiquement dans vos contacts."
+  );
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
+    targetedDemoShowHalo(
+      ['#preview-mail-subject'],
+      "Objet et message rédigés",
+      "L'objet et le message ci-dessous sont rédigés automatiquement, d'après votre demande."
+    );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
+      targetedDemoShowHalo(
+        ['#mail-preview-modal .save-btn'],
+        "Aperçu du mail",
+        "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
+      );
+    }, 2600);
+  }, 2600);
 }
 
 function finishTargetedDemoMailStep() {
