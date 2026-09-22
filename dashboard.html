@@ -21658,6 +21658,21 @@ function targetedDemoShowSendHalo() {
   );
 }
 
+// Bug remonté : si la boîte mail n'est pas (ou plus) connectée au moment de
+// cliquer sur Envoyer pendant la démo, le bandeau "Connexion expirée"
+// s'affiche par-dessus et désactive Envoyer — sans ce halo, l'utilisateur
+// se retrouvait bloqué sans savoir quoi faire. Appelée depuis
+// showMailAuthExpiredBanner() (voir son commentaire), quel que soit le
+// fournisseur (bouton "Reconnecter <fournisseur>" ou "Connecter une boîte"
+// — même id dans les deux cas).
+function targetedDemoShowReconnectHalo() {
+  targetedDemoShowHalo(
+    ['#mail-auth-reconnect-btn'],
+    "Connexion à reconnecter",
+    "Votre mail reste prêt tel quel — reconnectez votre messagerie, puis vous pourrez l'envoyer."
+  );
+}
+
 // RDV : demande explicite — on ne montre plus le raccourci "Rendez-vous" ni
 // le formulaire structuré pendant la démo, seulement la dictée/le texte
 // libre. La phrase pré-remplie contient déjà le contact, le jour et
@@ -26581,6 +26596,19 @@ async function saveActionLog(agent, action, status) {
       sendBtn.disabled = true;
       sendBtn.innerHTML = "📤 Envoyer le mail";
     }
+
+    // Bug remonté : pendant la démo ciblée (bouton "Mail"), si l'utilisateur
+    // clique sur Envoyer sans boîte connectée (ou connexion expirée), ce
+    // bandeau s'affiche et désactive Envoyer — mais le halo/la bulle
+    // restaient bloqués sur ce bouton désormais désactivé, sans jamais dire
+    // qu'il fallait d'abord reconnecter. On déplace donc le halo sur le
+    // bouton "Reconnecter" et on l'explique dans la bulle, le temps de la
+    // reconnexion (voir targetedDemoResumeAfterReconnect pour la suite —
+    // Gmail/Outlook via redirection OAuth — et hideMailAuthExpiredBanner
+    // ci-dessous pour SMTP, qui reste sur place sans recharger la page).
+    if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail" && typeof targetedDemoShowReconnectHalo === "function") {
+      targetedDemoShowReconnectHalo();
+    }
   }
 
   function hideMailAuthExpiredBanner() {
@@ -26591,6 +26619,15 @@ async function saveActionLog(agent, action, status) {
 
     const sendBtn = document.querySelector("#mail-preview-modal .save-btn");
     if (sendBtn) sendBtn.disabled = false;
+
+    // Pendant. Suite du correctif ci-dessus : reconnexion SMTP (seule qui ne
+    // recharge jamais la page, donc targetedDemoActive/targetedDemoFlow
+    // n'ont jamais été perdus) — on ramène directement le halo sur
+    // "Envoyer" une fois la boîte reconnectée. Gmail/Outlook (rechargement
+    // de page) sont pris en charge par targetedDemoResumeAfterReconnect().
+    if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail" && typeof targetedDemoShowSendHalo === "function") {
+      targetedDemoShowSendHalo();
+    }
   }
 
   // Recopie les champs affichés (potentiellement corrigés par
