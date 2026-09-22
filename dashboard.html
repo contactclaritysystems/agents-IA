@@ -20729,23 +20729,7 @@ function positionOnboardingSpotlight(target) {
   const x = rect.left + offsetX - pad;
   const y = rect.top + offsetY - pad;
   const w = rect.width + pad * 2;
-  let h = rect.height + pad * 2;
-
-  // Le halo ne doit jamais chevaucher la barre de menu du bas (demande
-  // explicite : il doit rester "entre la bulle d'explication et la barre
-  // du menu") — utile notamment pour les boutons des "Actions rapides",
-  // très proches de cette barre. On raccourcit le bas du halo si besoin
-  // pour qu'il s'arrête juste au-dessus, plutôt que de la recouvrir.
-  const bottomNavEl = document.getElementById("bottomNav");
-  if (bottomNavEl) {
-    const navRect = bottomNavEl.getBoundingClientRect();
-    if (navRect.width > 0 && navRect.height > 0) {
-      const navLimit = navRect.top + offsetY - 6;
-      if (y + h > navLimit) {
-        h = Math.max(navLimit - y, 0);
-      }
-    }
-  }
+  const h = rect.height + pad * 2;
 
   overlay.style.clipPath =
     "polygon(0% 0%, 0% 100%, " + x + "px 100%, " + x + "px " + y + "px, " +
@@ -21100,6 +21084,18 @@ function targetedDemoShowHalo(selectors, title, text) {
     targetedDemoPositionInterval = null;
   }
   targetedDemoRenderBubble(title, text);
+
+  // Le bouton mis en avant doit être entièrement visible — jamais coupé
+  // par la barre de menu du bas ni caché sous la bulle d'explication
+  // (demande explicite, vérifiée pour chaque bouton). Plutôt que de
+  // rogner le halo (ce qui cachait une partie du bouton), on fait défiler
+  // la page une fois pour amener le bouton entier dans la zone visible,
+  // avant de dessiner le halo autour de lui.
+  const firstTarget = pickVisibleElement(selectors);
+  if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
+    firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+  }
+
   const tick = () => {
     const target = pickVisibleElement(selectors);
     targetedDemoCurrentTarget = target;
