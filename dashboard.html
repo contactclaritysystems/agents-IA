@@ -21299,6 +21299,21 @@ function targetedDemoScrollBelowBubble(target) {
     } else {
       window.scrollBy({ top: -delta, left: 0, behavior: "auto" });
     }
+
+    // Filet de sécurité (demande explicite : "tous les halos doivent se
+    // voir entièrement") : quand la cible est déjà tout en haut de son
+    // conteneur (ex : la 1ère carte du planning juste après avoir ouvert le
+    // jour), il n'y a parfois plus de marge à faire défiler pour la
+    // descendre sous la bulle — le scroll ci-dessus ne suffit alors pas. On
+    // revérifie le recouvrement réel une fois le scroll appliqué et, s'il
+    // persiste, on repositionne la bulle elle-même au-dessus/en dessous de
+    // la cible (même mécanisme que pour l'aperçu du mail, voir
+    // targetedDemoPositionBubbleNear) plutôt que de laisser le halo caché.
+    const targetRectAfter = target.getBoundingClientRect();
+    const bubbleRectAfter = bubble.getBoundingClientRect();
+    if (targetRectAfter.top < bubbleRectAfter.bottom + margin) {
+      targetedDemoPositionBubbleNear(target);
+    }
   }
 }
 
@@ -21687,12 +21702,10 @@ function runTargetedDemoRdv() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
 
-  const input = document.getElementById("orchestrator-text-input");
-  if (input && !input.textContent.trim()) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
+  // Demande explicite (déjà appliquée à Mail) : le champ n'est plus
+  // pré-rempli pour aucune action — la phrase n'est montrée qu'à titre
+  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
+  // tape lui-même.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
@@ -21706,12 +21719,10 @@ function runTargetedDemoRappel() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
 
-  const input = document.getElementById("orchestrator-text-input");
-  if (input && !input.textContent.trim()) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
+  // Demande explicite (déjà appliquée à Mail) : le champ n'est plus
+  // pré-rempli pour aucune action — la phrase n'est montrée qu'à titre
+  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
+  // tape lui-même.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
@@ -35083,7 +35094,12 @@ ${body}`,
   // Démo ciblée : le mail vient d'être VRAIMENT envoyé (voir plus haut,
   // sendPreparedMail() ne l'intercepte plus) — on notifie la démo
   // seulement maintenant, une fois le succès réel confirmé, jamais avant.
-  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail" && typeof targetedDemoOnEvent === "function") {
+  // Capturé AVANT l'appel : targetedDemoOnEvent("mail_sent") déclenche
+  // targetedDemoStop() qui remet targetedDemoActive à false, donc le
+  // vérifier après coup (voir offerRelanceAfterMail ci-dessous) donnerait
+  // toujours faux.
+  const wasTargetedDemoMailFlow = typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail";
+  if (wasTargetedDemoMailFlow && typeof targetedDemoOnEvent === "function") {
     targetedDemoOnEvent("mail_sent");
   }
 
@@ -35092,7 +35108,16 @@ ${body}`,
   // bloc n'est atteint qu'après la confirmation d'envoi réel ci-dessus).
   // Ce n'est PAS un second mail : juste une proposition de rappel perso
   // pour l'utilisateur, voir offerRelanceAfterMail.
-  offerRelanceAfterMail(contactName, subject);
+  //
+  // Bug remonté : pendant la démo ciblée, cette popup s'ouvrait PAR-DESSUS
+  // l'écran de fin "Et voilà !" (déjà affiché juste au-dessus par
+  // targetedDemoOnEvent("mail_sent") ci-dessus) — double popup, aucun halo
+  // prévu pour celle-ci. Même raison déjà appliquée à onboardingActive
+  // (voir le commentaire dans offerRelanceAfterMail) : on saute cette
+  // proposition pendant la démo, l'envoi réel n'est pas affecté.
+  if (!wasTargetedDemoMailFlow) {
+    offerRelanceAfterMail(contactName, subject);
+  }
 
 }, 550);
 
