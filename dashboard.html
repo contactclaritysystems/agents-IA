@@ -20106,6 +20106,36 @@ async function goToDictateMailStep() {
   showOnboardingStep();
 }
 
+// Dès que la boîte mail est connectée, l'ancien tour s'arrête ici — plus de
+// dictée-exemple guidée par l'ancien système (dictate_mail/confirm_send...)
+// puisque c'est désormais exactement ce que propose le bouton "Écrire et
+// envoyer des mails" de la nouvelle démo ciblée. On termine donc l'ancien
+// tour immédiatement après la connexion mail, et la nouvelle popup à 5
+// boutons s'ouvre à la place.
+async function finishOldTourAndOpenTargetedDemo() {
+  onboardingActive = false;
+  onboardingStep = null;
+  stopOnboardingPositionLoop();
+
+  const overlay = document.getElementById("onboarding-overlay");
+  const ring = document.getElementById("onboarding-ring");
+  const bubble = document.getElementById("onboarding-bubble");
+  const micTag = document.getElementById("onboarding-mic-tag");
+  if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+  if (ring) ring.style.display = "none";
+  if (bubble) { bubble.style.display = "none"; bubble.innerHTML = ""; bubble.style.top = ""; }
+  if (micTag) micTag.style.display = "none";
+
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
+
+  const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+  if (typeof showSection === "function") showSection("agents", homeBtn);
+
+  await markOnboardingComplete();
+  maybeOpenTargetedDemoMenu();
+}
+
   const ONBOARDING_TIPS = [
   {
     title: "⚡ Les actions rapides",
@@ -20840,7 +20870,7 @@ function onboardingOnEvent(event) {
       document.getElementById("main-agents")?.classList.contains("active");
 
     if (alreadyOnAgentsPage) {
-      goToDictateMailStep();
+      finishOldTourAndOpenTargetedDemo();
       return;
     }
 
@@ -20850,7 +20880,7 @@ function onboardingOnEvent(event) {
   }
 
   if (event === "page:agents" && onboardingStep === "goto_agents") {
-    goToDictateMailStep();
+    finishOldTourAndOpenTargetedDemo();
     return;
   }
   
@@ -21310,7 +21340,7 @@ async function startOnboardingIfNeeded() {
       document.getElementById("main-agents")?.classList.contains("active");
 
     if (alreadyOnAgentsPage) {
-      await goToDictateMailStep();
+      await finishOldTourAndOpenTargetedDemo();
       return;
     }
 
