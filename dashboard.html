@@ -3459,6 +3459,19 @@ body[data-theme="dark"] #app-loader {
   display: none;
 }
 
+/* 2e anneau : utilisé uniquement par la démo ciblée quand une étape montre
+   2 cibles EN MÊME TEMPS (ex : champ+micro ET raccourci) — voir
+   positionOnboardingSpotlightMulti(). Même style que #onboarding-ring. */
+#onboarding-ring-2 {
+  position: fixed;
+  z-index: 900001;
+  border-radius: 14px;
+  box-shadow: 0 0 0 3px var(--clarity-surface), 0 0 0 6px var(--clarity-primary), 0 0 18px 4px rgba(0,0,0,.35);
+  pointer-events: none;
+  transition: top .3s ease, left .3s ease, width .3s ease, height .3s ease;
+  display: none;
+}
+
 /* Pendant la visite guidée (tips), le voile sombre est troué (clip-path)
    pile à l'endroit mis en avant, pour que l'utilisateur le voie bien
    éclairé — mais ce trou rendrait cette zone cliquable par défaut
@@ -11539,6 +11552,7 @@ body[data-theme="light"]::after {
 
   <div id="onboarding-overlay"></div>
   <div id="onboarding-ring"></div>
+  <div id="onboarding-ring-2"></div>
   <div id="onboarding-click-blocker"></div>
   <div id="onboarding-mic-tag">🎙️ C'est le micro</div>
   <div id="onboarding-bubble"></div>
@@ -19924,8 +19938,11 @@ let targetedDemoFlow = null;
 let targetedDemoPositionInterval = null;
 let targetedDemoCurrentTarget = null;
 let targetedDemoWaitTimeout = null;
-// Alterne le halo entre 2 cibles (ex : champ+micro / raccourci) quand une
-// étape propose 2 façons équivalentes d'agir — voir targetedDemoShowDualHalo.
+// Ancien mécanisme d'alternance entre 2 cibles, remplacé par l'affichage
+// simultané des 2 (voir targetedDemoShowHaloPair /
+// positionOnboardingSpotlightMulti) — gardé par prudence pour que
+// targetedDemoShowHalo()/targetedDemoStop() aient toujours quelque chose de
+// propre à nettoyer si un minuteur résiduel traînait encore.
 let targetedDemoCycleTimeout = null;
 
 // Étapes où l'utilisateur doit encore appuyer sur le micro pour
@@ -20744,6 +20761,84 @@ function positionOnboardingSpotlight(target) {
   ring.style.top = y + "px";
   ring.style.width = w + "px";
   ring.style.height = h + "px";
+  const ring2 = document.getElementById("onboarding-ring-2");
+  if (ring2) ring2.style.display = "none";
+}
+
+// Variante de positionOnboardingSpotlight() qui accepte jusqu'à 2 cibles à
+// la fois — utilisée par la démo ciblée quand une étape propose 2 façons
+// équivalentes d'agir (dicter/taper OU cliquer sur un raccourci) : les 2
+// doivent être visibles EN MÊME TEMPS, pas l'une après l'autre (demande
+// explicite), pour que l'utilisateur choisisse lui-même. Perce donc 2 trous
+// dans le même voile #onboarding-overlay (au lieu d'un seul) et affiche 2
+// anneaux distincts, un par cible.
+function positionOnboardingSpotlightMulti(targets) {
+  const overlay = document.getElementById("onboarding-overlay");
+  const ring = document.getElementById("onboarding-ring");
+  const ring2 = document.getElementById("onboarding-ring-2");
+  if (!overlay || !ring) return;
+
+  const list = (targets || []).filter(Boolean);
+  if (!list.length) {
+    overlay.style.clipPath = "none";
+    ring.style.display = "none";
+    if (ring2) ring2.style.display = "none";
+    return;
+  }
+  if (list.length === 1) {
+    // Une seule cible visible/disponible : même comportement qu'un halo
+    // simple (voir positionOnboardingSpotlight, qui masque déjà ring-2).
+    positionOnboardingSpotlight(list[0]);
+    return;
+  }
+
+  const pad = 8;
+  const vv = window.visualViewport;
+  const offsetX = vv ? vv.offsetLeft : 0;
+  const offsetY = vv ? vv.offsetTop : 0;
+
+  const rects = list.map(t => {
+    const r = typeof t.getBoundingClientRect === "function" ? t.getBoundingClientRect() : t;
+    return {
+      x: r.left + offsetX - pad,
+      y: r.top + offsetY - pad,
+      w: r.width + pad * 2,
+      h: r.height + pad * 2
+    };
+  });
+
+  // 2 trous distincts dans le même clip-path : même technique de "fente"
+  // que positionOnboardingSpotlight() (un aller-retour depuis le bord vers
+  // chaque rectangle), répétée pour chaque cible triée de gauche à droite
+  // pour ne jamais former de tracé qui se croise lui-même.
+  const sorted = [...rects].sort((a, b) => a.x - b.x);
+  const pts = ["0% 0%", "0% 100%"];
+  sorted.forEach(r => {
+    const x1 = r.x, y1 = r.y, x2 = r.x + r.w, y2 = r.y + r.h;
+    pts.push(x1 + "px 100%");
+    pts.push(x1 + "px " + y1 + "px");
+    pts.push(x2 + "px " + y1 + "px");
+    pts.push(x2 + "px " + y2 + "px");
+    pts.push(x1 + "px " + y2 + "px");
+    pts.push(x1 + "px 100%");
+  });
+  pts.push("100% 100%");
+  pts.push("100% 0%");
+  overlay.style.clipPath = "polygon(" + pts.join(", ") + ")";
+
+  ring.style.display = "block";
+  ring.style.left = rects[0].x + "px";
+  ring.style.top = rects[0].y + "px";
+  ring.style.width = rects[0].w + "px";
+  ring.style.height = rects[0].h + "px";
+
+  if (ring2) {
+    ring2.style.display = "block";
+    ring2.style.left = rects[1].x + "px";
+    ring2.style.top = rects[1].y + "px";
+    ring2.style.width = rects[1].w + "px";
+    ring2.style.height = rects[1].h + "px";
+  }
 }
 
 // Bug remonté : sur mobile (constaté sur iPhone/Safari), dès qu'on tape la
@@ -21086,11 +21181,8 @@ function targetedDemoShowHalo(selectors, title, text) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
-  // Un halo simple (une seule cible) annule toujours un éventuel cycle en
-  // cours (voir targetedDemoShowDualHalo) : sinon le cycle reprenait la
-  // main quelques secondes plus tard et effaçait le halo qu'on vient
-  // d'afficher (ex : halo "à vous de valider" écrasé par le cycle
-  // dictée/raccourci encore actif en arrière-plan).
+  // Un halo simple (une seule cible) annule tout minuteur résiduel encore
+  // programmé par une étape précédente.
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
@@ -21118,28 +21210,38 @@ function targetedDemoShowHalo(selectors, title, text) {
 }
 
 // Certaines étapes proposent 2 façons équivalentes d'agir (dicter/taper
-// dans le champ, OU cliquer sur le raccourci) : un seul halo ne peut
-// entourer qu'un seul élément à la fois, donc on alterne automatiquement
-// entre les 2 cibles toutes les quelques secondes, avec le texte qui
-// correspond à celle affichée à cet instant — pour que "ou cliquez sur ce
-// raccourci" corresponde toujours à un bouton effectivement entouré du
-// halo à un moment donné (demande explicite).
-function targetedDemoShowDualHalo(steps, cycleMs = 3200) {
+// dans le champ, OU cliquer sur le raccourci) : les 2 sont montrées EN MÊME
+// TEMPS, pas l'une après l'autre (demande explicite : "je veux voir les 2
+// en même temps et le client choisit ce qu'il préfère") — 2 trous dans le
+// voile, 2 anneaux (#onboarding-ring + #onboarding-ring-2), une seule bulle
+// qui mentionne les 2 options à la fois.
+function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
   }
-  let idx = 0;
-  const showNext = () => {
-    const step = steps[idx % steps.length];
-    idx++;
-    targetedDemoShowHalo(step.selectors, step.title, step.text);
-    // targetedDemoShowHalo() vient d'annuler targetedDemoCycleTimeout
-    // (voir plus haut) : on le reprogramme nous-mêmes juste après, pour le
-    // prochain cran du cycle.
-    targetedDemoCycleTimeout = setTimeout(showNext, cycleMs);
+  targetedDemoRenderBubble(title, text);
+
+  // On fait défiler jusqu'à la 1ère cible (le champ) : les 2 zones sont
+  // normalement déjà proches l'une de l'autre sur l'écran d'accueil, donc
+  // un seul scroll suffit à amener les 2 dans la zone visible.
+  const firstTarget = pickVisibleElement(selectorsA);
+  if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
+    firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+  }
+
+  const tick = () => {
+    const a = pickVisibleElement(selectorsA);
+    const b = pickVisibleElement(selectorsB);
+    targetedDemoCurrentTarget = a || b;
+    positionOnboardingSpotlightMulti([a, b]);
   };
-  showNext();
+  tick();
+  targetedDemoPositionInterval = setInterval(tick, 300);
 }
 
 function targetedDemoStop() {
@@ -21157,9 +21259,11 @@ function targetedDemoStop() {
   }
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
+  const ring2 = document.getElementById("onboarding-ring-2");
   const bubble = document.getElementById("onboarding-bubble");
   if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
   if (ring) ring.style.display = "none";
+  if (ring2) ring2.style.display = "none";
   if (bubble) { bubble.style.display = "none"; bubble.innerHTML = ""; }
   targetedDemoCurrentTarget = null;
 }
@@ -21227,22 +21331,16 @@ function runTargetedDemoMail() {
     if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
   }
 
-  // Halo alterné : le champ+micro et le raccourci "Envoyer un mail" sont 2
-  // façons équivalentes de démarrer — on montre les 2 à tour de rôle
-  // (demande explicite : "ou cliquez sur le raccourci" doit toujours
-  // correspondre à un bouton réellement entouré du halo à ce moment-là).
-  targetedDemoShowDualHalo([
-    {
-      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
-      title: "À vous de jouer",
-      text: `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — puis validez l'envoi.`
-    },
-    {
-      selectors: ['#quick-mail-btn'],
-      title: "À vous de jouer",
-      text: "Ou cliquez sur ce raccourci pour choisir un contact et lui écrire directement."
-    }
-  ]);
+  // Le champ+micro et le raccourci "Envoyer un mail" sont 2 façons
+  // équivalentes de démarrer : on les montre EN MÊME TEMPS (2 trous, 2
+  // anneaux) plutôt que l'un après l'autre, pour que l'utilisateur voie
+  // tout de suite les 2 options et choisisse lui-même (demande explicite).
+  targetedDemoShowHaloPair(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    ['#quick-mail-btn'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour choisir un contact directement.`
+  );
 
   targetedDemoWaitForMailPreview();
 }
@@ -21281,21 +21379,15 @@ function finishTargetedDemoMailStep() {
 function runTargetedDemoRdv() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
-  // Halo alterné entre le champ+micro (dicter/taper) et le raccourci
-  // "Planifier un RDV" (cliquer) : les 2 façons de faire sont montrées à
-  // tour de rôle, chacune avec le halo réellement dessus au bon moment.
-  targetedDemoShowDualHalo([
-    {
-      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
-      title: "À vous de jouer",
-      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
-    },
-    {
-      selectors: ['#quick-planning-btn'],
-      title: "À vous de jouer",
-      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous."
-    }
-  ]);
+  // Le champ+micro (dicter/taper) et le raccourci "Planifier un RDV"
+  // (cliquer) sont montrés EN MÊME TEMPS : 2 trous dans le voile, 2
+  // anneaux, une seule bulle qui présente les 2 options à la fois.
+  targetedDemoShowHaloPair(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    ['#quick-planning-btn'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous.`
+  );
   targetedDemoWaitForRdvModalOpen();
 }
 
@@ -21331,20 +21423,14 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
 function runTargetedDemoRappel() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
-  // Même règle que RDV : halo alterné entre le champ+micro et le raccourci
-  // "Créer un rappel".
-  targetedDemoShowDualHalo([
-    {
-      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
-      title: "À vous de jouer",
-      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
-    },
-    {
-      selectors: ['#quick-relance-btn', '.clarity-quick-row'],
-      title: "À vous de jouer",
-      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel."
-    }
-  ]);
+  // Même règle que RDV : champ+micro et raccourci "Créer un rappel" montrés
+  // en même temps.
+  targetedDemoShowHaloPair(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    ['#quick-relance-btn', '.clarity-quick-row'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel.`
+  );
   targetedDemoWaitForRappelModalOpen();
 }
 
@@ -21379,20 +21465,14 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
 // s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
   const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
-  // Même règle que RDV/Rappel : halo alterné entre le champ+micro et le
-  // raccourci "Compte rendu".
-  targetedDemoShowDualHalo([
-    {
-      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
-      title: "À vous de jouer",
-      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
-    },
-    {
-      selectors: ['#quick-compte-rendu-btn'],
-      title: "À vous de jouer",
-      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu."
-    }
-  ]);
+  // Même règle que RDV/Rappel : champ+micro et raccourci "Compte rendu"
+  // montrés en même temps.
+  targetedDemoShowHaloPair(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    ['#quick-compte-rendu-btn'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu.`
+  );
   targetedDemoWaitForCrModalOpen();
 }
 
