@@ -21238,6 +21238,48 @@ function targetedDemoShowHalo(selectors, title, text) {
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
 
+// Demande explicite : pendant la démo, on ne montre plus du tout les
+// boutons d'action rapide (trop d'infos en même temps, "je veux que tu
+// montres seulement les actions dictées, ou écrites à Clarity") — chaque
+// flux (mail/rdv/rappel/cr) ne montre donc plus qu'UNE seule cible : le
+// champ + micro. Une fois la demande envoyée, la validation elle-même n'a
+// plus de bouton dédié à suivre (RDV/Rappel se créent directement depuis la
+// dictée) : le halo doit donc pouvoir glisser tout seul, en silence, vers le
+// bandeau de progression (#orchestrator-dictation-box) dès qu'il apparaît à
+// la place du champ — même principe que targetedDemoTrackConfirmAndProgress,
+// mais ici la 1ère cible est le champ+micro plutôt qu'un bouton "Valider".
+// Une seule bulle, rendue une fois, jamais remplacée (même règle que pour
+// Mail à l'origine : pas de "nouvelle popup par-dessus").
+function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
+  }
+  targetedDemoRenderBubble(title, text);
+
+  const progressSelectors = ['#orchestrator-dictation-box'];
+
+  const firstTarget = pickVisibleElement(fieldSelectors);
+  if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
+    firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+  }
+
+  const tick = () => {
+    // Le bandeau de progression est prioritaire dès qu'il est visible : le
+    // champ, lui, reste affiché en permanence sur l'accueil, donc c'est sa
+    // présence qui indique qu'une demande est en cours de traitement.
+    const target = pickVisibleElement(progressSelectors) || pickVisibleElement(fieldSelectors);
+    targetedDemoCurrentTarget = target;
+    positionOnboardingSpotlight(target);
+  };
+  tick();
+  targetedDemoPositionInterval = setInterval(tick, 300);
+}
+
 // Certaines étapes proposent 2 façons équivalentes d'agir (dicter/taper
 // dans le champ, OU cliquer sur le raccourci) : les 2 sont montrées EN MÊME
 // TEMPS, pas l'une après l'autre (demande explicite : "je veux voir les 2
@@ -21288,7 +21330,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
 // bouton de confirmation n'étant plus visible), avec un texte différent
 // pour chaque phase — ce qui répond aussi à la demande explicite de voir le
 // halo suivre "les phrases qui défilent", preuve que Clarity travaille.
-function targetedDemoTrackConfirmAndProgress(confirmSelectors, title1, text1, title2, text2) {
+function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
@@ -21297,8 +21339,15 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title1, text1, ti
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
   }
+  // Une seule bulle, affichée une fois pour toute la durée de cette étape —
+  // jamais remplacée par une autre en cours de route (demande explicite :
+  // "je ne veux pas de nouvelle popup par-dessus", même comportement que
+  // pour Mail, qui n'a jamais eu de 2e bulle pendant l'envoi). Seul le halo
+  // (l'anneau) se déplace, en silence, du bouton de confirmation vers le
+  // bandeau de progression dès que celui-ci apparaît à sa place.
+  targetedDemoRenderBubble(title, text);
+
   const progressSelectors = ['#orchestrator-dictation-box'];
-  let lastPhase = null;
 
   const firstTarget = pickVisibleElement(confirmSelectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
@@ -21306,16 +21355,9 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title1, text1, ti
   }
 
   const tick = () => {
-    const confirmEl = pickVisibleElement(confirmSelectors);
-    const target = confirmEl || pickVisibleElement(progressSelectors);
+    const target = pickVisibleElement(confirmSelectors) || pickVisibleElement(progressSelectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
-    const phase = confirmEl ? "confirm" : (target ? "progress" : lastPhase);
-    if (phase && phase !== lastPhase) {
-      lastPhase = phase;
-      if (phase === "confirm") targetedDemoRenderBubble(title1, text1);
-      else targetedDemoRenderBubble(title2, text2);
-    }
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -21422,15 +21464,15 @@ function runTargetedDemoMail() {
     if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
   }
 
-  // Le champ+micro et le raccourci "Envoyer un mail" sont 2 façons
-  // équivalentes de démarrer : on les montre EN MÊME TEMPS (2 trous, 2
-  // anneaux) plutôt que l'un après l'autre, pour que l'utilisateur voie
-  // tout de suite les 2 options et choisisse lui-même (demande explicite).
-  targetedDemoShowHaloPair(
+  // Demande explicite : on ne montre plus aucun bouton d'action rapide
+  // pendant la démo (trop d'infos en même temps) — seule la voie dictée/
+  // tapée à Clarity est mise en avant. Le halo suit ensuite tout seul,
+  // silencieusement, vers le bandeau de progression une fois la demande
+  // envoyée (voir targetedDemoShowHaloWithProgress).
+  targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    ['#quick-mail-btn'],
     "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour choisir un contact directement.`
+    `Dictez (micro) ou tapez par exemple : « ${phrase} ».`
   );
 
   targetedDemoWaitForMailPreview();
@@ -21462,158 +21504,65 @@ function finishTargetedDemoMailStep() {
   showTargetedDemoEndSheet();
 }
 
-// RDV : c'est l'utilisateur qui clique lui-même sur le raccourci "Rendez-
-// vous" pour ouvrir le formulaire (on ne l'ouvre jamais à sa place) — on se
-// contente de le pré-remplir une fois ouvert, avec son propre prénom (voir
-// demande explicite) et un titre préfixé "Démo — " pour le reconnaître dans
-// Planning, puis c'est encore lui qui valide.
+// RDV : demande explicite — on ne montre plus le raccourci "Rendez-vous" ni
+// le formulaire structuré pendant la démo, seulement la dictée/le texte
+// libre. La phrase pré-remplie contient déjà le contact, le jour et
+// l'heure : Clarity crée donc le rendez-vous directement depuis cette
+// demande (sans ouvrir de formulaire à remplir), dès que l'utilisateur
+// l'envoie lui-même (micro ou bouton d'envoi du champ). La fin de cette
+// étape est déclenchée par le hook déjà branché dans callSimpleAgent (voir
+// targetedDemoOnEvent("rdv_created"), plus bas dans ce fichier), qui
+// fonctionne pour ce chemin dictée/texte comme pour l'ancien chemin
+// formulaire.
 function runTargetedDemoRdv() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
-  // Le champ+micro (dicter/taper) et le raccourci "Planifier un RDV"
-  // (cliquer) sont montrés EN MÊME TEMPS : 2 trous dans le voile, 2
-  // anneaux, une seule bulle qui présente les 2 options à la fois.
-  targetedDemoShowHaloPair(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    ['#quick-planning-btn'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous.`
-  );
-  targetedDemoWaitForRdvModalOpen();
-}
 
-function targetedDemoWaitForRdvModalOpen(attempts = 0) {
-  if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
-  const modal = document.getElementById("quick-planning-modal");
-  const open = modal && modal.style.display === "flex";
-  if (open) {
-    const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
-    const contactInput = document.getElementById("quick-planning-contact");
-    const titleInput = document.getElementById("quick-planning-title");
-    if (contactInput && !contactInput.value.trim()) contactInput.value = firstName;
-    if (titleInput && !titleInput.value.trim()) titleInput.value = "Démo — Rendez-vous avec " + firstName;
-
-    const tomorrowBtn = document.getElementById("quick-planning-quick-tomorrow");
-    if (tomorrowBtn) tomorrowBtn.click();
-    const timeInput = document.getElementById("quick-planning-time");
-    if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
-
-    targetedDemoRdvWalkthrough();
-    return;
+  const input = document.getElementById("orchestrator-text-input");
+  if (input && !input.textContent.trim()) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
   }
-  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
-  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRdvModalOpen(attempts + 1), 300);
-}
 
-// Petit parcours guidé dans le formulaire déjà ouvert : montre d'abord que
-// le nom/motif est rempli, puis que le jour/l'heure sont choisis, avant de
-// terminer sur le bouton de validation (demande explicite : expliquer le
-// remplissage, pas seulement dire "validez"). Le dernier halo bascule tout
-// seul sur le bandeau de progression une fois cliqué (voir
-// targetedDemoTrackConfirmAndProgress).
-function targetedDemoRdvWalkthrough() {
-  targetedDemoShowHalo(
-    ['#quick-planning-contact', '#quick-planning-title'],
-    "On remplit les infos",
-    "Le nom du contact (ou le motif) est déjà rempli, à titre d'exemple."
+  targetedDemoShowHaloWithProgress(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} » — Clarity note le rendez-vous dès que vous l'envoyez.`
   );
-  targetedDemoWalkthroughTimeout = setTimeout(() => {
-    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
-    targetedDemoShowHalo(
-      ['#quick-planning-time', '#quick-planning-date'],
-      "Puis le jour et l'heure",
-      "La date et l'heure sont également déjà choisies, à titre d'exemple."
-    );
-    targetedDemoWalkthroughTimeout = setTimeout(() => {
-      if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
-      targetedDemoTrackConfirmAndProgress(
-        ['#quick-planning-confirm'],
-        "À vous de valider",
-        "Cliquez sur « Noter le rendez-vous » pour l'enregistrer.",
-        "Clarity travaille",
-        "Elle enregistre le rendez-vous en direct — quelques secondes de patience."
-      );
-    }, 2600);
-  }, 2600);
 }
 
-// Rappel : même principe que RDV — l'utilisateur clique lui-même sur le
-// raccourci pour ouvrir le formulaire, qu'on pré-remplit ensuite.
+// Rappel : même principe que RDV — uniquement la dictée/le texte libre,
+// plus aucun raccourci ni formulaire montré pendant la démo.
 function runTargetedDemoRappel() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
-  // Même règle que RDV : champ+micro et raccourci "Créer un rappel" montrés
-  // en même temps.
-  targetedDemoShowHaloPair(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    ['#quick-relance-btn', '.clarity-quick-row'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel.`
-  );
-  targetedDemoWaitForRappelModalOpen();
-}
 
-function targetedDemoWaitForRappelModalOpen(attempts = 0) {
-  if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
-  const modal = document.getElementById("quick-reminder-modal");
-  const open = modal && modal.style.display === "flex";
-  if (open) {
-    const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
-    const reasonInput = document.getElementById("quick-reminder-reason");
-    if (reasonInput && !reasonInput.value.trim()) reasonInput.value = "Démo — Rappel pour " + firstName;
-
-    const tomorrowBtn = document.getElementById("quick-reminder-quick-tomorrow");
-    if (tomorrowBtn) tomorrowBtn.click();
-    const timeInput = document.getElementById("quick-reminder-time");
-    if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
-
-    targetedDemoRappelWalkthrough();
-    return;
+  const input = document.getElementById("orchestrator-text-input");
+  if (input && !input.textContent.trim()) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
   }
-  // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
-  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRappelModalOpen(attempts + 1), 300);
-}
 
-// Même principe que targetedDemoRdvWalkthrough().
-function targetedDemoRappelWalkthrough() {
-  targetedDemoShowHalo(
-    ['#quick-reminder-contact', '#quick-reminder-reason'],
-    "On remplit les infos",
-    "Le contact (optionnel) et le motif sont déjà remplis, à titre d'exemple."
+  targetedDemoShowHaloWithProgress(
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez par exemple : « ${phrase} » — Clarity note le rappel dès que vous l'envoyez.`
   );
-  targetedDemoWalkthroughTimeout = setTimeout(() => {
-    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
-    targetedDemoShowHalo(
-      ['#quick-reminder-time', '#quick-reminder-date'],
-      "Puis le jour et l'heure",
-      "La date et l'heure sont également déjà choisies, à titre d'exemple."
-    );
-    targetedDemoWalkthroughTimeout = setTimeout(() => {
-      if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
-      targetedDemoTrackConfirmAndProgress(
-        ['#quick-reminder-confirm'],
-        "À vous de valider",
-        "Cliquez sur « Noter le rappel » pour l'enregistrer.",
-        "Clarity travaille",
-        "Elle enregistre le rappel en direct — quelques secondes de patience."
-      );
-    }, 2600);
-  }, 2600);
 }
 
-// Compte rendu : l'utilisateur clique lui-même sur le raccourci pour ouvrir
-// le vrai formulaire (seul le Sujet est obligatoire), qu'on pré-remplit
-// d'un exemple ; on attend ensuite que le résultat (#cr-result-modal)
-// s'affiche pour considérer la démo terminée.
+// Compte rendu : demande explicite — on ne montre plus le raccourci dédié
+// pendant la démo, seulement la dictée/le texte libre. Dicter/taper une
+// phrase de compte rendu au champ général ouvre déjà le même formulaire
+// multi-points que le raccourci (voir le routage de l'orchestrateur,
+// data.agent === "compte_rendu"/"redaction" + looksLikeCompteRendu) : rien
+// à changer côté ouverture. On attend ensuite que le résultat
+// (#cr-result-modal) s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
   const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
-  // Même règle que RDV/Rappel : champ+micro et raccourci "Compte rendu"
-  // montrés en même temps.
-  targetedDemoShowHaloPair(
+  targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    ['#quick-compte-rendu-btn'],
     "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu.`
+    `Dictez (micro) ou tapez par exemple : « ${phrase} ».`
   );
   targetedDemoWaitForCrModalOpen();
 }
@@ -21628,6 +21577,20 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
       sujetInput.value = "Démo — Visite chantier";
       sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
+    // Un compte rendu exige au moins un point (ou une réponse de checklist)
+    // pour pouvoir être créé (voir submitCompteRendu()) — sans ça,
+    // l'utilisateur tombait sur un message d'erreur en pleine démo et ne
+    // pouvait jamais valider. On ajoute donc 3 points d'exemple déjà
+    // enregistrés, qu'on montre ensuite dans le halo suivant, avant que
+    // l'utilisateur valide lui-même.
+    if (!crPoints.length) {
+      crPoints.push(
+        "État général du chantier conforme, aucun désordre constaté",
+        "Travaux prévus réalisés dans les délais",
+        "Prochaine intervention à prévoir sous 15 jours"
+      );
+      if (typeof renderCrPoints === "function") renderCrPoints();
+    }
     targetedDemoCrWalkthrough();
     targetedDemoWaitForCrResult();
     return;
@@ -21636,23 +21599,22 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
-// Même principe que targetedDemoRdvWalkthrough() : le formulaire Compte
-// rendu n'a qu'un champ obligatoire (Sujet), donc un seul cran avant la
-// validation.
+// Un seul cran avant la validation : le sujet ET les 3 points d'exemple
+// sont déjà remplis, on les montre ensemble avant de terminer sur le bouton
+// de création (qui bascule ensuite tout seul, en silence, vers le bandeau
+// de progression — voir targetedDemoTrackConfirmAndProgress).
 function targetedDemoCrWalkthrough() {
   targetedDemoShowHalo(
-    ['#cr-field-sujet'],
-    "Le sujet est prêt",
-    "Le sujet du compte rendu est déjà rempli, à titre d'exemple."
+    ['#cr-points-list', '#cr-field-sujet'],
+    "Le sujet et les points sont prêts",
+    "Le sujet et 3 points sont déjà remplis, à titre d'exemple."
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
     targetedDemoTrackConfirmAndProgress(
       ['#cr-create-btn'],
       "À vous de valider",
-      "Cliquez sur « Créer le compte rendu » pour le générer.",
-      "Clarity rédige",
-      "Elle génère le compte rendu en direct — quelques secondes de patience."
+      "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
     );
   }, 2600);
 }
