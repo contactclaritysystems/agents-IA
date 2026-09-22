@@ -15568,6 +15568,13 @@ function firstScheduleNoticeFlagKey() {
 }
 
 function maybeShowFirstScheduleNotice() {
+  // Démo ciblée : le RDV/rappel créé pendant la démo est réel (vrai
+  // pipeline), donc cette popup se déclenchait aussi pendant la démo —
+  // elle s'affichait par-dessus/à côté du halo, gênant sa lecture (bug
+  // remonté : "il faut lever ce rappel pendant toute la démo"). On la
+  // suspend entièrement tant que la démo est active ; elle réapparaîtra
+  // normalement ensuite, au prochain vrai RDV/rappel créé hors démo.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) return;
   const flagKey = firstScheduleNoticeFlagKey();
   if (!flagKey) return;
   if (localStorage.getItem(flagKey) === "done") return;
@@ -19928,7 +19935,7 @@ let onboardingActive = false;
 let onboardingStep = null;
 let onboardingPositionInterval = null;
 
-// Démo d'accueil ciblée ("Sur quoi aimeriez-vous gagner du temps ?") —
+// Démo d'accueil ciblée ("Quelle action faites-vous le plus au quotidien ?") —
 // distincte de l'ancien tour ci-dessus (onboardingActive/onboardingStep),
 // qui continue de se jouer en premier sur un compte neuf. Cette démo
 // s'affiche ensuite, une seule fois (localStorage demo_done), et peut
@@ -20578,9 +20585,26 @@ function getStepSelectors(step) {
 function pickVisibleElement(selectors) {
   for (const sel of selectors) {
     const el = document.querySelector(sel);
-    if (el && el.offsetParent !== null) return el;
+    if (el && isPickableElementVisible(el)) return el;
   }
   return null;
+}
+
+// Bug remonté : le halo de la démo ciblée perdait sa cible (voile
+// entièrement refermé) dès qu'il devait suivre un élément en
+// position:fixed (ex : #orchestrator-dictation-box, le bandeau de
+// progression "Clarity travaille..."). Cause : el.offsetParent renvoie
+// TOUJOURS null pour un élément position:fixed, même quand il est bel et
+// bien affiché à l'écran — ce n'est fiable que pour les éléments en flux
+// normal. On retombe donc sur les styles calculés + la taille réelle pour
+// ce cas, offsetParent restant le chemin rapide pour tout le reste.
+function isPickableElementVisible(el) {
+  if (el.offsetParent !== null) return true;
+  const style = window.getComputedStyle(el);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+  if (parseFloat(style.opacity || "1") === 0) return false;
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
   function getOnboardingSpotlightTarget(step) {
@@ -21068,7 +21092,7 @@ async function markOnboardingComplete() {
     }, { onConflict: "user_id,agent_name" });
 }
 
-// ─── DÉMO D'ACCUEIL CIBLÉE ("Sur quoi aimeriez-vous gagner du temps ?") ───
+// ─── DÉMO D'ACCUEIL CIBLÉE ("Quelle action faites-vous le plus au quotidien ?") ───
 // Se déclenche APRÈS l'ancien tour ci-dessus (une fois demo_done !== "true"
 // dans le localStorage — pas de compte à gérer côté backend pour ça, un
 // simple drapeau local suffit). Réutilise les mêmes éléments de halo que
@@ -21123,8 +21147,8 @@ function openTargetedDemoMenu() {
   modal.innerHTML = `
     <div class="mail-choice-backdrop"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
-      <div class="mail-choice-title" style="text-align:center;">Sur quoi aimeriez-vous gagner du temps ?</div>
-      <div class="mail-choice-subtitle" style="text-align:center;">Choisissez une action : on vous montre tout de suite comment ça marche.</div>
+      <div class="mail-choice-title" style="text-align:center;">Quelle action faites-vous le plus au quotidien ?</div>
+      <div class="mail-choice-subtitle" style="text-align:center;">Choisissez-la : on vous montre tout de suite comment ça marche.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0;">
         <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('mail')">Écrire et envoyer des mails</button>
         <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('rdv')">Organiser mes rendez-vous</button>
@@ -33159,7 +33183,7 @@ return true;
 
   async function incrementActions() {
   // Aucune action ne doit être décomptée pendant la démo ciblée (5 boutons
-  // "Sur quoi aimeriez-vous gagner du temps ?") — voir targetedDemoActive.
+  // "Quelle action faites-vous le plus au quotidien ?") — voir targetedDemoActive.
   if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) return;
 
   try {
