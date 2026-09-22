@@ -21197,6 +21197,11 @@ function openTargetedDemoMenu() {
   if (oldBubble) { oldBubble.style.display = "none"; oldBubble.innerHTML = ""; }
   if (oldMicTag) oldMicTag.style.display = "none";
 
+  // Même filet de sécurité que showTargetedDemoEndSheet (symétrique) :
+  // jamais cette feuille de choix superposée à l'écran de fin "Et voilà !".
+  const staleEndSheet = document.getElementById("targeted-demo-end-modal");
+  if (staleEndSheet) staleEndSheet.remove();
+
   const existing = document.getElementById("targeted-demo-menu-modal");
   if (existing) existing.remove();
 
@@ -21578,6 +21583,14 @@ function targetedDemoStop() {
   if (ring2) ring2.style.display = "none";
   if (bubble) { bubble.style.display = "none"; bubble.innerHTML = ""; }
   targetedDemoCurrentTarget = null;
+  // Filet de sécurité : si la démo s'arrête pendant (ou après) le halo du
+  // résultat de compte rendu, les boutons Envoyer/PDF/Imprimer/Copier
+  // redeviennent utilisables normalement (voir
+  // targetedDemoSetCrResultActionsLocked) — sans quoi ils resteraient
+  // bloqués même une fois la démo terminée.
+  if (typeof targetedDemoSetCrResultActionsLocked === "function") {
+    targetedDemoSetCrResultActionsLocked(false);
+  }
 }
 
 // ─── Routeur + un parcours par bouton ─────────────────────────────────────
@@ -21604,23 +21617,38 @@ function startTargetedDemoFlow(flow) {
   else runTargetedDemoDecouverte();
 }
 
-// "Voir l'essentiel" : demande explicite (rendu premium) — un seul halo,
-// une seule bulle courte, pas d'étape micro séparée, aucun bouton d'action
-// rapide montré (même règle que partout ailleurs dans la démo). Le champ
-// reste vide (placeholder existant "Dites-moi ce qu'il vous faut…",
-// inchangé) : contrairement aux autres parcours, celui-ci ne vise aucun
-// résultat précis, il n'y a donc rien à préremplir.
+// "Voir l'essentiel" : demande explicite — 3 crans distincts, jamais
+// regroupés : d'abord le micro (dicter), puis le champ d'écriture, puis les
+// actions rapides. Le champ reste vide (placeholder existant "Dites-moi ce
+// qu'il vous faut…", inchangé) : contrairement aux autres parcours, celui-
+// ci ne vise aucun résultat précis, il n'y a donc rien à préremplir.
 function runTargetedDemoDecouverte() {
   targetedDemoShowHalo(
-    ['#orchestrator-text-input', '.clarity-input-row'],
-    "À vous",
-    "Parlez ou écrivez. Clarity s'occupe du reste."
+    ['#orchestrator-dictation-btn'],
+    "Dictez",
+    "Cliquez sur le micro et parlez à Clarity."
   );
-  targetedDemoWaitTimeout = setTimeout(() => {
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
-    targetedDemoStop();
-    showTargetedDemoEndSheet();
-  }, 3200);
+    targetedDemoShowHalo(
+      ['#orchestrator-text-input', '.clarity-input-row'],
+      "Vous pouvez écrire",
+      "Cliquez dans le champ pour taper votre demande."
+    );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+      targetedDemoShowHalo(
+        ['.clarity-quick-row'],
+        "Actions rapides",
+        "Ces raccourcis lancent directement l'action choisie."
+      );
+      targetedDemoWalkthroughTimeout = setTimeout(() => {
+        if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+        targetedDemoStop();
+        showTargetedDemoEndSheet();
+      }, 3200);
+    }, 2600);
+  }, 2600);
 }
 
 // Prénom du prospect (compte connecté) pour les phrases d'exemple des
@@ -21815,23 +21843,32 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
-// Un seul cran avant la validation : le sujet ET les points (issus de la
-// vraie demande de l'utilisateur) sont montrés ensemble avant de terminer
-// sur le bouton de création (qui bascule ensuite tout seul, en silence,
-// vers le bandeau de progression — voir targetedDemoTrackConfirmAndProgress).
+// Demande explicite : 3 crans distincts avant la validation, jamais
+// regroupés — d'abord le Sujet seul, puis les points (tous ensemble, en un
+// seul halo), puis enfin le bouton de création (qui bascule ensuite tout
+// seul, en silence, vers le bandeau de progression — voir
+// targetedDemoTrackConfirmAndProgress).
 function targetedDemoCrWalkthrough() {
   targetedDemoShowHalo(
-    ['#cr-points-list', '#cr-field-sujet'],
-    "Le sujet et les points sont prêts",
-    "Relisez-les, modifiez-les si besoin — vous pouvez aussi y ajouter des photos."
+    ['#cr-field-sujet'],
+    "Le sujet est prêt",
+    "Relisez-le, modifiez-le si besoin."
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
-    targetedDemoTrackConfirmAndProgress(
-      ['#cr-create-btn'],
-      "À vous de valider",
-      "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
+    targetedDemoShowHalo(
+      ['#cr-points-list'],
+      "Les points sont prêts",
+      "Relisez-les, modifiez-les si besoin — vous pouvez aussi y ajouter des photos."
     );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+      targetedDemoTrackConfirmAndProgress(
+        ['#cr-create-btn'],
+        "À vous de valider",
+        "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
+      );
+    }, 2600);
   }, 2600);
 }
 
@@ -21847,9 +21884,23 @@ function targetedDemoWaitForCrResult(attempts = 0) {
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 300);
 }
 
+// Demande explicite : les boutons d'action du résultat (Envoyer/PDF/
+// Imprimer/Copier/Fermer/Supprimer) restent visibles pendant ce halo — on
+// les montre — mais ne doivent PAS être cliquables : à ce stade de la
+// démo, seuls "À vous d'essayer"/"Découvrir une autre action" (écran de
+// fin, juste après) et "Déconnexion" doivent rester actionnables.
+function targetedDemoSetCrResultActionsLocked(locked) {
+  document.querySelectorAll('.cr-result-actions-row button').forEach(btn => {
+    btn.style.pointerEvents = locked ? "none" : "";
+  });
+}
+
 // Le compte rendu est prêt : on montre les actions disponibles avant de
-// terminer la démo (envoyer par mail, PDF, impression, copie du texte).
+// terminer la démo (envoyer par mail, PDF, impression, copie du texte),
+// sans qu'on puisse cliquer dessus (voir targetedDemoSetCrResultActionsLocked
+// ci-dessus).
 function targetedDemoShowCrResultHalo() {
+  targetedDemoSetCrResultActionsLocked(true);
   targetedDemoShowHalo(
     ['.cr-result-actions-row'],
     "À vous",
@@ -21988,6 +22039,16 @@ async function targetedDemoShowCreatedInCalendar(kind) {
 // ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
 
 function showTargetedDemoEndSheet() {
+  // Filet de sécurité (bug remonté : "double popup" après l'envoi du
+  // mail) — quelle qu'en soit la cause exacte (ex : la feuille de choix
+  // "Sur quoi voulez-vous gagner du temps ?" restée affichée par un appel
+  // externe à maybeOpenTargetedDemoMenu pendant la démo), l'écran de fin ne
+  // doit JAMAIS pouvoir se retrouver superposé à une autre popup de la
+  // démo. On force donc la fermeture complète de la feuille de choix (pas
+  // seulement masquée : retirée du DOM) juste avant d'afficher "Et voilà !".
+  const staleMenu = document.getElementById("targeted-demo-menu-modal");
+  if (staleMenu) staleMenu.remove();
+
   const existing = document.getElementById("targeted-demo-end-modal");
   if (existing) existing.remove();
 
