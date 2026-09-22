@@ -21636,6 +21636,15 @@ function targetedDemoClientFirstName() {
   return "votre client";
 }
 
+// Format unique des bulles "À vous" (tous les parcours sauf "Voir
+// l'essentiel") : demande explicite — toujours le même schéma "Dictez ou
+// écrivez par exemple : « [phrase] »", rien d'autre (pas de 2e phrase type
+// "Clarity note dès que..."). La phrase n'apparaît QUE dans la bulle,
+// jamais recopiée dans le champ (qui reste vide, placeholder habituel).
+function targetedDemoExampleBubbleText(phrase) {
+  return `Dictez ou écrivez par exemple :<br>« ${phrase} »`;
+}
+
 // Mail : demande explicite — le champ reste VIDE (placeholder habituel),
 // c'est le prospect qui écrit ou dicte sa propre demande. La bulle ne
 // montre plus qu'une seule phrase d'EXEMPLE (jamais recopiée dans le
@@ -21649,7 +21658,7 @@ function runTargetedDemoMail() {
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    `Envoyez un mail à ${firstName} pour confirmer demain 14h.`
+    targetedDemoExampleBubbleText(`Envoyez un mail à ${firstName} pour confirmer demain 14h.`)
   );
 
   targetedDemoWaitForMailPreview();
@@ -21757,7 +21766,7 @@ function runTargetedDemoRdv() {
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    `Notez un rendez-vous demain 14h avec ${firstName}.`
+    targetedDemoExampleBubbleText(`Notez un rendez-vous demain 14h avec ${firstName}.`)
   );
 }
 
@@ -21768,7 +21777,7 @@ function runTargetedDemoRappel() {
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Rappelez-moi demain 8h de récupérer les clés."
+    targetedDemoExampleBubbleText("Rappelez-moi demain 8h de récupérer les clés.")
   );
 }
 
@@ -21785,7 +21794,7 @@ function runTargetedDemoCr() {
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Créez le compte rendu quand les points sont les vôtres."
+    targetedDemoExampleBubbleText("Compte rendu visite portail, moteur à remplacer, peinture à reprendre, 3 barreaux tordus.")
   );
   targetedDemoWaitForCrModalOpen();
 }
