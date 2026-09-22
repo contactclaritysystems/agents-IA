@@ -21199,10 +21199,53 @@ function targetedDemoRenderBubble(title, text) {
   overlay.classList.add("active");
   bubble.style.display = "block";
   bubble.classList.remove("onboarding-center");
+  // Repart toujours de la position par défaut (CSS, ~42% centré) : une
+  // éventuelle position dynamique appliquée par une étape précédente (voir
+  // targetedDemoPositionBubbleNear, utilisé dans l'aperçu du mail) ne doit
+  // jamais persister sur l'étape suivante.
+  bubble.style.top = "";
+  bubble.style.transform = "";
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
     <div class="onboarding-text">${text}</div>
   `;
+}
+
+// L'aperçu du mail (#mail-preview-modal .mail-choice-box) est une popup en
+// position:fixed, toujours centrée à l'écran, avec un scroll interne très
+// limité : certains champs (Objet notamment) tombent alors pile dans la
+// zone occupée par la bulle par défaut, sans qu'aucun scroll ne puisse les
+// en dégager (la popup elle-même ne bouge jamais, demande explicite :
+// "il est sous la popup, on doit le voir"). On repositionne donc
+// directement la bulle au-dessus ou en dessous du champ ciblé, selon la
+// place réellement disponible à l'écran.
+function targetedDemoPositionBubbleNear(target) {
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!bubble || bubble.style.display === "none" || !target) return;
+  if (typeof target.getBoundingClientRect !== "function") return;
+
+  const targetRect = target.getBoundingClientRect();
+  const bubbleHeight = bubble.offsetHeight || 165;
+  const margin = 16;
+  const viewportHeight = window.innerHeight;
+
+  const spaceBelow = viewportHeight - targetRect.bottom;
+  const spaceAbove = targetRect.top;
+
+  let top;
+  if (spaceBelow >= bubbleHeight + margin * 2) {
+    top = targetRect.bottom + margin;
+  } else if (spaceAbove >= bubbleHeight + margin * 2) {
+    top = targetRect.top - bubbleHeight - margin;
+  } else {
+    top = spaceBelow >= spaceAbove
+      ? targetRect.bottom + margin
+      : targetRect.top - bubbleHeight - margin;
+  }
+  top = Math.max(margin, Math.min(top, viewportHeight - bubbleHeight - margin));
+
+  bubble.style.top = top + "px";
+  bubble.style.transform = "translateX(-50%)";
 }
 
 // Demande explicite : une fois que le halo bascule sur le bandeau de
@@ -21527,11 +21570,10 @@ function runTargetedDemoMail() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Envoie un mail à ${firstName} pour confirmer demain 14h`;
 
-  const input = document.getElementById("orchestrator-text-input");
-  if (input && !input.textContent.trim()) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
+  // Demande explicite : contrairement aux autres flux, le champ n'est plus
+  // pré-rempli à l'avance pour Mail — la phrase n'est montrée qu'à titre
+  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
+  // tape lui-même ("l'effet sera plus impactant").
 
   // Demande explicite : on ne montre plus aucun bouton d'action rapide
   // pendant la démo (trop d'infos en même temps) — seule la voie dictée/
@@ -21576,16 +21618,31 @@ function targetedDemoMailPreviewWalkthrough() {
     if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
     targetedDemoShowHalo(
       ['#preview-mail-subject'],
-      "Objet et message rédigés",
-      "L'objet et le message ci-dessous sont rédigés automatiquement, d'après votre demande."
+      "Objet rédigé",
+      "L'objet est rédigé automatiquement, d'après votre demande."
     );
+    // Ce champ tombe pile dans la zone occupée par la bulle par défaut (la
+    // popup d'aperçu est fixe et ne peut pas être scrollée pour l'en
+    // dégager) : on repositionne la bulle pour qu'il reste bien visible.
+    targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-subject']));
+
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
       targetedDemoShowHalo(
-        ['#mail-preview-modal .save-btn'],
-        "Aperçu du mail",
-        "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
+        ['#preview-mail-body'],
+        "Message rédigé",
+        "Le message est rédigé automatiquement, d'après votre demande."
       );
+      targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-body']));
+
+      targetedDemoWalkthroughTimeout = setTimeout(() => {
+        if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
+        targetedDemoShowHalo(
+          ['#mail-preview-modal .save-btn'],
+          "Aperçu du mail",
+          "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
+        );
+      }, 2600);
     }, 2600);
   }, 2600);
 }
@@ -21729,14 +21786,75 @@ function targetedDemoWaitForCrResult(attempts = 0) {
 // et Compte rendu ci-dessus).
 function targetedDemoOnEvent(event) {
   if (!targetedDemoActive) return;
-  if (
-    (event === "rdv_created" && targetedDemoFlow === "rdv") ||
-    (event === "rappel_created" && targetedDemoFlow === "rappel") ||
-    (event === "cr_created" && targetedDemoFlow === "cr")
-  ) {
+  if (event === "rdv_created" && targetedDemoFlow === "rdv") {
+    targetedDemoShowCreatedInCalendar("rdv");
+    return;
+  }
+  if (event === "rappel_created" && targetedDemoFlow === "rappel") {
+    targetedDemoShowCreatedInCalendar("rappel");
+    return;
+  }
+  if (event === "cr_created" && targetedDemoFlow === "cr") {
     targetedDemoStop();
     showTargetedDemoEndSheet();
   }
+}
+
+// Demande explicite : une fois le RDV/rappel confirmé, il ne suffit pas
+// d'un toast — on doit le VOIR apparaître dans le calendrier ("on doit
+// voir le calendrier avec ce fameux rdv, et pareil pour les rappels").
+// On bascule donc sur Planning, on ouvre le jour concerné (demain — la
+// date utilisée par la phrase d'exemple dictée/tapée) via
+// openPlanningCalendarDay() (qui affiche RDV et rappels du jour côte à
+// côte), puis on met en halo la carte correspondante avant de terminer sur
+// l'écran de fin habituel.
+async function targetedDemoShowCreatedInCalendar(kind) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  if (targetedDemoWalkthroughTimeout) {
+    clearTimeout(targetedDemoWalkthroughTimeout);
+    targetedDemoWalkthroughTimeout = null;
+  }
+  targetedDemoSetBubbleVisible(false);
+
+  const planningBtn = pickVisibleElement(['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]']);
+  if (typeof showSection === "function") showSection("planning", planningBtn);
+
+  if (typeof loadPlanningCalendarData === "function") {
+    try { await loadPlanningCalendarData(); } catch (e) { /* best-effort */ }
+  }
+  // La démo a pu être arrêtée pendant l'attente réseau ci-dessus (ex :
+  // déconnexion) — on vérifie donc à nouveau avant de continuer.
+  if (!targetedDemoActive || targetedDemoFlow !== kind) return;
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const iso = typeof isoFromDate === "function" ? isoFromDate(tomorrow) : null;
+
+  window.currentPlanningViewMode = "calendar";
+  if (iso && typeof openPlanningCalendarDay === "function") {
+    openPlanningCalendarDay(iso);
+  }
+
+  const selectors = kind === "rdv"
+    ? ['#planning-list .agent-card[onclick^="openAppointmentDetail"]']
+    : ['#planning-list .agent-card[onclick^="openFollowUpDetail"]'];
+
+  targetedDemoShowHalo(
+    selectors,
+    kind === "rdv" ? "Le rendez-vous est bien là" : "Le rappel est bien là",
+    kind === "rdv"
+      ? "Il apparaît directement dans votre calendrier — un vrai rendez-vous, enregistré pour de bon."
+      : "Il apparaît directement dans votre calendrier — un vrai rappel, enregistré pour de bon."
+  );
+
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive) return;
+    targetedDemoStop();
+    showTargetedDemoEndSheet();
+  }, 3200);
 }
 
 // ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
