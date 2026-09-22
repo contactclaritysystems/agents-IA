@@ -10021,6 +10021,11 @@ body[data-theme="light"]::after {
       <div class="settings-row-title">Application</div>
       <span class="settings-row-chevron">›</span>
     </div>
+    <div class="settings-row" id="replay-demo-settings-row" onclick="replayTargetedDemo()">
+      <span class="settings-row-icon settings-row-icon-violet">🔁</span>
+      <div class="settings-row-title">Revoir la visite</div>
+      <span class="settings-row-chevron">›</span>
+    </div>
   </div>
 
 </div>
@@ -16738,6 +16743,9 @@ async function confirmQuickPlanning() {
     if (data.success) {
       showToast(data.message || "Rendez-vous noté", "success");
       maybeShowFirstScheduleNotice();
+      if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rdv") {
+        targetedDemoOnEvent("rdv_created");
+      }
       return;
     }
     showToast(data.message || "Impossible de créer le rendez-vous", "error");
@@ -16972,6 +16980,9 @@ async function confirmQuickReminder() {
     if (data.success) {
       showToast(data.message || "Rappel noté", "success");
       maybeShowFirstScheduleNotice();
+      if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rappel") {
+        targetedDemoOnEvent("rappel_created");
+      }
     } else {
       showToast(data.message || "Impossible de créer le rappel", "error");
     }
@@ -19893,6 +19904,17 @@ let onboardingActive = false;
 let onboardingStep = null;
 let onboardingPositionInterval = null;
 
+// Démo d'accueil ciblée ("Sur quoi aimeriez-vous gagner du temps ?") —
+// distincte de l'ancien tour ci-dessus (onboardingActive/onboardingStep),
+// qui continue de se jouer en premier sur un compte neuf. Cette démo
+// s'affiche ensuite, une seule fois (localStorage demo_done), et peut
+// aussi être relancée manuellement depuis Réglages.
+let targetedDemoActive = false;
+let targetedDemoFlow = null;
+let targetedDemoPositionInterval = null;
+let targetedDemoCurrentTarget = null;
+let targetedDemoWaitTimeout = null;
+
 // Étapes où l'utilisateur doit encore appuyer sur le micro pour
 // démarrer : c'est là qu'on montre l'étiquette "C'est le micro", jamais
 // en usage normal de l'app. Volontairement absente de "stop_dictation" :
@@ -20454,6 +20476,7 @@ async function finishOnboardingTips() {
   const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
   if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
   await markOnboardingComplete();
+  maybeOpenTargetedDemoMenu();
 }
 
 function getStepSelectors(step) {
@@ -20898,10 +20921,376 @@ async function markOnboardingComplete() {
       updated_at: new Date().toISOString()
     }, { onConflict: "user_id,agent_name" });
 }
-  
+
+// ─── DÉMO D'ACCUEIL CIBLÉE ("Sur quoi aimeriez-vous gagner du temps ?") ───
+// Se déclenche APRÈS l'ancien tour ci-dessus (une fois demo_done !== "true"
+// dans le localStorage — pas de compte à gérer côté backend pour ça, un
+// simple drapeau local suffit). Réutilise les mêmes éléments de halo que
+// l'ancien tour (#onboarding-overlay/#onboarding-ring/#onboarding-bubble),
+// avec sa propre boucle de positionnement indépendante (targetedDemoActive
+// / targetedDemoFlow), et les popups déjà existants de l'app
+// (.mail-choice-backdrop/.mail-choice-box) pour le menu et l'écran de fin.
+
+function maybeOpenTargetedDemoMenu() {
+  if (targetedDemoActive) return;
+  if (localStorage.getItem("demo_done") === "true") return;
+  openTargetedDemoMenu();
+}
+
+function openTargetedDemoMenu() {
+  const existing = document.getElementById("targeted-demo-menu-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "targeted-demo-menu-modal";
+  modal.innerHTML = `
+    <div class="mail-choice-backdrop" onclick="dismissTargetedDemoMenu()"></div>
+    <div class="mail-choice-box" style="overflow-x:hidden;">
+      <div class="mail-choice-title">Sur quoi aimeriez-vous gagner du temps ?</div>
+      <div class="mail-choice-subtitle">Choisissez une action : on vous montre tout de suite comment ça marche.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0;">
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('mail')">Écrire et envoyer des mails</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('rdv')">Organiser mes rendez-vous</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('cr')">Faire mes comptes rendus</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('rappel')">Programmer mes rappels</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('decouverte')">Je veux juste découvrir</button>
+      </div>
+      <button class="sheet-btn" type="button" onclick="dismissTargetedDemoMenu()" style="width:100%;justify-content:center;margin-top:14px;">Plus tard</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.style.display = "block";
+}
+
+function closeTargetedDemoMenu() {
+  const modal = document.getElementById("targeted-demo-menu-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function dismissTargetedDemoMenu() {
+  closeTargetedDemoMenu();
+  localStorage.setItem("demo_done", "true");
+}
+
+function replayTargetedDemo() {
+  localStorage.setItem("demo_done", "false");
+  const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+  if (typeof showSection === "function") showSection("agents", homeBtn);
+  setTimeout(() => openTargetedDemoMenu(), 200);
+}
+
+// ─── Halo générique (réutilise #onboarding-overlay/#onboarding-ring déjà
+// présents dans le DOM — même technique que l'ancien tour pendant ses
+// étapes interactives : un trou (clip-path) sur l'élément visé, qui reste
+// donc cliquable au travers, sans bloqueur de clics puisque ces étapes
+// doivent rester utilisables normalement). ────────────────────────────────
+
+function targetedDemoRenderBubble(title, text) {
+  const overlay = document.getElementById("onboarding-overlay");
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!overlay || !bubble) return;
+  overlay.classList.add("active");
+  bubble.style.display = "block";
+  bubble.classList.remove("onboarding-center");
+  bubble.innerHTML = `
+    <div class="onboarding-title">${title}</div>
+    <div class="onboarding-text">${text}</div>
+  `;
+}
+
+function targetedDemoShowHalo(selectors, title, text) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  targetedDemoRenderBubble(title, text);
+  const tick = () => {
+    const target = pickVisibleElement(selectors);
+    targetedDemoCurrentTarget = target;
+    positionOnboardingSpotlight(target);
+  };
+  tick();
+  targetedDemoPositionInterval = setInterval(tick, 300);
+}
+
+function targetedDemoStop() {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  if (targetedDemoWaitTimeout) {
+    clearTimeout(targetedDemoWaitTimeout);
+    targetedDemoWaitTimeout = null;
+  }
+  const overlay = document.getElementById("onboarding-overlay");
+  const ring = document.getElementById("onboarding-ring");
+  const bubble = document.getElementById("onboarding-bubble");
+  if (overlay) { overlay.classList.remove("active"); overlay.style.clipPath = "none"; }
+  if (ring) ring.style.display = "none";
+  if (bubble) { bubble.style.display = "none"; bubble.innerHTML = ""; }
+  targetedDemoCurrentTarget = null;
+}
+
+// ─── Routeur + un parcours par bouton ─────────────────────────────────────
+
+function startTargetedDemoFlow(flow) {
+  closeTargetedDemoMenu();
+  targetedDemoActive = true;
+  targetedDemoFlow = flow;
+
+  if (flow === "mail") runTargetedDemoMail();
+  else if (flow === "rdv") runTargetedDemoRdv();
+  else if (flow === "cr") runTargetedDemoCr();
+  else if (flow === "rappel") runTargetedDemoRappel();
+  else runTargetedDemoDecouverte();
+}
+
+// "Je veux juste découvrir" : 2-3 halos maxi (champ + micro + Actions
+// rapides), enchaînés automatiquement, puis "À vous d'essayer" — pas les 4
+// démos à la suite.
+function runTargetedDemoDecouverte() {
+  targetedDemoShowHalo(
+    ['#orchestrator-text-input', '.clarity-input-row'],
+    "Dites-lui ce qu'il vous faut",
+    "Écrivez ou dictez votre demande ici, en langage naturel — comme à un assistant."
+  );
+  targetedDemoWaitTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+    targetedDemoShowHalo(
+      ['#orchestrator-dictation-btn'],
+      "Le micro",
+      "Vous pouvez aussi dicter votre demande à voix haute."
+    );
+    targetedDemoWaitTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+      targetedDemoShowHalo(
+        ['.clarity-quick-row'],
+        "Actions rapides",
+        "Ou passez directement par ces raccourcis pour les tâches courantes."
+      );
+      targetedDemoWaitTimeout = setTimeout(() => {
+        if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+        targetedDemoStop();
+        showTargetedDemoEndSheet();
+      }, 3200);
+    }, 3200);
+  }, 3200);
+}
+
+// Mail : phrase guidée envoyée via le vrai pipeline (dictée -> orchestrateur
+// -> aperçu du mail), pour un aperçu fidèle à la réalité. L'envoi réel est
+// bloqué plus loin dans sendPreparedMail() (voir son garde targetedDemoActive).
+function runTargetedDemoMail() {
+  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
+  const phrase = `Envoie un mail à ${firstName} pour confirmer demain 14h`;
+
+  targetedDemoShowHalo(
+    ['#orchestrator-text-input', '.clarity-input-row'],
+    "Exemple guidé",
+    `On envoie l'exemple : « ${phrase} »`
+  );
+
+  targetedDemoWaitTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
+    const input = document.getElementById("orchestrator-text-input");
+    if (input) input.textContent = phrase;
+    try { submitOrchestratorTypedText(); } catch (e) {}
+    targetedDemoWaitForMailPreview();
+  }, 1400);
+}
+
+function targetedDemoWaitForMailPreview(attempts = 0) {
+  if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
+  const modal = document.getElementById("mail-preview-modal");
+  const open = modal && modal.style.display === "block";
+  if (open) {
+    targetedDemoShowHalo(
+      ['#mail-preview-modal .save-btn'],
+      "Aperçu du mail",
+      "Relisez l'aperçu, puis cliquez sur Envoyer — aucun mail ne sera réellement envoyé pendant cette démo."
+    );
+    return;
+  }
+  if (attempts > 60) { targetedDemoStop(); return; }
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForMailPreview(attempts + 1), 300);
+}
+
+function finishTargetedDemoMailStep() {
+  targetedDemoStop();
+  if (typeof closeMailPreview === "function") closeMailPreview(false);
+  showToast("Exemple terminé — aucun mail n'est parti", "success");
+  showTargetedDemoEndSheet();
+}
+
+// RDV : passe par le formulaire structuré existant (plus fiable qu'une
+// dictée libre interprétée par l'IA), pré-rempli, avec le vrai prénom de
+// l'utilisateur (voir demande explicite) et un titre préfixé "Démo — " pour
+// pouvoir le reconnaître dans Planning.
+function runTargetedDemoRdv() {
+  targetedDemoShowHalo(
+    ['#quick-planning-btn'],
+    "Organiser mes rendez-vous",
+    "On va noter un rendez-vous d'exemple ensemble."
+  );
+
+  targetedDemoWaitTimeout = setTimeout(async () => {
+    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
+    await openQuickPlanningModal();
+    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
+
+    const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
+    const contactInput = document.getElementById("quick-planning-contact");
+    const titleInput = document.getElementById("quick-planning-title");
+    if (contactInput) contactInput.value = firstName;
+    if (titleInput) titleInput.value = "Démo — Rendez-vous avec " + firstName;
+
+    const tomorrowBtn = document.getElementById("quick-planning-quick-tomorrow");
+    if (tomorrowBtn) tomorrowBtn.click();
+    const timeInput = document.getElementById("quick-planning-time");
+    if (timeInput) { timeInput.value = "14:00"; refreshCustomDisplay(timeInput); }
+
+    targetedDemoShowHalo(
+      ['#quick-planning-confirm'],
+      "À vous de valider",
+      "Cliquez sur « Noter le rendez-vous » pour le voir apparaître dans Planning."
+    );
+  }, 900);
+}
+
+// Rappel : même principe que RDV, formulaire structuré existant pré-rempli.
+function runTargetedDemoRappel() {
+  targetedDemoShowHalo(
+    ['#quick-relance-btn', '.clarity-quick-row'],
+    "Programmer mes rappels",
+    "On va noter un rappel d'exemple ensemble."
+  );
+
+  targetedDemoWaitTimeout = setTimeout(async () => {
+    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
+    await openQuickReminderModal();
+    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
+
+    const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
+    const reasonInput = document.getElementById("quick-reminder-reason");
+    if (reasonInput) reasonInput.value = "Démo — Rappel pour " + firstName;
+
+    const tomorrowBtn = document.getElementById("quick-reminder-quick-tomorrow");
+    if (tomorrowBtn) tomorrowBtn.click();
+    const timeInput = document.getElementById("quick-reminder-time");
+    if (timeInput) { timeInput.value = "14:00"; refreshCustomDisplay(timeInput); }
+
+    targetedDemoShowHalo(
+      ['#quick-reminder-confirm'],
+      "À vous de valider",
+      "Cliquez sur « Noter le rappel » pour le voir apparaître dans la liste."
+    );
+  }, 900);
+}
+
+// Compte rendu : ouvre le vrai formulaire (seul le Sujet est obligatoire),
+// pré-rempli d'un exemple, puis on attend simplement que le résultat
+// (#cr-result-modal) s'affiche pour considérer la démo terminée.
+function runTargetedDemoCr() {
+  targetedDemoShowHalo(
+    ['#quick-compte-rendu-btn'],
+    "Faire mes comptes rendus",
+    "On va créer un exemple de compte rendu ensemble."
+  );
+
+  targetedDemoWaitTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+    quickStartCompteRendu();
+
+    targetedDemoWaitTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+      const sujetInput = document.getElementById("cr-field-sujet");
+      if (sujetInput) {
+        sujetInput.value = "Démo — Visite chantier";
+        sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      targetedDemoShowHalo(
+        ['#cr-create-btn'],
+        "Créer l'exemple",
+        "Cliquez ici pour voir le résultat généré automatiquement."
+      );
+      targetedDemoWaitForCrResult();
+    }, 500);
+  }, 900);
+}
+
+function targetedDemoWaitForCrResult(attempts = 0) {
+  if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+  const modal = document.getElementById("cr-result-modal");
+  const open = modal && modal.style.display === "block";
+  if (open) {
+    targetedDemoOnEvent("cr_created");
+    return;
+  }
+  if (attempts > 100) { targetedDemoStop(); return; }
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 300);
+}
+
+// Point d'entrée commun pour les résultats obtenus via les formulaires
+// structurés (RDV/Rappel — voir confirmQuickPlanning/confirmQuickReminder —
+// et Compte rendu ci-dessus).
+function targetedDemoOnEvent(event) {
+  if (!targetedDemoActive) return;
+  if (
+    (event === "rdv_created" && targetedDemoFlow === "rdv") ||
+    (event === "rappel_created" && targetedDemoFlow === "rappel") ||
+    (event === "cr_created" && targetedDemoFlow === "cr")
+  ) {
+    targetedDemoStop();
+    showTargetedDemoEndSheet();
+  }
+}
+
+// ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
+
+function showTargetedDemoEndSheet() {
+  const existing = document.getElementById("targeted-demo-end-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "targeted-demo-end-modal";
+  modal.innerHTML = `
+    <div class="mail-choice-backdrop" onclick="endTargetedDemoSession()"></div>
+    <div class="mail-choice-box" style="overflow-x:hidden;">
+      <div class="mail-choice-title">Et voilà !</div>
+      <div class="mail-choice-subtitle">C'est exactement comme ça que ça fonctionne, pour de vrai.</div>
+      <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="endTargetedDemoSession()">À vous d'essayer</button>
+      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="targetedDemoAnotherAction()">Découvrir une autre action</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.style.display = "block";
+}
+
+function closeTargetedDemoEndSheet() {
+  const modal = document.getElementById("targeted-demo-end-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function endTargetedDemoSession() {
+  closeTargetedDemoEndSheet();
+  targetedDemoActive = false;
+  targetedDemoFlow = null;
+  localStorage.setItem("demo_done", "true");
+}
+
+function targetedDemoAnotherAction() {
+  closeTargetedDemoEndSheet();
+  targetedDemoActive = false;
+  targetedDemoFlow = null;
+  openTargetedDemoMenu();
+}
+
 async function startOnboardingIfNeeded() {
   const completed = await loadOnboardingStatus();
-  if (completed) return;
+  if (completed) {
+    maybeOpenTargetedDemoMenu();
+    return;
+  }
 
   onboardingActive = true;
   startOnboardingPositionLoop();
@@ -24249,7 +24638,8 @@ const CLARITY_MODAL_IDS = [
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal", "relance-after-mail-modal",
-  "notify-help-sheet"
+  "notify-help-sheet",
+  "targeted-demo-menu-modal", "targeted-demo-end-modal"
 ];
 
 let clarityScrollLockY = 0;
@@ -32327,6 +32717,9 @@ return true;
 }
 
   async function incrementActions() {
+  // Aucune action ne doit être décomptée pendant la démo ciblée (5 boutons
+  // "Sur quoi aimeriez-vous gagner du temps ?") — voir targetedDemoActive.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) return;
 
   try {
 
@@ -33489,6 +33882,15 @@ function isValidEmailList(value) {
 }
 
   async function sendPreparedMail() {
+    // Démo ciblée (mail) : jamais d'envoi réel ni de vérification de boîte
+    // mail connectée pendant cette démo — on intercepte ICI, avant même la
+    // vérification "boîte mail connectée ?" plus bas, pour être sûr qu'elle
+    // ne s'affiche jamais pendant la démo (voir targetedDemoActive).
+    if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail") {
+      finishTargetedDemoMailStep();
+      return;
+    }
+
     // Capturé ICI, tout en haut : mailPreviewBackTarget est remis à null par
     // closeMailPreview(false) plus bas (avant même le toast de succès), donc
     // impossible de s'y fier une fois l'envoi terminé. Sert à distinguer
