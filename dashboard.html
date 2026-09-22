@@ -21229,10 +21229,15 @@ function finishTargetedDemoMailStep() {
 function runTargetedDemoRdv() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
+  // Le halo doit être sur le champ + micro (là où on peut réellement
+  // dicter/taper), pas sur le raccourci — sinon le texte dit "dictez" alors
+  // que rien de ce qui est mis en avant ne permet de le faire. Le raccourci
+  // "Planifier un RDV" reste mentionné par son nom dans le texte : pas
+  // besoin de halo dessus, c'est un bouton déjà visible et identifiable.
   targetedDemoShowHalo(
-    ['#quick-planning-btn'],
+    ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
-    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous.`
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Planifier un RDV » ci-dessous.`
   );
   targetedDemoWaitForRdvModalOpen();
 }
@@ -21269,10 +21274,13 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
 function runTargetedDemoRappel() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
+  // Même règle que RDV : halo sur le champ + micro, seul endroit où
+  // dicter/taper est réellement possible. Le raccourci "Créer un rappel"
+  // reste mentionné par son nom, pas besoin de halo dessus.
   targetedDemoShowHalo(
-    ['#quick-relance-btn', '.clarity-quick-row'],
+    ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
-    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel.`
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Créer un rappel » ci-dessous.`
   );
   targetedDemoWaitForRappelModalOpen();
 }
@@ -21308,10 +21316,12 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
 // s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
   const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
+  // Même règle que RDV/Rappel : halo sur le champ + micro. Le raccourci
+  // "Compte rendu" reste mentionné par son nom, pas besoin de halo dessus.
   targetedDemoShowHalo(
-    ['#quick-compte-rendu-btn'],
+    ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
-    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu.`
+    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Compte rendu » ci-dessous.`
   );
   targetedDemoWaitForCrModalOpen();
 }
