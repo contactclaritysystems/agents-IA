@@ -21106,26 +21106,30 @@ function runTargetedDemoDecouverte() {
   }, 3200);
 }
 
-// Mail : phrase guidée envoyée via le vrai pipeline (dictée -> orchestrateur
-// -> aperçu du mail), pour un aperçu fidèle à la réalité. L'envoi réel est
-// bloqué plus loin dans sendPreparedMail() (voir son garde targetedDemoActive).
+// Mail : phrase guidée pré-remplie à titre d'exemple, mais c'est bien
+// l'utilisateur qui déclenche l'envoi — en dictant (micro), en tapant lui-
+// même, ou simplement en cliquant sur "Envoyer" puisque la phrase est déjà
+// prête. On ne soumet jamais à sa place : on attend que l'aperçu du mail
+// apparaisse (preuve que LUI a validé), via le vrai pipeline (dictée ->
+// orchestrateur -> aperçu). L'envoi réel est bloqué plus loin dans
+// sendPreparedMail() (voir son garde targetedDemoActive).
 function runTargetedDemoMail() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Envoie un mail à ${firstName} pour confirmer demain 14h`;
 
+  const input = document.getElementById("orchestrator-text-input");
+  if (input && !input.textContent.trim()) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
+  }
+
   targetedDemoShowHalo(
-    ['#orchestrator-text-input', '.clarity-input-row'],
-    "Exemple guidé",
-    `On envoie l'exemple : « ${phrase} »`
+    ['.clarity-input-row', '#orchestrator-text-input'],
+    "À vous de jouer",
+    `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — puis validez l'envoi.`
   );
 
-  targetedDemoWaitTimeout = setTimeout(() => {
-    if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
-    const input = document.getElementById("orchestrator-text-input");
-    if (input) input.textContent = phrase;
-    try { submitOrchestratorTypedText(); } catch (e) {}
-    targetedDemoWaitForMailPreview();
-  }, 1400);
+  targetedDemoWaitForMailPreview();
 }
 
 function targetedDemoWaitForMailPreview(attempts = 0) {
@@ -21151,100 +21155,116 @@ function finishTargetedDemoMailStep() {
   showTargetedDemoEndSheet();
 }
 
-// RDV : passe par le formulaire structuré existant (plus fiable qu'une
-// dictée libre interprétée par l'IA), pré-rempli, avec le vrai prénom de
-// l'utilisateur (voir demande explicite) et un titre préfixé "Démo — " pour
-// pouvoir le reconnaître dans Planning.
+// RDV : c'est l'utilisateur qui clique lui-même sur le raccourci "Rendez-
+// vous" pour ouvrir le formulaire (on ne l'ouvre jamais à sa place) — on se
+// contente de le pré-remplir une fois ouvert, avec son propre prénom (voir
+// demande explicite) et un titre préfixé "Démo — " pour le reconnaître dans
+// Planning, puis c'est encore lui qui valide.
 function runTargetedDemoRdv() {
   targetedDemoShowHalo(
     ['#quick-planning-btn'],
-    "Organiser mes rendez-vous",
-    "On va noter un rendez-vous d'exemple ensemble."
+    "À vous de jouer",
+    "Cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous."
   );
+  targetedDemoWaitForRdvModalOpen();
+}
 
-  targetedDemoWaitTimeout = setTimeout(async () => {
-    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
-    await openQuickPlanningModal();
-    if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
-
+function targetedDemoWaitForRdvModalOpen(attempts = 0) {
+  if (!targetedDemoActive || targetedDemoFlow !== "rdv") return;
+  const modal = document.getElementById("quick-planning-modal");
+  const open = modal && modal.style.display === "flex";
+  if (open) {
     const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
     const contactInput = document.getElementById("quick-planning-contact");
     const titleInput = document.getElementById("quick-planning-title");
-    if (contactInput) contactInput.value = firstName;
-    if (titleInput) titleInput.value = "Démo — Rendez-vous avec " + firstName;
+    if (contactInput && !contactInput.value.trim()) contactInput.value = firstName;
+    if (titleInput && !titleInput.value.trim()) titleInput.value = "Démo — Rendez-vous avec " + firstName;
 
     const tomorrowBtn = document.getElementById("quick-planning-quick-tomorrow");
     if (tomorrowBtn) tomorrowBtn.click();
     const timeInput = document.getElementById("quick-planning-time");
-    if (timeInput) { timeInput.value = "14:00"; refreshCustomDisplay(timeInput); }
+    if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
 
     targetedDemoShowHalo(
       ['#quick-planning-confirm'],
       "À vous de valider",
       "Cliquez sur « Noter le rendez-vous » pour le voir apparaître dans Planning."
     );
-  }, 900);
+    return;
+  }
+  if (attempts > 200) { targetedDemoStop(); return; }
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRdvModalOpen(attempts + 1), 300);
 }
 
-// Rappel : même principe que RDV, formulaire structuré existant pré-rempli.
+// Rappel : même principe que RDV — l'utilisateur clique lui-même sur le
+// raccourci pour ouvrir le formulaire, qu'on pré-remplit ensuite.
 function runTargetedDemoRappel() {
   targetedDemoShowHalo(
     ['#quick-relance-btn', '.clarity-quick-row'],
-    "Programmer mes rappels",
-    "On va noter un rappel d'exemple ensemble."
+    "À vous de jouer",
+    "Cliquez sur ce raccourci pour ouvrir le formulaire de rappel."
   );
+  targetedDemoWaitForRappelModalOpen();
+}
 
-  targetedDemoWaitTimeout = setTimeout(async () => {
-    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
-    await openQuickReminderModal();
-    if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
-
+function targetedDemoWaitForRappelModalOpen(attempts = 0) {
+  if (!targetedDemoActive || targetedDemoFlow !== "rappel") return;
+  const modal = document.getElementById("quick-reminder-modal");
+  const open = modal && modal.style.display === "flex";
+  if (open) {
     const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
     const reasonInput = document.getElementById("quick-reminder-reason");
-    if (reasonInput) reasonInput.value = "Démo — Rappel pour " + firstName;
+    if (reasonInput && !reasonInput.value.trim()) reasonInput.value = "Démo — Rappel pour " + firstName;
 
     const tomorrowBtn = document.getElementById("quick-reminder-quick-tomorrow");
     if (tomorrowBtn) tomorrowBtn.click();
     const timeInput = document.getElementById("quick-reminder-time");
-    if (timeInput) { timeInput.value = "14:00"; refreshCustomDisplay(timeInput); }
+    if (timeInput) { timeInput.value = "14:00"; if (typeof refreshCustomDisplay === "function") refreshCustomDisplay(timeInput); }
 
     targetedDemoShowHalo(
       ['#quick-reminder-confirm'],
       "À vous de valider",
       "Cliquez sur « Noter le rappel » pour le voir apparaître dans la liste."
     );
-  }, 900);
+    return;
+  }
+  if (attempts > 200) { targetedDemoStop(); return; }
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForRappelModalOpen(attempts + 1), 300);
 }
 
-// Compte rendu : ouvre le vrai formulaire (seul le Sujet est obligatoire),
-// pré-rempli d'un exemple, puis on attend simplement que le résultat
-// (#cr-result-modal) s'affiche pour considérer la démo terminée.
+// Compte rendu : l'utilisateur clique lui-même sur le raccourci pour ouvrir
+// le vrai formulaire (seul le Sujet est obligatoire), qu'on pré-remplit
+// d'un exemple ; on attend ensuite que le résultat (#cr-result-modal)
+// s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
   targetedDemoShowHalo(
     ['#quick-compte-rendu-btn'],
-    "Faire mes comptes rendus",
-    "On va créer un exemple de compte rendu ensemble."
+    "À vous de jouer",
+    "Cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu."
   );
+  targetedDemoWaitForCrModalOpen();
+}
 
-  targetedDemoWaitTimeout = setTimeout(() => {
-    if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
-    quickStartCompteRendu();
-
-    targetedDemoWaitTimeout = setTimeout(() => {
-      if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
-      const sujetInput = document.getElementById("cr-field-sujet");
-      if (sujetInput) {
-        sujetInput.value = "Démo — Visite chantier";
-        sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      targetedDemoShowHalo(
-        ['#cr-create-btn'],
-        "Créer l'exemple",
-        "Cliquez ici pour voir le résultat généré automatiquement."
-      );
-      targetedDemoWaitForCrResult();
-    }, 500);
-  }, 900);
+function targetedDemoWaitForCrModalOpen(attempts = 0) {
+  if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+  const modal = document.getElementById("compte-rendu-modal");
+  const open = modal && modal.style.display === "flex";
+  if (open) {
+    const sujetInput = document.getElementById("cr-field-sujet");
+    if (sujetInput && !sujetInput.value.trim()) {
+      sujetInput.value = "Démo — Visite chantier";
+      sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    targetedDemoShowHalo(
+      ['#cr-create-btn'],
+      "À vous de valider",
+      "Cliquez sur « Créer le compte rendu » pour voir le résultat généré automatiquement."
+    );
+    targetedDemoWaitForCrResult();
+    return;
+  }
+  if (attempts > 200) { targetedDemoStop(); return; }
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
 function targetedDemoWaitForCrResult(attempts = 0) {
