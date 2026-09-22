@@ -20974,9 +20974,21 @@ async function markOnboardingComplete() {
 // / targetedDemoFlow), et les popups déjà existants de l'app
 // (.mail-choice-backdrop/.mail-choice-box) pour le menu et l'écran de fin.
 
+// Le drapeau "demo_done" est propre à CHAQUE compte (pas juste au
+// navigateur) : sans ça, un navigateur déjà utilisé pour tester un premier
+// compte (démo terminée -> demo_done="true" dans le localStorage du
+// domaine) empêchait à tort la popup de s'afficher pour un compte neuf
+// créé ensuite dans ce même navigateur — bug remonté ("je connecte mon
+// adresse mail et je ne vois rien"). On namespace donc la clé avec
+// l'email de l'utilisateur connecté.
+function targetedDemoStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "demo_done_" + email;
+}
+
 function maybeOpenTargetedDemoMenu() {
   if (targetedDemoActive) return;
-  if (localStorage.getItem("demo_done") === "true") return;
+  if (localStorage.getItem(targetedDemoStorageKey()) === "true") return;
   openTargetedDemoMenu();
 }
 
@@ -21037,11 +21049,11 @@ function closeTargetedDemoMenu() {
 
 function dismissTargetedDemoMenu() {
   closeTargetedDemoMenu();
-  localStorage.setItem("demo_done", "true");
+  localStorage.setItem(targetedDemoStorageKey(), "true");
 }
 
 function replayTargetedDemo() {
-  localStorage.setItem("demo_done", "false");
+  localStorage.setItem(targetedDemoStorageKey(), "false");
   const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
   if (typeof showSection === "function") showSection("agents", homeBtn);
   setTimeout(() => openTargetedDemoMenu(), 200);
@@ -21363,7 +21375,7 @@ function endTargetedDemoSession() {
   closeTargetedDemoEndSheet();
   targetedDemoActive = false;
   targetedDemoFlow = null;
-  localStorage.setItem("demo_done", "true");
+  localStorage.setItem(targetedDemoStorageKey(), "true");
   const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
   if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
 }
