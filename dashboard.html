@@ -13551,6 +13551,9 @@ window.handleCompteRenduBackdropClick = handleCompteRenduBackdropClick;
 // ferme directement, pas besoin d'enrober un formulaire vide d'une
 // confirmation inutile.
 function requestCloseCompteRendu() {
+  // Même règle : pas d'annulation possible pendant le parcours démo
+  // Compte rendu (voir cancelQuickPlanningModal).
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "cr") return;
   if (!crHasUnsavedContent()) {
     closeCompteRenduModal();
     return;
@@ -16669,6 +16672,10 @@ function closeQuickPlanningModal() {
 // Annuler / fond flou : confirmation seulement si "Avec qui" ou le motif a
 // été rempli (date/heure sont préremplies à l'ouverture, elles ne comptent pas).
 function cancelQuickPlanningModal() {
+  // La démo ciblée ne peut pas être annulée en cours de route (demande
+  // explicite) : pendant le parcours RDV, ce formulaire ne peut être fermé
+  // qu'en le validant.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rdv") return;
   const contact = (document.getElementById("quick-planning-contact")?.value || "").trim();
   const title = (document.getElementById("quick-planning-title")?.value || "").trim();
   if (contact || title) {
@@ -16912,6 +16919,9 @@ function closeQuickReminderModal() {
 
 // Même règle que le rendez-vous : contact ou motif rempli -> confirmation.
 function cancelQuickReminderModal() {
+  // Même règle que pour le RDV (voir cancelQuickPlanningModal) : pas
+  // d'annulation possible pendant le parcours démo Rappel.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rappel") return;
   const contact = (document.getElementById("quick-reminder-contact")?.value || "").trim();
   const reason = (document.getElementById("quick-reminder-reason")?.value || "").trim();
   if (contact || reason) {
@@ -20126,8 +20136,10 @@ async function finishOldTourAndOpenTargetedDemo() {
   if (bubble) { bubble.style.display = "none"; bubble.innerHTML = ""; bubble.style.top = ""; }
   if (micTag) micTag.style.display = "none";
 
-  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
-  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
+  // Le bouton "Déconnexion" reste affiché : il continue de servir de seule
+  // échappatoire pendant la nouvelle démo ciblée qui va s'ouvrir juste
+  // après (voir openTargetedDemoMenu/endTargetedDemoSession) — on ne le
+  // masque donc plus ici.
 
   const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
   if (typeof showSection === "function") showSection("agents", homeBtn);
@@ -20503,8 +20515,9 @@ async function finishOnboardingTips() {
     tipsBox.style.display = "none";
     tipsBox.innerHTML = "";
   }
-  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
-  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
+  // Le bouton "Déconnexion" reste affiché : voir la note dans
+  // finishOldTourAndOpenTargetedDemo() — il continue de servir de seule
+  // échappatoire pendant la nouvelle démo ciblée.
   await markOnboardingComplete();
   maybeOpenTargetedDemoMenu();
 }
@@ -20974,7 +20987,7 @@ function openTargetedDemoMenu() {
   const modal = document.createElement("div");
   modal.id = "targeted-demo-menu-modal";
   modal.innerHTML = `
-    <div class="mail-choice-backdrop" onclick="dismissTargetedDemoMenu()"></div>
+    <div class="mail-choice-backdrop"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
       <div class="mail-choice-title" style="text-align:center;">Sur quoi aimeriez-vous gagner du temps ?</div>
       <div class="mail-choice-subtitle" style="text-align:center;">Choisissez une action : on vous montre tout de suite comment ça marche.</div>
@@ -20989,6 +21002,13 @@ function openTargetedDemoMenu() {
   `;
   document.body.appendChild(modal);
   modal.style.display = "block";
+
+  // Seule échappatoire autorisée pendant toute la démo ciblée (demande
+  // explicite : ni le fond flou ni un bouton "Annuler" ne doivent la
+  // fermer) — voir aussi les gardes dans cancelQuickPlanningModal/
+  // cancelQuickReminderModal/requestCloseCompteRendu/requestCloseMailPreview.
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.add("active");
 }
 
 function closeTargetedDemoMenu() {
@@ -21303,7 +21323,7 @@ function showTargetedDemoEndSheet() {
   const modal = document.createElement("div");
   modal.id = "targeted-demo-end-modal";
   modal.innerHTML = `
-    <div class="mail-choice-backdrop" onclick="endTargetedDemoSession()"></div>
+    <div class="mail-choice-backdrop"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
       <div class="mail-choice-title">Et voilà !</div>
       <div class="mail-choice-subtitle">C'est exactement comme ça que ça fonctionne, pour de vrai.</div>
@@ -21325,6 +21345,8 @@ function endTargetedDemoSession() {
   targetedDemoActive = false;
   targetedDemoFlow = null;
   localStorage.setItem("demo_done", "true");
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
 }
 
 function targetedDemoAnotherAction() {
@@ -27914,6 +27936,10 @@ function goBackFromMailPreview() {
 // perdu (souvent le fruit d'une dictée entière). Rien à perdre (aperçu
 // encore vide, cas rare) -> ferme directement.
 function requestCloseMailPreview() {
+  // Même règle : pas d'annulation possible pendant le parcours démo Mail
+  // (voir cancelQuickPlanningModal) — seul le bouton Envoyer, intercepté
+  // par sendPreparedMail(), termine cette étape.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "mail") return;
   const to = document.getElementById("preview-mail-to")?.value.trim() || "";
   const subject = document.getElementById("preview-mail-subject")?.value.trim() || "";
   const body = document.getElementById("preview-mail-body")?.value.trim() || "";
