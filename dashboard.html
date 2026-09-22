@@ -15547,6 +15547,56 @@ function extractCompteRenduSubject(text) {
 }
 window.extractCompteRenduSubject = extractCompteRenduSubject;
 
+// Découpe une demande de compte rendu dictée/tapée en un sujet ET des
+// points séparés — jusqu'ici, seul le sujet était extrait (voir
+// extractCompteRenduSubject ci-dessus) : les points restaient à zéro tant
+// que l'utilisateur ne les retapait pas un par un dans le modal. Demande
+// explicite : "Compte rendu visite portail — moteur à remplacer, peinture
+// à reprendre, 3 barreaux tordus" doit ouvrir directement avec Sujet
+// "Visite portail" + 3 points distincts, SANS RIEN INVENTER d'autre (pas
+// de "état général conforme", "travaux dans les délais"...). Le tiret
+// (cadratin, demi-cadratin ou double tiret, entouré d'espaces pour ne pas
+// couper un mot composé) sépare le sujet des points, eux-mêmes séparés par
+// des virgules. Sans tiret : tout le texte devient un seul point, avec un
+// sujet court générique "Compte rendu".
+function parseCompteRenduDictation(text) {
+  let s = (text || "").trim();
+  if (!s) return { sujet: "", points: [] };
+  s = s.replace(/^(écris|écrit|ecris|ecrit|fais|fait|rédige|redige|prépare|prepare|crée|créé|créer|cree|creer|génère|genere)(\s*-?\s*moi)?\s+/i, "");
+  s = s.replace(/^(le|un|mon)\s+compte[\s-]?rendu\s*/i, "");
+  s = s.replace(/^compte[\s-]?rendu\s*/i, "");
+  s = s.trim();
+  if (!s) return { sujet: "", points: [] };
+
+  const trimEdges = str => str.trim().replace(/^[,\s]+/, "").replace(/[.\s]+$/, "");
+  const dashMatch = s.match(/\s[—–-]{1,2}\s/);
+
+  let sujetPart = "";
+  let pointsPart = s;
+  if (dashMatch) {
+    const idx = s.indexOf(dashMatch[0]);
+    sujetPart = trimEdges(s.slice(0, idx));
+    pointsPart = trimEdges(s.slice(idx + dashMatch[0].length));
+  } else {
+    pointsPart = trimEdges(s);
+  }
+
+  // Sans tiret : une seule phrase, donc un seul point (jamais découpé sur
+  // les virgules internes) — demande explicite.
+  const points = !pointsPart
+    ? []
+    : dashMatch
+      ? pointsPart.split(",").map(trimEdges).filter(Boolean)
+      : [pointsPart];
+
+  const sujet = sujetPart
+    ? sujetPart.charAt(0).toUpperCase() + sujetPart.slice(1)
+    : "Compte rendu";
+
+  return { sujet, points };
+}
+window.parseCompteRenduDictation = parseCompteRenduDictation;
+
 // ─── ACTION RAPIDE "PLANIFIER UN RDV" — formulaire direct ───────
 // Avant : clic sur l'action rapide -> texte d'exemple dans le champ, puis
 // aller-retour avec l'agent (souvent 2 popups : contact+motif, puis
@@ -18831,8 +18881,11 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
         // réécrite/enrichie côté backend (ex: "en incluant les détails des
         // travaux effectués, les matériaux utilisés..."), ce qui polluait
         // le champ Sujet avec du texte jamais prononcé par l'utilisateur.
-        const crSubject = extractCompteRenduSubject(instruction);
-        await openCompteRenduModal();
+        // Demande explicite : le sujet ET les points doivent être extraits
+        // du texte brut (séparateur tiret), sans jamais rien inventer —
+        // voir parseCompteRenduDictation.
+        const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
+        await openCompteRenduModal(crParsedPoints);
         if (crSubject) {
           const sujetInput = document.getElementById("cr-field-sujet");
           if (sujetInput) {
@@ -21570,39 +21623,33 @@ function runTargetedDemoDecouverte() {
   }, 3200);
 }
 
-// Mail : phrase guidée pré-remplie à titre d'exemple, mais c'est bien
-// l'utilisateur qui déclenche l'envoi — en dictant (micro), en tapant lui-
-// même, ou simplement en cliquant sur "Envoyer" puisque la phrase est déjà
-// prête. On ne soumet jamais à sa place : on attend que l'aperçu du mail
-// apparaisse (preuve que LUI a validé), via le vrai pipeline (dictée ->
-// orchestrateur -> aperçu). L'envoi réel est bloqué plus loin dans
-// sendPreparedMail() (voir son garde targetedDemoActive).
+// Prénom du prospect (compte connecté) pour les phrases d'exemple des
+// bulles — jamais un nom fixe inventé ("Thomas") ni le prénom de
+// l'utilisateur lui-même ("antho") : demande explicite, corrige une
+// confusion précédente. Repli neutre si le profil n'a pas de prénom.
+function targetedDemoClientFirstName() {
+  const p = (typeof currentProfile !== "undefined" && currentProfile) || {};
+  if (p.firstname) return p.firstname;
+  const meta = (typeof currentUser !== "undefined" && currentUser && currentUser.user_metadata) || {};
+  if (meta.firstname) return meta.firstname;
+  if (meta.prenom) return meta.prenom;
+  return "votre client";
+}
+
+// Mail : demande explicite — le champ reste VIDE (placeholder habituel),
+// c'est le prospect qui écrit ou dicte sa propre demande. La bulle ne
+// montre plus qu'une seule phrase d'EXEMPLE (jamais recopiée dans le
+// champ), avec le vrai prénom du compte connecté. On attend ensuite que
+// l'aperçu du mail apparaisse (preuve que LUI a validé), via le vrai
+// pipeline (dictée -> orchestrateur -> aperçu). L'envoi réel est bloqué
+// plus loin dans sendPreparedMail() (voir son garde targetedDemoActive).
 function runTargetedDemoMail() {
-  // Demande explicite (rendu premium) : prénom complet fixe pour la démo
-  // ("Thomas"), plus le prénom du compte connecté ("antho") — ce contact
-  // n'existe pas forcément dans le carnet, mais c'est sans conséquence ici
-  // (l'aperçu du mail gère déjà normalement une adresse inconnue).
-  const phrase = "Envoyez un mail à Thomas pour confirmer demain 14h.";
+  const firstName = targetedDemoClientFirstName();
 
-  // Demande explicite : la phrase est déjà écrite dans le champ (pas
-  // seulement montrée en exemple dans la bulle) — l'utilisateur peut
-  // l'envoyer telle quelle ou la modifier avant d'envoyer.
-  const input = document.getElementById("orchestrator-text-input");
-  if (input) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
-  // Demande explicite : on ne montre plus aucun bouton d'action rapide
-  // pendant la démo (trop d'infos en même temps) — seule la voie dictée/
-  // tapée à Clarity est mise en avant. Le halo suit ensuite tout seul,
-  // silencieusement, vers le bandeau de progression une fois la demande
-  // envoyée (voir targetedDemoShowHaloWithProgress). Bulle courte, une
-  // seule phrase, sans mode d'emploi.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Envoyez cette demande telle quelle, ou modifiez-la."
+    `Envoyez un mail à ${firstName} pour confirmer demain 14h.`
   );
 
   targetedDemoWaitForMailPreview();
@@ -21703,65 +21750,42 @@ function targetedDemoShowReconnectHalo() {
 // fonctionne pour ce chemin dictée/texte comme pour l'ancien chemin
 // formulaire.
 function runTargetedDemoRdv() {
-  // Demande explicite (rendu premium) : prénom complet fixe pour la démo
-  // ("Thomas"), plus le prénom du compte connecté ("antho").
-  const phrase = "Notez un rendez-vous demain 14h avec Thomas.";
+  // Demande explicite : champ vide, seule la bulle montre un exemple, avec
+  // le vrai prénom du compte connecté.
+  const firstName = targetedDemoClientFirstName();
 
-  // Demande explicite (rendu premium) : la phrase est déjà écrite dans le
-  // champ (comme le compte rendu ci-dessous), pas seulement montrée en
-  // exemple dans la bulle.
-  const input = document.getElementById("orchestrator-text-input");
-  if (input) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
-  // Bulle courte, une seule phrase, sans mode d'emploi.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Envoyez cette demande telle quelle, ou modifiez-la."
+    `Notez un rendez-vous demain 14h avec ${firstName}.`
   );
 }
 
 // Rappel : même principe que RDV — uniquement la dictée/le texte libre,
-// plus aucun raccourci ni formulaire montré pendant la démo.
+// plus aucun raccourci ni formulaire montré pendant la démo. Champ vide,
+// exemple dans la bulle seulement.
 function runTargetedDemoRappel() {
-  const phrase = "Rappelez-moi demain 8h de récupérer les clés.";
-
-  const input = document.getElementById("orchestrator-text-input");
-  if (input) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Envoyez cette demande telle quelle, ou modifiez-la."
+    "Rappelez-moi demain 8h de récupérer les clés."
   );
 }
 
-// Compte rendu : demande explicite — on ne montre plus le raccourci dédié
-// pendant la démo, seulement la dictée/le texte libre. Dicter/taper une
+// Compte rendu : demande explicite — champ vide, c'est le prospect qui
+// dicte/écrit entièrement sa demande (rien de préremplit). Dicter/taper une
 // phrase de compte rendu au champ général ouvre déjà le même formulaire
 // multi-points que le raccourci (voir le routage de l'orchestrateur,
-// data.agent === "compte_rendu"/"redaction" + looksLikeCompteRendu) : rien
-// à changer côté ouverture. On attend ensuite que le résultat
-// (#cr-result-modal) s'affiche pour considérer la démo terminée.
+// data.agent === "compte_rendu"/"redaction" + looksLikeCompteRendu), qui
+// extrait maintenant lui-même le sujet ET les points du texte brut, sans
+// rien inventer (voir parseCompteRenduDictation) : rien à faire ici côté
+// ouverture. On attend ensuite que le résultat (#cr-result-modal) s'affiche
+// pour considérer la démo terminée.
 function runTargetedDemoCr() {
-  const phrase = "Compte rendu visite portail — moteur à remplacer, peinture à reprendre, 3 barreaux tordus.";
-
-  const input = document.getElementById("orchestrator-text-input");
-  if (input) {
-    input.textContent = phrase;
-    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
-  }
-
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    "Envoyez cette demande telle quelle, ou modifiez-la."
+    "Créez le compte rendu quand les points sont les vôtres."
   );
   targetedDemoWaitForCrModalOpen();
 }
@@ -21771,25 +21795,9 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
   const modal = document.getElementById("compte-rendu-modal");
   const open = modal && modal.style.display === "flex";
   if (open) {
-    const sujetInput = document.getElementById("cr-field-sujet");
-    if (sujetInput && !sujetInput.value.trim()) {
-      sujetInput.value = "Démo — Visite chantier";
-      sujetInput.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    // Un compte rendu exige au moins un point (ou une réponse de checklist)
-    // pour pouvoir être créé (voir submitCompteRendu()) — sans ça,
-    // l'utilisateur tombait sur un message d'erreur en pleine démo et ne
-    // pouvait jamais valider. On ajoute donc 3 points d'exemple déjà
-    // enregistrés, qu'on montre ensuite dans le halo suivant, avant que
-    // l'utilisateur valide lui-même.
-    if (!crPoints.length) {
-      crPoints.push(
-        "État général du chantier conforme, aucun désordre constaté",
-        "Travaux prévus réalisés dans les délais",
-        "Prochaine intervention à prévoir sous 15 jours"
-      );
-      if (typeof renderCrPoints === "function") renderCrPoints();
-    }
+    // Sujet et points viennent maintenant réellement de la demande de
+    // l'utilisateur (voir parseCompteRenduDictation, appelée au moment de
+    // l'ouverture du modal) — on ne préremplit plus jamais rien ici.
     targetedDemoCrWalkthrough();
     targetedDemoWaitForCrResult();
     return;
@@ -21798,15 +21806,15 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
-// Un seul cran avant la validation : le sujet ET les 3 points d'exemple
-// sont déjà remplis, on les montre ensemble avant de terminer sur le bouton
-// de création (qui bascule ensuite tout seul, en silence, vers le bandeau
-// de progression — voir targetedDemoTrackConfirmAndProgress).
+// Un seul cran avant la validation : le sujet ET les points (issus de la
+// vraie demande de l'utilisateur) sont montrés ensemble avant de terminer
+// sur le bouton de création (qui bascule ensuite tout seul, en silence,
+// vers le bandeau de progression — voir targetedDemoTrackConfirmAndProgress).
 function targetedDemoCrWalkthrough() {
   targetedDemoShowHalo(
     ['#cr-points-list', '#cr-field-sujet'],
     "Le sujet et les points sont prêts",
-    "Le sujet et 3 points sont déjà remplis, à titre d'exemple."
+    "Relisez-les, modifiez-les si besoin — vous pouvez aussi y ajouter des photos."
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
@@ -21821,13 +21829,28 @@ function targetedDemoCrWalkthrough() {
 function targetedDemoWaitForCrResult(attempts = 0) {
   if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
   const modal = document.getElementById("cr-result-modal");
-  const open = modal && modal.style.display === "block";
+  const open = modal && modal.style.display === "flex";
   if (open) {
     targetedDemoOnEvent("cr_created");
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 300);
+}
+
+// Le compte rendu est prêt : on montre les actions disponibles avant de
+// terminer la démo (envoyer par mail, PDF, impression, copie du texte).
+function targetedDemoShowCrResultHalo() {
+  targetedDemoShowHalo(
+    ['.cr-result-actions-row'],
+    "À vous",
+    "Envoyez-le par mail, téléchargez-le en PDF, imprimez-le ou copiez le texte."
+  );
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+    targetedDemoStop();
+    showTargetedDemoEndSheet();
+  }, 3200);
 }
 
 // Point d'entrée commun pour les résultats obtenus via les formulaires
@@ -21844,8 +21867,7 @@ function targetedDemoOnEvent(event) {
     return;
   }
   if (event === "cr_created" && targetedDemoFlow === "cr") {
-    targetedDemoStop();
-    showTargetedDemoEndSheet();
+    targetedDemoShowCrResultHalo();
     return;
   }
   // Demande explicite : le mail doit VRAIMENT partir pendant la démo (voir
@@ -29447,9 +29469,10 @@ if (
   // Toujours à partir de la dictée/texte BRUT de l'utilisateur (variable
   // locale "instruction"), jamais de data.instruction : voir le même
   // correctif côté texte (sendTypedInstruction) juste au-dessus dans ce
-  // fichier.
-  const crSubject = extractCompteRenduSubject(instruction);
-  await openCompteRenduModal();
+  // fichier. Sujet ET points extraits ensemble, sans rien inventer — voir
+  // parseCompteRenduDictation.
+  const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
+  await openCompteRenduModal(crParsedPoints);
   if (crSubject) {
     const sujetInput = document.getElementById("cr-field-sujet");
     if (sujetInput) {
