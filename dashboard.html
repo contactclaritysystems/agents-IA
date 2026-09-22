@@ -19956,6 +19956,11 @@ let targetedDemoCycleTimeout = null;
 // séparé de targetedDemoWaitTimeout pour ne jamais entrer en conflit avec
 // un autre "wait" (ex : targetedDemoWaitForCrResult) actif en parallèle.
 let targetedDemoWalkthroughTimeout = null;
+// Filet de sécurité pour targetedDemoShowCreatedInCalendar (voir son
+// commentaire) : re-vérifie que la vue Jour du calendrier n'a pas été
+// reprise par la grille du mois (chargement en tâche de fond concurrent,
+// déclenché par showSection("planning", ...)), et la restaure sinon.
+let targetedDemoCalendarGuardInterval = null;
 
 // Étapes où l'utilisateur doit encore appuyer sur le micro pour
 // démarrer : c'est là qu'on montre l'étiquette "C'est le micro", jamais
@@ -21507,6 +21512,10 @@ function targetedDemoStop() {
     clearTimeout(targetedDemoWalkthroughTimeout);
     targetedDemoWalkthroughTimeout = null;
   }
+  if (targetedDemoCalendarGuardInterval) {
+    clearInterval(targetedDemoCalendarGuardInterval);
+    targetedDemoCalendarGuardInterval = null;
+  }
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
   const ring2 = document.getElementById("onboarding-ring-2");
@@ -21542,35 +21551,22 @@ function startTargetedDemoFlow(flow) {
   else runTargetedDemoDecouverte();
 }
 
-// "Je veux juste découvrir" : 2-3 halos maxi (champ + micro + Actions
-// rapides), enchaînés automatiquement, puis "À vous d'essayer" — pas les 4
-// démos à la suite.
+// "Voir l'essentiel" : demande explicite (rendu premium) — un seul halo,
+// une seule bulle courte, pas d'étape micro séparée, aucun bouton d'action
+// rapide montré (même règle que partout ailleurs dans la démo). Le champ
+// reste vide (placeholder existant "Dites-moi ce qu'il vous faut…",
+// inchangé) : contrairement aux autres parcours, celui-ci ne vise aucun
+// résultat précis, il n'y a donc rien à préremplir.
 function runTargetedDemoDecouverte() {
   targetedDemoShowHalo(
     ['#orchestrator-text-input', '.clarity-input-row'],
-    "Dites-lui ce qu'il vous faut",
-    "Écrivez ou dictez votre demande ici, en langage naturel — comme à un assistant."
+    "À vous",
+    "Parlez ou écrivez. Clarity s'occupe du reste."
   );
   targetedDemoWaitTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
-    targetedDemoShowHalo(
-      ['#orchestrator-dictation-btn'],
-      "Le micro",
-      "Vous pouvez aussi dicter votre demande à voix haute."
-    );
-    targetedDemoWaitTimeout = setTimeout(() => {
-      if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
-      targetedDemoShowHalo(
-        ['.clarity-quick-row'],
-        "Actions rapides",
-        "Ou passez directement par ces raccourcis pour les tâches courantes."
-      );
-      targetedDemoWaitTimeout = setTimeout(() => {
-        if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
-        targetedDemoStop();
-        showTargetedDemoEndSheet();
-      }, 3200);
-    }, 3200);
+    targetedDemoStop();
+    showTargetedDemoEndSheet();
   }, 3200);
 }
 
@@ -21582,23 +21578,31 @@ function runTargetedDemoDecouverte() {
 // orchestrateur -> aperçu). L'envoi réel est bloqué plus loin dans
 // sendPreparedMail() (voir son garde targetedDemoActive).
 function runTargetedDemoMail() {
-  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
-  const phrase = `Envoie un mail à ${firstName} pour confirmer demain 14h`;
+  // Demande explicite (rendu premium) : prénom complet fixe pour la démo
+  // ("Thomas"), plus le prénom du compte connecté ("antho") — ce contact
+  // n'existe pas forcément dans le carnet, mais c'est sans conséquence ici
+  // (l'aperçu du mail gère déjà normalement une adresse inconnue).
+  const phrase = "Envoyez un mail à Thomas pour confirmer demain 14h.";
 
-  // Demande explicite : contrairement aux autres flux, le champ n'est plus
-  // pré-rempli à l'avance pour Mail — la phrase n'est montrée qu'à titre
-  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
-  // tape lui-même ("l'effet sera plus impactant").
+  // Demande explicite : la phrase est déjà écrite dans le champ (pas
+  // seulement montrée en exemple dans la bulle) — l'utilisateur peut
+  // l'envoyer telle quelle ou la modifier avant d'envoyer.
+  const input = document.getElementById("orchestrator-text-input");
+  if (input) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
+  }
 
   // Demande explicite : on ne montre plus aucun bouton d'action rapide
   // pendant la démo (trop d'infos en même temps) — seule la voie dictée/
   // tapée à Clarity est mise en avant. Le halo suit ensuite tout seul,
   // silencieusement, vers le bandeau de progression une fois la demande
-  // envoyée (voir targetedDemoShowHaloWithProgress).
+  // envoyée (voir targetedDemoShowHaloWithProgress). Bulle courte, une
+  // seule phrase, sans mode d'emploi.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} ».`
+    "À vous",
+    "Envoyez cette demande telle quelle, ou modifiez-la."
   );
 
   targetedDemoWaitForMailPreview();
@@ -21699,34 +21703,42 @@ function targetedDemoShowReconnectHalo() {
 // fonctionne pour ce chemin dictée/texte comme pour l'ancien chemin
 // formulaire.
 function runTargetedDemoRdv() {
-  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
-  const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
+  // Demande explicite (rendu premium) : prénom complet fixe pour la démo
+  // ("Thomas"), plus le prénom du compte connecté ("antho").
+  const phrase = "Notez un rendez-vous demain 14h avec Thomas.";
 
-  // Demande explicite (déjà appliquée à Mail) : le champ n'est plus
-  // pré-rempli pour aucune action — la phrase n'est montrée qu'à titre
-  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
-  // tape lui-même.
+  // Demande explicite (rendu premium) : la phrase est déjà écrite dans le
+  // champ (comme le compte rendu ci-dessous), pas seulement montrée en
+  // exemple dans la bulle.
+  const input = document.getElementById("orchestrator-text-input");
+  if (input) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
+  }
+
+  // Bulle courte, une seule phrase, sans mode d'emploi.
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} » — Clarity note le rendez-vous dès que vous l'envoyez.`
+    "À vous",
+    "Envoyez cette demande telle quelle, ou modifiez-la."
   );
 }
 
 // Rappel : même principe que RDV — uniquement la dictée/le texte libre,
 // plus aucun raccourci ni formulaire montré pendant la démo.
 function runTargetedDemoRappel() {
-  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
-  const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
+  const phrase = "Rappelez-moi demain 8h de récupérer les clés.";
 
-  // Demande explicite (déjà appliquée à Mail) : le champ n'est plus
-  // pré-rempli pour aucune action — la phrase n'est montrée qu'à titre
-  // d'exemple dans la bulle, c'est bien l'utilisateur qui la dicte ou la
-  // tape lui-même.
+  const input = document.getElementById("orchestrator-text-input");
+  if (input) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
+  }
+
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} » — Clarity note le rappel dès que vous l'envoyez.`
+    "À vous",
+    "Envoyez cette demande telle quelle, ou modifiez-la."
   );
 }
 
@@ -21738,11 +21750,18 @@ function runTargetedDemoRappel() {
 // à changer côté ouverture. On attend ensuite que le résultat
 // (#cr-result-modal) s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
-  const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
+  const phrase = "Compte rendu visite portail — moteur à remplacer, peinture à reprendre, 3 barreaux tordus.";
+
+  const input = document.getElementById("orchestrator-text-input");
+  if (input) {
+    input.textContent = phrase;
+    if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
+  }
+
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} ».`
+    "À vous",
+    "Envoyez cette demande telle quelle, ou modifiez-la."
   );
   targetedDemoWaitForCrModalOpen();
 }
@@ -21872,9 +21891,21 @@ async function targetedDemoShowCreatedInCalendar(kind) {
   const iso = typeof isoFromDate === "function" ? isoFromDate(tomorrow) : null;
 
   window.currentPlanningViewMode = "calendar";
-  if (iso && typeof openPlanningCalendarDay === "function") {
-    openPlanningCalendarDay(iso);
-  }
+  // Demande explicite : "il faudrait passer le calendrier en jour pour voir
+  // ce fameux rdv" — openPlanningCalendarDay() affiche bien la liste du
+  // jour, mais ne bascule jamais lui-même le sélecteur Jour/Semaine/Mois
+  // (comportement normal hors démo, voir son commentaire : ça permet de
+  // garder "← Retour au mois" quand on creuse depuis la grille). Ici il n'y
+  // a pas de grille d'origine à préserver : on force donc explicitement le
+  // sélecteur sur "Jour" pour que la vue affichée corresponde au bouton
+  // actif.
+  const showCalendarDayView = () => {
+    window.currentCalendarViewMode = "day";
+    if (iso && typeof openPlanningCalendarDay === "function") {
+      openPlanningCalendarDay(iso);
+    }
+  };
+  showCalendarDayView();
 
   const selectors = kind === "rdv"
     ? ['#planning-list .agent-card[onclick^="openAppointmentDetail"]']
@@ -21887,6 +21918,34 @@ async function targetedDemoShowCreatedInCalendar(kind) {
       ? "Il apparaît directement dans votre calendrier — un vrai rendez-vous, enregistré pour de bon."
       : "Il apparaît directement dans votre calendrier — un vrai rappel, enregistré pour de bon."
   );
+
+  // Bug remonté : "je vois le calendrier au mois... je ne vois pas le rdv".
+  // Cause réelle : showSection("planning", ...) ci-dessus déclenche en
+  // tâche de fond (non attendue, jamais exposée pour être attendue proprement
+  // d'ici) openPlanningAppointments() -> openPlanningCalendar(), qui
+  // recharge puis réaffiche la GRILLE DU MOIS — une vraie course avec notre
+  // propre vue Jour ci-dessus, gagnée tantôt par l'une tantôt par l'autre
+  // selon la vitesse du réseau. On surveille donc pendant 1,5s si la carte
+  // visée a disparu (signe que la grille du mois a repris la main) et on
+  // restaure alors la vue Jour — le halo déjà actif (tick 300ms, voir
+  // targetedDemoShowHalo) la retrouve tout seul dès qu'elle réapparaît,
+  // aucun besoin de relancer le halo lui-même.
+  if (targetedDemoCalendarGuardInterval) {
+    clearInterval(targetedDemoCalendarGuardInterval);
+    targetedDemoCalendarGuardInterval = null;
+  }
+  let calendarGuardTicks = 0;
+  targetedDemoCalendarGuardInterval = setInterval(() => {
+    calendarGuardTicks++;
+    if (!targetedDemoActive || targetedDemoFlow !== kind || calendarGuardTicks > 6) {
+      clearInterval(targetedDemoCalendarGuardInterval);
+      targetedDemoCalendarGuardInterval = null;
+      return;
+    }
+    if (!pickVisibleElement(selectors)) {
+      showCalendarDayView();
+    }
+  }, 250);
 
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive) return;
