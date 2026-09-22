@@ -19924,6 +19924,9 @@ let targetedDemoFlow = null;
 let targetedDemoPositionInterval = null;
 let targetedDemoCurrentTarget = null;
 let targetedDemoWaitTimeout = null;
+// Alterne le halo entre 2 cibles (ex : champ+micro / raccourci) quand une
+// étape propose 2 façons équivalentes d'agir — voir targetedDemoShowDualHalo.
+let targetedDemoCycleTimeout = null;
 
 // Étapes où l'utilisateur doit encore appuyer sur le micro pour
 // démarrer : c'est là qu'on montre l'étiquette "C'est le micro", jamais
@@ -21083,6 +21086,15 @@ function targetedDemoShowHalo(selectors, title, text) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  // Un halo simple (une seule cible) annule toujours un éventuel cycle en
+  // cours (voir targetedDemoShowDualHalo) : sinon le cycle reprenait la
+  // main quelques secondes plus tard et effaçait le halo qu'on vient
+  // d'afficher (ex : halo "à vous de valider" écrasé par le cycle
+  // dictée/raccourci encore actif en arrière-plan).
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
+  }
   targetedDemoRenderBubble(title, text);
 
   // Le bouton mis en avant doit être entièrement visible — jamais coupé
@@ -21105,6 +21117,31 @@ function targetedDemoShowHalo(selectors, title, text) {
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
 
+// Certaines étapes proposent 2 façons équivalentes d'agir (dicter/taper
+// dans le champ, OU cliquer sur le raccourci) : un seul halo ne peut
+// entourer qu'un seul élément à la fois, donc on alterne automatiquement
+// entre les 2 cibles toutes les quelques secondes, avec le texte qui
+// correspond à celle affichée à cet instant — pour que "ou cliquez sur ce
+// raccourci" corresponde toujours à un bouton effectivement entouré du
+// halo à un moment donné (demande explicite).
+function targetedDemoShowDualHalo(steps, cycleMs = 3200) {
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
+  }
+  let idx = 0;
+  const showNext = () => {
+    const step = steps[idx % steps.length];
+    idx++;
+    targetedDemoShowHalo(step.selectors, step.title, step.text);
+    // targetedDemoShowHalo() vient d'annuler targetedDemoCycleTimeout
+    // (voir plus haut) : on le reprogramme nous-mêmes juste après, pour le
+    // prochain cran du cycle.
+    targetedDemoCycleTimeout = setTimeout(showNext, cycleMs);
+  };
+  showNext();
+}
+
 function targetedDemoStop() {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
@@ -21113,6 +21150,10 @@ function targetedDemoStop() {
   if (targetedDemoWaitTimeout) {
     clearTimeout(targetedDemoWaitTimeout);
     targetedDemoWaitTimeout = null;
+  }
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
   }
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
@@ -21186,11 +21227,22 @@ function runTargetedDemoMail() {
     if (typeof updateOrchestratorSendButton === "function") updateOrchestratorSendButton();
   }
 
-  targetedDemoShowHalo(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — ou cliquez sur le raccourci « Envoyer un mail » ci-dessous. Puis validez l'envoi.`
-  );
+  // Halo alterné : le champ+micro et le raccourci "Envoyer un mail" sont 2
+  // façons équivalentes de démarrer — on montre les 2 à tour de rôle
+  // (demande explicite : "ou cliquez sur le raccourci" doit toujours
+  // correspondre à un bouton réellement entouré du halo à ce moment-là).
+  targetedDemoShowDualHalo([
+    {
+      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
+      title: "À vous de jouer",
+      text: `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — puis validez l'envoi.`
+    },
+    {
+      selectors: ['#quick-mail-btn'],
+      title: "À vous de jouer",
+      text: "Ou cliquez sur ce raccourci pour choisir un contact et lui écrire directement."
+    }
+  ]);
 
   targetedDemoWaitForMailPreview();
 }
@@ -21229,16 +21281,21 @@ function finishTargetedDemoMailStep() {
 function runTargetedDemoRdv() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
-  // Le halo doit être sur le champ + micro (là où on peut réellement
-  // dicter/taper), pas sur le raccourci — sinon le texte dit "dictez" alors
-  // que rien de ce qui est mis en avant ne permet de le faire. Le raccourci
-  // "Planifier un RDV" reste mentionné par son nom dans le texte : pas
-  // besoin de halo dessus, c'est un bouton déjà visible et identifiable.
-  targetedDemoShowHalo(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Planifier un RDV » ci-dessous.`
-  );
+  // Halo alterné entre le champ+micro (dicter/taper) et le raccourci
+  // "Planifier un RDV" (cliquer) : les 2 façons de faire sont montrées à
+  // tour de rôle, chacune avec le halo réellement dessus au bon moment.
+  targetedDemoShowDualHalo([
+    {
+      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
+      title: "À vous de jouer",
+      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
+    },
+    {
+      selectors: ['#quick-planning-btn'],
+      title: "À vous de jouer",
+      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous."
+    }
+  ]);
   targetedDemoWaitForRdvModalOpen();
 }
 
@@ -21274,14 +21331,20 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
 function runTargetedDemoRappel() {
   const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
   const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
-  // Même règle que RDV : halo sur le champ + micro, seul endroit où
-  // dicter/taper est réellement possible. Le raccourci "Créer un rappel"
-  // reste mentionné par son nom, pas besoin de halo dessus.
-  targetedDemoShowHalo(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Créer un rappel » ci-dessous.`
-  );
+  // Même règle que RDV : halo alterné entre le champ+micro et le raccourci
+  // "Créer un rappel".
+  targetedDemoShowDualHalo([
+    {
+      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
+      title: "À vous de jouer",
+      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
+    },
+    {
+      selectors: ['#quick-relance-btn', '.clarity-quick-row'],
+      title: "À vous de jouer",
+      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel."
+    }
+  ]);
   targetedDemoWaitForRappelModalOpen();
 }
 
@@ -21316,13 +21379,20 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
 // s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
   const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
-  // Même règle que RDV/Rappel : halo sur le champ + micro. Le raccourci
-  // "Compte rendu" reste mentionné par son nom, pas besoin de halo dessus.
-  targetedDemoShowHalo(
-    ['.clarity-input-row', '#orchestrator-text-input'],
-    "À vous de jouer",
-    `Dictez (micro) ou tapez par exemple : « ${phrase} », ou cliquez sur le raccourci « Compte rendu » ci-dessous.`
-  );
+  // Même règle que RDV/Rappel : halo alterné entre le champ+micro et le
+  // raccourci "Compte rendu".
+  targetedDemoShowDualHalo([
+    {
+      selectors: ['.clarity-input-row', '#orchestrator-text-input'],
+      title: "À vous de jouer",
+      text: `Dictez (micro) ou tapez par exemple : « ${phrase} »`
+    },
+    {
+      selectors: ['#quick-compte-rendu-btn'],
+      title: "À vous de jouer",
+      text: "Ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu."
+    }
+  ]);
   targetedDemoWaitForCrModalOpen();
 }
 
