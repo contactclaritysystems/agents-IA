@@ -20946,16 +20946,15 @@ function openTargetedDemoMenu() {
   modal.innerHTML = `
     <div class="mail-choice-backdrop" onclick="dismissTargetedDemoMenu()"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
-      <div class="mail-choice-title">Sur quoi aimeriez-vous gagner du temps ?</div>
-      <div class="mail-choice-subtitle">Choisissez une action : on vous montre tout de suite comment ça marche.</div>
+      <div class="mail-choice-title" style="text-align:center;">Sur quoi aimeriez-vous gagner du temps ?</div>
+      <div class="mail-choice-subtitle" style="text-align:center;">Choisissez une action : on vous montre tout de suite comment ça marche.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0;">
-        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('mail')">Écrire et envoyer des mails</button>
-        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('rdv')">Organiser mes rendez-vous</button>
-        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('cr')">Faire mes comptes rendus</button>
-        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('rappel')">Programmer mes rappels</button>
-        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;" onclick="startTargetedDemoFlow('decouverte')">Je veux juste découvrir</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('mail')">Écrire et envoyer des mails</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('rdv')">Organiser mes rendez-vous</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('cr')">Faire mes comptes rendus</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('rappel')">Programmer mes rappels</button>
+        <button type="button" class="mail-choice-btn" style="width:100%;justify-content:center;min-width:0;font-size:16px;font-weight:700;" onclick="startTargetedDemoFlow('decouverte')">Je veux juste découvrir</button>
       </div>
-      <button class="sheet-btn" type="button" onclick="dismissTargetedDemoMenu()" style="width:100%;justify-content:center;margin-top:14px;">Plus tard</button>
     </div>
   `;
   document.body.appendChild(modal);
