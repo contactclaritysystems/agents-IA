@@ -21189,7 +21189,7 @@ function runTargetedDemoMail() {
   targetedDemoShowHalo(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous de jouer",
-    `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — puis validez l'envoi.`
+    `Dictez (micro) ou tapez votre demande, par exemple : « ${phrase} » — ou cliquez sur le raccourci « Envoyer un mail » ci-dessous. Puis validez l'envoi.`
   );
 
   targetedDemoWaitForMailPreview();
@@ -21227,10 +21227,12 @@ function finishTargetedDemoMailStep() {
 // demande explicite) et un titre préfixé "Démo — " pour le reconnaître dans
 // Planning, puis c'est encore lui qui valide.
 function runTargetedDemoRdv() {
+  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
+  const phrase = `Note un rendez-vous avec ${firstName} pour demain 11h`;
   targetedDemoShowHalo(
     ['#quick-planning-btn'],
     "À vous de jouer",
-    "Cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous."
+    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rendez-vous.`
   );
   targetedDemoWaitForRdvModalOpen();
 }
@@ -21265,10 +21267,12 @@ function targetedDemoWaitForRdvModalOpen(attempts = 0) {
 // Rappel : même principe que RDV — l'utilisateur clique lui-même sur le
 // raccourci pour ouvrir le formulaire, qu'on pré-remplit ensuite.
 function runTargetedDemoRappel() {
+  const firstName = (typeof getUserFirstName === "function" ? getUserFirstName(currentUser) : "") || "vous";
+  const phrase = `Rappelle-moi d'appeler ${firstName} demain à 14h`;
   targetedDemoShowHalo(
     ['#quick-relance-btn', '.clarity-quick-row'],
     "À vous de jouer",
-    "Cliquez sur ce raccourci pour ouvrir le formulaire de rappel."
+    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de rappel.`
   );
   targetedDemoWaitForRappelModalOpen();
 }
@@ -21303,10 +21307,11 @@ function targetedDemoWaitForRappelModalOpen(attempts = 0) {
 // d'un exemple ; on attend ensuite que le résultat (#cr-result-modal)
 // s'affiche pour considérer la démo terminée.
 function runTargetedDemoCr() {
+  const phrase = "Fais un compte rendu de ma visite chantier de ce matin";
   targetedDemoShowHalo(
     ['#quick-compte-rendu-btn'],
     "À vous de jouer",
-    "Cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu."
+    `Dictez ou tapez par exemple : « ${phrase} », ou cliquez sur ce raccourci pour ouvrir le formulaire de compte rendu.`
   );
   targetedDemoWaitForCrModalOpen();
 }
@@ -30280,6 +30285,19 @@ async function callSimpleAgent(
   }
   showToast(content || "C’est noté", "success");
   maybeShowFirstScheduleNotice();
+
+  // Démo ciblée RDV/Rappel : l'utilisateur a le droit de dicter/taper sa
+  // demande directement (ex: "note un rdv avec Anthony pour demain 11h")
+  // au lieu de cliquer sur le raccourci du formulaire structuré — les deux
+  // chemins doivent faire avancer la démo (voir demande explicite : "tu
+  // dois montrer les 2 possibilités"). Le chemin "clic" est déjà couvert
+  // par confirmQuickPlanning()/confirmQuickReminder() ; ceci couvre le
+  // chemin "dictée/texte libre", qui passe toujours par callSimpleAgent()
+  // (jamais par les modals quick-planning/quick-reminder).
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && typeof targetedDemoOnEvent === "function") {
+    if (agentName === "planning" && targetedDemoFlow === "rdv") targetedDemoOnEvent("rdv_created");
+    else if (agentName === "relance" && targetedDemoFlow === "rappel") targetedDemoOnEvent("rappel_created");
+  }
 
   // Contrat Grok (nouveau) : même règle que côté orchestrateur (voir
   // sendTypedInstruction) — on ne dépend plus du body /agent/planning pour
