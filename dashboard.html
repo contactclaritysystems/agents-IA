@@ -21591,6 +21591,12 @@ function targetedDemoStop() {
   if (typeof targetedDemoSetCrResultActionsLocked === "function") {
     targetedDemoSetCrResultActionsLocked(false);
   }
+  // Même filet de sécurité pour la liste des points du compte rendu (voir
+  // targetedDemoSetCrPointsExpanded) : sa limite de hauteur normale doit
+  // toujours être restaurée si la démo s'arrête pendant ce halo.
+  if (typeof targetedDemoSetCrPointsExpanded === "function") {
+    targetedDemoSetCrPointsExpanded(false);
+  }
 }
 
 // ─── Routeur + un parcours par bouton ─────────────────────────────────────
@@ -21843,6 +21849,20 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
   targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
 }
 
+// Bug remonté : "#cr-points-list" a son propre scroll interne (CSS
+// max-height:220px;overflow-y:auto — nécessaire pour ne pas faire exploser
+// la popup quand il y a beaucoup de points), donc son halo ne montrait que
+// ce qui tenait déjà dans ces 220px, potentiellement un seul point selon la
+// longueur du texte. On retire temporairement cette limite le temps du
+// halo (tous les points existants doivent être visibles d'un coup, pas
+// seulement le 1er), puis on la restaure — voir targetedDemoStop, qui
+// appelle aussi cette fonction en filet de sécurité.
+function targetedDemoSetCrPointsExpanded(expanded) {
+  const list = document.getElementById("cr-points-list");
+  if (!list) return;
+  list.style.maxHeight = expanded ? "none" : "";
+}
+
 // Demande explicite : 3 crans distincts avant la validation, jamais
 // regroupés — d'abord le Sujet seul, puis les points (tous ensemble, en un
 // seul halo), puis enfin le bouton de création (qui bascule ensuite tout
@@ -21856,6 +21876,7 @@ function targetedDemoCrWalkthrough() {
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+    targetedDemoSetCrPointsExpanded(true);
     targetedDemoShowHalo(
       ['#cr-points-list'],
       "Les points sont prêts",
@@ -21863,6 +21884,7 @@ function targetedDemoCrWalkthrough() {
     );
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+      targetedDemoSetCrPointsExpanded(false);
       targetedDemoTrackConfirmAndProgress(
         ['#cr-create-btn'],
         "À vous de valider",
@@ -21908,6 +21930,14 @@ function targetedDemoShowCrResultHalo() {
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+    // Demande explicite : une fois ces boutons montrés, le compte rendu se
+    // ferme et on revient à l'accueil — jamais laissé ouvert (et donc
+    // cliquable) derrière l'écran de fin. closeCrResultModal() ferme
+    // directement, sans la confirmation "Fermer sans l'envoyer ?" (qui
+    // n'a pas sa place pendant la démo).
+    if (typeof closeCrResultModal === "function") closeCrResultModal();
+    const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+    if (typeof showSection === "function") showSection("agents", homeBtn);
     targetedDemoStop();
     showTargetedDemoEndSheet();
   }, 3200);
