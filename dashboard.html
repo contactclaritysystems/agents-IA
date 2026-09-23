@@ -22380,8 +22380,8 @@ function targetedDemoSetCrPointsExpanded(expanded) {
 // seul, en silence, vers le bandeau de progression — voir
 // targetedDemoTrackConfirmAndProgress).
 // Demande explicite ("réduis le temps") : Sujet/Photos/Infos passés de
-// 4,6s à 3s chacun — seul "Les points sont prêts" reste à 4,6s (pas visé
-// par la demande, souvent plus long à relire).
+// 4,6s à 3s chacun — seul "Vos points" reste à 4,6s (pas visé par la
+// demande, souvent plus long à relire).
 function targetedDemoCrWalkthrough() {
   targetedDemoShowHalo(
     ['#cr-field-sujet'],
@@ -22393,8 +22393,8 @@ function targetedDemoCrWalkthrough() {
     targetedDemoSetCrPointsExpanded(true);
     targetedDemoShowHalo(
       ['#cr-points-list'],
-      "Les points sont prêts",
-      "Relisez-les, modifiez-les si besoin."
+      "Vos points",
+      "Supprimez-en un, ou ajoutez-en d’autres, avant de créer le compte rendu."
     );
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
@@ -22652,8 +22652,8 @@ function showTargetedDemoEndSheet() {
   modal.innerHTML = `
     <div class="mail-choice-backdrop"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
-      <div class="mail-choice-title">Et voilà !</div>
-      <div class="mail-choice-subtitle">C'est exactement comme ça que ça fonctionne, pour de vrai.</div>
+      <div class="mail-choice-title">Et voilà</div>
+      <div class="mail-choice-subtitle">C'est aussi simple que ça.</div>
       <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="targetedDemoContinueVisite()">Continuer la visite</button>
       <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="targetedDemoAnotherAction()">Tester une autre action</button>
       <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="endTargetedDemoSession()">Je me débrouille</button>
