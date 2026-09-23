@@ -3568,10 +3568,18 @@ body[data-theme="dark"] #app-loader {
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
   font-family: 'Inter', sans-serif;
   display: none;
-  /* La bulle n'a jamais de contenu cliquable (titre + texte) — comme pour
-     le voile ci-dessus, elle ne doit jamais pouvoir intercepter un clic
-     destiné à un bouton réel qu'elle chevaucherait par erreur. */
-  pointer-events: none;
+  /* La bulle elle-même n'a pas de bouton ni de lien — mais son TEXTE doit
+     rester sélectionnable/copiable (demande explicite : l'exemple à
+     dicter/taper doit pouvoir être copié-collé). Le pointer-events:none
+     qui empêche le halo (voile + anneaux, voir #onboarding-overlay et
+     #onboarding-ring ci-dessus/dessous) d'intercepter un clic destiné à un
+     bouton réel reste sur CES éléments-là ; la bulle, elle, est bien
+     positionnée à côté de la cible (jamais dessus, voir
+     targetedDemoPositionBubbleNear), donc la laisser recevoir les clics/la
+     sélection ne risque pas de voler un clic destiné à un bouton réel. */
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 #onboarding-bubble.onboarding-center {
@@ -15574,8 +15582,12 @@ window.extractCompteRenduSubject = extractCompteRenduSubject;
 // de "état général conforme", "travaux dans les délais"...). Le tiret
 // (cadratin, demi-cadratin ou double tiret, entouré d'espaces pour ne pas
 // couper un mot composé) sépare le sujet des points, eux-mêmes séparés par
-// des virgules. Sans tiret : tout le texte devient un seul point, avec un
-// sujet court générique "Compte rendu".
+// des virgules. Le deux-points ":" est reconnu comme séparateur équivalent
+// (demande explicite : "Compte rendu rendez-vous client : point sur le
+// dossier, planning validé, récap à envoyer demain, relance vendredi" doit
+// ouvrir avec Sujet "Rendez-vous client" + 4 points distincts). Sans aucun
+// séparateur : tout le texte devient un seul point, avec un sujet court
+// générique "Compte rendu".
 function parseCompteRenduDictation(text) {
   let s = (text || "").trim();
   if (!s) return { sujet: "", points: [] };
@@ -15587,22 +15599,24 @@ function parseCompteRenduDictation(text) {
 
   const trimEdges = str => str.trim().replace(/^[,\s]+/, "").replace(/[.\s]+$/, "");
   const dashMatch = s.match(/\s[—–-]{1,2}\s/);
+  const colonMatch = !dashMatch ? s.match(/\s*:\s*/) : null;
+  const sepMatch = dashMatch || colonMatch;
 
   let sujetPart = "";
   let pointsPart = s;
-  if (dashMatch) {
-    const idx = s.indexOf(dashMatch[0]);
+  if (sepMatch) {
+    const idx = s.indexOf(sepMatch[0]);
     sujetPart = trimEdges(s.slice(0, idx));
-    pointsPart = trimEdges(s.slice(idx + dashMatch[0].length));
+    pointsPart = trimEdges(s.slice(idx + sepMatch[0].length));
   } else {
     pointsPart = trimEdges(s);
   }
 
-  // Sans tiret : une seule phrase, donc un seul point (jamais découpé sur
-  // les virgules internes) — demande explicite.
+  // Sans séparateur (tiret ou deux-points) : une seule phrase, donc un seul
+  // point (jamais découpé sur les virgules internes) — demande explicite.
   const points = !pointsPart
     ? []
-    : dashMatch
+    : sepMatch
       ? pointsPart.split(",").map(trimEdges).filter(Boolean)
       : [pointsPart];
 
@@ -21629,9 +21643,12 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
       targetedDemoRemoveScrollSpacer();
     }
     // Demande explicite : dès que le halo suit le bandeau de progression
-    // (les phrases qui défilent), la bulle d'explication disparaît — elle
-    // ne doit plus jamais rester affichée par-dessus.
-    targetedDemoSetBubbleVisible(!progressTarget);
+    // (les phrases qui défilent) OU qu'une autre popup de l'appli s'ouvre
+    // par-dessus (ex : sélecteur de contact, fiche "Nouveau contact"), la
+    // bulle d'explication disparaît — elle ne doit plus jamais rester
+    // affichée orpheline par-dessus (bug remonté : "Envoie un mail à
+    // antho..." restée par-dessus la fiche contact).
+    targetedDemoSetBubbleVisible(!progressTarget && !isAnyClarityModalOpen());
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -22066,7 +22083,7 @@ function runTargetedDemoCr() {
   targetedDemoShowHaloWithProgress(
     ['.clarity-input-row', '#orchestrator-text-input'],
     "À vous",
-    targetedDemoExampleBubbleText("Compte rendu visite portail, moteur à remplacer, peinture à reprendre, 3 barreaux tordus.")
+    targetedDemoExampleBubbleText("Compte rendu rendez-vous client : point sur le dossier, planning validé, récap à envoyer demain, relance vendredi.")
   );
   targetedDemoWaitForCrModalOpen();
 }
@@ -31661,6 +31678,29 @@ if (typeof data === "string") {
     if (!data.success && data.reason === "no_recipient") {
       hideOrRemoveBox(box);
 
+      // Démo Mail = "un mail à soi" (demande explicite) : l'exemple dicté
+      // ("Envoyez-moi un mail...") ne nomme jamais un contact existant, donc
+      // "no_recipient" est normal ici — jamais un vrai échec. On ne doit
+      // JAMAIS ouvrir le sélecteur de contact pendant la démo (la bulle
+      // d'exemple resterait affichée par-dessus, orpheline — bug remonté).
+      // On force directement le destinataire = e-mail du compte connecté et
+      // on ouvre l'aperçu, même schéma que le cas "missing_content" plus bas
+      // qui réutilise déjà le texte tel quel sans repasser par l'agent.
+      if (targetedDemoActive && targetedDemoFlow === "mail") {
+        openMailPreview(
+          {
+            to: currentUser && currentUser.email ? currentUser.email : "",
+            cc: "",
+            subject: "",
+            body: instruction
+          },
+          instruction
+        );
+        unlockAgentButtons();
+        autoHideDictationBox(box);
+        return "success";
+      }
+
       // Pas de toast d'erreur ici : choisir un destinataire est une étape
       // normale du flux (pas un échec), le popup qui s'ouvre juste en
       // dessous suffit comme retour. Un toast rouge à ce stade donnait
@@ -31680,6 +31720,25 @@ if (typeof data === "string") {
 
     if (!data.success && data.reason === "contact_not_found") {
       hideOrRemoveBox(box);
+
+      // Même règle que "no_recipient" juste au-dessus, pour la même raison :
+      // pendant la démo Mail, jamais la fiche "Nouveau contact" par-dessus la
+      // bulle d'exemple — on force le compte connecté comme destinataire et
+      // on ouvre directement l'aperçu.
+      if (targetedDemoActive && targetedDemoFlow === "mail") {
+        openMailPreview(
+          {
+            to: currentUser && currentUser.email ? currentUser.email : "",
+            cc: "",
+            subject: "",
+            body: instruction
+          },
+          instruction
+        );
+        unlockAgentButtons();
+        autoHideDictationBox(box);
+        return "success";
+      }
 
       // Voix retirée ici aussi (même raison) : le toast + le flux d'ajout
       // de contact restent le retour principal, fiable.
