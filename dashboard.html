@@ -21936,8 +21936,8 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
 function targetedDemoMailPreviewWalkthrough() {
   targetedDemoShowHalo(
     ['#mail-preview-to-group'],
-    "Le contact est retrouvé",
-    "Clarity a retrouvé l'adresse du contact automatiquement dans vos contacts."
+    "Destinataire",
+    "Clarity a trouvé l'adresse d'après ce que vous avez dit."
   );
   // Demande explicite : "une étape = un tap ou 4 secondes fixes, pas un
   // saut parce que le layout a bougé" — chaque étape reste affichée un
@@ -21949,8 +21949,8 @@ function targetedDemoMailPreviewWalkthrough() {
     if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
     targetedDemoShowHalo(
       ['#preview-mail-subject'],
-      "Objet rédigé",
-      "L'objet est rédigé automatiquement, d'après votre demande."
+      "Objet",
+      "L'objet reprend votre demande."
     );
     // Ce champ tombe pile dans la zone occupée par la bulle par défaut (la
     // popup d'aperçu est fixe et ne peut pas être scrollée pour l'en
@@ -21964,8 +21964,8 @@ function targetedDemoMailPreviewWalkthrough() {
       if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
       targetedDemoShowHalo(
         ['#preview-mail-body'],
-        "Message rédigé",
-        "Le message est rédigé automatiquement, d'après votre demande."
+        "Message",
+        "Le texte aussi. Plus tard, vous pourrez le modifier avant d'envoyer."
       );
       targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-body']));
 
