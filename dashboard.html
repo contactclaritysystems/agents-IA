@@ -22171,7 +22171,7 @@ function targetedDemoMailPreviewWalkthrough() {
   targetedDemoShowHalo(
     ['#mail-preview-to-group'],
     "Destinataire",
-    "Clarity a trouvé l'adresse d'après ce que vous avez dit."
+    "Clarity a reconnu le nom dicté et a repris l’adresse dans vos contacts."
   );
   // Demande explicite : "une étape = un tap ou 4 secondes fixes, pas un
   // saut parce que le layout a bougé" — chaque étape reste affichée un
@@ -22358,6 +22358,9 @@ function targetedDemoSetCrPointsExpanded(expanded) {
 // seul halo), puis enfin le bouton de création (qui bascule ensuite tout
 // seul, en silence, vers le bandeau de progression — voir
 // targetedDemoTrackConfirmAndProgress).
+// Demande explicite ("réduis le temps") : Sujet/Photos/Infos passés de
+// 4,6s à 3s chacun — seul "Les points sont prêts" reste à 4,6s (pas visé
+// par la demande, souvent plus long à relire).
 function targetedDemoCrWalkthrough() {
   targetedDemoShowHalo(
     ['#cr-field-sujet'],
@@ -22401,10 +22404,10 @@ function targetedDemoCrWalkthrough() {
             "À vous de valider",
             "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
           );
-        }, 4600);
-      }, 4600);
+        }, 3000);
+      }, 3000);
     }, 4600);
-  }, 4600);
+  }, 3000);
 }
 
 function targetedDemoWaitForCrResult(attempts = 0) {
@@ -22587,11 +22590,12 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     }
   }, 250);
 
+  // Demande explicite ("réduis le temps") : 7,2s -> 4,6s.
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive) return;
     targetedDemoStop();
     showTargetedDemoEndSheet();
-  }, 7200);
+  }, 4600);
 }
 
 // ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
@@ -30302,7 +30306,16 @@ console.log("MESSAGE =", message);
       // bandeau intermédiaire (trop long à l'écran pour rien).
       if (config.agent === "planning" || config.agent === "relance") {
         setDictationBoxState(box, "success");
-        box.innerHTML = config.successText;
+        // Démo ciblée : même correctif que callSimpleAgent() juste plus
+        // haut dans ce fichier (voir son commentaire) — ce chemin passe
+        // par une clarification vocale (date/heure manquante) plutôt que
+        // par la dictée directe, mais montre le même bandeau "✅ Réponse
+        // prête" à supprimer pendant la démo.
+        if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) {
+          hideOrRemoveBox(box);
+        } else {
+          box.innerHTML = config.successText;
+        }
         showToast(content || "C'est noté", "success");
 
         // Contrat Grok (nouveau) : on ne dépend plus du body /agent/planning
@@ -31621,6 +31634,15 @@ async function callSimpleAgent(
       // "box" et gère sa propre progression (comme le flux mail normal),
       // donc pas de "✅ Réponse prête" ni d'auto-hide qui le ferait
       // disparaître pendant que la recherche de contact démarre.
+    } else if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) {
+      // Démo ciblée : demande explicite ("lève le toast pendant la
+      // démo", vu après un RDV créé par dictée — même chose que les vrais
+      // toasts déjà supprimés, voir showToast) — ce bandeau "✅ Réponse
+      // prête" restait affiché ~1,5s (voir autoHideDictationBox) avant de
+      // disparaître, en plein doublon avec le halo/la bulle qui racontent
+      // déjà toute l'histoire. On masque donc directement le bandeau,
+      // sans jamais y afficher ce texte.
+      hideOrRemoveBox(box);
     } else {
       box.innerHTML = "✅ Réponse prête";
       autoHideDictationBox(box);
