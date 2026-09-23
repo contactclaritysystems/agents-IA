@@ -25904,6 +25904,15 @@ function deleteSelectedContact() {
 // ─── UTILS ───────────────────────────────────────────────
 
 function showToast(msg, type = "success") {
+  // Démo ciblée : demande explicite ("désactive tous les toasts pendant
+  // toute la démo") — contrairement au tour de bienvenue juste en dessous
+  // (qui garde les erreurs visibles), ICI aucun toast ne doit apparaître,
+  // succès COMME erreur, tant que la démo tourne : les halos/bulles
+  // guident déjà l'utilisateur pas à pas de bout en bout, un toast
+  // par-dessus fait toujours doublon et distrait, même en cas d'échec
+  // (l'envoi réel du mail, par exemple, reste rare pendant une démo).
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive) return;
+
   // Pendant le tour de bienvenue, les toasts de succès ("compte
   // connecté", "mail envoyé"...) font doublon avec la bulle
   // d'explication et gênent la lecture de l'étape en cours. On les
@@ -35425,6 +35434,38 @@ function isValidEmailList(value) {
     bubble.style.display = hidden ? "none" : "block";
   }
 
+  // Demande explicite : le halo (voile assombri + anneau) autour du
+  // bouton "Envoyer" doit lui aussi disparaître IMMÉDIATEMENT au clic —
+  // jusqu'ici seule la bulle d'explication se masquait au clic (voir
+  // setMailPreviewBubbleHiddenForSend ci-dessus), le halo restait lui
+  // affiché sur le bouton pendant que la carte s'envolait (.sending).
+  // On désactive donc le voile (#onboarding-overlay) et les 2 anneaux
+  // (#onboarding-ring/-ring-2) directement — jamais
+  // positionOnboardingSpotlight(null), qui viderait le clip-path et
+  // assombrirait alors TOUT l'écran (voir son propre commentaire) au lieu
+  // de faire disparaître le halo proprement. Au retour (hidden=false,
+  // après un échec d'envoi qui redonne la main), on se contente de
+  // réactiver le voile : l'anneau, lui, se repositionne tout seul au
+  // prochain sondage (100ms max, voir onboardingPositionInterval/
+  // targetedDemoPositionInterval), pas besoin de dupliquer ce calcul ici.
+  // Même garde-fou que la bulle : ne touche rien hors tour d'accueil/
+  // démo ciblée (utilisateur normal).
+  function setMailPreviewHaloHiddenForSend(hidden) {
+    const tourActive = typeof onboardingActive !== "undefined" && onboardingActive;
+    const demoActive = typeof targetedDemoActive !== "undefined" && targetedDemoActive;
+    if (!tourActive && !demoActive) return;
+    const overlay = document.getElementById("onboarding-overlay");
+    const ring = document.getElementById("onboarding-ring");
+    const ring2 = document.getElementById("onboarding-ring-2");
+    if (hidden) {
+      if (overlay) overlay.classList.remove("active");
+      if (ring) ring.style.display = "none";
+      if (ring2) ring2.style.display = "none";
+    } else if (overlay) {
+      overlay.classList.add("active");
+    }
+  }
+
   async function sendPreparedMail() {
     // Démo ciblée (mail) : demande explicite — le mail doit VRAIMENT
     // partir pendant la démo ("c'est ce qui fait le wouaw du client"), donc
@@ -35526,6 +35567,7 @@ if (modalBox) {
   modalBox.classList.add("sending");
 }
 setMailPreviewBubbleHiddenForSend(true);
+setMailPreviewHaloHiddenForSend(true);
 
 const box = document.querySelector(".page-view.active #dictation-box");
 if (box) box.innerHTML = "📤 Envoi du mail en cours...";
@@ -35542,6 +35584,7 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
       sendBtn.innerHTML = "📤 Envoyer le mail";
     }
     setMailPreviewBubbleHiddenForSend(false);
+    setMailPreviewHaloHiddenForSend(false);
     unlockAgentButtons();
     resetOrchestratorMicButton();
     return;
@@ -35630,6 +35673,7 @@ if (!connectedEmail) {
 
   if (modalBox) modalBox.classList.remove("sending");
   setMailPreviewBubbleHiddenForSend(false);
+  setMailPreviewHaloHiddenForSend(false);
 
   const boxOnNotConnected = document.querySelector(".page-view.active #dictation-box");
   if (boxOnNotConnected) boxOnNotConnected.innerHTML = "";
@@ -35767,6 +35811,7 @@ const payload = {
 
         if (modalBox) modalBox.classList.remove("sending");
         setMailPreviewBubbleHiddenForSend(false);
+        setMailPreviewHaloHiddenForSend(false);
 
         const boxOnAuthFail = document.querySelector(".page-view.active #dictation-box");
         if (boxOnAuthFail) boxOnAuthFail.innerHTML = "";
@@ -35788,6 +35833,7 @@ const payload = {
           sendBtn.innerHTML = "📤 Envoyer le mail";
         }
         setMailPreviewBubbleHiddenForSend(false);
+        setMailPreviewHaloHiddenForSend(false);
         unlockAgentButtons();
         resetOrchestratorMicButton();
         return;
@@ -35800,6 +35846,7 @@ const payload = {
         sendBtn.innerHTML = "📤 Envoyer le mail";
       }
       setMailPreviewBubbleHiddenForSend(false);
+      setMailPreviewHaloHiddenForSend(false);
       // Envoi vraiment échoué : le micro peut redevenir utilisable.
       unlockAgentButtons();
       resetOrchestratorMicButton();
@@ -35923,6 +35970,7 @@ ${body}`,
       sendBtn.innerHTML = "📤 Envoyer le mail";
     }
     setMailPreviewBubbleHiddenForSend(false);
+    setMailPreviewHaloHiddenForSend(false);
 
     showToast("Erreur envoi mail", "error");
     // Envoi vraiment échoué (exception réseau) : le micro peut
