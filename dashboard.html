@@ -22568,7 +22568,7 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     selectors,
     kind === "rdv" ? "Le rendez-vous est bien là" : "Le rappel est bien là",
     kind === "rdv"
-      ? "Il apparaît directement dans votre calendrier — un vrai rendez-vous, enregistré pour de bon."
+      ? "Il est dans votre planning. Vous pouvez choisir combien de temps avant Clarity vous prévient par e-mail."
       : "Il est dans votre planning. Vous recevrez un e-mail à l’heure prévue."
   );
 
@@ -22608,8 +22608,18 @@ async function targetedDemoShowCreatedInCalendar(kind) {
   }, 4600);
 }
 
-// ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
-
+// ─── Écran de fin d'action : "Continuer la visite" | "Tester une autre
+// action" | "Je me débrouille" ──────────────────────────────────────────
+// Demande explicite ("remettre la visite après le test d'une action") :
+// avant, cet écran terminait la démo ("À vous d'essayer") ou rouvrait
+// directement la popup de choix ("Découvrir une autre action") — la fin de
+// visite existante (Contacts/Planning/Réglages) n'était plus jamais
+// proposée depuis ici. Un 3e choix "Continuer la visite" l'enchaîne
+// maintenant (voir targetedDemoContinueVisite/runTargetedDemoVisite plus
+// bas), qui reprend les écrans Contacts/Planning/Réglages déjà existants
+// (jamais recréés). Les 2 anciens boutons restent, seulement renommés :
+// "Tester une autre action" (= "Découvrir une autre action", inchangé) et
+// "Je me débrouille" (= "À vous d'essayer", inchangé — fin de démo).
 function showTargetedDemoEndSheet() {
   // Filet de sécurité (bug remonté : "double popup" après l'envoi du
   // mail) — quelle qu'en soit la cause exacte (ex : la feuille de choix
@@ -22631,8 +22641,9 @@ function showTargetedDemoEndSheet() {
     <div class="mail-choice-box" style="overflow-x:hidden;">
       <div class="mail-choice-title">Et voilà !</div>
       <div class="mail-choice-subtitle">C'est exactement comme ça que ça fonctionne, pour de vrai.</div>
-      <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="endTargetedDemoSession()">À vous d'essayer</button>
-      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="targetedDemoAnotherAction()">Découvrir une autre action</button>
+      <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="targetedDemoContinueVisite()">Continuer la visite</button>
+      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="targetedDemoAnotherAction()">Tester une autre action</button>
+      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="endTargetedDemoSession()">Je me débrouille</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -22658,6 +22669,162 @@ function targetedDemoAnotherAction() {
   targetedDemoActive = false;
   targetedDemoFlow = null;
   openTargetedDemoMenu();
+}
+
+// ─── Visite guidée : Contacts → Planning → Réglages ────────────────────
+// Demande explicite ("remettre la visite après le test d'une action") :
+// bouton "Continuer la visite" de l'écran de fin d'action (voir
+// showTargetedDemoEndSheet). Reprend 3 écrans déjà existants et déjà
+// branchés — Contacts, Planning, Réglages — sans en recréer le contenu :
+// on navigue simplement dessus (showSection, inchangé) et on pose UNE
+// seule bulle courte sur chacun, aucune dictée requise (même principe que
+// "Voir l'essentiel", qui n'exige pas non plus de 2e dictée). Se termine
+// par une clôture dédiée ("C'est à vous", voir showTargetedDemoVisiteEndSheet)
+// distincte de l'écran de fin d'action : plus aucun bouton de relance
+// ensuite, la démo se termine pour de bon.
+function targetedDemoContinueVisite() {
+  closeTargetedDemoEndSheet();
+  targetedDemoActive = true;
+  targetedDemoFlow = "visite";
+  runTargetedDemoVisite();
+}
+
+function runTargetedDemoVisite() {
+  const contactsBtn = pickVisibleElement(['.nav-item[onclick*="contacts"]', '.bottom-tab[data-section="contacts"]']);
+  if (typeof showSection === "function") showSection("contacts", contactsBtn);
+
+  // .contacts-search-box (barre de recherche + bouton "Ajouter un
+  // contact") est toujours présente, contrairement à #contacts-list qui
+  // peut être vide (aucun contact enregistré) — cible fiable quel que
+  // soit l'état du carnet.
+  targetedDemoShowHalo(
+    ['.contacts-search-box'],
+    "Contacts",
+    "Vos clients sont ici. Clarity s’en sert pour les mails."
+  );
+
+  targetedDemoWalkthroughTimeout = setTimeout(() => {
+    if (!targetedDemoActive || targetedDemoFlow !== "visite") return;
+    const planningBtn = pickVisibleElement(['.nav-item[onclick*="planning"]', '.bottom-tab[data-section="planning"]']);
+    if (typeof showSection === "function") showSection("planning", planningBtn);
+
+    targetedDemoShowHalo(
+      ['.planning-calendar-card'],
+      "Planning",
+      "Rendez-vous et rappels au même endroit."
+    );
+
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "visite") return;
+      const settingsBtn = pickVisibleElement(['.nav-item[onclick*="settings"]', '.bottom-tab[data-section="settings"]']);
+      if (typeof showSection === "function") showSection("settings", settingsBtn);
+
+      targetedDemoShowSettingsOverviewHalo(
+        "Réglages",
+        "Boîte mail, notifications, styles d’écriture."
+      );
+
+      targetedDemoWalkthroughTimeout = setTimeout(() => {
+        if (!targetedDemoActive || targetedDemoFlow !== "visite") return;
+        targetedDemoStop();
+        showTargetedDemoVisiteEndSheet();
+      }, 3000);
+    }, 3000);
+  }, 3000);
+}
+
+// L'écran Réglages regroupe "Messagerie", "Notifications" et "Styles
+// d'écriture" (voir #writing-styles-row) dans 3 blocs séparés, pas côte à
+// côte — un simple sélecteur ne peut donc pas couvrir les 3 à la fois. On
+// englobe leurs 3 rectangles dans un seul halo, même principe que
+// getConfirmSendSpotlightRect (halo de "Envoyer") plus haut dans ce
+// fichier.
+function getSettingsOverviewSpotlightRect() {
+  const ids = ["gmail-mobile-card", "notifications-settings-row", "writing-styles-row"];
+  const rects = ids
+    .map(id => document.getElementById(id))
+    .filter(el => el && isPickableElementVisible(el))
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+
+  if (!rects.length) return null;
+
+  const left = Math.min(...rects.map(r => r.left));
+  const top = Math.min(...rects.map(r => r.top));
+  const right = Math.max(...rects.map(r => r.right));
+  const bottom = Math.max(...rects.map(r => r.bottom));
+  const box = { left, top, width: right - left, height: bottom - top };
+  // targetedDemoPositionBubbleNear() exige un objet avec sa propre
+  // méthode getBoundingClientRect() (contrairement à
+  // positionOnboardingSpotlight, qui accepte aussi un simple rect nu) —
+  // ajoutée ici pour que ce rectangle englobant fonctionne avec les 2,
+  // exactement comme un vrai élément DOM.
+  box.getBoundingClientRect = () => box;
+  return box;
+}
+
+// Même mécanique que targetedDemoShowHalo (halo + bulle qui suivent la
+// cible en LIVE, sondage 100ms, rattrapage instantané scroll/clavier) —
+// seule différence : la cible est le rectangle englobant calculé par
+// getSettingsOverviewSpotlightRect() ci-dessus, pas un sélecteur CSS.
+function targetedDemoShowSettingsOverviewHalo(title, text) {
+  if (targetedDemoPositionInterval) {
+    clearInterval(targetedDemoPositionInterval);
+    targetedDemoPositionInterval = null;
+  }
+  targetedDemoCurrentTick = null;
+  if (targetedDemoCycleTimeout) {
+    clearTimeout(targetedDemoCycleTimeout);
+    targetedDemoCycleTimeout = null;
+  }
+  targetedDemoRenderBubble(title, text);
+
+  const firstTarget = getSettingsOverviewSpotlightRect();
+  if (firstTarget) {
+    targetedDemoCurrentTarget = firstTarget;
+    targetedDemoEnsureTargetAboveKeyboard();
+  }
+
+  const tick = () => {
+    const target = getSettingsOverviewSpotlightRect();
+    targetedDemoCurrentTarget = target;
+    positionOnboardingSpotlight(target);
+    if (target) {
+      targetedDemoPositionBubbleNear(target);
+    } else {
+      targetedDemoRemoveScrollSpacer();
+      targetedDemoResetBubblePosition();
+    }
+  };
+  targetedDemoCurrentTick = tick;
+  tick();
+  targetedDemoPositionInterval = setInterval(tick, 100);
+}
+
+// Clôture de la visite — distincte de showTargetedDemoEndSheet (qui
+// propose, elle, de continuer/recommencer) : demande explicite, plus
+// aucun bouton de relance ici, juste "C'est à vous". Réutilise
+// endTargetedDemoSession() telle quelle pour la sortie (marque la démo
+// terminée, retire le bouton Déconnexion de secours, coupe le halo).
+function showTargetedDemoVisiteEndSheet() {
+  const staleMenu = document.getElementById("targeted-demo-menu-modal");
+  if (staleMenu) staleMenu.remove();
+
+  const existing = document.getElementById("targeted-demo-end-modal");
+  if (existing) existing.remove();
+
+  const modal = document.createElement("div");
+  modal.id = "targeted-demo-end-modal";
+  modal.innerHTML = `
+    <div class="mail-choice-backdrop"></div>
+    <div class="mail-choice-box" style="overflow-x:hidden;">
+      <div class="mail-choice-title">C'est à vous</div>
+      <div class="mail-choice-subtitle">Vous connaissez maintenant l'essentiel de Clarity.</div>
+      <button class="save-btn" type="button" style="width:100%;margin-top:16px;" onclick="endTargetedDemoSession()">Terminer</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.style.display = "block";
 }
 
 async function startOnboardingIfNeeded() {
