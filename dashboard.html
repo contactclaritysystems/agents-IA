@@ -21321,8 +21321,21 @@ function replayTargetedDemo() {
 // SEULE FOIS par targetedDemoPositionBubbleNear (voir plus bas), puis
 // réutilisé tel quel à chaque recalcul suivant (scroll, sondage 300ms...).
 // Remis à zéro à chaque nouvelle étape (targetedDemoRenderBubble) et
-// quand la cible se perd (targetedDemoResetBubblePosition).
+// quand la cible se perd (targetedDemoResetBubblePosition) — sauf si
+// targetedDemoBubbleForceAbove est actif pour cette étape (voir plus bas),
+// auquel cas on retombe sur "above" plutôt que null.
 let targetedDemoBubbleSide = null;
+
+// Demande explicite : dès qu'on appuie sur le champ d'écriture, le clavier
+// s'ouvre et réduit (parfois à zéro) la place EN DESSOUS du champ — une
+// bulle décidée "en dessous" avant l'ouverture du clavier (zone alors
+// encore dégagée) se retrouvait donc plaquée par-dessus le champ une fois
+// le clavier ouvert. Activé pour la durée d'une étape par les appelants de
+// targetedDemoShowHalo/targetedDemoShowHaloWithProgress qui ciblent un
+// champ de saisie (forceBubbleAbove=true) : la bulle reste alors TOUJOURS
+// au-dessus, jamais en dessous, y compris après un reset (cible perdue
+// puis retrouvée) au cours de la même étape.
+let targetedDemoBubbleForceAbove = false;
 
 function targetedDemoRenderBubble(title, text) {
   const overlay = document.getElementById("onboarding-overlay");
@@ -21338,8 +21351,11 @@ function targetedDemoRenderBubble(title, text) {
   bubble.style.top = "";
   bubble.style.transform = "";
   // Nouvelle étape -> le côté (au-dessus/en dessous) sera redécidé au
-  // prochain appel de targetedDemoPositionBubbleNear, une seule fois.
+  // prochain appel de targetedDemoPositionBubbleNear, une seule fois (ou
+  // forcé "above" par l'appelant juste après cet appel, voir
+  // targetedDemoBubbleForceAbove ci-dessus).
   targetedDemoBubbleSide = null;
+  targetedDemoBubbleForceAbove = false;
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
     <div class="onboarding-text">${text}</div>
@@ -21433,8 +21449,10 @@ function targetedDemoResetBubblePosition() {
   bubble.style.top = "";
   bubble.style.transform = "";
   // Cible perdue -> le côté (au-dessus/en dessous) sera redécidé depuis
-  // zéro si une cible réapparaît.
-  targetedDemoBubbleSide = null;
+  // zéro si une cible réapparaît — sauf si cette étape force "au-dessus"
+  // (champ d'écriture, clavier), auquel cas on garde ce côté imposé plutôt
+  // que de retomber sur une redécision libre.
+  targetedDemoBubbleSide = targetedDemoBubbleForceAbove ? "above" : null;
 }
 
 // Cherche le plus proche ancêtre réellement scrollable (overflow-y: auto/
@@ -21591,7 +21609,15 @@ if (window.visualViewport) {
   });
 }
 
-function targetedDemoShowHalo(selectors, title, text) {
+// forceBubbleAbove : demande explicite — dès qu'on appuie sur le champ
+// d'écriture, le clavier s'ouvre et réduit la zone visible EN DESSOUS du
+// champ (parfois jusqu'à zéro) ; la bulle, si elle avait été décidée "en
+// dessous" avant l'ouverture du clavier (zone alors encore dégagée),
+// finissait donc plaquée par-dessus le champ une fois le clavier ouvert.
+// Pour toute étape ciblant un champ de saisie, on force donc la bulle
+// au-dessus dès le départ (jamais en dessous), quelle que soit la place
+// disponible au moment du calcul.
+function targetedDemoShowHalo(selectors, title, text, forceBubbleAbove) {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
@@ -21603,6 +21629,10 @@ function targetedDemoShowHalo(selectors, title, text) {
     targetedDemoCycleTimeout = null;
   }
   targetedDemoRenderBubble(title, text);
+  if (forceBubbleAbove) {
+    targetedDemoBubbleForceAbove = true;
+    targetedDemoBubbleSide = "above";
+  }
 
   // Le bouton mis en avant doit être entièrement visible — jamais coupé
   // par la barre de menu du bas ni caché sous la bulle d'explication
@@ -21666,6 +21696,11 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     targetedDemoCycleTimeout = null;
   }
   targetedDemoRenderBubble(title, text);
+  // Toujours le champ d'écriture ici (voir les 4 appelants : Mail, RDV,
+  // Rappel, Compte rendu) -> toujours au-dessus, jamais en dessous, pour
+  // ne pas finir plaquée par-dessus le champ à l'ouverture du clavier.
+  targetedDemoBubbleForceAbove = true;
+  targetedDemoBubbleSide = "above";
 
   const progressSelectors = ['#orchestrator-dictation-box'];
 
@@ -21900,7 +21935,8 @@ function runTargetedDemoDecouverte() {
     targetedDemoShowHalo(
       ['#orchestrator-text-input', '.clarity-input-row'],
       "Ou écrivez",
-      "Même chose, sans le micro."
+      "Même chose, sans le micro.",
+      true
     );
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
