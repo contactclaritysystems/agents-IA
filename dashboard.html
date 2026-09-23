@@ -20489,7 +20489,14 @@ function showTipsRing(selectorsRef, anchorAboveTarget) {
     return;
   }
 
-  const rect = target.getBoundingClientRect();
+  // Cas particulier d'un onglet de la barre du bas (voir
+  // getBottomTabSpotlightRect plus bas dans ce fichier) : la visite passe
+  // d'abord par l'onglet lui-même (navSelectors) avant le contenu de la
+  // section — même correctif que positionOnboardingSpotlight pour ne
+  // viser que l'icône+le nom réellement affichés.
+  const rect = target.classList && target.classList.contains("bottom-tab")
+    ? (getBottomTabSpotlightRect(target) || target.getBoundingClientRect())
+    : target.getBoundingClientRect();
   // Demande explicite ("les marges des halos sont plus larges que les
   // fenêtres et les champs") : même correctif que positionOnboardingSpotlight/
   // positionOnboardingSpotlightMulti (voir leurs commentaires) — plus de
@@ -20926,6 +20933,33 @@ function renderOnboardingBubble(title, text, centered = false, showNextButton = 
   syncOnboardingBubblePosition();
 }
 
+// Bug remonté ("le halo sur la barre du menu ne montre pas toute l'icône
+// et son nom") : un .bottom-tab est un enfant flex:1 d'une rangée flex
+// (.bottom-nav) SANS align-items défini dessus — il s'étire donc par
+// défaut sur toute la hauteur de la barre du bas (72px), bien plus haut
+// que l'icône + le libellé qu'il contient, centrés dedans par
+// justify-content:center. Son propre getBoundingClientRect() ne colle
+// donc pas forcément à ce qui est visuellement l'icône+le nom. Même
+// principe que getConfirmSendSpotlightRect plus haut : on reconstruit le
+// halo à partir de l'union des rectangles de l'icône et du libellé
+// eux-mêmes, qui colle toujours à ce qui est réellement affiché.
+function getBottomTabSpotlightRect(tab) {
+  if (!tab) return null;
+  const icon = tab.querySelector(".bottom-tab-icon");
+  const label = tab.querySelector(".bottom-tab-label");
+  const rects = [icon, label]
+    .filter(el => el)
+    .map(el => el.getBoundingClientRect())
+    .filter(r => r.width > 0 && r.height > 0);
+  if (!rects.length) return tab.getBoundingClientRect();
+
+  const left = Math.min(...rects.map(r => r.left));
+  const top = Math.min(...rects.map(r => r.top));
+  const right = Math.max(...rects.map(r => r.right));
+  const bottom = Math.max(...rects.map(r => r.bottom));
+  return { left, top, width: right - left, height: bottom - top };
+}
+
 function positionOnboardingSpotlight(target) {
   const overlay = document.getElementById("onboarding-overlay");
   const ring = document.getElementById("onboarding-ring");
@@ -20941,9 +20975,15 @@ function positionOnboardingSpotlight(target) {
   // "target" est soit un élément DOM (cas normal), soit déjà un
   // rectangle tout calculé {left, top, width, height} (cas
   // "confirm_send", voir getConfirmSendSpotlightRect ci-dessus).
-  const rect = typeof target.getBoundingClientRect === "function"
-    ? target.getBoundingClientRect()
-    : target;
+  // Cas particulier d'un onglet de la barre du bas (voir
+  // getBottomTabSpotlightRect ci-dessus) : on vise l'icône+le nom
+  // réellement affichés, pas le bouton entier (qui s'étire sur toute la
+  // hauteur de la barre).
+  const rect = target.classList && target.classList.contains("bottom-tab")
+    ? (getBottomTabSpotlightRect(target) || target.getBoundingClientRect())
+    : typeof target.getBoundingClientRect === "function"
+      ? target.getBoundingClientRect()
+      : target;
   // Demande explicite ("les halos ne font pas bien la taille des fenêtres
   // ou des champs, ajuste pour avoir la taille exacte") : plus de marge
   // (avant : 8px de chaque côté) — le halo (anneau + trou du voile) colle
