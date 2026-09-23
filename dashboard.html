@@ -21960,6 +21960,7 @@ function targetedDemoMailPreviewWalkthrough() {
     // avec le commentaire ci-dessus.)
     targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-subject']));
 
+    // Demande explicite : "Objet : moins 2 secondes" -> 6s - 2s = 4s.
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
       targetedDemoShowHalo(
@@ -21969,11 +21970,12 @@ function targetedDemoMailPreviewWalkthrough() {
       );
       targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-body']));
 
+      // Demande explicite : "Message : +1 seconde" -> 6s + 1s = 7s.
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
         targetedDemoShowSendHalo();
-      }, 6000);
-    }, 6000);
+      }, 7000);
+    }, 4000);
   }, 6000);
 }
 
