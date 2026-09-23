@@ -20490,10 +20490,11 @@ function showTipsRing(selectorsRef, anchorAboveTarget) {
   }
 
   const rect = target.getBoundingClientRect();
-  // Halo plus généreux que pendant les étapes interactives (8px) : ici
-  // il est purement illustratif, donc on peut se permettre plus large
-  // pour mieux le voir.
-  const pad = 16;
+  // Demande explicite ("les marges des halos sont plus larges que les
+  // fenêtres et les champs") : même correctif que positionOnboardingSpotlight/
+  // positionOnboardingSpotlightMulti (voir leurs commentaires) — plus de
+  // marge, le halo colle exactement au rectangle réel de la cible.
+  const pad = 0;
   const x = rect.left - pad;
   const y = rect.top - pad;
   const w = rect.width + pad * 2;
@@ -22087,8 +22088,14 @@ function runTargetedDemoDecouverte() {
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
+    // Demande explicite ("le halo prenne tout le champ ovale avec la pièce
+    // jointe aussi") : l'ordre des sélecteurs était inversé — #orchestrator-
+    // text-input (juste le texte) était tenté AVANT .clarity-input-row (le
+    // champ ovale entier, trombone compris), donc toujours choisi en premier
+    // puisque toujours visible. .clarity-input-row en premier, comme pour
+    // les autres parcours (mail/rdv/rappel/cr un peu plus bas).
     targetedDemoShowHalo(
-      ['#orchestrator-text-input', '.clarity-input-row'],
+      ['.clarity-input-row', '#orchestrator-text-input'],
       "Ou écrivez",
       "Même chose, sans le micro.",
       true
@@ -22178,8 +22185,12 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
 // partir de la demande — on l'explique d'abord, avant de terminer sur
 // "Envoyer" (même principe que targetedDemoRdvWalkthrough à l'origine).
 function targetedDemoMailPreviewWalkthrough() {
+  // Demande explicite ("le halo prend aussi le nom destinataire") :
+  // #mail-preview-to-group englobait le libellé "Destinataire" ET le
+  // champ — on vise maintenant #preview-mail-to directement (le champ
+  // lui-même), même principe que #preview-mail-subject juste en dessous.
   targetedDemoShowHalo(
-    ['#mail-preview-to-group'],
+    ['#preview-mail-to'],
     "Destinataire",
     "Clarity a reconnu le nom dicté et a repris l’adresse dans vos contacts."
   );
