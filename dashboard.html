@@ -17755,6 +17755,13 @@ function openPlanningScheduleSheet(data, instruction) {
 
   modal.style.display = "flex";
   setTimeout(() => document.getElementById("planning-sheet-contact").focus(), 60);
+
+  // Démo : même bug que pour le rappel (voir openReminderScheduleSheet) —
+  // sans ce remplacement, l'ancienne bulle "Dictez ou écrivez..." restait
+  // figée par-dessus ce nouveau popup de précision date/heure.
+  if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rdv" && typeof targetedDemoShowPlanningScheduleHalo === "function") {
+    targetedDemoShowPlanningScheduleHalo();
+  }
 }
 
 function updatePlanningTimeMin() {
@@ -17875,6 +17882,12 @@ async function confirmPlanningSchedule() {
       pendingClarifyAgent = null;
       if (typeof unlockAgentButtons === "function") unlockAgentButtons();
       if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+      // Démo : même hook que pour le rappel (voir confirmReminderSchedule)
+      // — sans lui, valider ce popup de précision ne faisait jamais avancer
+      // la démo RDV.
+      if (typeof targetedDemoActive !== "undefined" && targetedDemoActive && targetedDemoFlow === "rdv" && typeof targetedDemoOnEvent === "function") {
+        targetedDemoOnEvent("rdv_created");
+      }
       return;
     }
 
@@ -21397,6 +21410,126 @@ function targetedDemoScrollBelowBubble(target) {
   }
 }
 
+// ─── DÉMO CIBLÉE : CIBLE TOUJOURS VISIBLE AU-DESSUS DU CLAVIER ──────────
+// Bug remonté plusieurs fois (mobile iOS/Android) : dès que le clavier
+// virtuel s'ouvre pendant la démo, la cible du halo en cours (champ de
+// dictée, bouton "Envoyer", "Reconnecter Gmail", "Créer le compte rendu",
+// bouton "Noter le rappel/rendez-vous"...) peut se retrouver partiellement
+// ou totalement sous le clavier, ou coupée en deux. Jusqu'ici, chaque halo
+// ne faisait défiler la page qu'UNE fois, au moment où il apparaissait
+// (voir targetedDemoShowHalo et les fonctions apparentées juste après) :
+// si le clavier s'ouvrait APRÈS coup (l'utilisateur touche le champ une
+// fois le halo déjà affiché), rien ne recalculait la position. On ajoute
+// ici un recalage systématique de la cible courante (targetedDemoCurrentTarget,
+// déjà tenue à jour par chaque tick de halo), déclenché à la fois par les
+// évènements du clavier virtuel (immédiat, via window.visualViewport) et par
+// le sondage existant de chaque halo (toutes les 300ms) — voir les appels
+// ajoutés dans targetedDemoShowHalo/targetedDemoShowHaloWithProgress/
+// targetedDemoShowHaloPair/targetedDemoTrackConfirmAndProgress.
+const TARGETED_DEMO_KEYBOARD_MARGIN = 24;
+
+function targetedDemoEnsureTargetAboveKeyboard() {
+  if (!targetedDemoActive || !targetedDemoCurrentTarget) return;
+  const target = targetedDemoCurrentTarget;
+  if (typeof target.getBoundingClientRect !== "function") return;
+
+  const vv = window.visualViewport;
+  // vv.height/offsetTop reflètent la zone RÉELLEMENT visible (donc déjà
+  // rétrécie par le clavier), contrairement à window.innerHeight — même
+  // recalage que positionOnboardingSpotlight/syncOnboardingBubblePosition
+  // un peu plus haut dans ce fichier.
+  const visibleTop = vv ? vv.offsetTop : 0;
+  const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+
+  const rect = target.getBoundingClientRect();
+  const margin = TARGETED_DEMO_KEYBOARD_MARGIN;
+
+  let delta = 0;
+  if (rect.bottom > visibleBottom - margin) {
+    delta = rect.bottom - (visibleBottom - margin);
+  } else if (rect.top < visibleTop + margin) {
+    delta = rect.top - (visibleTop + margin);
+  }
+  if (!delta) return;
+
+  const scrollParent = targetedDemoFindScrollParent(target);
+  if (scrollParent && typeof scrollParent.scrollBy === "function") {
+    scrollParent.scrollBy({ top: delta, left: 0, behavior: "auto" });
+  } else {
+    window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+  }
+
+  // Certains conteneurs (ex : la popup "Rappel"/"Rendez-vous", très courte)
+  // n'ont pas assez de hauteur de défilement pour vraiment dégager la
+  // cible du clavier — le scroll ci-dessus ne suffit alors pas à lui
+  // seul. On revérifie une fois le scroll appliqué (après le prochain
+  // repaint) et, si la cible est encore coupée, on ajoute un espaceur
+  // temporaire en bas du conteneur pour créer la place manquante, le
+  // temps que ce halo reste affiché (voir targetedDemoRemoveScrollSpacer,
+  // appelé dès que la démo avance ou s'arrête).
+  requestAnimationFrame(() => {
+    if (!targetedDemoActive || targetedDemoCurrentTarget !== target) return;
+    const rectAfter = target.getBoundingClientRect();
+    if (rectAfter.bottom <= visibleBottom - margin + 1) {
+      targetedDemoRemoveScrollSpacer();
+    } else {
+      const deficit = rectAfter.bottom - (visibleBottom - margin);
+      targetedDemoEnsureScrollSpacer(scrollParent, deficit);
+      if (scrollParent && typeof scrollParent.scrollBy === "function") {
+        scrollParent.scrollBy({ top: deficit, left: 0, behavior: "auto" });
+      }
+    }
+    positionOnboardingSpotlight(target);
+  });
+
+  // Repositionne aussitôt le halo (sans attendre le prochain sondage à
+  // 300ms) et vérifie que la bulle ne chevauche plus la cible désormais
+  // déplacée.
+  positionOnboardingSpotlight(target);
+  targetedDemoScrollBelowBubble(target);
+}
+
+let targetedDemoScrollSpacer = null;
+let targetedDemoScrollSpacerParent = null;
+
+function targetedDemoEnsureScrollSpacer(scrollParent, height) {
+  const parent = scrollParent || document.body;
+  if (targetedDemoScrollSpacer && targetedDemoScrollSpacerParent === parent) {
+    // N'agrandit l'espaceur que si nécessaire — ne le rétrécit jamais tout
+    // seul (évite un battement si le calcul oscille de quelques pixels
+    // d'un sondage à l'autre).
+    const current = parseFloat(targetedDemoScrollSpacer.style.height) || 0;
+    if (height > current) targetedDemoScrollSpacer.style.height = height + "px";
+    return;
+  }
+  targetedDemoRemoveScrollSpacer();
+  const spacer = document.createElement("div");
+  spacer.setAttribute("data-targeted-demo-spacer", "1");
+  spacer.style.height = Math.max(0, height) + "px";
+  spacer.style.flexShrink = "0";
+  spacer.style.pointerEvents = "none";
+  parent.appendChild(spacer);
+  targetedDemoScrollSpacer = spacer;
+  targetedDemoScrollSpacerParent = parent;
+}
+
+function targetedDemoRemoveScrollSpacer() {
+  if (targetedDemoScrollSpacer && targetedDemoScrollSpacer.parentNode) {
+    targetedDemoScrollSpacer.parentNode.removeChild(targetedDemoScrollSpacer);
+  }
+  targetedDemoScrollSpacer = null;
+  targetedDemoScrollSpacerParent = null;
+}
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", function () {
+    if (targetedDemoActive) targetedDemoEnsureTargetAboveKeyboard();
+  });
+  window.visualViewport.addEventListener("scroll", function () {
+    if (targetedDemoActive) targetedDemoEnsureTargetAboveKeyboard();
+  });
+}
+
 function targetedDemoShowHalo(selectors, title, text) {
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
@@ -21426,6 +21559,12 @@ function targetedDemoShowHalo(selectors, title, text) {
     const target = pickVisibleElement(selectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
+    if (target) {
+      targetedDemoEnsureTargetAboveKeyboard();
+      targetedDemoScrollBelowBubble(target);
+    } else {
+      targetedDemoRemoveScrollSpacer();
+    }
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -21470,6 +21609,12 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     const target = progressTarget || pickVisibleElement(fieldSelectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
+    if (target) {
+      targetedDemoEnsureTargetAboveKeyboard();
+      targetedDemoScrollBelowBubble(target);
+    } else {
+      targetedDemoRemoveScrollSpacer();
+    }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent), la bulle d'explication disparaît — elle
     // ne doit plus jamais rester affichée par-dessus.
@@ -21510,6 +21655,12 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
     const b = pickVisibleElement(selectorsB);
     targetedDemoCurrentTarget = a || b;
     positionOnboardingSpotlightMulti([a, b]);
+    if (targetedDemoCurrentTarget) {
+      targetedDemoEnsureTargetAboveKeyboard();
+      targetedDemoScrollBelowBubble(targetedDemoCurrentTarget);
+    } else {
+      targetedDemoRemoveScrollSpacer();
+    }
   };
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
@@ -21561,6 +21712,12 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     const target = confirmTarget || progressTarget;
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
+    if (target) {
+      targetedDemoEnsureTargetAboveKeyboard();
+      targetedDemoScrollBelowBubble(target);
+    } else {
+      targetedDemoRemoveScrollSpacer();
+    }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent), la bulle d'explication disparaît — elle
     // ne doit plus jamais rester affichée par-dessus.
@@ -21614,6 +21771,13 @@ function targetedDemoStop() {
   if (typeof targetedDemoSetCrPointsExpanded === "function") {
     targetedDemoSetCrPointsExpanded(false);
   }
+  // Filet de sécurité : retire l'espaceur ajouté éventuellement par
+  // targetedDemoEnsureTargetAboveKeyboard() pour dégager une cible du
+  // clavier — sinon il resterait en place (espace vide en bas d'un
+  // conteneur) même une fois la démo arrêtée.
+  if (typeof targetedDemoRemoveScrollSpacer === "function") {
+    targetedDemoRemoveScrollSpacer();
+  }
 }
 
 // ─── Routeur + un parcours par bouton ─────────────────────────────────────
@@ -21648,22 +21812,22 @@ function startTargetedDemoFlow(flow) {
 function runTargetedDemoDecouverte() {
   targetedDemoShowHalo(
     ['#orchestrator-dictation-btn'],
-    "Dictez",
-    "Cliquez sur le micro et parlez à Clarity."
+    "Parlez",
+    "Un mot, Clarity s'occupe du reste."
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
     targetedDemoShowHalo(
       ['#orchestrator-text-input', '.clarity-input-row'],
-      "Vous pouvez écrire",
-      "Cliquez dans le champ pour taper votre demande."
+      "Ou écrivez",
+      "Même chose, sans le micro."
     );
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
       targetedDemoShowHalo(
         ['.clarity-quick-row'],
-        "Actions rapides",
-        "Ces raccourcis lancent directement l'action choisie."
+        "Plus vite encore",
+        "Un tap, l'action part."
       );
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
@@ -21693,7 +21857,10 @@ function targetedDemoClientFirstName() {
 // "Clarity note dès que..."). La phrase n'apparaît QUE dans la bulle,
 // jamais recopiée dans le champ (qui reste vide, placeholder habituel).
 function targetedDemoExampleBubbleText(phrase) {
-  return `Dictez ou écrivez par exemple :<br>« ${phrase} »`;
+  // Demande explicite : la phrase d'exemple doit ressortir visuellement
+  // (gras) pour être plus facile à voir — seule la phrase, pas le
+  // "Dictez ou écrivez par exemple :" qui l'introduit.
+  return `Dictez ou écrivez par exemple :<br>« <b>${phrase}</b> »`;
 }
 
 // Mail : demande explicite — le champ reste VIDE (placeholder habituel),
@@ -21792,8 +21959,13 @@ function targetedDemoShowSendHalo() {
 // fournisseur (bouton "Reconnecter <fournisseur>" ou "Connecter une boîte"
 // — même id dans les deux cas).
 function targetedDemoShowReconnectHalo() {
+  // Bug remonté : le halo ne mettait en valeur que le bouton lui-même — le
+  // bandeau au-dessus (icône + "Connexion ... expirée" + explication)
+  // restait assombri sous l'overlay, donc peu lisible ("je ne vois pas bien
+  // la page de reconnexion"). On éclaire maintenant tout le bandeau
+  // (#mail-auth-banner), bouton compris, pour que le contexte reste visible.
   targetedDemoShowHalo(
-    ['#mail-auth-reconnect-btn'],
+    ['#mail-auth-banner'],
     "Connexion à reconnecter",
     "Votre mail reste prêt tel quel — reconnectez votre messagerie, puis vous pourrez l'envoyer."
   );
@@ -21809,6 +21981,18 @@ function targetedDemoShowReminderScheduleHalo() {
     ['#reminder-sheet-confirm'],
     "Précisez la date",
     "Vérifiez la date et l'heure, puis validez pour créer le rappel."
+  );
+}
+
+// RDV : même principe que targetedDemoShowReminderScheduleHalo ci-dessus,
+// pour le popup de précision date/heure du rendez-vous (#planning-schedule-modal,
+// ouvert par openPlanningScheduleSheet quand /agent/planning répond
+// "missing_date"/"missing_time").
+function targetedDemoShowPlanningScheduleHalo() {
+  targetedDemoShowHalo(
+    ['#planning-sheet-confirm'],
+    "Précisez la date",
+    "Vérifiez la date et l'heure, puis validez pour créer le rendez-vous."
   );
 }
 
@@ -21910,16 +22094,39 @@ function targetedDemoCrWalkthrough() {
     targetedDemoShowHalo(
       ['#cr-points-list'],
       "Les points sont prêts",
-      "Relisez-les, modifiez-les si besoin — vous pouvez aussi y ajouter des photos."
+      "Relisez-les, modifiez-les si besoin."
     );
     targetedDemoWalkthroughTimeout = setTimeout(() => {
       if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+      // Retire la limite de hauteur du bloc points juste le temps de son
+      // propre halo (voir targetedDemoSetCrPointsExpanded) — plus besoin
+      // une fois passé aux étapes suivantes (photos/infos).
       targetedDemoSetCrPointsExpanded(false);
-      targetedDemoTrackConfirmAndProgress(
-        ['#cr-create-btn'],
-        "À vous de valider",
-        "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
+      // Demande explicite : montrer aussi, avec leur propre halo, que le
+      // client peut ajouter des photos et des informations complémentaires
+      // (adresse, client, contact, société...) avant de créer le compte
+      // rendu.
+      targetedDemoShowHalo(
+        ['#cr-live-checklist-photos-section'],
+        "Ajoutez des photos",
+        "Vous pouvez illustrer votre compte rendu avec des photos, si besoin."
       );
+      targetedDemoWalkthroughTimeout = setTimeout(() => {
+        if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+        targetedDemoShowHalo(
+          ['#cr-optional-chips'],
+          "Ajoutez des infos",
+          "Adresse, client, contact, société... ajoutez les informations utiles au compte rendu."
+        );
+        targetedDemoWalkthroughTimeout = setTimeout(() => {
+          if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+          targetedDemoTrackConfirmAndProgress(
+            ['#cr-create-btn'],
+            "À vous de valider",
+            "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
+          );
+        }, 2600);
+      }, 2600);
     }, 2600);
   }, 2600);
 }
@@ -21953,24 +22160,36 @@ function targetedDemoSetCrResultActionsLocked(locked) {
 // ci-dessus).
 function targetedDemoShowCrResultHalo() {
   targetedDemoSetCrResultActionsLocked(true);
+  // Demande explicite : aucun halo ne montrait jusqu'ici le résultat
+  // lui-même (l'aperçu rédigé) — seuls les boutons d'action apparaissaient.
+  // On montre donc d'abord l'aperçu généré, puis on enchaîne sur les
+  // boutons comme avant.
   targetedDemoShowHalo(
-    ['.cr-result-actions-row'],
-    "À vous",
-    "Envoyez-le par mail, téléchargez-le en PDF, imprimez-le ou copiez le texte."
+    ['#cr-result-content'],
+    "Le compte rendu est prêt",
+    "Voici le résultat rédigé par Clarity à partir de vos points."
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
-    // Demande explicite : une fois ces boutons montrés, le compte rendu se
-    // ferme et on revient à l'accueil — jamais laissé ouvert (et donc
-    // cliquable) derrière l'écran de fin. closeCrResultModal() ferme
-    // directement, sans la confirmation "Fermer sans l'envoyer ?" (qui
-    // n'a pas sa place pendant la démo).
-    if (typeof closeCrResultModal === "function") closeCrResultModal();
-    const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
-    if (typeof showSection === "function") showSection("agents", homeBtn);
-    targetedDemoStop();
-    showTargetedDemoEndSheet();
-  }, 5200);
+    targetedDemoShowHalo(
+      ['.cr-result-actions-row'],
+      "À vous",
+      "Envoyez-le par mail, téléchargez-le en PDF, imprimez-le ou copiez le texte."
+    );
+    targetedDemoWalkthroughTimeout = setTimeout(() => {
+      if (!targetedDemoActive || targetedDemoFlow !== "cr") return;
+      // Demande explicite : une fois ces boutons montrés, le compte rendu se
+      // ferme et on revient à l'accueil — jamais laissé ouvert (et donc
+      // cliquable) derrière l'écran de fin. closeCrResultModal() ferme
+      // directement, sans la confirmation "Fermer sans l'envoyer ?" (qui
+      // n'a pas sa place pendant la démo).
+      if (typeof closeCrResultModal === "function") closeCrResultModal();
+      const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
+      if (typeof showSection === "function") showSection("agents", homeBtn);
+      targetedDemoStop();
+      showTargetedDemoEndSheet();
+    }, 5200);
+  }, 2600);
 }
 
 // Point d'entrée commun pour les résultats obtenus via les formulaires
@@ -22093,7 +22312,7 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     if (!targetedDemoActive) return;
     targetedDemoStop();
     showTargetedDemoEndSheet();
-  }, 3200);
+  }, 5200);
 }
 
 // ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
@@ -26809,6 +27028,15 @@ async function saveActionLog(agent, action, status) {
       }
     }
     if (banner) banner.style.display = "flex";
+
+    // Demande explicite : ce bandeau doit être "devant les yeux" dès qu'il
+    // apparaît, même hors démo — sinon, si l'aperçu du mail était scrollé
+    // ailleurs (Cc, message...), le bandeau et le bouton de reconnexion
+    // pouvaient rester hors champ, invisibles, avec juste "Envoyer" désactivé
+    // sans explication visible.
+    if (banner && typeof banner.scrollIntoView === "function") {
+      banner.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    }
 
     // L'envoi reste bloqué tant que la reconnexion n'a pas eu lieu : pas
     // la peine de laisser retenter un envoi qui échouera pour la même
