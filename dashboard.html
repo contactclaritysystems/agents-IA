@@ -21060,18 +21060,23 @@ function syncOnboardingBubblePosition() {
         const visibleBottom = vv.offsetTop + vv.height;
         const spaceBelow = visibleBottom - (targetBottom + gap) - bubbleHeight;
         const spaceAbove = (targetTop - gap) - bubbleHeight - vv.offsetTop;
-        if (spaceBelow >= 0) {
-          top = targetBottom + gap;
-        } else if (spaceAbove >= 0) {
+        // Demande explicite ("je veux que le halo soit au-dessus [de la
+        // bulle] — la bulle explique, en dessous on voit le halo qui
+        // prouve") — même règle que la démo ciblée (voir
+        // targetedDemoPositionBubbleNear) : la bulle passe désormais
+        // au-dessus du champ en priorité, uniforme sur tout le SaaS.
+        if (spaceAbove >= 0) {
           top = targetTop - gap - bubbleHeight;
-        } else if (spaceBelow >= spaceAbove) {
+        } else if (spaceBelow >= 0) {
+          top = targetBottom + gap;
+        } else if (spaceAbove >= spaceBelow) {
           // Ni assez de place au-dessus ni en dessous (champ occupant
           // presque toute la zone visible) : on prend le côté où on déborde
           // le moins, plutôt que de rester bêtement collée en haut — ce qui
           // pouvait encore chevaucher un champ très grand.
-          top = targetBottom + gap;
-        } else {
           top = targetTop - gap - bubbleHeight;
+        } else {
+          top = targetBottom + gap;
         }
 
         // Filet de sécurité : ne jamais laisser la bulle remonter au-dessus
@@ -21416,25 +21421,24 @@ function targetedDemoPositionBubbleNear(target) {
   const visibleTop = vv ? vv.offsetTop : 0;
   const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
 
-  const spaceBelow = visibleBottom - targetRect.bottom;
-  const spaceAbove = targetRect.top - visibleTop;
-
-  // Bug remonté (mobile) : au scroll, la cible se déplace dans l'écran —
-  // recalculer spaceBelow/spaceAbove à CHAQUE sondage pouvait faire basculer
-  // la bulle d'un côté à l'autre du halo en cours de scroll. Le côté
-  // (au-dessus/en dessous) n'est donc décidé qu'UNE SEULE FOIS par étape
-  // (mémorisé dans targetedDemoBubbleSide, remis à zéro par
+  // Demande explicite ("je veux que le halo soit au-dessus [de la bulle] —
+  // c'est plus logique que la bulle explique, puis en dessous on voit le
+  // halo qui prouve") : la bulle d'explication est donc désormais TOUJOURS
+  // placée au-dessus de sa cible, jamais en dessous — quel que soit le halo
+  // (accueil, aperçu mail, RDV/Rappel/CR, carte du calendrier...), même
+  // règle partout dans la démo. Avant ce correctif, le côté était calculé
+  // au cas par cas selon la place disponible (souvent "en dessous" pour la
+  // plupart des halos, "au-dessus" forcé seulement pour le champ
+  // d'écriture) : targetedDemoBubbleForceAbove ne servait alors que pour ce
+  // cas particulier ; il reste utilisé mais est maintenant redondant avec
+  // ce nouveau comportement par défaut. Le côté n'est décidé qu'UNE SEULE
+  // FOIS par étape (mémorisé dans targetedDemoBubbleSide, remis à zéro par
   // targetedDemoRenderBubble/targetedDemoResetBubblePosition) : une fois
-  // choisi, on ne fait plus que SUIVRE la cible de ce même côté, jamais
-  // recalculer le côté lui-même.
+  // choisi, on ne fait plus que SUIVRE la cible de ce même côté. Le clamp
+  // ci-dessous garantit que la bulle reste toujours entièrement visible,
+  // même si la cible est tout en haut de l'écran.
   if (!targetedDemoBubbleSide) {
-    if (spaceBelow >= bubbleHeight + margin * 2) {
-      targetedDemoBubbleSide = "below";
-    } else if (spaceAbove >= bubbleHeight + margin * 2) {
-      targetedDemoBubbleSide = "above";
-    } else {
-      targetedDemoBubbleSide = spaceBelow >= spaceAbove ? "below" : "above";
-    }
+    targetedDemoBubbleSide = "above";
   }
 
   // Bug remonté ("sans clavier c'est parfait, dès que le clavier s'ouvre la
