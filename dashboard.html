@@ -20178,7 +20178,13 @@ function updateOnboardingMicTag() {
 
 function startOnboardingPositionLoop() {
   stopOnboardingPositionLoop();
-  onboardingPositionInterval = setInterval(onboardingPositionTick, 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms — le halo/la bulle du tour d'accueil recolle donc à une
+  // fenêtre qui vient de s'ouvrir ou de changer de taille (donc ni scroll
+  // ni clavier, les 2 seuls cas déjà instantanés par ailleurs) jusqu'à 3x
+  // plus vite. Toujours un simple sondage DOM (getBoundingClientRect) très
+  // léger, donc sans impact perceptible sur les perfs à cette fréquence.
+  onboardingPositionInterval = setInterval(onboardingPositionTick, 100);
   // En plus du sondage toutes les 300ms, on se recale immédiatement sur les
   // évènements du clavier virtuel (voir onboardingPositionTick / la note
   // juste avant syncOnboardingBubblePosition plus bas pour le détail du
@@ -20540,9 +20546,12 @@ function hideTipsRing() {
 function startTipsPositionLoop(selectors, anchorAboveTarget) {
   stopTipsPositionLoop();
   showTipsRing(selectors, anchorAboveTarget);
+  // Même resserrement que onboardingPositionInterval/targetedDemoPositionInterval
+  // (voir leurs commentaires) : 300ms -> 100ms pour réduire le décalage
+  // visuel du halo "Astuces" par rapport à sa cible.
   onboardingTipsPositionInterval = setInterval(() => {
     showTipsRing(selectors, anchorAboveTarget);
-  }, 300);
+  }, 100);
 }
 
 function stopTipsPositionLoop() {
@@ -21768,7 +21777,13 @@ function targetedDemoShowHalo(selectors, title, text, forceBubbleAbove) {
   };
   targetedDemoCurrentTick = tick;
   tick();
-  targetedDemoPositionInterval = setInterval(tick, 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms pour tous les halos de la démo ciblée — réduit jusqu'à 3x le
+  // décalage visuel quand la cible change (ouverture/redimensionnement
+  // d'une fenêtre), seul cas encore couvert par ce sondage périodique (le
+  // scroll et le clavier ont déjà leur propre rattrapage instantané, voir
+  // plus haut).
+  targetedDemoPositionInterval = setInterval(tick, 100);
 }
 
 // Demande explicite : pendant la démo, on ne montre plus du tout les
@@ -21836,7 +21851,13 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
   };
   targetedDemoCurrentTick = tick;
   tick();
-  targetedDemoPositionInterval = setInterval(tick, 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms pour tous les halos de la démo ciblée — réduit jusqu'à 3x le
+  // décalage visuel quand la cible change (ouverture/redimensionnement
+  // d'une fenêtre), seul cas encore couvert par ce sondage périodique (le
+  // scroll et le clavier ont déjà leur propre rattrapage instantané, voir
+  // plus haut).
+  targetedDemoPositionInterval = setInterval(tick, 100);
 }
 
 // Certaines étapes proposent 2 façons équivalentes d'agir (dicter/taper
@@ -21884,7 +21905,13 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
   };
   targetedDemoCurrentTick = tick;
   tick();
-  targetedDemoPositionInterval = setInterval(tick, 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms pour tous les halos de la démo ciblée — réduit jusqu'à 3x le
+  // décalage visuel quand la cible change (ouverture/redimensionnement
+  // d'une fenêtre), seul cas encore couvert par ce sondage périodique (le
+  // scroll et le clavier ont déjà leur propre rattrapage instantané, voir
+  // plus haut).
+  targetedDemoPositionInterval = setInterval(tick, 100);
 }
 
 // Étape "confirmer" d'un formulaire structuré (RDV/Rappel/Compte rendu) :
@@ -21950,7 +21977,13 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
   };
   targetedDemoCurrentTick = tick;
   tick();
-  targetedDemoPositionInterval = setInterval(tick, 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms pour tous les halos de la démo ciblée — réduit jusqu'à 3x le
+  // décalage visuel quand la cible change (ouverture/redimensionnement
+  // d'une fenêtre), seul cas encore couvert par ce sondage périodique (le
+  // scroll et le clavier ont déjà leur propre rattrapage instantané, voir
+  // plus haut).
+  targetedDemoPositionInterval = setInterval(tick, 100);
 }
 
 function targetedDemoStop() {
@@ -22124,7 +22157,10 @@ function targetedDemoWaitForMailPreview(attempts = 0) {
   // seule si l'utilisateur met du temps à agir (demande explicite — seule
   // la déconnexion ou la fin de la démo y mettent fin), on continue donc
   // d'attendre indéfiniment.
-  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForMailPreview(attempts + 1), 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms — détecte jusqu'à 3x plus vite l'ouverture de l'aperçu du mail
+  // pour enchaîner sur son halo.
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForMailPreview(attempts + 1), 100);
 }
 
 // Demande explicite : l'aperçu ne montrait pas que le contact vient d'être
@@ -22298,7 +22334,9 @@ function targetedDemoWaitForCrModalOpen(attempts = 0) {
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
-  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms, même raison que targetedDemoWaitForMailPreview ci-dessus.
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrModalOpen(attempts + 1), 100);
 }
 
 // Bug remonté : "#cr-points-list" a son propre scroll interne (CSS
@@ -22378,7 +22416,9 @@ function targetedDemoWaitForCrResult(attempts = 0) {
     return;
   }
   // Pas d'abandon automatique (voir targetedDemoWaitForMailPreview).
-  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 300);
+  // Demande explicite ("optimiser le visuel") : sondage resserré de 300ms
+  // à 100ms, même raison que targetedDemoWaitForMailPreview ci-dessus.
+  targetedDemoWaitTimeout = setTimeout(() => targetedDemoWaitForCrResult(attempts + 1), 100);
 }
 
 // Demande explicite : les boutons d'action du résultat (Envoyer/PDF/
