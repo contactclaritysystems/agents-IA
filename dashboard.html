@@ -35363,6 +35363,28 @@ function isValidEmailList(value) {
   }
 }
 
+  // Demande explicite : la bulle d'explication (tour d'accueil ET démo
+  // ciblée, même élément #onboarding-bubble partagé par les 2) doit
+  // disparaître IMMÉDIATEMENT au clic sur "Envoyer" de l'aperçu du mail,
+  // plutôt que d'attendre le prochain sondage (jusqu'à 300ms plus tard,
+  // voir onboardingPositionTick pour le tour d'accueil, ou le tick de
+  // targetedDemoShowHalo pour la démo ciblée) — sinon elle restait
+  // affichée un court instant pendant que la carte commençait déjà à
+  // s'envoler (.sending). Ne touche rien si aucun tour/démo n'est en
+  // cours (utilisateur normal, hors onboarding) : la bulle est alors déjà
+  // display:none par défaut (CSS) et ce garde-fou l'empêche de la faire
+  // apparaître par erreur lors d'un restore après échec (voir hidden=false
+  // plus bas, sur chaque branche d'échec qui redonne la main pour
+  // recliquer sur "Envoyer").
+  function setMailPreviewBubbleHiddenForSend(hidden) {
+    const tourActive = typeof onboardingActive !== "undefined" && onboardingActive;
+    const demoActive = typeof targetedDemoActive !== "undefined" && targetedDemoActive;
+    if (!tourActive && !demoActive) return;
+    const bubble = document.getElementById("onboarding-bubble");
+    if (!bubble) return;
+    bubble.style.display = hidden ? "none" : "block";
+  }
+
   async function sendPreparedMail() {
     // Démo ciblée (mail) : demande explicite — le mail doit VRAIMENT
     // partir pendant la démo ("c'est ce qui fait le wouaw du client"), donc
@@ -35463,10 +35485,11 @@ if (sendBtn) {
 if (modalBox) {
   modalBox.classList.add("sending");
 }
+setMailPreviewBubbleHiddenForSend(true);
 
 const box = document.querySelector(".page-view.active #dictation-box");
 if (box) box.innerHTML = "📤 Envoi du mail en cours...";
-    
+
   if (!currentPreparedMail || !currentUser) {
     showToast("Mail introuvable", "error");
     // Échec avant même l'appel réseau : remet l'aperçu dans un état
@@ -35478,6 +35501,7 @@ if (box) box.innerHTML = "📤 Envoi du mail en cours...";
       sendBtn.disabled = false;
       sendBtn.innerHTML = "📤 Envoyer le mail";
     }
+    setMailPreviewBubbleHiddenForSend(false);
     unlockAgentButtons();
     resetOrchestratorMicButton();
     return;
@@ -35565,6 +35589,7 @@ if (!connectedEmail) {
   showMailAuthExpiredBanner(connectedProvider, { notConnected: true });
 
   if (modalBox) modalBox.classList.remove("sending");
+  setMailPreviewBubbleHiddenForSend(false);
 
   const boxOnNotConnected = document.querySelector(".page-view.active #dictation-box");
   if (boxOnNotConnected) boxOnNotConnected.innerHTML = "";
@@ -35701,6 +35726,7 @@ const payload = {
         showMailAuthExpiredBanner(connectedProvider);
 
         if (modalBox) modalBox.classList.remove("sending");
+        setMailPreviewBubbleHiddenForSend(false);
 
         const boxOnAuthFail = document.querySelector(".page-view.active #dictation-box");
         if (boxOnAuthFail) boxOnAuthFail.innerHTML = "";
@@ -35721,6 +35747,7 @@ const payload = {
           sendBtn.disabled = false;
           sendBtn.innerHTML = "📤 Envoyer le mail";
         }
+        setMailPreviewBubbleHiddenForSend(false);
         unlockAgentButtons();
         resetOrchestratorMicButton();
         return;
@@ -35732,6 +35759,7 @@ const payload = {
         sendBtn.disabled = false;
         sendBtn.innerHTML = "📤 Envoyer le mail";
       }
+      setMailPreviewBubbleHiddenForSend(false);
       // Envoi vraiment échoué : le micro peut redevenir utilisable.
       unlockAgentButtons();
       resetOrchestratorMicButton();
@@ -35854,6 +35882,7 @@ ${body}`,
       sendBtn.disabled = false;
       sendBtn.innerHTML = "📤 Envoyer le mail";
     }
+    setMailPreviewBubbleHiddenForSend(false);
 
     showToast("Erreur envoi mail", "error");
     // Envoi vraiment échoué (exception réseau) : le micro peut
