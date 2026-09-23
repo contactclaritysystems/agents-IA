@@ -5805,7 +5805,28 @@ body,
   text-overflow: clip;
   word-break: break-word;
   line-height: 1.4;
-  max-height: 5.6em; /* 4 lignes pile, la coupe tombe entre deux lignes */
+  /* Bug remonté ("regarde ce qui se passe quand le texte est trop long") :
+     à 4 lignes (5.6em), un texte un peu long (ex : dictée d'un compte
+     rendu) se faisait couper NET, en plein milieu d'une phrase, sans
+     aucun indice visuel ni scrollbar perceptible sur mobile (iOS/Android
+     masquent les scrollbars tactiles) — on avait l'impression que le
+     champ "cassait" le texte plutôt que de simplement le faire défiler.
+     Plus de hauteur avant de couper (~6 lignes) pour que l'écrasante
+     majorité des dictées/saisies tiennent sans jamais avoir besoin de
+     défiler. */
+  max-height: 8.4em; /* ~6 lignes avant de défiler */
+}
+
+/* Bug remonté (suite) : au-delà de ces ~6 lignes (cas rares, texte
+   vraiment long), le texte défile toujours mais reste invisible tant
+   qu'on ne le sait pas — ce dégradé en bas du champ (voir is-clipped,
+   posé par updateOrchestratorSendButton dès que le texte dépasse
+   réellement la hauteur visible) signale qu'il y a plus à lire, comme
+   un fondu de fin de liste. Purement visuel, jamais posé si le texte
+   tient déjà entièrement. */
+.clarity-input-bar.has-text.is-clipped .clarity-input-placeholder {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 20px), transparent 100%);
 }
 
 /* Variante textarea (champ "autre question" de la popup résultat) : même
@@ -5831,7 +5852,10 @@ body,
   font-weight: 500;
   line-height: 1.4;
   color: var(--clarity-text);
-  max-height: 5.6em; /* 4 lignes pile */
+  /* Même correctif que .clarity-input-bar.has-text .clarity-input-placeholder
+     ci-dessus (voir son commentaire) : plus de hauteur avant de défiler,
+     pour cette variante textarea aussi ("tout le SaaS doit être pareil"). */
+  max-height: 8.4em; /* ~6 lignes avant de défiler */
   overflow-y: auto;
 }
 
@@ -18890,6 +18914,50 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       // réessayer).
       if (sentAttachments.length && typeof resetHomeCardAttachments === "function") resetHomeCardAttachments();
 
+      // Compte rendu demandé via le champ général (pas le bouton dédié) :
+      // demande explicite — si le texte BRUT contient "compte rendu"/
+      // "compte-rendu", on n'ouvre JAMAIS Planning ni Relance, même si la
+      // phrase mentionne aussi un rendez-vous ou un jour de semaine
+      // ("...planning validé, relance vendredi" par exemple) : toujours le
+      // modal multi-points du compte rendu (/agent/redaction), quel que
+      // soit l'agent choisi par /orchestrate. Ce test passe donc AVANT
+      // tout le reste (multi-intentions RDV+Mail, mail, relance) — avant,
+      // il ne se déclenchait qu'après coup et seulement si /orchestrate
+      // avait lui-même renvoyé data.agent "redaction"/"compte_rendu" : un
+      // compte rendu mal classé par l'orchestrateur (ex: en "planning" à
+      // cause d'un jour de semaine dans le texte) pouvait alors ouvrir
+      // Planning ou Relance au lieu du compte rendu (voir looksLikeCompteRendu).
+      if (looksLikeCompteRendu(data.instruction || instruction)) {
+        hideOrRemoveBox(box);
+        unlockAgentButtons();
+        // Toujours à partir de la dictée/texte BRUT de l'utilisateur
+        // (variable locale "instruction"), jamais de data.instruction : ce
+        // dernier vient de l'orchestrateur et peut être une version
+        // réécrite/enrichie côté backend (ex: "en incluant les détails des
+        // travaux effectués, les matériaux utilisés..."), ce qui polluait
+        // le champ Sujet avec du texte jamais prononcé par l'utilisateur.
+        // Demande explicite : le sujet ET les points doivent être extraits
+        // du texte brut (séparateur tiret), sans jamais rien inventer —
+        // voir parseCompteRenduDictation.
+        const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
+        await openCompteRenduModal(crParsedPoints);
+        if (crSubject) {
+          const sujetInput = document.getElementById("cr-field-sujet");
+          if (sujetInput) {
+            sujetInput.value = crSubject;
+            // Affectation directe de .value : ne déclenche PAS l'évènement
+            // "input" du champ (contrairement à une vraie frappe/collage
+            // utilisateur), donc updateCrCreateButtonState() — rattachée à
+            // cet évènement — ne s'exécutait jamais ici. Résultat : le
+            // Sujet était bien rempli à l'écran mais "Créer le compte
+            // rendu" restait grisé tant que l'utilisateur ne retouchait pas
+            // lui-même un champ. On appelle donc la fonction nous-mêmes.
+            updateCrCreateButtonState();
+          }
+        }
+        return;
+      }
+
       // Multi-intentions V3 : le texte BRUT tranche AVANT tout, quel que
       // soit l'agent choisi par /orchestrate — jamais l'IA "au feeling".
       // Si le texte contient à la fois une intention RDV et une intention
@@ -18925,43 +18993,6 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
         box.innerHTML = "🔎 Recherche du contact...";
         if (sentAttachments.length) window.pendingMailAttachmentsPreload = sentAttachments.slice();
         return callMailAgent(instruction, box, data.request_id || requestId);
-      }
-
-      // Compte rendu demandé via le champ général (pas le bouton dédié) :
-      // ouvre le même modal multi-points, pas le formulaire générique de
-      // /agent/redaction (voir looksLikeCompteRendu).
-      if (
-        (data.agent === "redaction" || data.agent === "compte_rendu") &&
-        looksLikeCompteRendu(data.instruction || instruction)
-      ) {
-        hideOrRemoveBox(box);
-        unlockAgentButtons();
-        // Toujours à partir de la dictée/texte BRUT de l'utilisateur
-        // (variable locale "instruction"), jamais de data.instruction : ce
-        // dernier vient de l'orchestrateur et peut être une version
-        // réécrite/enrichie côté backend (ex: "en incluant les détails des
-        // travaux effectués, les matériaux utilisés..."), ce qui polluait
-        // le champ Sujet avec du texte jamais prononcé par l'utilisateur.
-        // Demande explicite : le sujet ET les points doivent être extraits
-        // du texte brut (séparateur tiret), sans jamais rien inventer —
-        // voir parseCompteRenduDictation.
-        const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
-        await openCompteRenduModal(crParsedPoints);
-        if (crSubject) {
-          const sujetInput = document.getElementById("cr-field-sujet");
-          if (sujetInput) {
-            sujetInput.value = crSubject;
-            // Affectation directe de .value : ne déclenche PAS l'évènement
-            // "input" du champ (contrairement à une vraie frappe/collage
-            // utilisateur), donc updateCrCreateButtonState() — rattachée à
-            // cet évènement — ne s'exécutait jamais ici. Résultat : le
-            // Sujet était bien rempli à l'écran mais "Créer le compte
-            // rendu" restait grisé tant que l'utilisateur ne retouchait pas
-            // lui-même un champ. On appelle donc la fonction nous-mêmes.
-            updateCrCreateButtonState();
-          }
-        }
-        return;
       }
 
       if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
@@ -19114,7 +19145,19 @@ function updateOrchestratorSendButton() {
   // Forme du champ : pilule vide -> coins arrondis + texte enroulé dès
   // qu'on écrit (voir .clarity-input-bar.has-text).
   const bar = document.getElementById("home-input-bar");
-  if (bar) bar.classList.toggle("has-text", hasText);
+  if (bar) {
+    bar.classList.toggle("has-text", hasText);
+    // Bug remonté ("regarde ce qui se passe quand le texte est trop
+    // long") : au-delà de la hauteur visible (~6 lignes, voir
+    // .clarity-input-bar.has-text .clarity-input-placeholder), le champ
+    // défile mais rien ne le signalait — même mesure de dépassement que
+    // targetedDemoFindScrollParent plus loin dans ce fichier
+    // (scrollHeight > clientHeight). Posé APRÈS le toggle ci-dessus : la
+    // mesure doit se faire une fois le texte réellement enroulé (has-text),
+    // pas pendant que le champ est encore en pilule à une seule ligne.
+    const isClipped = hasText && el.scrollHeight > el.clientHeight + 1;
+    bar.classList.toggle("is-clipped", isClipped);
+  }
 }
 
 // Clic sur "Envoyer" = exactement la même action que valider la saisie
@@ -29965,6 +30008,42 @@ console.log("REPONSE BRUTE :", text);
   return;
 }
 
+// Compte rendu demandé à la voix via le micro général (pas le bouton
+// dédié) : même règle que côté texte (sendTypedInstruction) — demande
+// explicite : si le texte BRUT contient "compte rendu"/"compte-rendu", on
+// n'ouvre JAMAIS Planning ni Relance, même si la phrase mentionne aussi un
+// rendez-vous ou un jour de semaine ("...planning validé, relance
+// vendredi" par exemple) : toujours le modal multi-points du compte rendu
+// (/agent/redaction), quel que soit l'agent choisi par /orchestrate. Ce
+// test passe donc AVANT tout le reste (multi-intentions RDV+Mail, mail,
+// relance) — voir le même correctif, avec la même explication complète,
+// côté texte (sendTypedInstruction) plus haut dans ce fichier.
+if (looksLikeCompteRendu(data.instruction || instruction)) {
+  hideOrRemoveBox(box);
+  unlockAgentButtons();
+  resetOrchestratorMicButton();
+  // Toujours à partir de la dictée/texte BRUT de l'utilisateur (variable
+  // locale "instruction"), jamais de data.instruction : voir le même
+  // correctif côté texte (sendTypedInstruction) juste au-dessus dans ce
+  // fichier. Sujet ET points extraits ensemble, sans rien inventer — voir
+  // parseCompteRenduDictation.
+  const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
+  await openCompteRenduModal(crParsedPoints);
+  if (crSubject) {
+    const sujetInput = document.getElementById("cr-field-sujet");
+    if (sujetInput) {
+      sujetInput.value = crSubject;
+      // Même correctif que côté texte (voir sendTypedInstruction) :
+      // l'affectation directe de .value ne déclenche pas l'évènement
+      // "input" dont dépend updateCrCreateButtonState() — sans cet appel
+      // explicite, "Créer le compte rendu" restait grisé bien que le Sujet
+      // soit déjà rempli (cas voix, via le micro général).
+      updateCrCreateButtonState();
+    }
+  }
+  return;
+}
+
 // Multi-intentions V3 : même règle que côté texte (sendTypedInstruction)
 // — le texte BRUT dicté tranche AVANT tout, quel que soit l'agent choisi
 // par /orchestrate. Double intention Mail+RDV -> toujours Planning
@@ -30008,38 +30087,6 @@ if (data.agent === "relance" && textMentionsRelanceRecipient(instruction)) {
     box,
     data.request_id || requestId
   );
-}
-
-// Compte rendu demandé à la voix via le micro général (pas le bouton
-// dédié) : même règle que côté texte (sendTypedInstruction) — on ouvre le
-// modal multi-points, jamais le formulaire générique de /agent/redaction.
-if (
-  (data.agent === "redaction" || data.agent === "compte_rendu") &&
-  looksLikeCompteRendu(data.instruction || instruction)
-) {
-  hideOrRemoveBox(box);
-  unlockAgentButtons();
-  resetOrchestratorMicButton();
-  // Toujours à partir de la dictée/texte BRUT de l'utilisateur (variable
-  // locale "instruction"), jamais de data.instruction : voir le même
-  // correctif côté texte (sendTypedInstruction) juste au-dessus dans ce
-  // fichier. Sujet ET points extraits ensemble, sans rien inventer — voir
-  // parseCompteRenduDictation.
-  const { sujet: crSubject, points: crParsedPoints } = parseCompteRenduDictation(instruction);
-  await openCompteRenduModal(crParsedPoints);
-  if (crSubject) {
-    const sujetInput = document.getElementById("cr-field-sujet");
-    if (sujetInput) {
-      sujetInput.value = crSubject;
-      // Même correctif que côté texte (voir sendTypedInstruction) :
-      // l'affectation directe de .value ne déclenche pas l'évènement
-      // "input" dont dépend updateCrCreateButtonState() — sans cet appel
-      // explicite, "Créer le compte rendu" restait grisé bien que le Sujet
-      // soit déjà rempli (cas voix, via le micro général).
-      updateCrCreateButtonState();
-    }
-  }
-  return;
 }
 
 // Agents "simples" (une dictée -> une réponse, sans étape intermédiaire
