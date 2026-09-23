@@ -21943,7 +21943,7 @@ function targetedDemoMailPreviewWalkthrough() {
   // saut parce que le layout a bougé" — chaque étape reste affichée un
   // délai FIXE (jamais déclenché par un changement de mise en page : ce
   // timer ne dépend d'aucune mesure de layout). Temps repris explicitement :
-  // Destinataire 4s, Objet 4s, Message 6s.
+  // Destinataire 3s, Objet 3s, Message 4s.
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
     targetedDemoShowHalo(
@@ -21971,9 +21971,9 @@ function targetedDemoMailPreviewWalkthrough() {
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
         targetedDemoShowSendHalo();
-      }, 6000);
-    }, 4000);
-  }, 4000);
+      }, 4000);
+    }, 3000);
+  }, 3000);
 }
 
 // Dernière étape de l'aperçu mail (halo sur "Envoyer") — extraite dans sa
