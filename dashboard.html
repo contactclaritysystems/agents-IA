@@ -21422,9 +21422,21 @@ function targetedDemoPositionBubbleNear(target) {
     }
   }
 
+  // Bug remonté ("sans clavier c'est parfait, dès que le clavier s'ouvre la
+  // bulle ne se comporte plus pareil") : #onboarding-bubble est en
+  // position:fixed, donc son "top" CSS se cale sur le viewport de MISE EN
+  // PAGE (layout viewport), pas sur le viewport visuel réellement affiché
+  // — exactement comme pour #onboarding-ring, qui ajoute déjà
+  // `offsetY` (voir positionOnboardingSpotlight ci-dessus). Ce recalage
+  // manquait ici : tant que offsetY valait 0 (pas de clavier), aucune
+  // différence visible : les 2 restaient synchronisés par coïncidence.
+  // Dès que le clavier s'ouvre (ou qu'on scrolle clavier ouvert), offsetY
+  // devient non nul et l'anneau (recalé) se désynchronisait de la bulle
+  // (non recalée). On applique donc le même décalage aux 2 branches.
+  const offsetY = vv ? vv.offsetTop : 0;
   let top = targetedDemoBubbleSide === "below"
-    ? targetRect.bottom + margin
-    : targetRect.top - bubbleHeight - margin;
+    ? targetRect.bottom + offsetY + margin
+    : targetRect.top + offsetY - bubbleHeight - margin;
   top = Math.max(visibleTop + margin, Math.min(top, visibleBottom - bubbleHeight - margin));
 
   bubble.style.top = top + "px";
