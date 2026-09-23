@@ -21316,6 +21316,14 @@ function replayTargetedDemo() {
 // donc cliquable au travers, sans bloqueur de clics puisque ces étapes
 // doivent rester utilisables normalement). ────────────────────────────────
 
+// Mémorise, pour l'étape de halo EN COURS, si la bulle a été placée
+// au-dessus ("above") ou en dessous ("below") de sa cible — décidé UNE
+// SEULE FOIS par targetedDemoPositionBubbleNear (voir plus bas), puis
+// réutilisé tel quel à chaque recalcul suivant (scroll, sondage 300ms...).
+// Remis à zéro à chaque nouvelle étape (targetedDemoRenderBubble) et
+// quand la cible se perd (targetedDemoResetBubblePosition).
+let targetedDemoBubbleSide = null;
+
 function targetedDemoRenderBubble(title, text) {
   const overlay = document.getElementById("onboarding-overlay");
   const bubble = document.getElementById("onboarding-bubble");
@@ -21329,6 +21337,9 @@ function targetedDemoRenderBubble(title, text) {
   // jamais persister sur l'étape suivante.
   bubble.style.top = "";
   bubble.style.transform = "";
+  // Nouvelle étape -> le côté (au-dessus/en dessous) sera redécidé au
+  // prochain appel de targetedDemoPositionBubbleNear, une seule fois.
+  targetedDemoBubbleSide = null;
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
     <div class="onboarding-text">${text}</div>
@@ -21365,16 +21376,27 @@ function targetedDemoPositionBubbleNear(target) {
   const spaceBelow = visibleBottom - targetRect.bottom;
   const spaceAbove = targetRect.top - visibleTop;
 
-  let top;
-  if (spaceBelow >= bubbleHeight + margin * 2) {
-    top = targetRect.bottom + margin;
-  } else if (spaceAbove >= bubbleHeight + margin * 2) {
-    top = targetRect.top - bubbleHeight - margin;
-  } else {
-    top = spaceBelow >= spaceAbove
-      ? targetRect.bottom + margin
-      : targetRect.top - bubbleHeight - margin;
+  // Bug remonté (mobile) : au scroll, la cible se déplace dans l'écran —
+  // recalculer spaceBelow/spaceAbove à CHAQUE sondage pouvait faire basculer
+  // la bulle d'un côté à l'autre du halo en cours de scroll. Le côté
+  // (au-dessus/en dessous) n'est donc décidé qu'UNE SEULE FOIS par étape
+  // (mémorisé dans targetedDemoBubbleSide, remis à zéro par
+  // targetedDemoRenderBubble/targetedDemoResetBubblePosition) : une fois
+  // choisi, on ne fait plus que SUIVRE la cible de ce même côté, jamais
+  // recalculer le côté lui-même.
+  if (!targetedDemoBubbleSide) {
+    if (spaceBelow >= bubbleHeight + margin * 2) {
+      targetedDemoBubbleSide = "below";
+    } else if (spaceAbove >= bubbleHeight + margin * 2) {
+      targetedDemoBubbleSide = "above";
+    } else {
+      targetedDemoBubbleSide = spaceBelow >= spaceAbove ? "below" : "above";
+    }
   }
+
+  let top = targetedDemoBubbleSide === "below"
+    ? targetRect.bottom + margin
+    : targetRect.top - bubbleHeight - margin;
   top = Math.max(visibleTop + margin, Math.min(top, visibleBottom - bubbleHeight - margin));
 
   bubble.style.top = top + "px";
@@ -21410,6 +21432,9 @@ function targetedDemoResetBubblePosition() {
   if (!bubble) return;
   bubble.style.top = "";
   bubble.style.transform = "";
+  // Cible perdue -> le côté (au-dessus/en dessous) sera redécidé depuis
+  // zéro si une cible réapparaît.
+  targetedDemoBubbleSide = null;
 }
 
 // Cherche le plus proche ancêtre réellement scrollable (overflow-y: auto/
