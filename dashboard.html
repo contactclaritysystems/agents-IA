@@ -20943,7 +20943,15 @@ function positionOnboardingSpotlight(target) {
   const rect = typeof target.getBoundingClientRect === "function"
     ? target.getBoundingClientRect()
     : target;
-  const pad = 8;
+  // Demande explicite ("les halos ne font pas bien la taille des fenêtres
+  // ou des champs, ajuste pour avoir la taille exacte") : plus de marge
+  // (avant : 8px de chaque côté) — le halo (anneau + trou du voile) colle
+  // désormais exactement au rectangle réel de la cible. Le rendu visible
+  // de l'anneau vient entièrement de son box-shadow (voir #onboarding-ring
+  // en CSS, 0 0 0 Npx = tracé vers l'EXTÉRIEUR de sa boîte), donc à pad=0
+  // l'anneau se dessine pile sur le bord de la cible, sans jamais empiéter
+  // dessus.
+  const pad = 0;
 
   // Bug remonté (voir aussi syncOnboardingBubblePosition un peu plus bas) :
   // quand le clavier virtuel s'ouvre sur mobile, #onboarding-ring et le
@@ -21007,7 +21015,9 @@ function positionOnboardingSpotlightMulti(targets) {
     return;
   }
 
-  const pad = 8;
+  // Même correctif que positionOnboardingSpotlight ci-dessus (voir son
+  // commentaire) : taille exacte de la cible, plus de marge de 8px.
+  const pad = 0;
   const vv = window.visualViewport;
   const offsetX = vv ? vv.offsetLeft : 0;
   const offsetY = vv ? vv.offsetTop : 0;
@@ -22559,7 +22569,7 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     kind === "rdv" ? "Le rendez-vous est bien là" : "Le rappel est bien là",
     kind === "rdv"
       ? "Il apparaît directement dans votre calendrier — un vrai rendez-vous, enregistré pour de bon."
-      : "Il apparaît directement dans votre calendrier — un vrai rappel, enregistré pour de bon."
+      : "Il est dans votre planning. Vous recevrez un e-mail à l’heure prévue."
   );
 
   // Bug remonté : "je vois le calendrier au mois... je ne vois pas le rdv".
