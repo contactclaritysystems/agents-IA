@@ -21337,6 +21337,23 @@ let targetedDemoBubbleSide = null;
 // puis retrouvée) au cours de la même étape.
 let targetedDemoBubbleForceAbove = false;
 
+// Bug remonté ("la bulle bouge quand je scrolle, elle doit être fixe
+// au-dessus du halo") : avant ce correctif, targetedDemoPositionBubbleNear
+// était rappelée à CHAQUE sondage (300ms) et à CHAQUE évènement
+// "visualViewport scroll" (déclenché en rafale par le navigateur pendant
+// l'ouverture du clavier ou un simple défilement) — la bulle se
+// repositionnait donc en continu d'après le rectangle LIVE de la cible,
+// ce qui la faisait suivre chaque micro-mouvement du scroll au lieu de
+// rester fixe. Elle ne doit désormais être (re)positionnée qu'à des
+// moments précis et rares : ouverture de l'étape, cible retrouvée après
+// une perte temporaire, et vrai changement clavier/rotation (géré à part
+// par targetedDemoEnsureTargetAboveKeyboard, qui continue d'appeler
+// targetedDemoPositionBubbleNear directement). Ce drapeau porte cette
+// intention : true = "à repositionner à la prochaine occasion", consommé
+// (remis à false) dès que ça arrive. Le halo (l'anneau), lui, continue de
+// suivre la cible en direct à chaque sondage — seule la bulle se fige.
+let targetedDemoBubbleNeedsReposition = true;
+
 function targetedDemoRenderBubble(title, text) {
   const overlay = document.getElementById("onboarding-overlay");
   const bubble = document.getElementById("onboarding-bubble");
@@ -21356,6 +21373,7 @@ function targetedDemoRenderBubble(title, text) {
   // targetedDemoBubbleForceAbove ci-dessus).
   targetedDemoBubbleSide = null;
   targetedDemoBubbleForceAbove = false;
+  targetedDemoBubbleNeedsReposition = true;
   bubble.innerHTML = `
     <div class="onboarding-title">${title}</div>
     <div class="onboarding-text">${text}</div>
@@ -21453,6 +21471,9 @@ function targetedDemoResetBubblePosition() {
   // (champ d'écriture, clavier), auquel cas on garde ce côté imposé plutôt
   // que de retomber sur une redécision libre.
   targetedDemoBubbleSide = targetedDemoBubbleForceAbove ? "above" : null;
+  // Cible retrouvée plus tard -> une seule repositionnement, puis on fige
+  // de nouveau (voir targetedDemoBubbleNeedsReposition ci-dessus).
+  targetedDemoBubbleNeedsReposition = true;
 }
 
 // Cherche le plus proche ancêtre réellement scrollable (overflow-y: auto/
@@ -21597,15 +21618,21 @@ if (window.visualViewport) {
   });
   // "scroll" = seul le décalage du viewport visuel a changé (ex : le
   // navigateur fait défiler la page tout seul pour amener le champ actif
-  // au-dessus du clavier) : on se contente de RECALER le halo/la bulle sur
-  // leur position actuelle (aucun effet de bord, jamais de scroll ici) —
+  // au-dessus du clavier) : on se contente de RECALER le halo (l'anneau)
+  // sur sa position actuelle (aucun effet de bord, jamais de scroll ici) —
   // bug remonté ("la bulle saute en boucle") : appeler ici la fonction qui
   // scrolle elle-même créait une boucle, ce scroll redéclenchant à son tour
-  // ce même évènement "scroll".
+  // ce même évènement "scroll". Nouveau bug remonté ("la bulle bouge quand
+  // je scrolle, elle doit être fixe au-dessus du halo") : cet évènement
+  // "scroll" se déclenche en rafale (à chaque micro-défilement du
+  // navigateur pendant l'ouverture du clavier ou un simple scroll) — SEUL
+  // l'anneau doit continuer à suivre la cible ici ; la bulle, elle, ne se
+  // repositionne plus qu'à des moments précis (voir
+  // targetedDemoBubbleNeedsReposition), jamais sur ce simple évènement de
+  // scroll.
   window.visualViewport.addEventListener("scroll", function () {
     if (!targetedDemoActive || !targetedDemoCurrentTarget) return;
     positionOnboardingSpotlight(targetedDemoCurrentTarget);
-    targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
   });
 }
 
@@ -21656,18 +21683,33 @@ function targetedDemoShowHalo(selectors, title, text, forceBubbleAbove) {
   // de l'étape et aux vrais évènements clavier/rotation) : plus aucun
   // risque que 2 mécanismes de repositionnement se contredisent d'un
   // sondage à l'autre.
+  // Mémorise la cible du sondage précédent — un CHANGEMENT réel de cible
+  // (ex : le bouton bascule vers le bandeau de progression) reste un
+  // moment légitime pour repositionner la bulle une fois, même en dehors
+  // d'un scroll.
+  let lastBubbleTarget = null;
   const tick = () => {
     const target = pickVisibleElement(selectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoPositionBubbleNear(target);
+      if (target !== lastBubbleTarget) targetedDemoBubbleNeedsReposition = true;
+      // La bulle ne se repositionne qu'aux moments légitimes (voir
+      // targetedDemoBubbleNeedsReposition), jamais à chaque sondage — sinon
+      // elle suivrait chaque micro-mouvement de scroll au lieu de rester
+      // fixe.
+      if (targetedDemoBubbleNeedsReposition) {
+        targetedDemoPositionBubbleNear(target);
+        targetedDemoBubbleNeedsReposition = false;
+      }
+      lastBubbleTarget = target;
     } else {
       targetedDemoRemoveScrollSpacer();
       // Bug remonté (bouton "Envoyer" qui disparaît pendant l'envoi réel du
       // mail) : sans cible, la bulle ne doit plus rester collée à sa
       // dernière position dynamique — elle revient au centre par défaut.
       targetedDemoResetBubblePosition();
+      lastBubbleTarget = null;
     }
   };
   tick();
@@ -21711,6 +21753,7 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     targetedDemoEnsureTargetAboveKeyboard();
   }
 
+  let lastBubbleTarget = null;
   const tick = () => {
     // Le bandeau de progression est prioritaire dès qu'il est visible : le
     // champ, lui, reste affiché en permanence sur l'accueil, donc c'est sa
@@ -21720,10 +21763,16 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoPositionBubbleNear(target);
+      if (target !== lastBubbleTarget) targetedDemoBubbleNeedsReposition = true;
+      if (targetedDemoBubbleNeedsReposition) {
+        targetedDemoPositionBubbleNear(target);
+        targetedDemoBubbleNeedsReposition = false;
+      }
+      lastBubbleTarget = target;
     } else {
       targetedDemoRemoveScrollSpacer();
       targetedDemoResetBubblePosition();
+      lastBubbleTarget = null;
     }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent) OU qu'une autre popup de l'appli s'ouvre
@@ -21764,16 +21813,23 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
     targetedDemoEnsureTargetAboveKeyboard();
   }
 
+  let lastBubbleTarget = null;
   const tick = () => {
     const a = pickVisibleElement(selectorsA);
     const b = pickVisibleElement(selectorsB);
     targetedDemoCurrentTarget = a || b;
     positionOnboardingSpotlightMulti([a, b]);
     if (targetedDemoCurrentTarget) {
-      targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
+      if (targetedDemoCurrentTarget !== lastBubbleTarget) targetedDemoBubbleNeedsReposition = true;
+      if (targetedDemoBubbleNeedsReposition) {
+        targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
+        targetedDemoBubbleNeedsReposition = false;
+      }
+      lastBubbleTarget = targetedDemoCurrentTarget;
     } else {
       targetedDemoRemoveScrollSpacer();
       targetedDemoResetBubblePosition();
+      lastBubbleTarget = null;
     }
   };
   tick();
@@ -21821,6 +21877,7 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     targetedDemoEnsureTargetAboveKeyboard();
   }
 
+  let lastBubbleTarget = null;
   const tick = () => {
     const confirmTarget = pickVisibleElement(confirmSelectors);
     const progressTarget = confirmTarget ? null : pickVisibleElement(progressSelectors);
@@ -21828,10 +21885,16 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoPositionBubbleNear(target);
+      if (target !== lastBubbleTarget) targetedDemoBubbleNeedsReposition = true;
+      if (targetedDemoBubbleNeedsReposition) {
+        targetedDemoPositionBubbleNear(target);
+        targetedDemoBubbleNeedsReposition = false;
+      }
+      lastBubbleTarget = target;
     } else {
       targetedDemoRemoveScrollSpacer();
       targetedDemoResetBubblePosition();
+      lastBubbleTarget = null;
     }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent), la bulle d'explication disparaît — elle
