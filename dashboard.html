@@ -21394,6 +21394,24 @@ function targetedDemoSetBubbleVisible(visible) {
   if (bubble) bubble.style.display = visible ? "block" : "none";
 }
 
+// Bug remonté ("la bulle est en haut de la page, elle doit rester
+// centrée") : targetedDemoPositionBubbleNear() déplace la bulle À CÔTÉ de
+// sa cible (ex : juste au-dessus du bouton "Envoyer"). Si cette cible
+// disparaît en cours d'étape (ex : le bouton "Envoyer" se désactive/se
+// cache pendant l'envoi réel du mail), plus rien ne rappelait cette
+// fonction ensuite : la bulle restait figée à cette position dynamique
+// (parfois tout en haut de l'écran, hors de tout repère visuel), au lieu
+// de revenir à sa position par défaut (CSS, ~42% centré) tant qu'aucune
+// nouvelle cible n'est trouvée. Même reset que celui fait par
+// targetedDemoRenderBubble() au DÉBUT d'une étape, appelable ici en PLEIN
+// MILIEU d'une étape dès que la cible se perd.
+function targetedDemoResetBubblePosition() {
+  const bubble = document.getElementById("onboarding-bubble");
+  if (!bubble) return;
+  bubble.style.top = "";
+  bubble.style.transform = "";
+}
+
 // Cherche le plus proche ancêtre réellement scrollable (overflow-y: auto/
 // scroll ET contenu qui dépasse), sinon retombe sur le scroll de la page —
 // l'app utilise plusieurs conteneurs internes selon l'écran, pas toujours
@@ -21591,6 +21609,10 @@ function targetedDemoShowHalo(selectors, title, text) {
       targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
+      // Bug remonté (bouton "Envoyer" qui disparaît pendant l'envoi réel du
+      // mail) : sans cible, la bulle ne doit plus rester collée à sa
+      // dernière position dynamique — elle revient au centre par défaut.
+      targetedDemoResetBubblePosition();
     }
   };
   tick();
@@ -21641,6 +21663,7 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
       targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
+      targetedDemoResetBubblePosition();
     }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent) OU qu'une autre popup de l'appli s'ouvre
@@ -21690,6 +21713,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
       targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
     } else {
       targetedDemoRemoveScrollSpacer();
+      targetedDemoResetBubblePosition();
     }
   };
   tick();
@@ -21747,6 +21771,7 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
       targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
+      targetedDemoResetBubblePosition();
     }
     // Demande explicite : dès que le halo suit le bandeau de progression
     // (les phrases qui défilent), la bulle d'explication disparaît — elle
