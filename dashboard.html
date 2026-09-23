@@ -3443,6 +3443,19 @@ body[data-theme="dark"] #app-loader {
   z-index: 900000;
   background: rgba(15,15,17,.55);
   display: none;
+  /* Bug remonté (PC, "Reconnecter Gmail") : le clic utile tombait plus bas
+     que le bouton visuellement mis en avant. Ce voile perce un "trou"
+     (clip-path) autour de la cible pour laisser cliquer au travers, mais
+     ce trou dépend d'un calcul de position (getBoundingClientRect) qui
+     peut être en retard d'une frame par rapport au vrai bouton (scroll,
+     zoom, redimensionnement...) — tout écart, même d'un pixel, faisait
+     alors manquer le clic contre ce voile opaque. pointer-events:none
+     supprime le problème à la racine : ce voile ne sert plus JAMAIS à
+     intercepter un clic, seulement à assombrir visuellement — un clic
+     n'y touche donc jamais que le vrai bouton en dessous, quelle que soit
+     la précision du calcul de position. (#onboarding-ring/-ring-2 avaient
+     déjà cette règle ; il manquait sur le voile lui-même.) */
+  pointer-events: none;
 }
 
 #onboarding-overlay.active {
@@ -3555,6 +3568,10 @@ body[data-theme="dark"] #app-loader {
   box-shadow: 0 18px 50px rgba(0,0,0,.28);
   font-family: 'Inter', sans-serif;
   display: none;
+  /* La bulle n'a jamais de contenu cliquable (titre + texte) — comme pour
+     le voile ci-dessus, elle ne doit jamais pouvoir intercepter un clic
+     destiné à un bouton réel qu'elle chevaucherait par erreur. */
+  pointer-events: none;
 }
 
 #onboarding-bubble.onboarding-center {
@@ -21320,10 +21337,19 @@ function targetedDemoPositionBubbleNear(target) {
   const targetRect = target.getBoundingClientRect();
   const bubbleHeight = bubble.offsetHeight || 165;
   const margin = 16;
-  const viewportHeight = window.innerHeight;
+  // Zone RÉELLEMENT visible (donc déjà rétrécie par le clavier virtuel sur
+  // mobile) — même recalage que positionOnboardingSpotlight/
+  // targetedDemoEnsureTargetAboveKeyboard plus haut dans ce fichier. Avant
+  // ce correctif, ce calcul se basait sur window.innerHeight (qui ne bouge
+  // pas quand le clavier s'ouvre) : la bulle pouvait donc se positionner
+  // "en dessous" d'un champ qui, en pratique, est déjà caché sous le
+  // clavier.
+  const vv = window.visualViewport;
+  const visibleTop = vv ? vv.offsetTop : 0;
+  const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
 
-  const spaceBelow = viewportHeight - targetRect.bottom;
-  const spaceAbove = targetRect.top;
+  const spaceBelow = visibleBottom - targetRect.bottom;
+  const spaceAbove = targetRect.top - visibleTop;
 
   let top;
   if (spaceBelow >= bubbleHeight + margin * 2) {
@@ -21335,7 +21361,7 @@ function targetedDemoPositionBubbleNear(target) {
       ? targetRect.bottom + margin
       : targetRect.top - bubbleHeight - margin;
   }
-  top = Math.max(margin, Math.min(top, viewportHeight - bubbleHeight - margin));
+  top = Math.max(visibleTop + margin, Math.min(top, visibleBottom - bubbleHeight - margin));
 
   bubble.style.top = top + "px";
   bubble.style.transform = "translateX(-50%)";
@@ -21368,46 +21394,6 @@ function targetedDemoFindScrollParent(el) {
     node = node.parentElement;
   }
   return document.scrollingElement || document.documentElement;
-}
-
-// Bug remonté : un scrollIntoView({block:"center"}) centre la cible au
-// milieu de l'écran, exactement là où se trouve la bulle d'explication
-// (#onboarding-bubble, fixée à ~42% de la hauteur) — la cible se retrouvait
-// donc à moitié cachée dessous ("je veux voir ce champ plus bas par
-// rapport à la popup"). On vérifie ici le chevauchement réel avec le
-// rectangle de la bulle, et on décale la page vers le bas si besoin pour
-// faire apparaître la cible sous elle, avec une marge.
-function targetedDemoScrollBelowBubble(target) {
-  if (!target || typeof target.getBoundingClientRect !== "function") return;
-  const bubble = document.getElementById("onboarding-bubble");
-  if (!bubble || bubble.style.display === "none") return;
-  const bubbleRect = bubble.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-  const margin = 16;
-  if (targetRect.top < bubbleRect.bottom + margin) {
-    const delta = (bubbleRect.bottom + margin) - targetRect.top;
-    const scrollParent = targetedDemoFindScrollParent(target);
-    if (scrollParent && typeof scrollParent.scrollBy === "function") {
-      scrollParent.scrollBy({ top: -delta, left: 0, behavior: "auto" });
-    } else {
-      window.scrollBy({ top: -delta, left: 0, behavior: "auto" });
-    }
-
-    // Filet de sécurité (demande explicite : "tous les halos doivent se
-    // voir entièrement") : quand la cible est déjà tout en haut de son
-    // conteneur (ex : la 1ère carte du planning juste après avoir ouvert le
-    // jour), il n'y a parfois plus de marge à faire défiler pour la
-    // descendre sous la bulle — le scroll ci-dessus ne suffit alors pas. On
-    // revérifie le recouvrement réel une fois le scroll appliqué et, s'il
-    // persiste, on repositionne la bulle elle-même au-dessus/en dessous de
-    // la cible (même mécanisme que pour l'aperçu du mail, voir
-    // targetedDemoPositionBubbleNear) plutôt que de laisser le halo caché.
-    const targetRectAfter = target.getBoundingClientRect();
-    const bubbleRectAfter = bubble.getBoundingClientRect();
-    if (targetRectAfter.top < bubbleRectAfter.bottom + margin) {
-      targetedDemoPositionBubbleNear(target);
-    }
-  }
 }
 
 // ─── DÉMO CIBLÉE : CIBLE TOUJOURS VISIBLE AU-DESSUS DU CLAVIER ──────────
@@ -21480,13 +21466,19 @@ function targetedDemoEnsureTargetAboveKeyboard() {
       }
     }
     positionOnboardingSpotlight(target);
+    targetedDemoPositionBubbleNear(target);
   });
 
   // Repositionne aussitôt le halo (sans attendre le prochain sondage à
-  // 300ms) et vérifie que la bulle ne chevauche plus la cible désormais
-  // déplacée.
+  // 300ms) — la bulle se recale par-dessus le contenu (CSS uniquement,
+  // jamais un 2e scroll : voir targetedDemoPositionBubbleNear), pour ne
+  // jamais faire concurrence au scroll ci-dessus qui, lui, dégage la
+  // cible du clavier. Bug remonté ("la bulle saute en boucle") : ces deux
+  // ajustements étaient auparavant deux scrolls indépendants qui pouvaient
+  // se contredire d'un sondage à l'autre — un seul des deux déplace
+  // maintenant la page, l'autre ne fait plus que repositionner la bulle.
   positionOnboardingSpotlight(target);
-  targetedDemoScrollBelowBubble(target);
+  targetedDemoPositionBubbleNear(target);
 }
 
 let targetedDemoScrollSpacer = null;
@@ -21522,11 +21514,23 @@ function targetedDemoRemoveScrollSpacer() {
 }
 
 if (window.visualViewport) {
+  // "resize" = la hauteur réellement visible a changé (clavier qui
+  // s'ouvre/se ferme, rotation) : seul cet évènement déclenche un scroll
+  // correctif (une seule fois, voir targetedDemoEnsureTargetAboveKeyboard).
   window.visualViewport.addEventListener("resize", function () {
     if (targetedDemoActive) targetedDemoEnsureTargetAboveKeyboard();
   });
+  // "scroll" = seul le décalage du viewport visuel a changé (ex : le
+  // navigateur fait défiler la page tout seul pour amener le champ actif
+  // au-dessus du clavier) : on se contente de RECALER le halo/la bulle sur
+  // leur position actuelle (aucun effet de bord, jamais de scroll ici) —
+  // bug remonté ("la bulle saute en boucle") : appeler ici la fonction qui
+  // scrolle elle-même créait une boucle, ce scroll redéclenchant à son tour
+  // ce même évènement "scroll".
   window.visualViewport.addEventListener("scroll", function () {
-    if (targetedDemoActive) targetedDemoEnsureTargetAboveKeyboard();
+    if (!targetedDemoActive || !targetedDemoCurrentTarget) return;
+    positionOnboardingSpotlight(targetedDemoCurrentTarget);
+    targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
   });
 }
 
@@ -21552,16 +21556,25 @@ function targetedDemoShowHalo(selectors, title, text) {
   const firstTarget = pickVisibleElement(selectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    targetedDemoScrollBelowBubble(firstTarget);
+    targetedDemoCurrentTarget = firstTarget;
+    targetedDemoEnsureTargetAboveKeyboard();
   }
 
+  // Demande explicite ("la bulle saute en boucle, halo/bulle pas fiables") :
+  // UNE seule position par étape. Le sondage à 300ms ci-dessous ne sert plus
+  // qu'à détecter un changement réel de cible (ex : bascule vers le bandeau
+  // de progression) — repositionner le halo/la bulle est désormais sans
+  // effet de bord (aucun scroll ici, voir targetedDemoPositionBubbleNear et
+  // targetedDemoEnsureTargetAboveKeyboard, appelée seulement à l'ouverture
+  // de l'étape et aux vrais évènements clavier/rotation) : plus aucun
+  // risque que 2 mécanismes de repositionnement se contredisent d'un
+  // sondage à l'autre.
   const tick = () => {
     const target = pickVisibleElement(selectors);
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoEnsureTargetAboveKeyboard();
-      targetedDemoScrollBelowBubble(target);
+      targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
     }
@@ -21598,7 +21611,8 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
   const firstTarget = pickVisibleElement(fieldSelectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    targetedDemoScrollBelowBubble(firstTarget);
+    targetedDemoCurrentTarget = firstTarget;
+    targetedDemoEnsureTargetAboveKeyboard();
   }
 
   const tick = () => {
@@ -21610,8 +21624,7 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoEnsureTargetAboveKeyboard();
-      targetedDemoScrollBelowBubble(target);
+      targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
     }
@@ -21647,7 +21660,8 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
   const firstTarget = pickVisibleElement(selectorsA);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    targetedDemoScrollBelowBubble(firstTarget);
+    targetedDemoCurrentTarget = firstTarget;
+    targetedDemoEnsureTargetAboveKeyboard();
   }
 
   const tick = () => {
@@ -21656,8 +21670,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
     targetedDemoCurrentTarget = a || b;
     positionOnboardingSpotlightMulti([a, b]);
     if (targetedDemoCurrentTarget) {
-      targetedDemoEnsureTargetAboveKeyboard();
-      targetedDemoScrollBelowBubble(targetedDemoCurrentTarget);
+      targetedDemoPositionBubbleNear(targetedDemoCurrentTarget);
     } else {
       targetedDemoRemoveScrollSpacer();
     }
@@ -21703,7 +21716,8 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
   const firstTarget = pickVisibleElement(confirmSelectors);
   if (firstTarget && typeof firstTarget.scrollIntoView === "function") {
     firstTarget.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
-    targetedDemoScrollBelowBubble(firstTarget);
+    targetedDemoCurrentTarget = firstTarget;
+    targetedDemoEnsureTargetAboveKeyboard();
   }
 
   const tick = () => {
@@ -21713,8 +21727,7 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     targetedDemoCurrentTarget = target;
     positionOnboardingSpotlight(target);
     if (target) {
-      targetedDemoEnsureTargetAboveKeyboard();
-      targetedDemoScrollBelowBubble(target);
+      targetedDemoPositionBubbleNear(target);
     } else {
       targetedDemoRemoveScrollSpacer();
     }
@@ -21829,13 +21842,15 @@ function runTargetedDemoDecouverte() {
         "Plus vite encore",
         "Un tap, l'action part."
       );
+      // Demande explicite : +2s sur chaque halo chronométré, pour laisser le
+      // temps de lire la bulle.
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
         targetedDemoStop();
         showTargetedDemoEndSheet();
-      }, 3200);
-    }, 2600);
-  }, 2600);
+      }, 5200);
+    }, 4600);
+  }, 4600);
 }
 
 // Prénom du prospect (compte connecté) pour les phrases d'exemple des
@@ -21907,6 +21922,12 @@ function targetedDemoMailPreviewWalkthrough() {
     "Le contact est retrouvé",
     "Clarity a retrouvé l'adresse du contact automatiquement dans vos contacts."
   );
+  // Demande explicite : "une étape = un tap ou 4 secondes fixes, pas un
+  // saut parce que le layout a bougé" — chaque étape reste affichée un
+  // délai FIXE (jamais déclenché par un changement de mise en page : ce
+  // timer ne dépend d'aucune mesure de layout), porté à 6s pour laisser
+  // davantage le temps de lire la bulle (demande explicite ultérieure :
+  // +2s sur chaque halo chronométré).
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
     targetedDemoShowHalo(
@@ -21917,6 +21938,9 @@ function targetedDemoMailPreviewWalkthrough() {
     // Ce champ tombe pile dans la zone occupée par la bulle par défaut (la
     // popup d'aperçu est fixe et ne peut pas être scrollée pour l'en
     // dégager) : on repositionne la bulle pour qu'il reste bien visible.
+    // (targetedDemoShowHalo le fait déjà lui-même au premier sondage — cet
+    // appel explicite est redondant mais inoffensif, gardé par cohérence
+    // avec le commentaire ci-dessus.)
     targetedDemoPositionBubbleNear(pickVisibleElement(['#preview-mail-subject']));
 
     targetedDemoWalkthroughTimeout = setTimeout(() => {
@@ -21931,9 +21955,9 @@ function targetedDemoMailPreviewWalkthrough() {
       targetedDemoWalkthroughTimeout = setTimeout(() => {
         if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
         targetedDemoShowSendHalo();
-      }, 2600);
-    }, 2600);
-  }, 2600);
+      }, 6000);
+    }, 6000);
+  }, 6000);
 }
 
 // Dernière étape de l'aperçu mail (halo sur "Envoyer") — extraite dans sa
@@ -22125,10 +22149,10 @@ function targetedDemoCrWalkthrough() {
             "À vous de valider",
             "Cliquez sur « Créer le compte rendu » pour le générer — Clarity le rédige ensuite en direct, quelques secondes de patience."
           );
-        }, 2600);
-      }, 2600);
-    }, 2600);
-  }, 2600);
+        }, 4600);
+      }, 4600);
+    }, 4600);
+  }, 4600);
 }
 
 function targetedDemoWaitForCrResult(attempts = 0) {
@@ -22188,8 +22212,8 @@ function targetedDemoShowCrResultHalo() {
       if (typeof showSection === "function") showSection("agents", homeBtn);
       targetedDemoStop();
       showTargetedDemoEndSheet();
-    }, 5200);
-  }, 2600);
+    }, 7200);
+  }, 4600);
 }
 
 // Point d'entrée commun pour les résultats obtenus via les formulaires
@@ -22312,7 +22336,7 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     if (!targetedDemoActive) return;
     targetedDemoStop();
     showTargetedDemoEndSheet();
-  }, 5200);
+  }, 7200);
 }
 
 // ─── Écran de fin : "À vous d'essayer" | "Découvrir une autre action" ─────
