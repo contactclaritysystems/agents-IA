@@ -20057,6 +20057,21 @@ let onboardingPositionInterval = null;
 let targetedDemoActive = false;
 let targetedDemoFlow = null;
 let targetedDemoPositionInterval = null;
+// Bug remonté ("dans l'aperçu du mail, si je scrolle, ça bouge" — alors que
+// même mécanisme que la page d'accueil) : le sondage toutes les 300ms
+// (targetedDemoPositionInterval) suffit pour garder le halo/la bulle
+// exacts, mais laisse un léger temps de retard (jusqu'à 300ms) avant de
+// rattraper un scroll — visible surtout sur un scroll DANS une popup (ex :
+// #mail-preview-modal), qui ne déclenche ni resize ni scroll du viewport
+// visuel. On mémorise donc ici la fonction tick() actuellement active pour
+// pouvoir la relancer IMMÉDIATEMENT dès qu'un scroll est détecté n'importe
+// où (voir l'écouteur "scroll" en phase de capture plus bas dans ce
+// fichier), le sondage à 300ms restant un filet de sécurité pour tout
+// changement qui ne déclenche pas d'évènement "scroll" (ex : un bouton qui
+// disparaît). Un seul mécanisme, partagé par tous les halos de la démo
+// (accueil, aperçu mail, RDV/Rappel/CR, carte du calendrier...) — exactement
+// la demande explicite : "tout le SaaS doit être pareil, rien de différent".
+let targetedDemoCurrentTick = null;
 let targetedDemoCurrentTarget = null;
 let targetedDemoWaitTimeout = null;
 // Ancien mécanisme d'alternance entre 2 cibles, remplacé par l'affichage
@@ -21619,17 +21634,28 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", function () {
     if (targetedDemoActive) targetedDemoEnsureTargetAboveKeyboard();
   });
-  // Pas d'écouteur "scroll" ici : le halo et la bulle doivent toujours
-  // suivre la position RÉELLE et actuelle du champ ciblé (sinon le halo
-  // peut finir par entourer un tout autre élément après un défilement).
-  // Ce suivi en direct est déjà assuré par le sondage toutes les 300ms de
-  // chaque halo actif (voir les fonctions targetedDemoShowHalo*), qui
-  // recalcule sans condition positionOnboardingSpotlight(Multi) et
-  // targetedDemoPositionBubbleNear à chaque tick — un écouteur "scroll"
-  // en plus ferait doublon (déclenchements en rafale) sans rien
-  // améliorer. "resize" reste utile seul : c'est le signal fiable d'un
-  // vrai changement de clavier (ouverture/fermeture/rotation).
 }
+
+// Bug remonté ("dans l'aperçu du mail, si je scrolle, ça bouge — tout le
+// SaaS doit être pareil, rien de différent") : le sondage toutes les 300ms
+// (voir targetedDemoShowHalo/...WithProgress/...Pair/...TrackConfirmAndProgress,
+// qui recalculent tous sans condition positionOnboardingSpotlight(Multi) +
+// targetedDemoPositionBubbleNear à chaque tick) suffit à garder le halo et
+// la bulle exacts, mais laisse jusqu'à 300ms de retard avant de rattraper
+// un scroll — surtout visible sur un scroll À L'INTÉRIEUR d'une popup (ex :
+// #mail-preview-modal, qui a son propre défilement interne limité), qui ne
+// déclenche ni "resize" du clavier ni scroll de la page elle-même.
+// L'évènement DOM natif "scroll" ne remonte pas (bubble) jusqu'à window,
+// mais un écouteur posé sur window EN PHASE DE CAPTURE (3e argument à
+// true) intercepte bien tout scroll déclenché n'importe où dans la page —
+// y compris dans une popup avec défilement interne. On relance alors
+// immédiatement la même fonction tick() déjà utilisée par le sondage
+// (mémorisée dans targetedDemoCurrentTick), pour un rattrapage instantané
+// au lieu d'attendre le prochain sondage — un seul et même mécanisme,
+// partagé par TOUS les halos de la démo, où qu'ils soient dans le SaaS.
+window.addEventListener("scroll", function () {
+  if (targetedDemoActive && targetedDemoCurrentTick) targetedDemoCurrentTick();
+}, true);
 
 // forceBubbleAbove : demande explicite — dès qu'on appuie sur le champ
 // d'écriture, le clavier s'ouvre et réduit la zone visible EN DESSOUS du
@@ -21644,6 +21670,7 @@ function targetedDemoShowHalo(selectors, title, text, forceBubbleAbove) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   // Un halo simple (une seule cible) annule tout minuteur résiduel encore
   // programmé par une étape précédente.
   if (targetedDemoCycleTimeout) {
@@ -21692,6 +21719,7 @@ function targetedDemoShowHalo(selectors, title, text, forceBubbleAbove) {
       targetedDemoResetBubblePosition();
     }
   };
+  targetedDemoCurrentTick = tick;
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
@@ -21713,6 +21741,7 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
@@ -21758,6 +21787,7 @@ function targetedDemoShowHaloWithProgress(fieldSelectors, title, text) {
     // antho..." restée par-dessus la fiche contact).
     targetedDemoSetBubbleVisible(!progressTarget && !isAnyClarityModalOpen());
   };
+  targetedDemoCurrentTick = tick;
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
@@ -21773,6 +21803,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
@@ -21804,6 +21835,7 @@ function targetedDemoShowHaloPair(selectorsA, selectorsB, title, text) {
       targetedDemoResetBubblePosition();
     }
   };
+  targetedDemoCurrentTick = tick;
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
@@ -21828,6 +21860,7 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   if (targetedDemoCycleTimeout) {
     clearTimeout(targetedDemoCycleTimeout);
     targetedDemoCycleTimeout = null;
@@ -21868,6 +21901,7 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
     // ne doit plus jamais rester affichée par-dessus.
     targetedDemoSetBubbleVisible(!progressTarget);
   };
+  targetedDemoCurrentTick = tick;
   tick();
   targetedDemoPositionInterval = setInterval(tick, 300);
 }
@@ -21877,6 +21911,7 @@ function targetedDemoStop() {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   if (targetedDemoWaitTimeout) {
     clearTimeout(targetedDemoWaitTimeout);
     targetedDemoWaitTimeout = null;
@@ -22387,6 +22422,7 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
   }
+  targetedDemoCurrentTick = null;
   if (targetedDemoWalkthroughTimeout) {
     clearTimeout(targetedDemoWalkthroughTimeout);
     targetedDemoWalkthroughTimeout = null;
