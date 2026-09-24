@@ -3499,6 +3499,26 @@ body[data-theme="dark"] #app-loader {
   display: none;
 }
 
+/* Bug remonté ("Voir l'essentiel" : le micro et les actions rapides
+   restent cliquables pendant la démo) : ce parcours (targetedDemoFlow
+   === "decouverte") est le seul de la démo ciblée où RIEN n'est censé
+   être cliqué — tout s'enchaîne tout seul via des minuteurs (contrairement
+   à mail/RDV/rappel/compte rendu, où le champ ou le bouton mis en avant
+   DOIT rester cliquable : dictée réelle, "Envoyer", "Créer le compte
+   rendu"...). Ce calque plein écran, transparent, absorbe donc tous les
+   clics — activé seulement le temps de ce parcours (voir
+   targetedDemoSetClickBlockerActive). */
+#targeted-demo-click-blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 900002;
+  background: transparent;
+  display: none;
+}
+#targeted-demo-click-blocker.active {
+  display: block;
+}
+
 /* Étiquette "C'est le micro" : uniquement pendant les étapes de dictée
    du tour de bienvenue (affichée/positionnée en JS), jamais en usage
    normal — remplace l'idée d'un halo permanent, jugé pas assez sobre. */
@@ -11603,6 +11623,12 @@ body[data-theme="light"]::after {
   <div id="onboarding-ring"></div>
   <div id="onboarding-ring-2"></div>
   <div id="onboarding-click-blocker"></div>
+  <!-- Demande explicite ("aucun bouton à part ceux prévus par la démo ne
+       doit être cliquable") : couvre tout l'écran pendant "Voir l'essentiel"
+       (targetedDemoRunDecouverte), le seul parcours de la démo ciblée
+       purement illustratif — micro et actions rapides sont montrés, jamais
+       cliqués (voir targetedDemoSetClickBlockerActive). -->
+  <div id="targeted-demo-click-blocker"></div>
   <div id="onboarding-mic-tag">🎙️ C'est le micro</div>
   <div id="onboarding-bubble"></div>
   <div id="onboarding-tips"></div>
@@ -20957,7 +20983,15 @@ function getBottomTabSpotlightRect(tab) {
   const top = Math.min(...rects.map(r => r.top));
   const right = Math.max(...rects.map(r => r.right));
   const bottom = Math.max(...rects.map(r => r.bottom));
-  return { left, top, width: right - left, height: bottom - top };
+  // Demande explicite ("halo barre menu légèrement plus gros") : un peu de
+  // marge autour de l'icône+le nom, plutôt que de coller au pixel près.
+  const pad = 6;
+  return {
+    left: left - pad,
+    top: top - pad,
+    width: (right - left) + pad * 2,
+    height: (bottom - top) + pad * 2
+  };
 }
 
 function positionOnboardingSpotlight(target) {
@@ -22037,7 +22071,19 @@ function targetedDemoTrackConfirmAndProgress(confirmSelectors, title, text) {
   targetedDemoPositionInterval = setInterval(tick, 100);
 }
 
+// Demande explicite ("aucun bouton à part ceux prévus par la démo ne doit
+// être cliquable") : voir #targeted-demo-click-blocker en CSS. Utilisé
+// uniquement par "Voir l'essentiel" (runTargetedDemoDecouverte), le seul
+// parcours purement illustratif de la démo ciblée — toujours désactivé
+// dans targetedDemoStop() ci-dessous, quel que soit le parcours en cours,
+// pour ne jamais le laisser actif par erreur après la fin de la démo.
+function targetedDemoSetClickBlockerActive(active) {
+  const blocker = document.getElementById("targeted-demo-click-blocker");
+  if (blocker) blocker.classList.toggle("active", active);
+}
+
 function targetedDemoStop() {
+  targetedDemoSetClickBlockerActive(false);
   if (targetedDemoPositionInterval) {
     clearInterval(targetedDemoPositionInterval);
     targetedDemoPositionInterval = null;
@@ -22121,6 +22167,13 @@ function startTargetedDemoFlow(flow) {
 // qu'il vous faut…", inchangé) : contrairement aux autres parcours, celui-
 // ci ne vise aucun résultat précis, il n'y a donc rien à préremplir.
 function runTargetedDemoDecouverte() {
+  // Bug remonté ("le micro et les boutons d'actions rapides sont
+  // cliquables") : ce parcours ne fait que montrer 3 zones l'une après
+  // l'autre (jamais de clic attendu, tout enchaîne tout seul) — on bloque
+  // donc tous les clics le temps du parcours (voir
+  // targetedDemoSetClickBlockerActive et #targeted-demo-click-blocker),
+  // désactivé automatiquement par targetedDemoStop() à la fin.
+  targetedDemoSetClickBlockerActive(true);
   targetedDemoShowHalo(
     ['#orchestrator-dictation-btn'],
     "Parlez",
@@ -22238,7 +22291,8 @@ function targetedDemoMailPreviewWalkthrough() {
   // saut parce que le layout a bougé" — chaque étape reste affichée un
   // délai FIXE (jamais déclenché par un changement de mise en page : ce
   // timer ne dépend d'aucune mesure de layout). Temps repris explicitement :
-  // Destinataire 3s, Objet 3s, Message 4s.
+  // Destinataire 3s puis +1s ("temps halo Destinataire mail") = 4s,
+  // Objet 3s, Message 4s.
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "mail") return;
     targetedDemoShowHalo(
@@ -22268,7 +22322,7 @@ function targetedDemoMailPreviewWalkthrough() {
         targetedDemoShowSendHalo();
       }, 4000);
     }, 3000);
-  }, 3000);
+  }, 4000);
 }
 
 // Dernière étape de l'aperçu mail (halo sur "Envoyer") — extraite dans sa
@@ -22590,9 +22644,33 @@ async function targetedDemoShowCreatedInCalendar(kind) {
   // déconnexion) — on vérifie donc à nouveau avant de continuer.
   if (!targetedDemoActive || targetedDemoFlow !== kind) return;
 
+  // Bug remonté ("rappel enregistré : pas de halo dessus") : on ouvrait
+  // TOUJOURS le jour "demain" calculé ici, en supposant que c'est
+  // forcément là que le rappel vient d'atterrir. Si l'agent a compris/
+  // enregistré une autre date (ex : "aujourd'hui" selon l'heure, ou un
+  // léger décalage de fuseau côté backend), le jour ouvert ne contient
+  // alors aucun rappel -> aucune carte trouvée -> le halo ne s'affiche
+  // jamais. On vérifie donc, dans les données fraîchement rechargées
+  // ci-dessus, quel jour (aujourd'hui, demain, ou après-demain) contient
+  // réellement un élément du bon type, et on ouvre CE jour-là — demain
+  // reste vérifié en premier (comportement inchangé dans le cas normal).
+  const isoOf = (d) => (typeof isoFromDate === "function" ? isoFromDate(d) : null);
+  const today = new Date();
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const iso = typeof isoFromDate === "function" ? isoFromDate(tomorrow) : null;
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  const candidateIsos = [isoOf(tomorrow), isoOf(today), isoOf(dayAfterTomorrow)].filter(Boolean);
+
+  let iso = candidateIsos[0] || null;
+  if (typeof planningCalendarEventsForDay === "function") {
+    const hasMatch = (candidateIso) => {
+      const { appts, relances } = planningCalendarEventsForDay(candidateIso);
+      return kind === "rdv" ? appts.length > 0 : relances.length > 0;
+    };
+    const found = candidateIsos.find(hasMatch);
+    if (found) iso = found;
+  }
 
   window.currentPlanningViewMode = "calendar";
   // Demande explicite : "il faudrait passer le calendrier en jour pour voir
@@ -22651,12 +22729,15 @@ async function targetedDemoShowCreatedInCalendar(kind) {
     }
   }, 250);
 
-  // Demande explicite ("réduis le temps") : 7,2s -> 4,6s.
+  // Demande explicite ("réduis le temps") : 7,2s -> 4,6s. Puis demande
+  // explicite ("temps rdv validé : +1s") : 4,6s -> 5,6s, pour laisser
+  // plus de temps de lire "Le rendez-vous est bien là"/"Le rappel est
+  // bien là" avant d'enchaîner sur l'écran de fin.
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive) return;
     targetedDemoStop();
     showTargetedDemoEndSheet();
-  }, 4600);
+  }, 5600);
 }
 
 // ─── Écran de fin d'action : "Continuer la visite" | "Tester une autre
