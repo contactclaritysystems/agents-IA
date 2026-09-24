@@ -894,21 +894,21 @@ header {
     <div class="vbubble">
       <span id="dictationText"></span><span class="typing-cursor">|</span>
     </div>
+    <!-- Contenu initial = 1re des 4 preuves qui tournent (voir heroDemoSteps
+         / animateHeroDemo plus bas) : JS le réécrit dès que la carte entre
+         dans l'écran, ceci n'est que l'état de repli avant/sans JS. -->
     <div class="abubble" id="mailPreview" style="opacity:0; transform:translateY(8px);">
-      <div class="mail-to-row">À : Anthony <span class="mail-to-email">(anthony@exemple.fr)</span></div>
-      Objet : Point sur le dossier<br/><br/>
-Bonjour Anthony,<br/>
-Je vous propose que nous organisions une réunion mardi matin afin de faire le point sur le dossier et les prochaines étapes.<br/><br/>
-Dites-moi si ce créneau vous convient.<br/><br/>
-Bonne journée
+      <div class="mail-to-row">Rendez-vous</div>
+      Dupont — Mardi 14h<br/><br/>
+      Rappel automatique programmé avant l'heure.
     </div>
     <div class="hcard-actions" id="mailActions">
-      <button type="button" class="hcard-btn-send" id="mailSendBtn">Envoyer</button>
+      <button type="button" class="hcard-btn-send" id="mailSendBtn">Confirmer</button>
       <button type="button" class="hcard-btn-ghost">Modifier</button>
       <button type="button" class="hcard-btn-ghost">Annuler</button>
     </div>
     <div class="hcard-ft" id="mailStatus">
-      <span class="dot"></span>Préparation du mail…
+      <span class="dot"></span>Dictée en cours…
     </div>
   </div>
 </div>
@@ -1420,61 +1420,125 @@ async function signIn() {
   onAnim(emailEl, () => { emailAutofilled = true; });
   onAnim(passwordEl, () => { passwordAutofilled = true; });
 })();
-const dictationSentence = "« Envoie un mail à Anthony pour lui proposer une réunion mardi matin afin de faire le point sur le dossier. »";
+// Demande explicite ("le héros ne doit plus vendre uniquement le mail") :
+// le mail n'est plus la SEULE preuve montrée par l'animation du hero — 4
+// dictées différentes tournent à tour de rôle sur la même carte (RDV,
+// compte rendu, rappel, puis mail), chacune avec son propre aperçu de
+// résultat. Le mail reste l'une des 4 preuves, plus la seule.
+const heroDemoSteps = [
+  {
+    sentence: "« RDV avec Dupont mardi 14h »",
+    body: `<div class="mail-to-row">Rendez-vous</div>Dupont — Mardi 14h<br/><br/>Rappel automatique programmé avant l'heure.`,
+    preparing: "Ajout au planning…",
+    confirmLabel: "Confirmer",
+    doneStatus: "Ajouté"
+  },
+  {
+    sentence: "« Compte rendu de la visite »",
+    body: `<div class="mail-to-row">Compte rendu — Visite client</div>Point sur le dossier, planning validé.<br/>Récap à envoyer demain, relance vendredi.`,
+    preparing: "Rédaction du compte rendu…",
+    confirmLabel: "Créer",
+    doneStatus: "Créé"
+  },
+  {
+    sentence: "« Rappelle-moi demain 8h »",
+    body: `<div class="mail-to-row">Rappel</div>Demain 8h<br/><br/>Vous recevrez un e-mail à l'heure prévue.`,
+    preparing: "Programmation du rappel…",
+    confirmLabel: "Programmer",
+    doneStatus: "Programmé"
+  },
+  {
+    sentence: "« Envoie un mail à Anthony »",
+    body: `<div class="mail-to-row">À : Anthony <span class="mail-to-email">(anthony@exemple.fr)</span></div>Objet : Point sur le dossier<br/><br/>Bonjour Anthony,<br/>Je vous propose que nous organisions une réunion mardi matin afin de faire le point sur le dossier et les prochaines étapes.<br/><br/>Dites-moi si ce créneau vous convient.<br/><br/>Bonne journée`,
+    preparing: "Rédaction du mail…",
+    confirmLabel: "Envoyer",
+    doneStatus: "Envoyé"
+  }
+];
 function animateHeroDemo() {
   const textEl = document.getElementById("dictationText");
   const mailEl = document.getElementById("mailPreview");
   const statusEl = document.getElementById("mailStatus");
   const actionsEl = document.getElementById("mailActions");
   const sendBtn = document.getElementById("mailSendBtn");
-  if (!textEl || !mailEl || !statusEl || !actionsEl || !sendBtn) return { interval: null, timeouts: [] };
-  textEl.textContent = "";
-  mailEl.style.opacity = "0";
-  mailEl.style.transform = "translateY(8px)";
-  mailEl.classList.remove("mail-sent");
-  actionsEl.classList.remove("show");
-  sendBtn.classList.remove("pressed");
-  statusEl.innerHTML = '<span class="dot"></span>Dictée en cours…';
-  const timeouts = [];
-  let i = 0;
-  const interval = setInterval(() => {
-    textEl.textContent += dictationSentence.charAt(i);
-    i++;
-    if (i >= dictationSentence.length) {
-      clearInterval(interval);
-      timeouts.push(setTimeout(() => {
-        statusEl.innerHTML = '<span class="dot"></span>Rédaction du mail…';
-      }, 400));
-      timeouts.push(setTimeout(() => {
-        mailEl.classList.add("mail-sent");
-        mailEl.style.opacity = "1";
-        mailEl.style.transform = "translateY(0)";
-        statusEl.innerHTML = '<span class="dot"></span>Aperçu prêt — à vous de valider';
-      }, 1200));
-      timeouts.push(setTimeout(() => {
-        actionsEl.classList.add("show");
-      }, 1900));
-      timeouts.push(setTimeout(() => {
-        sendBtn.classList.add("pressed");
-      }, 2900));
-      timeouts.push(setTimeout(() => {
-        statusEl.innerHTML = '<span class="dot"></span>Envoyé';
-      }, 3250));
+  if (!textEl || !mailEl || !statusEl || !actionsEl || !sendBtn) return { stop: () => {} };
+
+  let stepIndex = 0;
+  let interval = null;
+  let timeouts = [];
+  let stopped = false;
+
+  function clearTimers() {
+    if (interval) clearInterval(interval);
+    timeouts.forEach(t => clearTimeout(t));
+    timeouts = [];
+  }
+
+  function runStep() {
+    if (stopped) return;
+    const step = heroDemoSteps[stepIndex];
+    textEl.textContent = "";
+    mailEl.innerHTML = step.body;
+    mailEl.style.opacity = "0";
+    mailEl.style.transform = "translateY(8px)";
+    mailEl.classList.remove("mail-sent");
+    actionsEl.classList.remove("show");
+    sendBtn.classList.remove("pressed");
+    sendBtn.textContent = step.confirmLabel;
+    statusEl.innerHTML = '<span class="dot"></span>Dictée en cours…';
+    let i = 0;
+    interval = setInterval(() => {
+      textEl.textContent += step.sentence.charAt(i);
+      i++;
+      if (i >= step.sentence.length) {
+        clearInterval(interval);
+        timeouts.push(setTimeout(() => {
+          statusEl.innerHTML = '<span class="dot"></span>' + step.preparing;
+        }, 400));
+        timeouts.push(setTimeout(() => {
+          mailEl.classList.add("mail-sent");
+          mailEl.style.opacity = "1";
+          mailEl.style.transform = "translateY(0)";
+          statusEl.innerHTML = '<span class="dot"></span>Aperçu prêt — à vous de valider';
+        }, 1200));
+        timeouts.push(setTimeout(() => {
+          actionsEl.classList.add("show");
+        }, 1900));
+        timeouts.push(setTimeout(() => {
+          sendBtn.classList.add("pressed");
+        }, 2900));
+        timeouts.push(setTimeout(() => {
+          statusEl.innerHTML = '<span class="dot"></span>' + step.doneStatus;
+        }, 3250));
+        // Enchaîne sur la dictée suivante (boucle indéfiniment sur les 4) —
+        // le temps de laisser le résultat affiché un moment avant de
+        // repasser à "Dictée en cours…".
+        timeouts.push(setTimeout(() => {
+          stepIndex = (stepIndex + 1) % heroDemoSteps.length;
+          runStep();
+        }, 4850));
+      }
+    }, 45);
+  }
+
+  runStep();
+  return {
+    stop: () => {
+      stopped = true;
+      clearTimers();
     }
-  }, 45);
-  return { interval, timeouts };
+  };
 }
 window.addEventListener("load", () => {
   const card = document.querySelector(".hcard");
   if (!card) return;
-  let current = { interval: null, timeouts: [] };
+  let current = { stop: () => {} };
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         current = animateHeroDemo();
       } else {
-        clearInterval(current.interval);
-        (current.timeouts || []).forEach(t => clearTimeout(t));
+        current.stop();
       }
     });
   }, { threshold: 0.6 });
