@@ -10458,7 +10458,7 @@ body[data-theme="light"]::after {
 </div>
   </div>
 
-  <div class="stat-card">
+  <div class="stat-card" id="time-saved-stat-card" onclick="openTimeSavedInfo()" style="cursor:pointer;">
     <div class="stat-icon-wrap blue">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v5l3 2"/><path d="M9 2h6"/></svg>
     </div>
@@ -19076,10 +19076,17 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
       openMailPreview(data, instruction);
       unlockAgentButtons();
       resetOrchestratorMicButton();
-      await incrementActions();
-      await loadSubscription();
-      await saveActionLog(effectiveAgent, instruction, "success");
-      await loadActionCounter();
+      // Démo ciblée en cours (pas encore "Je me débrouille"/fin de visite) :
+      // aucune action de test ne doit compter, ni dans le quota (déjà géré
+      // par incrementActions() lui-même) ni dans le temps gagné — saveActionLog
+      // écrirait un log "success" lu ensuite par loadActionCounter(). Même
+      // garde que isComingSoonResponse un peu plus bas dans cette fonction.
+      if (!targetedDemoActive) {
+        await incrementActions();
+        await loadSubscription();
+        await saveActionLog(effectiveAgent, instruction, "success");
+        await loadActionCounter();
+      }
       autoHideDictationBox(box);
       return;
     }
@@ -19119,8 +19126,10 @@ async function sendTypedInstruction(instruction, continuing = false, attachments
     resetOrchestratorMicButton();
 
     // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie action,
-    // ne compte pas dans l'historique ni dans le quota.
-    if (!isComingSoonResponse(data, content)) {
+    // ne compte pas dans l'historique ni dans le quota. Même règle pendant
+    // une démo ciblée en cours (targetedDemoActive) — voir la note sur la
+    // branche mail juste au-dessus.
+    if (!isComingSoonResponse(data, content) && !targetedDemoActive) {
       await incrementActions();
       await loadSubscription();
 
@@ -28419,6 +28428,25 @@ async function saveActionLog(agent, action, status) {
   requestAnimationFrame(update);
 }
 
+// Table de référence UNIQUE "forfait de temps" par agent — utilisée à la
+// fois par loadActionCounter() (calcul du temps gagné) et par la popup
+// d'explication openTimeSavedInfo() ("Temps estimé"), pour que les deux
+// restent toujours synchronisés et qu'aucune valeur ne soit dupliquée à la
+// main. Demande explicite : uniquement les agents V1 réellement branchés
+// (les 5 boutons d'action rapide Mail/Rédaction/Assistant/Planning/Relance,
+// + Compte rendu et Tâche — voir SIMPLE_AGENT_WEBHOOKS et
+// AGENT_MAIL_WEBHOOK_URL), au forfait exact demandé — aucune valeur
+// inventée pour un agent absent de ce tableau.
+const TIME_SAVED_CONFIG = {
+  mails: { label: "Mail", minutes: 4 },
+  planning: { label: "Rendez-vous", minutes: 5 },
+  relance: { label: "Rappel", minutes: 3 },
+  notes: { label: "Compte rendu", minutes: 10 },
+  redaction: { label: "Rédaction", minutes: 6 },
+  taches: { label: "Tâche", minutes: 2 },
+  assistant: { label: "Question", minutes: 2 }
+};
+
   async function loadActionCounter() {
   if (!currentUser) return;
 
@@ -28435,15 +28463,14 @@ async function saveActionLog(agent, action, status) {
 
   const actions = data || [];
 
-  const timeSavedByAgent = {
-    mails: 4,
-    planning: 5,
-    relance: 3,
-    notes: 10
-  };
-
+  // Plus de valeur "inventée" par défaut (l'ancien fallback à 3 min pour un
+  // agent inconnu) : chaque agent V1 a désormais son forfait explicite dans
+  // TIME_SAVED_CONFIG ci-dessus — un agent qui n'y figure pas (ex :
+  // "orchestrator", qui ne journalise jamais de status "success", voir
+  // saveActionLog) ne doit ajouter aucune minute.
   const totalMinutes = actions.reduce((total, item) => {
-    return total + (timeSavedByAgent[item.agent] || 3);
+    const cfg = TIME_SAVED_CONFIG[item.agent];
+    return total + (cfg ? cfg.minutes : 0);
   }, 0);
 
     window.currentTimeSavedMinutes = totalMinutes;
@@ -30477,10 +30504,16 @@ console.log("MESSAGE =", message);
         unlockAgentButtons();
         resetMicButton();
 
-        await incrementActions();
-        await loadSubscription();
-        await saveActionLog(effectiveAgent, instruction, "success");
-        await loadActionCounter();
+        // Démo ciblée en cours : aucune action de test ne doit compter, ni
+        // dans le quota (déjà géré par incrementActions() lui-même) ni dans
+        // le temps gagné (saveActionLog + loadActionCounter) — même garde
+        // que côté dictée tapée (sendTypedInstruction).
+        if (!targetedDemoActive) {
+          await incrementActions();
+          await loadSubscription();
+          await saveActionLog(effectiveAgent, instruction, "success");
+          await loadActionCounter();
+        }
 
         autoHideDictationBox(box);
         return;
@@ -30575,8 +30608,9 @@ console.log("MESSAGE =", message);
       resetMicButton();
 
       // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie
-      // action, ne compte pas dans l'historique ni dans le quota.
-      if (!isComingSoonResponse(data, content)) {
+      // action, ne compte pas dans l'historique ni dans le quota. Même
+      // règle pendant une démo ciblée en cours (targetedDemoActive).
+      if (!isComingSoonResponse(data, content) && !targetedDemoActive) {
         await incrementActions();
         await loadSubscription();
 
@@ -31929,8 +31963,10 @@ async function callSimpleAgent(
     resetOrchestratorMicButton();
 
     // Réponse "à venir" (ex: "Bientôt disponible !") : pas une vraie action,
-    // ne compte pas dans l'historique ni dans le quota.
-    if (!isComingSoonResponse(data, content)) {
+    // ne compte pas dans l'historique ni dans le quota. Même règle pendant
+    // une démo ciblée en cours (targetedDemoActive) — voir la même garde
+    // côté sendTypedInstruction/startSimpleAgentDictation.
+    if (!isComingSoonResponse(data, content) && !targetedDemoActive) {
       await incrementActions();
       await loadSubscription();
 
@@ -36770,6 +36806,42 @@ currentContact.trim() !== currentFollowUpInitialContact.trim()
     <button class="save-btn"
             onclick="closePricingPage()">
       Fermer
+    </button>
+  `;
+
+  document.getElementById("pricing-modal").style.display = "block";
+}
+
+// Popup "Temps estimé", au clic sur la carte "Temps gagné" — demande
+// explicite : expliquer que c'est un forfait par action réussie, pas un
+// chronomètre. Réutilise le même écrin générique que openSubscriptionInfo()
+// juste au-dessus (#pricing-modal/#pricing-modal-content, mêmes classes
+// limit-warning-header/gmail-desc/save-btn) pour rester dans le même style
+// que le reste de l'app. La liste des forfaits vient de TIME_SAVED_CONFIG
+// (voir loadActionCounter) : une seule source de vérité, jamais de valeur
+// recopiée à la main ici.
+function openTimeSavedInfo() {
+  const rows = Object.values(TIME_SAVED_CONFIG)
+    .map(cfg => `${cfg.label} ${cfg.minutes} min`)
+    .join(" · ");
+
+  document.getElementById("pricing-modal-content").innerHTML = `
+    <div class="limit-warning-header">
+      <span>⏱️</span>
+      <strong>Temps estimé</strong>
+    </div>
+
+    <div class="gmail-desc" style="margin-bottom:18px;">
+      Chaque action réussie ajoute un forfait, pas un chronomètre :
+      <br><br>
+      ${rows}
+      <br><br>
+      C'est le temps que ces gestes prennent en général à la main.
+    </div>
+
+    <button class="save-btn"
+            onclick="closePricingPage()">
+      Compris
     </button>
   `;
 
