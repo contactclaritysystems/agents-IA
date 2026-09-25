@@ -22217,14 +22217,15 @@ function runTargetedDemoDecouverte() {
   );
   targetedDemoWalkthroughTimeout = setTimeout(() => {
     if (!targetedDemoActive || targetedDemoFlow !== "decouverte") return;
-    // Demande explicite ("le halo prenne tout le champ ovale avec la pièce
-    // jointe aussi") : l'ordre des sélecteurs était inversé — #orchestrator-
-    // text-input (juste le texte) était tenté AVANT .clarity-input-row (le
-    // champ ovale entier, trombone compris), donc toujours choisi en premier
-    // puisque toujours visible. .clarity-input-row en premier, comme pour
-    // les autres parcours (mail/rdv/rappel/cr un peu plus bas).
+    // Demande explicite ("on doit voir seulement le champ texte, sans le
+    // micro") : .clarity-input-row englobe le champ ET le micro (deux
+    // enfants distincts, voir le HTML de la carte d'accueil) — un halo sur
+    // .clarity-input-row entourait donc aussi le micro, alors que la bulle
+    // dit justement "Même chose, sans le micro". .clarity-input-bar est le
+    // champ ovale lui-même (trombone + texte + flèche d'envoi), sans le
+    // bouton micro qui est un sibling en dehors de cette barre.
     targetedDemoShowHalo(
-      ['.clarity-input-row', '#orchestrator-text-input'],
+      ['.clarity-input-bar', '#orchestrator-text-input'],
       "Ou écrivez",
       "Même chose, sans le micro.",
       true
