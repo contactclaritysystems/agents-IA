@@ -20597,6 +20597,17 @@ function stopTipsPositionLoop() {
 
 let onboardingTipIndex = 0;
 
+// Demande explicite ("à la fin du tour [relancé via Continuer la visite],
+// l'utilisateur doit pouvoir tester lui-même Clarity, plus de démo après
+// ça") : startOnboardingTips()/finishOnboardingTips() servent à la fois
+// pour la toute première visite (juste après la connexion — la popup de
+// choix doit alors s'ouvrir ensuite, comportement normal) ET pour la
+// relance manuelle depuis "Continuer la visite" en fin d'action (où la
+// popup ne doit plus jamais revenir). Ce drapeau distingue les deux cas :
+// posé à true juste avant la relance manuelle, lu par finishOnboardingTips()
+// puis remis à false aussitôt.
+let onboardingTipsIsManualReplay = false;
+
 function showOnboardingTip(index) {
   const tipsBox = document.getElementById("onboarding-tips");
   if (!tipsBox) return;
@@ -20767,10 +20778,26 @@ async function finishOnboardingTips() {
     tipsBox.style.display = "none";
     tipsBox.innerHTML = "";
   }
+  await markOnboardingComplete();
+
+  // Demande explicite ("dès que je mets Continuer la visite, à la fin du
+  // tour l'utilisateur doit pouvoir tester lui-même Clarity, plus de démo
+  // après ça") : quand ce tour a été relancé manuellement depuis "Continuer
+  // la visite" (fin d'une action de la démo ciblée), on ne rouvre plus la
+  // popup de choix — on termine la démo pour de bon, comme "Je me
+  // débrouille" (voir endTargetedDemoSession). La popup ne doit se rouvrir
+  // toute seule qu'à la toute première connexion (cas normal ci-dessous).
+  if (onboardingTipsIsManualReplay) {
+    onboardingTipsIsManualReplay = false;
+    localStorage.setItem(targetedDemoStorageKey(), "true");
+    const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+    if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
+    return;
+  }
+
   // Le bouton "Déconnexion" reste affiché : voir la note dans
   // finishOldTourAndOpenTargetedDemo() — il continue de servir de seule
   // échappatoire pendant la nouvelle démo ciblée.
-  await markOnboardingComplete();
   maybeOpenTargetedDemoMenu();
 }
 
@@ -22821,6 +22848,7 @@ function targetedDemoContinueVisite() {
   targetedDemoStop();
   targetedDemoActive = false;
   targetedDemoFlow = null;
+  onboardingTipsIsManualReplay = true;
   startOnboardingTips();
 }
 
