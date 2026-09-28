@@ -25194,67 +25194,22 @@ document.querySelectorAll(
   "#main-settings .settings-page-block"
 ).forEach(el => el.classList.remove("is-hidden"));
 
-try {
-
-  if (profile.firstname || profile.lastname) {
-    await upsertSelfContact(profile);
-  }
-
-} catch (e) {
-
-  console.error("Erreur création contact profil:", e);
-
-}
-
   } catch (err) {
     console.error("SAVE PROFILE ERROR:", err);
     showToast("Erreur sauvegarde profil");
   }
 }
 
-  async function upsertSelfContact(profile) {
-  if (!currentUser) throw new Error("Utilisateur non connecté");
-
-  const fullName = ((profile.firstname || "") + " " + (profile.lastname || "")).trim();
-
-  if (!fullName) {
-    throw new Error("Nom incomplet");
-  }
-
-  const contactData = {
-    user_id: currentUser.id,
-    full_name: fullName,
-    company: profile.company || "",
-    email: currentUser.email,
-    phone: profile.phone || "",
-    updated_at: new Date().toISOString()
-  };
-
-  const { data: existing, error: findError } = await supabaseClient
-    .from("contacts")
-    .select("id")
-    .eq("user_id", currentUser.id)
-    .eq("email", currentUser.email)
-    .limit(1);
-
-  if (findError) throw findError;
-
-  if (existing && existing.length > 0) {
-    const { error: updateError } = await supabaseClient
-      .from("contacts")
-      .update(contactData)
-      .eq("id", existing[0].id);
-
-    if (updateError) throw updateError;
-    return;
-  }
-
-  const { error: insertError } = await supabaseClient
-    .from("contacts")
-    .insert(contactData);
-
-  if (insertError) throw insertError;
-}
+// Bug remonté ("le profil crée un 2e contact") : enregistrer Réglages →
+// Profil appelait ici upsertSelfContact(profile), qui cherchait un contact
+// existant par email = currentUser.email (l'e-mail du COMPTE connecté) —
+// jamais l'e-mail réel du contact du carnet, qui peut être différent (ex :
+// une adresse perso). La recherche ne trouvait donc rien et INSERT une
+// toute nouvelle fiche à chaque fois que le nom/prénom du profil changeait,
+// en doublon d'une fiche existante. Le profil sert Clarity (signature,
+// vouvoiement) — jamais le carnet de contacts : upsertSelfContact() et son
+// appel ont été retirés, sans toucher aux fiches déjà en double (à
+// fusionner à la main si besoin, décision qui revient à l'utilisateur).
 
   function lockProfileFields() {
 
