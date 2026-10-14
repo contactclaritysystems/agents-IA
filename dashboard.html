@@ -2770,7 +2770,8 @@ body[data-theme="dark"] .cr-point-edit-input {
   #writing-styles-mobile-section,
   #notifications-mobile-section,
   #preferences-mobile-section,
-  #application-mobile-section {
+  #application-mobile-section,
+  #social-mobile-section {
     display: none;
   }
 
@@ -2778,7 +2779,8 @@ body[data-theme="dark"] .cr-point-edit-input {
   #writing-styles-mobile-section.open,
   #notifications-mobile-section.open,
   #preferences-mobile-section.open,
-  #application-mobile-section.open {
+  #application-mobile-section.open,
+  #social-mobile-section.open {
     display: block;
     position: fixed;
     inset: 0;
@@ -2804,7 +2806,8 @@ body[data-theme="dark"] .cr-point-edit-input {
   #writing-styles-mobile-section .mobile-subpage-header,
   #notifications-mobile-section .mobile-subpage-header,
   #preferences-mobile-section .mobile-subpage-header,
-  #application-mobile-section .mobile-subpage-header {
+  #application-mobile-section .mobile-subpage-header,
+  #social-mobile-section .mobile-subpage-header {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -2815,7 +2818,8 @@ body[data-theme="dark"] .cr-point-edit-input {
   #writing-styles-mobile-section .mobile-subpage-header .sheet-btn,
   #notifications-mobile-section .mobile-subpage-header .sheet-btn,
   #preferences-mobile-section .mobile-subpage-header .sheet-btn,
-  #application-mobile-section .mobile-subpage-header .sheet-btn {
+  #application-mobile-section .mobile-subpage-header .sheet-btn,
+  #social-mobile-section .mobile-subpage-header .sheet-btn {
     width: auto !important;
     height: 34px !important;
     padding: 0 12px !important;
@@ -2828,7 +2832,8 @@ body[data-theme="dark"] .cr-point-edit-input {
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
   #notifications-mobile-section .mobile-subpage-header .section-title,
   #preferences-mobile-section .mobile-subpage-header .section-title,
-  #application-mobile-section .mobile-subpage-header .section-title {
+  #application-mobile-section .mobile-subpage-header .section-title,
+  #social-mobile-section .mobile-subpage-header .section-title {
     font-size: 20px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
@@ -6479,7 +6484,8 @@ body.qa-reorder-active {
 #writing-styles-mobile-section,
 #notifications-mobile-section,
 #preferences-mobile-section,
-#application-mobile-section {
+#application-mobile-section,
+#social-mobile-section {
   display: none !important;
 }
 
@@ -6487,7 +6493,8 @@ body.qa-reorder-active {
 #writing-styles-mobile-section.open,
 #notifications-mobile-section.open,
 #preferences-mobile-section.open,
-#application-mobile-section.open {
+#application-mobile-section.open,
+#social-mobile-section.open {
   display: block !important;
   position: fixed !important;
   inset: 0;
@@ -6661,7 +6668,8 @@ a:hover {
 #writing-styles-mobile-section.open,
 #notifications-mobile-section.open,
 #preferences-mobile-section.open,
-#application-mobile-section.open {
+#application-mobile-section.open,
+#social-mobile-section.open {
   padding-left: max(18px, calc((100% - 900px) / 2)) !important;
   padding-right: max(18px, calc((100% - 900px) / 2)) !important;
 }
@@ -7378,7 +7386,8 @@ body[data-theme="azur"] .loader-halo {
   #writing-styles-mobile-section .mobile-subpage-header,
   #notifications-mobile-section .mobile-subpage-header,
   #preferences-mobile-section .mobile-subpage-header,
-  #application-mobile-section .mobile-subpage-header {
+  #application-mobile-section .mobile-subpage-header,
+  #social-mobile-section .mobile-subpage-header {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -7392,7 +7401,8 @@ body[data-theme="azur"] .loader-halo {
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
   #notifications-mobile-section .mobile-subpage-header .section-title,
   #preferences-mobile-section .mobile-subpage-header .section-title,
-  #application-mobile-section .mobile-subpage-header .section-title {
+  #application-mobile-section .mobile-subpage-header .section-title,
+  #social-mobile-section .mobile-subpage-header .section-title {
     font-size: 21px !important;
     font-weight: 780 !important;
     letter-spacing: -0.02em !important;
@@ -7406,7 +7416,8 @@ body[data-theme="azur"] .loader-halo {
   #writing-styles-mobile-section .mobile-subpage-header .section-title,
   #notifications-mobile-section .mobile-subpage-header .section-title,
   #preferences-mobile-section .mobile-subpage-header .section-title,
-  #application-mobile-section .mobile-subpage-header .section-title {
+  #application-mobile-section .mobile-subpage-header .section-title,
+  #social-mobile-section .mobile-subpage-header .section-title {
     font-size: 26px !important;
   }
 }
@@ -7423,7 +7434,8 @@ body[data-theme="azur"] .loader-halo {
   #writing-styles-mobile-section.open,
   #notifications-mobile-section.open,
   #preferences-mobile-section.open,
-  #application-mobile-section.open {
+  #application-mobile-section.open,
+  #social-mobile-section.open {
     position: static !important;
     inset: auto !important;
     z-index: auto !important;
@@ -8220,7 +8232,8 @@ body[data-theme="dark"] .clarity-hero {
   body.is-standalone-ios #writing-styles-mobile-section.open,
   body.is-standalone-ios #notifications-mobile-section.open,
   body.is-standalone-ios #preferences-mobile-section.open,
-  body.is-standalone-ios #application-mobile-section.open {
+  body.is-standalone-ios #application-mobile-section.open,
+  body.is-standalone-ios #social-mobile-section.open {
     padding-top: calc(24px + env(safe-area-inset-top)) !important;
     padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important;
   }
@@ -10273,6 +10286,55 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+<!-- Sous-page "Publications automatiques" (V1 réglages + sauvegarde
+     uniquement — la génération du contenu viendra plus tard). Même
+     patron que les autres sous-pages Réglages. -->
+<div id="social-mobile-section">
+  <div class="mobile-subpage-header">
+    <button class="sheet-btn" type="button" onclick="closeSocialSubpage()">← Retour</button>
+    <div class="section-title">Publications automatiques</div>
+  </div>
+
+  <p class="settings-subpage-intro">
+    Activez la préparation automatique de posts réseaux : Clarity générera le contenu et vous l'enverra par mail pour validation.
+  </p>
+
+  <div class="settings-group" style="margin-top:14px;">
+    <div class="settings-row" id="social-toggle-row" style="cursor:default;">
+      <span class="settings-row-icon settings-row-icon-purple">📣</span>
+      <div class="settings-row-title">Publications automatiques</div>
+      <button type="button" class="settings-toggle" id="social-toggle-switch" onclick="setSocialEnabled(!socialEnabled)" aria-label="Activer les publications automatiques">
+        <span class="settings-toggle-knob"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="field-group" style="margin-top:18px;">
+    <div class="field-label">Publications par semaine</div>
+    <div class="planning-view-toggle" id="social-frequency-chips"></div>
+  </div>
+
+  <div class="field-group" style="margin-top:14px;">
+    <div class="field-label">Longueur du texte</div>
+    <div class="planning-view-toggle" id="social-length-chips"></div>
+  </div>
+
+  <div class="field-group" style="margin-top:14px;">
+    <div class="field-label">De quoi Clarity doit parler ?</div>
+    <textarea class="field-input" id="social-context-input" rows="4" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
+  </div>
+
+  <div class="field-group" style="margin-top:14px;">
+    <div class="field-label">Logo (optionnel)</div>
+    <div id="social-logo-preview-wrap" style="display:none; margin-bottom:10px;">
+      <img id="social-logo-preview" src="" alt="Logo" style="max-width:120px; max-height:120px; border-radius:14px; border:1px solid var(--clarity-border); display:block; margin-bottom:8px;" />
+      <button class="sheet-btn" type="button" onclick="removeSocialLogo()">Retirer le logo</button>
+    </div>
+    <input type="file" id="social-logo-input" accept="image/*" style="display:none;" onchange="handleSocialLogoSelected(this)" />
+    <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="width:100%;justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
+  </div>
+</div>
+
   <!-- GMAIL -->
   <div class="gmail-section" id="gmail-connect-section">
   <div>
@@ -10321,6 +10383,12 @@ body[data-theme="light"]::after {
       <span class="settings-row-icon settings-row-icon-green">✍️</span>
       <div class="settings-row-title">Styles d'écriture</div>
       <span class="settings-row-value" id="writing-styles-count-label">0</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="social-settings-row" onclick="openSocialSubpage()">
+      <span class="settings-row-icon settings-row-icon-purple">📣</span>
+      <div class="settings-row-title">Publications automatiques</div>
+      <span class="settings-row-value" id="social-status-label">Off</span>
       <span class="settings-row-chevron">›</span>
     </div>
     <div class="settings-row" id="custom-agent-block" onclick="openSupportChoiceModal()">
@@ -23340,6 +23408,7 @@ async function handleUser(user) {
   await loadActionCounter();
   await loadSubscription();
   await loadDigestSettings();
+  await loadSocialSettings();
   await startOnboardingIfNeeded();
 
   // Chargé ici (et pas seulement à la demande, ex: en ouvrant la page
@@ -25114,6 +25183,222 @@ function closeApplicationSubpage() {
   document.querySelectorAll(
     "#main-settings .settings-page-block"
   ).forEach(el => el.classList.remove("is-hidden"));
+}
+
+// ─── RÉGLAGES > PUBLICATIONS AUTOMATIQUES (V1) ──────────────────────────
+// Nouvelle section demandée : Clarity génèrera plus tard le contenu des
+// posts réseaux et l'enverra par mail — ici, on ne fait QUE les réglages +
+// la sauvegarde (pas de génération, pas d'agent, pas de mail branchés à ce
+// stade). Stocké dans une table Supabase dédiée "profiles" (1 ligne par
+// utilisateur, clé "id" = l'id du compte connecté) avec les 5 colonnes
+// demandées : social_enabled (bool), social_frequency (int),
+// social_length (text), social_context (text), social_logo_url (text).
+// Cette table et le bucket de stockage "social-posts" doivent exister
+// côté Supabase — travail backend, hors du périmètre frontend de ce
+// fichier (voir le message envoyé à Anthony à ce sujet).
+let socialEnabled = false;
+let socialFrequency = 3;
+let socialLength = "moyen";
+let socialContext = "";
+let socialLogoUrl = null;
+let socialContextDirty = false;
+
+const SOCIAL_FREQUENCY_OPTIONS = [1, 2, 3, 5, 7];
+const SOCIAL_LENGTH_OPTIONS = [
+  { key: "court", label: "Court" },
+  { key: "moyen", label: "Moyen" },
+  { key: "long", label: "Long" }
+];
+
+function openSocialSubpage() {
+  const section = document.getElementById("social-mobile-section");
+  if (!section) return;
+  section.classList.add("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.add("is-hidden"));
+}
+
+function closeSocialSubpage() {
+  const section = document.getElementById("social-mobile-section");
+  if (!section) return;
+  // Un retour tactile direct sur "← Retour" ne déclenche pas forcément le
+  // onblur du champ texte avant de démonter la vue : on force la
+  // sauvegarde d'une frappe en cours plutôt que de la perdre.
+  flushSocialContextIfDirty();
+  section.classList.remove("open");
+  document.querySelectorAll(
+    "#main-settings .settings-page-block"
+  ).forEach(el => el.classList.remove("is-hidden"));
+}
+
+async function loadSocialSettings() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("social_enabled, social_frequency, social_length, social_context, social_logo_url")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erreur chargement publications automatiques:", error);
+    } else if (data) {
+      socialEnabled = !!data.social_enabled;
+      socialFrequency = data.social_frequency || 3;
+      socialLength = data.social_length || "moyen";
+      socialContext = data.social_context || "";
+      socialLogoUrl = data.social_logo_url || null;
+    }
+  } catch (e) {
+    console.error("Erreur réseau publications automatiques:", e);
+  }
+  syncSocialUI();
+}
+
+function syncSocialUI() {
+  const toggle = document.getElementById("social-toggle-switch");
+  if (toggle) toggle.classList.toggle("active", socialEnabled);
+
+  const statusLabel = document.getElementById("social-status-label");
+  if (statusLabel) statusLabel.textContent = socialEnabled ? "Activé" : "Off";
+
+  renderSocialFrequencyChips();
+  renderSocialLengthChips();
+
+  // Ne touche jamais la valeur si le champ a le focus (évite d'écraser une
+  // frappe en cours si syncSocialUI() est rappelée entre-temps, ex : juste
+  // après un upload de logo).
+  const textarea = document.getElementById("social-context-input");
+  if (textarea && document.activeElement !== textarea) {
+    textarea.value = socialContext;
+  }
+
+  const previewWrap = document.getElementById("social-logo-preview-wrap");
+  const previewImg = document.getElementById("social-logo-preview");
+  if (previewWrap && previewImg) {
+    if (socialLogoUrl) {
+      previewImg.src = socialLogoUrl;
+      previewWrap.style.display = "block";
+    } else {
+      previewImg.src = "";
+      previewWrap.style.display = "none";
+    }
+  }
+}
+
+function renderSocialFrequencyChips() {
+  const wrap = document.getElementById("social-frequency-chips");
+  if (!wrap) return;
+  wrap.innerHTML = SOCIAL_FREQUENCY_OPTIONS.map(n => `
+    <button type="button" class="planning-view-toggle-btn${n === socialFrequency ? " active" : ""}" onclick="selectSocialFrequency(${n})">${n}</button>
+  `).join("");
+}
+
+function renderSocialLengthChips() {
+  const wrap = document.getElementById("social-length-chips");
+  if (!wrap) return;
+  wrap.innerHTML = SOCIAL_LENGTH_OPTIONS.map(o => `
+    <button type="button" class="planning-view-toggle-btn${o.key === socialLength ? " active" : ""}" onclick="selectSocialLength('${o.key}')">${o.label}</button>
+  `).join("");
+}
+
+function setSocialEnabled(enabled) {
+  socialEnabled = enabled;
+  syncSocialUI();
+  saveSocialSettings();
+}
+
+function selectSocialFrequency(n) {
+  socialFrequency = n;
+  renderSocialFrequencyChips();
+  saveSocialSettings();
+}
+
+function selectSocialLength(key) {
+  socialLength = key;
+  renderSocialLengthChips();
+  saveSocialSettings();
+}
+
+function markSocialContextDirty() {
+  socialContextDirty = true;
+}
+
+function flushSocialContextIfDirty() {
+  if (!socialContextDirty) return;
+  const textarea = document.getElementById("social-context-input");
+  socialContext = textarea ? textarea.value : socialContext;
+  socialContextDirty = false;
+  saveSocialSettings();
+}
+
+// Même principe que uploadCrChecklistPhoto() plus haut dans ce fichier
+// (bucket Supabase dédié, chemin {user_id}/... pour isoler les fichiers
+// par compte) — ici pour le bucket "social-posts".
+async function handleSocialLogoSelected(input) {
+  const file = input.files && input.files[0];
+  input.value = "";
+  if (!file || !currentUser || !currentUser.id) return;
+
+  const btn = document.getElementById("social-logo-upload-btn");
+  const originalLabel = btn ? btn.innerHTML : "";
+  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Envoi..."; }
+
+  try {
+    const ext = (file.name && file.name.includes(".")) ? file.name.split(".").pop().toLowerCase() : "png";
+    const path = currentUser.id + "/logo-" + Date.now() + "." + ext;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from("social-posts")
+      .upload(path, file, { contentType: file.type || "image/png", upsert: false });
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabaseClient.storage.from("social-posts").getPublicUrl(path);
+    socialLogoUrl = urlData && urlData.publicUrl;
+    syncSocialUI();
+    await saveSocialSettings();
+  } catch (e) {
+    console.error("Erreur upload logo publications:", e);
+    showToast("Impossible d'envoyer le logo", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
+}
+
+function removeSocialLogo() {
+  socialLogoUrl = null;
+  syncSocialUI();
+  saveSocialSettings();
+}
+
+// Envoie TOUJOURS les 5 réglages ensemble (même principe documenté sur
+// saveDigestSettings plus haut) : évite qu'une sauvegarde partielle
+// n'écrase les autres champs côté serveur si la ligne est remplacée
+// plutôt que fusionnée.
+async function saveSocialSettings() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { error } = await supabaseClient
+      .from("profiles")
+      .upsert({
+        id: currentUser.id,
+        social_enabled: socialEnabled,
+        social_frequency: socialFrequency,
+        social_length: socialLength,
+        social_context: socialContext,
+        social_logo_url: socialLogoUrl,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
+
+    if (error) {
+      console.error("Erreur sauvegarde publications automatiques:", error);
+      showToast("Erreur sauvegarde des publications automatiques", "error");
+    }
+  } catch (e) {
+    console.error("Erreur réseau publications automatiques:", e);
+    showToast("Erreur réseau", "error");
+  }
 }
 
  async function saveProfile() {
@@ -32530,6 +32815,8 @@ function showSection(section, btn) {
   if (preferencesSubpageNav) preferencesSubpageNav.classList.remove("open");
   const applicationSubpageNav = document.getElementById("application-mobile-section");
   if (applicationSubpageNav) applicationSubpageNav.classList.remove("open");
+  const socialSubpageNav = document.getElementById("social-mobile-section");
+  if (socialSubpageNav) socialSubpageNav.classList.remove("open");
   document.querySelectorAll(
     "#main-settings .settings-page-block"
   ).forEach(el => el.classList.remove("is-hidden"));
