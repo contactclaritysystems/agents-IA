@@ -21527,11 +21527,18 @@ function openTargetedDemoMenu() {
   const existing = document.getElementById("targeted-demo-menu-modal");
   if (existing) existing.remove();
 
+  // Drapeau à usage unique (voir replayTargetedDemo) : seule la popup
+  // ouverte depuis Réglages > Revoir la visite affiche la croix de
+  // fermeture, jamais celle d'une inscription normale.
+  const allowClose = targetedDemoMenuAllowClose;
+  targetedDemoMenuAllowClose = false;
+
   const modal = document.createElement("div");
   modal.id = "targeted-demo-menu-modal";
   modal.innerHTML = `
     <div class="mail-choice-backdrop"></div>
     <div class="mail-choice-box" style="overflow-x:hidden;">
+      ${allowClose ? '<div class="fiche-close-row"><button type="button" class="fiche-close-btn" onclick="cancelTargetedDemoMenuReplay()" aria-label="Fermer">✕</button></div>' : ''}
       <div class="mail-choice-title" style="text-align:center;">Sur quoi voulez-vous gagner du temps ?</div>
       <div class="mail-choice-subtitle" style="text-align:center;">Choisissez. On vous montre le résultat, pas un mode d'emploi.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0;">
@@ -21564,11 +21571,32 @@ function dismissTargetedDemoMenu() {
   localStorage.setItem(targetedDemoStorageKey(), "true");
 }
 
+// Demande explicite : un clic accidentel sur "Réglages > Revoir la visite"
+// ne doit pas forcer à faire toute la démo — une croix doit permettre de
+// quitter CETTE popup de choix. Mais surtout pas lors d'une inscription
+// normale (maybeOpenTargetedDemoMenu, au premier login) : la règle
+// "ni le fond flou ni un bouton Annuler ne doivent la fermer" reste
+// intacte dans ce cas. D'où ce drapeau, armé uniquement ici et consommé
+// une seule fois par openTargetedDemoMenu (voir plus bas).
+let targetedDemoMenuAllowClose = false;
+
 function replayTargetedDemo() {
   localStorage.setItem(targetedDemoStorageKey(), "false");
+  targetedDemoMenuAllowClose = true;
   const homeBtn = pickVisibleElement(['.nav-item[onclick*="agents"]', '.bottom-tab[data-section="agents"]']);
   if (typeof showSection === "function") showSection("agents", homeBtn);
   setTimeout(() => openTargetedDemoMenu(), 200);
+}
+
+// Annule un "Revoir la visite" déclenché par erreur depuis Réglages :
+// referme la popup de choix et remet le flag localStorage comme avant
+// (sinon replayTargetedDemo() l'ayant mis à "false", le menu se
+// rouvrirait seul au prochain login via maybeOpenTargetedDemoMenu).
+function cancelTargetedDemoMenuReplay() {
+  closeTargetedDemoMenu();
+  localStorage.setItem(targetedDemoStorageKey(), "true");
+  const demoLogoutBtn = document.getElementById("onboarding-demo-logout-btn");
+  if (demoLogoutBtn) demoLogoutBtn.classList.remove("active");
 }
 
 // ─── Halo générique (réutilise #onboarding-overlay/#onboarding-ring déjà
