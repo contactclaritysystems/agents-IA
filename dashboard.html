@@ -10333,6 +10333,30 @@ body[data-theme="light"]::after {
     <input type="file" id="social-logo-input" accept="image/*" style="display:none;" onchange="handleSocialLogoSelected(this)" />
     <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="width:100%;justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
   </div>
+
+  <!-- Préparation UI (backend /social/generate pas encore déployé — voir
+       SOCIAL_GENERATE_ENDPOINT/generateSocialPost) : juste génération +
+       affichage pour l'instant, pas de publication automatique. Thème en
+       option (point 5 de la demande), même composants que le reste de
+       Réglages. -->
+  <div class="field-group" style="margin-top:22px;">
+    <div class="field-label">Générer un post</div>
+    <input class="field-input" type="text" id="social-generate-theme-input" placeholder="Thème (optionnel) — ex. promotion, nouveauté, conseil client…" />
+    <button class="sheet-btn" type="button" id="social-generate-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="generateSocialPost()">✨ Générer un post</button>
+  </div>
+
+  <div id="social-generated-result" style="display:none; margin-top:18px;">
+    <div class="field-group">
+      <div class="field-label">Aperçu du post</div>
+      <div id="social-generated-image-wrap" style="display:none; margin-bottom:10px;">
+        <img id="social-generated-image" src="" alt="Image générée" style="width:100%; max-width:320px; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
+      </div>
+      <div class="field-input" id="social-generated-caption" style="white-space:pre-wrap; min-height:auto;"></div>
+      <div id="social-generated-hashtags" style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);"></div>
+    </div>
+    <button class="sheet-btn" type="button" id="social-regenerate-btn" style="width:100%;justify-content:center;margin-top:12px;" onclick="generateSocialPost()">🔁 Régénérer</button>
+    <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="copySocialGeneratedText()">📋 Copier le texte</button>
+  </div>
 </div>
 
   <!-- GMAIL -->
@@ -25426,6 +25450,128 @@ async function saveSocialSettings() {
   } catch (e) {
     console.error("Erreur réseau publications automatiques:", e);
     showToast("Erreur réseau", "error");
+  }
+}
+
+// ─── RÉGLAGES > PUBLICATIONS AUTOMATIQUES — GÉNÉRATION (préparation UI) ────
+// Endpoint backend pas encore déployé au moment de cet ajout : on prépare
+// seulement l'appel, l'affichage du résultat (image + texte + hashtags),
+// "Régénérer" (même appel) et "Copier le texte". Pas de publication
+// automatique pour l'instant (demande explicite) — juste génération +
+// affichage, à valider/copier à la main.
+const SOCIAL_GENERATE_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/generate";
+
+let socialGeneratedPost = null;
+let socialGenerating = false;
+
+async function generateSocialPost() {
+  if (!currentUser || !currentUser.id) return;
+  if (socialGenerating) return; // anti double-clic (Générer/Régénérer partagent le même appel)
+
+  socialGenerating = true;
+  renderSocialGeneratedResult();
+
+  try {
+    const themeInput = document.getElementById("social-generate-theme-input");
+    const theme = themeInput ? themeInput.value.trim() : "";
+
+    const payload = { user_id: currentUser.id, platform: "instagram" };
+    if (theme) payload.theme = theme;
+
+    const resp = await fetch(SOCIAL_GENERATE_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await resp.json().catch(() => null);
+
+    if (!resp.ok || !data || !data.success || !data.post) {
+      throw new Error((data && data.error) || ("Réponse invalide (" + resp.status + ")"));
+    }
+
+    socialGeneratedPost = data.post;
+  } catch (e) {
+    console.error("Erreur génération post:", e);
+    showToast("Impossible de générer le post pour le moment", "error");
+    socialGeneratedPost = null;
+  } finally {
+    socialGenerating = false;
+    renderSocialGeneratedResult();
+  }
+}
+
+function renderSocialGeneratedResult() {
+  const generateBtn = document.getElementById("social-generate-btn");
+  if (generateBtn) {
+    generateBtn.disabled = socialGenerating;
+    generateBtn.innerHTML = socialGenerating ? "⏳ Génération..." : "✨ Générer un post";
+  }
+
+  const regenerateBtn = document.getElementById("social-regenerate-btn");
+  if (regenerateBtn) {
+    regenerateBtn.disabled = socialGenerating;
+    regenerateBtn.innerHTML = socialGenerating ? "⏳ Génération..." : "🔁 Régénérer";
+  }
+
+  const resultWrap = document.getElementById("social-generated-result");
+  if (!resultWrap) return;
+
+  if (!socialGeneratedPost) {
+    resultWrap.style.display = "none";
+    return;
+  }
+  resultWrap.style.display = "block";
+
+  const imageWrap = document.getElementById("social-generated-image-wrap");
+  const image = document.getElementById("social-generated-image");
+  if (imageWrap && image) {
+    if (socialGeneratedPost.image_url) {
+      image.src = socialGeneratedPost.image_url;
+      imageWrap.style.display = "block";
+    } else {
+      image.src = "";
+      imageWrap.style.display = "none";
+    }
+  }
+
+  const captionEl = document.getElementById("social-generated-caption");
+  if (captionEl) captionEl.textContent = socialGeneratedPost.caption || "";
+
+  const hashtagsEl = document.getElementById("social-generated-hashtags");
+  if (hashtagsEl) {
+    hashtagsEl.textContent = socialGeneratedHashtagsText();
+  }
+}
+
+// Normalise la liste de hashtags reçue (avec ou sans "#") en une chaîne
+// affichable/copiable "#un #deux #trois" — réutilisé par l'affichage ET
+// par "Copier le texte" pour ne jamais diverger.
+function socialGeneratedHashtagsText() {
+  if (!socialGeneratedPost || !Array.isArray(socialGeneratedPost.hashtags)) return "";
+  return socialGeneratedPost.hashtags
+    .filter(Boolean)
+    .map(t => (String(t).startsWith("#") ? String(t) : "#" + t))
+    .join(" ");
+}
+
+// Même patron que copySimpleAgentResult (texte + fallback d'erreur).
+async function copySocialGeneratedText() {
+  if (!socialGeneratedPost) return;
+
+  const hashtagsStr = socialGeneratedHashtagsText();
+  const fullText = [socialGeneratedPost.caption || "", hashtagsStr].filter(Boolean).join("\n\n");
+
+  if (!fullText.trim()) {
+    showToast("Texte vide", "error");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(fullText);
+    showToast("Texte copié");
+  } catch (e) {
+    showToast("Impossible de copier automatiquement", "error");
   }
 }
 
