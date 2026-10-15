@@ -25402,9 +25402,12 @@ function flushSocialContextIfDirty() {
   saveSocialSettings();
 }
 
-// Même principe que uploadCrChecklistPhoto() plus haut dans ce fichier
-// (bucket Supabase dédié, chemin {user_id}/... pour isoler les fichiers
-// par compte) — ici pour le bucket "social-posts".
+// Demande explicite : le logo n'est plus déposé directement dans le bucket
+// Supabase "social-posts" — il part en POST multipart vers le backend
+// (SOCIAL_LOGO_ENDPOINT), qui renvoie logo_url. On garde la sauvegarde dans
+// profiles (saveSocialSettings) pour que le logo reste choisi d'une session
+// à l'autre, mais c'est bien logo_url (renvoyé par CE endpoint) qui est
+// envoyé à /social/generate (voir requestSocialPosts), pas une URL Supabase.
 async function handleSocialLogoSelected(input) {
   const file = input.files && input.files[0];
   input.value = "";
@@ -25415,16 +25418,24 @@ async function handleSocialLogoSelected(input) {
   if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Envoi..."; }
 
   try {
-    const ext = (file.name && file.name.includes(".")) ? file.name.split(".").pop().toLowerCase() : "png";
-    const path = currentUser.id + "/logo-" + Date.now() + "." + ext;
+    const formData = new FormData();
+    formData.append("user_id", currentUser.id);
+    formData.append("file", file);
 
-    const { error: uploadError } = await supabaseClient.storage
-      .from("social-posts")
-      .upload(path, file, { contentType: file.type || "image/png", upsert: false });
-    if (uploadError) throw uploadError;
+    // Pas de header Content-Type manuel : le navigateur fixe lui-même le
+    // boundary multipart correct pour un FormData.
+    const resp = await fetch(SOCIAL_LOGO_ENDPOINT, {
+      method: "POST",
+      body: formData
+    });
 
-    const { data: urlData } = supabaseClient.storage.from("social-posts").getPublicUrl(path);
-    socialLogoUrl = urlData && urlData.publicUrl;
+    const data = await resp.json().catch(() => null);
+
+    if (!resp.ok || !data || !data.success || !data.logo_url) {
+      throw new Error((data && data.error) || ("Réponse invalide (" + resp.status + ")"));
+    }
+
+    socialLogoUrl = data.logo_url;
     syncSocialUI();
     await saveSocialSettings();
   } catch (e) {
@@ -25480,6 +25491,7 @@ async function saveSocialSettings() {
 // cases à cocher Instagram/Facebook/LinkedIn, plusieurs possibles,
 // Instagram cochée par défaut.
 const SOCIAL_GENERATE_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/generate";
+const SOCIAL_LOGO_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/logo";
 
 const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: "📷", color: "violet" },
@@ -25548,6 +25560,11 @@ async function requestSocialPosts(platforms) {
 
     const payload = { user_id: currentUser.id, platforms: platforms, with_emojis: withEmojis };
     if (theme) payload.theme = theme;
+    // Demande explicite : logo_url part TOUJOURS dans le body dès qu'un
+    // logo a été choisi (socialLogoUrl, renvoyé par SOCIAL_LOGO_ENDPOINT),
+    // que ce soit "Générer" ou le "Régénérer" d'une carte — jamais omis
+    // tant qu'un logo est présent.
+    if (socialLogoUrl) payload.logo_url = socialLogoUrl;
 
     const resp = await fetch(SOCIAL_GENERATE_ENDPOINT, {
       method: "POST",
