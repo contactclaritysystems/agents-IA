@@ -10353,6 +10353,18 @@ body[data-theme="light"]::after {
     <input class="field-input" type="text" id="social-generate-theme-input" placeholder="ex. promotion, nouveauté, conseil client…" />
   </div>
 
+  <!-- "Avec smileys" : envoyé dans le body ("with_emojis") à chaque Générer
+       ET chaque Régénérer (voir requestSocialPosts) — activé par défaut. -->
+  <div class="field-group" style="margin-top:14px;">
+    <div class="settings-group">
+      <label class="settings-row" style="cursor:pointer;" for="social-with-emojis-checkbox">
+        <span class="settings-row-icon settings-row-icon-yellow">😀</span>
+        <div class="settings-row-title">Avec smileys</div>
+        <input type="checkbox" id="social-with-emojis-checkbox" checked />
+      </label>
+    </div>
+  </div>
+
   <button class="sheet-btn" type="button" id="social-generate-btn" style="width:100%;justify-content:center;margin-top:14px;" onclick="generateSocialPosts()">✨ Générer</button>
 
   <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:14px;margin-top:18px;"></div>
@@ -25528,7 +25540,13 @@ async function requestSocialPosts(platforms) {
     const themeInput = document.getElementById("social-generate-theme-input");
     const theme = themeInput ? themeInput.value.trim() : "";
 
-    const payload = { user_id: currentUser.id, platforms: platforms };
+    // "Avec smileys" : toujours envoyé (contrairement au thème, optionnel),
+    // activé par défaut — reflète l'état réel de la case au moment du clic,
+    // que ce soit "Générer" ou le "Régénérer" d'une carte.
+    const withEmojisCheckbox = document.getElementById("social-with-emojis-checkbox");
+    const withEmojis = withEmojisCheckbox ? withEmojisCheckbox.checked : true;
+
+    const payload = { user_id: currentUser.id, platforms: platforms, with_emojis: withEmojis };
     if (theme) payload.theme = theme;
 
     const resp = await fetch(SOCIAL_GENERATE_ENDPOINT, {
@@ -25594,7 +25612,7 @@ function socialResultCardHtml(platformConfig) {
     <div class="field-group" id="social-result-card-${key}">
       <div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>
       ${imageHtml}
-      <div class="field-input" style="white-space:pre-wrap; min-height:auto;">${escapeHtmlForPrint(post.caption || "")}</div>
+      <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
       <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
       <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="copySocialPostText('${key}')">📋 Copier le texte</button>
