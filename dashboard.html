@@ -10300,7 +10300,7 @@ body[data-theme="light"]::after {
     Activez la préparation automatique de posts réseaux : Clarity générera le contenu et vous l'enverra par mail pour validation.
   </p>
 
-  <div class="settings-group" style="margin-top:14px;">
+  <div class="settings-group" style="margin-top:12px;">
     <div class="settings-row" id="social-toggle-row" style="cursor:default;">
       <span class="settings-row-icon settings-row-icon-purple">📣</span>
       <div class="settings-row-title">Publications réseaux</div>
@@ -10316,7 +10316,12 @@ body[data-theme="light"]::after {
        1. Publications (fréquence, réseaux, longueur, smileys)
        2. Société (de quoi parler + logo)
        3. Générer (thème + bouton + résultats)
-       Tous les ids/handlers sont inchangés — seul l'agencement bouge. -->
+       Tous les ids/handlers sont inchangés — seul l'agencement bouge.
+       Espacements resserrés par rapport aux autres sous-pages (demande
+       explicite : cette page faisait "trop chargé") — .settings-group-label
+       garde son style (taille/couleur/majuscules) mais avec un margin-top
+       réduit ici via l'inline style, et les field-group passent de 14px
+       à 10px d'écart. -->
 
   <div class="settings-group-label">Publications</div>
 
@@ -10327,19 +10332,19 @@ body[data-theme="light"]::after {
 
   <!-- Cases à cocher Instagram/Facebook/LinkedIn (plusieurs possibles,
        Instagram cochée par défaut — voir SOCIAL_PLATFORMS). -->
-  <div class="field-group" style="margin-top:14px;">
+  <div class="field-group" style="margin-top:10px;">
     <div class="field-label">Réseaux</div>
     <div class="settings-group" id="social-platforms-checklist" style="margin-top:8px;"></div>
   </div>
 
-  <div class="field-group" style="margin-top:14px;">
+  <div class="field-group" style="margin-top:10px;">
     <div class="field-label">Longueur du texte</div>
     <div class="planning-view-toggle" id="social-length-chips"></div>
   </div>
 
   <!-- "Avec smileys" : envoyé dans le body ("with_emojis") à chaque Générer
        ET chaque Régénérer (voir requestSocialPosts) — activé par défaut. -->
-  <div class="field-group" style="margin-top:14px;">
+  <div class="field-group" style="margin-top:10px;">
     <div class="settings-group">
       <label class="settings-row" style="cursor:pointer;" for="social-with-emojis-checkbox">
         <span class="settings-row-icon settings-row-icon-yellow">😀</span>
@@ -10349,14 +10354,14 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
-  <div class="settings-group-label">Société</div>
+  <div class="settings-group-label" style="margin-top:14px;">Société</div>
 
   <div class="field-group" style="margin-top:8px;">
     <div class="field-label">De quoi Clarity doit parler ?</div>
     <textarea class="field-input" id="social-context-input" rows="4" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
   </div>
 
-  <div class="field-group" style="margin-top:14px;">
+  <div class="field-group" style="margin-top:10px;">
     <div class="field-label">Logo (optionnel)</div>
     <div id="social-logo-preview-wrap" style="display:none; margin-bottom:10px;">
       <img id="social-logo-preview" src="" alt="Logo" style="max-width:120px; max-height:120px; border-radius:14px; border:1px solid var(--clarity-border); display:block; margin-bottom:8px;" />
@@ -10366,19 +10371,19 @@ body[data-theme="light"]::after {
     <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="width:100%;justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
   </div>
 
-  <div class="settings-group-label">Générer</div>
+  <div class="settings-group-label" style="margin-top:14px;">Générer</div>
 
   <div class="field-group" style="margin-top:8px;">
     <div class="field-label">Thème (optionnel)</div>
     <input class="field-input" type="text" id="social-generate-theme-input" placeholder="ex. promotion, nouveauté, conseil client…" />
   </div>
 
-  <button class="sheet-btn" type="button" id="social-generate-btn" style="width:100%;justify-content:center;margin-top:14px;" onclick="generateSocialPosts()">✨ Générer</button>
+  <button class="sheet-btn" type="button" id="social-generate-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="generateSocialPosts()">✨ Générer</button>
 
   <!-- Résultats : une carte par réseau coché (voir renderSocialGeneratedResults/
        socialResultCardHtml) — image si image_url présent, caption, hashtags,
-       Régénérer + Copier par carte. -->
-  <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:14px;margin-top:18px;"></div>
+       Régénérer + Copier côte à côte par carte. -->
+  <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:10px;margin-top:14px;"></div>
 </div>
 
   <!-- GMAIL -->
@@ -25656,7 +25661,7 @@ function renderSocialGeneratedResults() {
   if (!wrap) return;
 
   const platformsWithPosts = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]);
-  wrap.innerHTML = platformsWithPosts.map(p => socialResultCardHtml(p)).join("");
+  wrap.innerHTML = platformsWithPosts.map(p => socialResultCardHtml(p)).join("") + socialSharedImageHtml();
 }
 
 function socialResultCardHtml(platformConfig) {
@@ -25664,18 +25669,36 @@ function socialResultCardHtml(platformConfig) {
   const post = socialGeneratedPosts[key];
   const generating = socialGeneratingPlatforms.has(key);
   const hashtagsStr = socialPostHashtagsText(post);
-  const imageHtml = post.image_url
-    ? `<img src="${escapeHtmlForPrint(post.image_url)}" alt="Image générée" style="width:100%; max-width:320px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin-bottom:10px;" />`
-    : "";
 
+  // Régénérer / Copier côte à côte (même pattern que "Annuler" / "Créer et
+  // utiliser" dans l'éditeur de style d'écriture, ou "Oui" / "Non" dans le
+  // bilan d'essai) — au lieu d'un bouton pleine largeur sous l'autre, qui
+  // faisait prendre toute la page aux cartes de résultat.
   return `
     <div class="field-group" id="social-result-card-${key}">
       <div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>
-      ${imageHtml}
       <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
-      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:12px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
-      <button class="sheet-btn" type="button" style="width:100%;justify-content:center;margin-top:10px;" onclick="copySocialPostText('${key}')">📋 Copier le texte</button>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="sheet-btn" type="button" style="flex:1;justify-content:center;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
+        <button class="sheet-btn" type="button" style="flex:1;justify-content:center;" onclick="copySocialPostText('${key}')">📋 Copier le texte</button>
+      </div>
+    </div>
+  `;
+}
+
+// Une seule image est générée pour l'ensemble des réseaux (pas une par
+// réseau) : on l'affiche donc une seule fois, tout en bas, après les cartes
+// de publications — plutôt que de la répéter dans chaque carte. On la
+// récupère sur le premier post qui en a une (ils partagent tous la même URL).
+function socialSharedImageHtml() {
+  const postWithImage = Object.values(socialGeneratedPosts).find(p => p && p.image_url);
+  if (!postWithImage) return "";
+
+  return `
+    <div class="field-group" id="social-shared-image-card">
+      <div class="field-label">🖼️ Image générée</div>
+      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:320px; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
     </div>
   `;
 }
