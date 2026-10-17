@@ -25314,6 +25314,7 @@ function closeSocialSubpage() {
 
 async function loadSocialSettings() {
   if (!currentUser || !currentUser.id) return;
+  loadSocialSelectedPlatforms();
   try {
     const { data, error } = await supabaseClient
       .from("profiles")
@@ -25514,6 +25515,36 @@ let socialSelectedPlatforms = new Set(["instagram"]);
 let socialGeneratingPlatforms = new Set(); // réseaux dont la génération/régénération est en cours
 let socialGeneratedPosts = {}; // { instagram: {platform,caption,image_url,hashtags}, ... }
 
+// Namespace avec l'email de l'utilisateur connecté (même pattern que
+// targetedDemoStorageKey) pour éviter qu'un autre compte, dans le même
+// navigateur, n'hérite d'une sélection de réseaux qui n'est pas la sienne.
+function socialPlatformsStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "social_platforms_" + email;
+}
+
+function loadSocialSelectedPlatforms() {
+  try {
+    const raw = localStorage.getItem(socialPlatformsStorageKey());
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const valid = parsed.filter(k => SOCIAL_PLATFORMS.some(p => p.key === k));
+      if (valid.length > 0) socialSelectedPlatforms = new Set(valid);
+    }
+  } catch (e) {
+    console.error("Erreur lecture réseaux sélectionnés:", e);
+  }
+}
+
+function saveSocialSelectedPlatforms() {
+  try {
+    localStorage.setItem(socialPlatformsStorageKey(), JSON.stringify(Array.from(socialSelectedPlatforms)));
+  } catch (e) {
+    console.error("Erreur sauvegarde réseaux sélectionnés:", e);
+  }
+}
+
 function renderSocialPlatformChecklist() {
   const wrap = document.getElementById("social-platforms-checklist");
   if (!wrap) return;
@@ -25529,6 +25560,7 @@ function renderSocialPlatformChecklist() {
 function toggleSocialPlatform(key, checked) {
   if (checked) socialSelectedPlatforms.add(key);
   else socialSelectedPlatforms.delete(key);
+  saveSocialSelectedPlatforms();
 }
 
 // Bouton principal "Générer" : génère pour tous les réseaux cochés en un
