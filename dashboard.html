@@ -10318,21 +10318,41 @@ body[data-theme="light"]::after {
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
+    <!-- Jours de publication + heure par jour : ligne compacte qui ouvre une
+         popup (#social-days-modal), visible seulement si "Publications
+         réseaux" est ON (voir syncSocialUI). Remplace l'ancien bloc affiché
+         en permanence sur la page (chips + heures), devenu trop encombrant
+         une fois testé en situation réelle — même contenu, juste déplacé
+         dans une popup. -->
+    <div class="settings-row" id="social-days-row" style="display:none;" onclick="openSocialDaysModal()">
+      <span class="settings-row-icon settings-row-icon-blue">📅</span>
+      <div class="settings-row-title">Jours de publication</div>
+      <span class="settings-row-value" id="social-days-row-display">Aucun jour</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
   </div>
 
-  <!-- Jours de publication + heure par jour (remplace l'ancienne fréquence
-       1/2/3/5/7 en popup) : visible seulement si "Publications réseaux" est
-       ON (voir syncSocialUI). Reste "léger" (demande explicite) — chips
-       inline comme Longueur du texte, pas de popup, même patron que
-       renderSocialLengthChips/.planning-view-toggle-btn pour les chips, et
-       .field-input réutilisé en plus petit pour les champs heure. -->
-  <div class="field-group" id="social-days-field-group" style="margin-top:12px;display:none;">
-    <div class="field-label">Jours de publication</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;" id="social-days-chips"></div>
-    <!-- Heure par jour coché uniquement (côte à côte, pas une par jour non
-         coché) — par défaut 12:00, modifiable individuellement (voir
-         toggleSocialDay/updateSocialDayTime). -->
-    <div style="display:none;flex-direction:column;gap:8px;margin-top:10px;" id="social-days-times-list"></div>
+  <!-- Popup "Jours de publication" : même patron que #notify-offset-modal /
+       #notify-time-modal (.mail-choice-backdrop + .mail-choice-box). Contenu
+       identique à l'ancien bloc inline (chips Lun..Dim + un champ heure par
+       jour coché) — seule la présentation change, logique JS inchangée
+       (renderSocialDaysChips/renderSocialDaysTimesList/toggleSocialDay/
+       updateSocialDayTime). Tout est déjà sauvegardé en live (localStorage)
+       à chaque coche/heure modifiée, donc un seul bouton "Fermer" suffit
+       (pas de Valider/Annuler). -->
+  <div id="social-days-modal" style="display:none;">
+    <div class="mail-choice-backdrop" onclick="closeSocialDaysModal()"></div>
+    <div class="mail-choice-box" style="max-width:320px;padding:16px;">
+      <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Jours de publication</div>
+      <div class="mail-choice-subtitle" style="font-size:12px;">Choisissez les jours, et l'heure pour chacun.</div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;" id="social-days-chips"></div>
+      <div style="display:none;flex-direction:column;gap:8px;margin-top:10px;" id="social-days-times-list"></div>
+
+      <button class="sheet-btn" type="button" onclick="closeSocialDaysModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
+        Fermer
+      </button>
+    </div>
   </div>
 
   <!-- Mise en page en 3 blocs clairs, chacun avec son titre
@@ -25397,10 +25417,11 @@ function syncSocialUI() {
   const statusLabel = document.getElementById("social-status-label");
   if (statusLabel) statusLabel.textContent = socialEnabled ? "Activé" : "Off";
 
-  const daysGroup = document.getElementById("social-days-field-group");
-  if (daysGroup) daysGroup.style.display = socialEnabled ? "block" : "none";
+  const daysRow = document.getElementById("social-days-row");
+  if (daysRow) daysRow.style.display = socialEnabled ? "flex" : "none";
   renderSocialDaysChips();
   renderSocialDaysTimesList();
+  renderSocialDaysRowDisplay();
 
   renderSocialLengthChips();
 
@@ -25485,6 +25506,27 @@ function renderSocialDaysChips() {
   `).join("");
 }
 
+// Résumé affiché dans la ligne "Jours de publication" (settings-row qui
+// ouvre la popup) : liste des jours cochés, ou "Aucun jour" si aucun.
+function renderSocialDaysRowDisplay() {
+  const display = document.getElementById("social-days-row-display");
+  if (!display) return;
+  const checkedDays = SOCIAL_DAYS.filter(d => socialScheduleDays[d.key] !== undefined);
+  display.textContent = checkedDays.length === 0 ? "Aucun jour" : checkedDays.map(d => d.label).join(", ");
+}
+
+function openSocialDaysModal() {
+  renderSocialDaysChips();
+  renderSocialDaysTimesList();
+  const modal = document.getElementById("social-days-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeSocialDaysModal() {
+  const modal = document.getElementById("social-days-modal");
+  if (modal) modal.style.display = "none";
+}
+
 // Liste compacte, sous les chips, UNIQUEMENT pour les jours cochés (pas un
 // champ heure par jour non coché) — chaque jour coché garde son propre
 // champ heure, par défaut SOCIAL_DEFAULT_TIME.
@@ -25514,6 +25556,7 @@ function toggleSocialDay(key) {
   }
   renderSocialDaysChips();
   renderSocialDaysTimesList();
+  renderSocialDaysRowDisplay();
   saveSocialScheduleDays();
 }
 
@@ -27039,7 +27082,7 @@ const CLARITY_MODAL_IDS = [
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal", "relance-after-mail-modal",
   "notify-help-sheet",
-  "targeted-demo-menu-modal", "targeted-demo-end-modal"
+  "targeted-demo-menu-modal", "targeted-demo-end-modal", "social-days-modal"
 ];
 
 let clarityScrollLockY = 0;
