@@ -10349,7 +10349,7 @@ body[data-theme="light"]::after {
       <label class="settings-row" style="cursor:pointer;" for="social-with-emojis-checkbox">
         <span class="settings-row-icon settings-row-icon-yellow">😀</span>
         <div class="settings-row-title">Avec smileys</div>
-        <input type="checkbox" id="social-with-emojis-checkbox" checked />
+        <input type="checkbox" id="social-with-emojis-checkbox" checked onchange="saveSocialWithEmojisPref(this.checked)" />
       </label>
     </div>
   </div>
@@ -25320,6 +25320,7 @@ function closeSocialSubpage() {
 async function loadSocialSettings() {
   if (!currentUser || !currentUser.id) return;
   loadSocialSelectedPlatforms();
+  loadSocialWithEmojisPref();
   try {
     const { data, error } = await supabaseClient
       .from("profiles")
@@ -25550,6 +25551,34 @@ function saveSocialSelectedPlatforms() {
   }
 }
 
+// Même logique que les réseaux sélectionnés (persistance localStorage
+// namespacée par email) pour le switch "Avec smileys" : activé par défaut,
+// mais rechargé au démarrage s'il a été changé.
+function socialWithEmojisStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "social_with_emojis_" + email;
+}
+
+function loadSocialWithEmojisPref() {
+  const checkbox = document.getElementById("social-with-emojis-checkbox");
+  if (!checkbox) return;
+  try {
+    const raw = localStorage.getItem(socialWithEmojisStorageKey());
+    if (raw === null) return; // rien sauvegardé -> garde le défaut coché du HTML
+    checkbox.checked = raw === "true";
+  } catch (e) {
+    console.error("Erreur lecture préférence smileys:", e);
+  }
+}
+
+function saveSocialWithEmojisPref(checked) {
+  try {
+    localStorage.setItem(socialWithEmojisStorageKey(), String(!!checked));
+  } catch (e) {
+    console.error("Erreur sauvegarde préférence smileys:", e);
+  }
+}
+
 function renderSocialPlatformChecklist() {
   const wrap = document.getElementById("social-platforms-checklist");
   if (!wrap) return;
@@ -25687,20 +25716,74 @@ function socialResultCardHtml(platformConfig) {
   `;
 }
 
+// URL de l'image partagée affichée (voir socialSharedImageHtml) — gardée en
+// variable globale plutôt que ré-embarquée dans l'attribut onclick du bouton
+// "Partager", même pattern que crPhotoLightboxUrl pour shareCrPhoto().
+let socialSharedImageUrl = null;
+
 // Une seule image est générée pour l'ensemble des réseaux (pas une par
 // réseau) : on l'affiche donc une seule fois, tout en bas, après les cartes
 // de publications — plutôt que de la répéter dans chaque carte. On la
 // récupère sur le premier post qui en a une (ils partagent tous la même URL).
 function socialSharedImageHtml() {
   const postWithImage = Object.values(socialGeneratedPosts).find(p => p && p.image_url);
-  if (!postWithImage) return "";
+  if (!postWithImage) {
+    socialSharedImageUrl = null;
+    return "";
+  }
+  socialSharedImageUrl = postWithImage.image_url;
 
   return `
     <div class="field-group" id="social-shared-image-card">
       <div class="field-label">🖼️ Image générée</div>
       <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:320px; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
+      <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="shareSocialImage()">📤 Partager</button>
     </div>
   `;
+}
+
+// Feuille de partage native (même patron que shareCrPhoto) : partage le
+// fichier image quand le navigateur le permet (l'utilisateur retrouve aussi
+// "Enregistrer l'image" en plus des apps), sinon partage le lien, puis en
+// dernier recours copie le lien dans le presse-papier.
+async function shareSocialImage() {
+  if (!socialSharedImageUrl) return;
+  const isDataUrl = socialSharedImageUrl.indexOf("data:") === 0;
+  try {
+    if (navigator.share) {
+      if (navigator.canShare) {
+        try {
+          const response = await fetch(socialSharedImageUrl);
+          const blob = await response.blob();
+          const fileName = (socialSharedImageUrl.split("/").pop() || "publication.jpg").split("?")[0];
+          const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return;
+          }
+        } catch (e) {
+          if (isShareCancelled(e)) return;
+          // Fichier non partageable pour une autre raison (CORS, format...) :
+          // on retombe sur le partage du lien juste en dessous plutôt que
+          // d'échouer.
+        }
+      }
+      if (isDataUrl) {
+        showToast("Impossible de partager cette image", "error");
+        return;
+      }
+      await navigator.share({ url: socialSharedImageUrl });
+    } else if (isDataUrl) {
+      showToast("Impossible de partager cette image", "error");
+    } else {
+      await navigator.clipboard.writeText(socialSharedImageUrl);
+      showToast("Lien de l'image copié");
+    }
+  } catch (e) {
+    if (isShareCancelled(e)) return;
+    console.error("Partage image impossible :", e);
+    showToast("Impossible de partager l'image", "error");
+  }
 }
 
 // Normalise la liste de hashtags d'UN post (avec ou sans "#") en une chaîne
