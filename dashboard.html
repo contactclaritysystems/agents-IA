@@ -10296,27 +10296,6 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
-<!-- Popup "Publications par semaine" : même composant que
-     #notify-offset-modal (Rappels/Rendez-vous dans Notifications), sans la
-     partie "wheel" puisqu'il n'y a que 5 valeurs fixes à choisir dans une
-     liste (voir openSocialFrequencyModal/confirmSocialFrequency). -->
-<div id="social-frequency-modal" style="display:none;">
-  <div class="mail-choice-backdrop" onclick="closeSocialFrequencyModal()"></div>
-  <div class="mail-choice-box" style="max-width:300px;padding:16px;">
-    <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Publications par semaine</div>
-    <div class="mail-choice-subtitle" style="font-size:12px;">Combien de publications par semaine ?</div>
-
-    <div id="social-frequency-mode-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
-
-    <button class="save-btn" type="button" style="width:100%;margin-top:14px;padding:12px;font-size:14px;" onclick="confirmSocialFrequency()">
-      Valider
-    </button>
-    <button class="sheet-btn" type="button" onclick="closeSocialFrequencyModal()" style="width:100%;justify-content:center;margin-top:8px;padding:9px;">
-      Annuler
-    </button>
-  </div>
-</div>
-
 <!-- Sous-page "Publications réseaux" (renommée depuis "Publications
      automatiques" : rien n'est encore automatique à ce stade, tout reste
      manuel — réglages + génération à la demande). Même patron que les
@@ -10339,17 +10318,21 @@ body[data-theme="light"]::after {
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
-    <!-- Même barre/carte que la ligne du switch juste au-dessus (demande
-         explicite), visible seulement si "Publications réseaux" est ON (voir
-         syncSocialUI) — ouvre une popup pour choisir la fréquence au lieu
-         d'afficher les chips directement sur la page (même patron que
-         Rappels/Rendez-vous dans Notifications : voir openNotifyOffsetModal). -->
-    <div class="settings-row" id="social-frequency-row" style="display:none;" onclick="openSocialFrequencyModal()">
-      <span class="settings-row-icon settings-row-icon-blue">📅</span>
-      <div class="settings-row-title">Publications par semaine</div>
-      <span class="settings-row-value" id="social-frequency-row-display">3 / semaine</span>
-      <span class="settings-row-chevron">›</span>
-    </div>
+  </div>
+
+  <!-- Jours de publication + heure par jour (remplace l'ancienne fréquence
+       1/2/3/5/7 en popup) : visible seulement si "Publications réseaux" est
+       ON (voir syncSocialUI). Reste "léger" (demande explicite) — chips
+       inline comme Longueur du texte, pas de popup, même patron que
+       renderSocialLengthChips/.planning-view-toggle-btn pour les chips, et
+       .field-input réutilisé en plus petit pour les champs heure. -->
+  <div class="field-group" id="social-days-field-group" style="margin-top:12px;display:none;">
+    <div class="field-label">Jours de publication</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;" id="social-days-chips"></div>
+    <!-- Heure par jour coché uniquement (côte à côte, pas une par jour non
+         coché) — par défaut 12:00, modifiable individuellement (voir
+         toggleSocialDay/updateSocialDayTime). -->
+    <div style="display:none;flex-direction:column;gap:8px;margin-top:10px;" id="social-days-times-list"></div>
   </div>
 
   <!-- Mise en page en 3 blocs clairs, chacun avec son titre
@@ -25327,7 +25310,25 @@ let socialContext = "";
 let socialLogoUrl = null;
 let socialContextDirty = false;
 
-const SOCIAL_FREQUENCY_OPTIONS = [1, 2, 3, 5, 7];
+// Jours de publication cochés + heure par jour, ex. { mon: "12:00", wed:
+// "09:30" } — remplace l'ancienne fréquence 1/2/3/5/7 en popup (demande
+// explicite : jours + heure par jour, visuel léger). Pas encore de colonne
+// Supabase dédiée (voir loadSocialScheduleDays/saveSocialScheduleDays plus
+// bas) : persisté en localStorage pour l'instant, socialFrequency reste
+// quand même synchronisé avec le nombre de jours cochés pour ne pas casser
+// ce que le backend ferait déjà de cette colonne existante.
+let socialScheduleDays = {};
+const SOCIAL_DAYS = [
+  { key: "mon", label: "Lun" },
+  { key: "tue", label: "Mar" },
+  { key: "wed", label: "Mer" },
+  { key: "thu", label: "Jeu" },
+  { key: "fri", label: "Ven" },
+  { key: "sat", label: "Sam" },
+  { key: "sun", label: "Dim" }
+];
+const SOCIAL_DEFAULT_TIME = "12:00";
+
 const SOCIAL_LENGTH_OPTIONS = [
   { key: "court", label: "Court" },
   { key: "moyen", label: "Moyen" },
@@ -25385,6 +25386,7 @@ async function loadSocialSettings() {
   } catch (e) {
     console.error("Erreur réseau publications automatiques:", e);
   }
+  loadSocialScheduleDays();
   syncSocialUI();
 }
 
@@ -25395,9 +25397,10 @@ function syncSocialUI() {
   const statusLabel = document.getElementById("social-status-label");
   if (statusLabel) statusLabel.textContent = socialEnabled ? "Activé" : "Off";
 
-  const frequencyRow = document.getElementById("social-frequency-row");
-  if (frequencyRow) frequencyRow.style.display = socialEnabled ? "flex" : "none";
-  renderSocialFrequencyRowDisplay();
+  const daysGroup = document.getElementById("social-days-field-group");
+  if (daysGroup) daysGroup.style.display = socialEnabled ? "block" : "none";
+  renderSocialDaysChips();
+  renderSocialDaysTimesList();
 
   renderSocialLengthChips();
 
@@ -25434,53 +25437,90 @@ function syncSocialUI() {
   }
 }
 
-// Juste l'affichage de la valeur courante sur la ligne (pas la popup elle-
-// même) — appelé par syncSocialUI à chaque changement d'état.
-function renderSocialFrequencyRowDisplay() {
-  const display = document.getElementById("social-frequency-row-display");
-  if (display) display.textContent = socialFrequency + " / semaine";
+// Namespace par email (même pattern que socialPlatformsStorageKey /
+// socialWithEmojisStorageKey) : pas encore de colonne Supabase pour le
+// planning jour/heure (voir le commentaire plus haut sur socialScheduleDays
+// et le résumé envoyé à Anthony), donc persisté ici en localStorage.
+function socialScheduleStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "social_schedule_" + email;
 }
 
-// Popup de choix de la fréquence (même patron que
-// openNotifyOffsetModal/renderOffsetModeList, sans la partie "wheel" : ici
-// une simple liste de 5 valeurs fixes). La sélection dans la liste est
-// provisoire (socialFrequencyModalValue) tant que "Valider" n'a pas été
-// cliqué — "Annuler" referme sans rien changer, comme pour Rappels/RDV.
-let socialFrequencyModalValue = null;
-
-function openSocialFrequencyModal() {
-  socialFrequencyModalValue = socialFrequency;
-  renderSocialFrequencyModalList();
-  const modal = document.getElementById("social-frequency-modal");
-  if (modal) modal.style.display = "flex";
+function loadSocialScheduleDays() {
+  try {
+    const raw = localStorage.getItem(socialScheduleStorageKey());
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return;
+    const valid = {};
+    Object.keys(parsed).forEach(key => {
+      const isKnownDay = SOCIAL_DAYS.some(d => d.key === key);
+      const isValidTime = typeof parsed[key] === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(parsed[key]);
+      if (isKnownDay && isValidTime) valid[key] = parsed[key];
+    });
+    socialScheduleDays = valid;
+  } catch (e) {
+    console.error("Erreur lecture jours de publication:", e);
+  }
 }
 
-function closeSocialFrequencyModal() {
-  const modal = document.getElementById("social-frequency-modal");
-  if (modal) modal.style.display = "none";
+function saveSocialScheduleDays() {
+  try {
+    localStorage.setItem(socialScheduleStorageKey(), JSON.stringify(socialScheduleDays));
+  } catch (e) {
+    console.error("Erreur sauvegarde jours de publication:", e);
+  }
+  // socialFrequency (colonne Supabase déjà existante) reste synchronisé
+  // avec le nombre de jours cochés, pour ne pas casser ce que le backend en
+  // ferait déjà aujourd'hui.
+  socialFrequency = Object.keys(socialScheduleDays).length;
+  saveSocialSettings();
 }
 
-function renderSocialFrequencyModalList() {
-  const container = document.getElementById("social-frequency-mode-list");
-  if (!container) return;
-  container.innerHTML = SOCIAL_FREQUENCY_OPTIONS.map(n => `
-    <button type="button" class="notify-offset-mode-row${n === socialFrequencyModalValue ? " active" : ""}" onclick="selectSocialFrequencyModalValue(${n})">
-      <span>${n} / semaine</span>
-      <span class="notify-offset-mode-check">✓</span>
-    </button>
+function renderSocialDaysChips() {
+  const wrap = document.getElementById("social-days-chips");
+  if (!wrap) return;
+  wrap.innerHTML = SOCIAL_DAYS.map(d => `
+    <button type="button" class="planning-view-toggle-btn${socialScheduleDays[d.key] !== undefined ? " active" : ""}" style="flex:0 0 auto;padding:7px 14px;border-radius:10px;" onclick="toggleSocialDay('${d.key}')">${d.label}</button>
   `).join("");
 }
 
-function selectSocialFrequencyModalValue(n) {
-  socialFrequencyModalValue = n;
-  renderSocialFrequencyModalList();
+// Liste compacte, sous les chips, UNIQUEMENT pour les jours cochés (pas un
+// champ heure par jour non coché) — chaque jour coché garde son propre
+// champ heure, par défaut SOCIAL_DEFAULT_TIME.
+function renderSocialDaysTimesList() {
+  const wrap = document.getElementById("social-days-times-list");
+  if (!wrap) return;
+  const checkedDays = SOCIAL_DAYS.filter(d => socialScheduleDays[d.key] !== undefined);
+  if (checkedDays.length === 0) {
+    wrap.style.display = "none";
+    wrap.innerHTML = "";
+    return;
+  }
+  wrap.style.display = "flex";
+  wrap.innerHTML = checkedDays.map(d => `
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:12.5px;font-weight:650;color:var(--clarity-text);width:34px;">${d.label}</span>
+      <input type="time" class="field-input" style="width:auto;min-height:0;height:34px;padding:4px 8px;font-size:12.5px;" value="${escapeHtmlForPrint(socialScheduleDays[d.key])}" onchange="updateSocialDayTime('${d.key}', this.value)" />
+    </div>
+  `).join("");
 }
 
-function confirmSocialFrequency() {
-  socialFrequency = socialFrequencyModalValue;
-  renderSocialFrequencyRowDisplay();
-  saveSocialSettings();
-  closeSocialFrequencyModal();
+function toggleSocialDay(key) {
+  if (socialScheduleDays[key] !== undefined) {
+    delete socialScheduleDays[key];
+  } else {
+    socialScheduleDays[key] = SOCIAL_DEFAULT_TIME;
+  }
+  renderSocialDaysChips();
+  renderSocialDaysTimesList();
+  saveSocialScheduleDays();
+}
+
+function updateSocialDayTime(key, value) {
+  if (!value || socialScheduleDays[key] === undefined) return;
+  socialScheduleDays[key] = value;
+  saveSocialScheduleDays();
 }
 
 function renderSocialLengthChips() {
@@ -26996,7 +27036,6 @@ const CLARITY_MODAL_IDS = [
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "notify-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
-  "social-frequency-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal", "relance-after-mail-modal",
   "notify-help-sheet",
