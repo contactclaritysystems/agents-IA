@@ -10296,6 +10296,27 @@ body[data-theme="light"]::after {
   </div>
 </div>
 
+<!-- Popup "Publications par semaine" : même composant que
+     #notify-offset-modal (Rappels/Rendez-vous dans Notifications), sans la
+     partie "wheel" puisqu'il n'y a que 5 valeurs fixes à choisir dans une
+     liste (voir openSocialFrequencyModal/confirmSocialFrequency). -->
+<div id="social-frequency-modal" style="display:none;">
+  <div class="mail-choice-backdrop" onclick="closeSocialFrequencyModal()"></div>
+  <div class="mail-choice-box" style="max-width:300px;padding:16px;">
+    <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Publications par semaine</div>
+    <div class="mail-choice-subtitle" style="font-size:12px;">Combien de publications par semaine ?</div>
+
+    <div id="social-frequency-mode-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+
+    <button class="save-btn" type="button" style="width:100%;margin-top:14px;padding:12px;font-size:14px;" onclick="confirmSocialFrequency()">
+      Valider
+    </button>
+    <button class="sheet-btn" type="button" onclick="closeSocialFrequencyModal()" style="width:100%;justify-content:center;margin-top:8px;padding:9px;">
+      Annuler
+    </button>
+  </div>
+</div>
+
 <!-- Sous-page "Publications réseaux" (renommée depuis "Publications
      automatiques" : rien n'est encore automatique à ce stade, tout reste
      manuel — réglages + génération à la demande). Même patron que les
@@ -10318,6 +10339,17 @@ body[data-theme="light"]::after {
         <span class="settings-toggle-knob"></span>
       </button>
     </div>
+    <!-- Même barre/carte que la ligne du switch juste au-dessus (demande
+         explicite), visible seulement si "Publications réseaux" est ON (voir
+         syncSocialUI) — ouvre une popup pour choisir la fréquence au lieu
+         d'afficher les chips directement sur la page (même patron que
+         Rappels/Rendez-vous dans Notifications : voir openNotifyOffsetModal). -->
+    <div class="settings-row" id="social-frequency-row" style="display:none;" onclick="openSocialFrequencyModal()">
+      <span class="settings-row-icon settings-row-icon-blue">📅</span>
+      <div class="settings-row-title">Publications par semaine</div>
+      <span class="settings-row-value" id="social-frequency-row-display">3 / semaine</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
   </div>
 
   <!-- Mise en page en 3 blocs clairs, chacun avec son titre
@@ -10334,18 +10366,6 @@ body[data-theme="light"]::after {
        à 10px d'écart. -->
 
   <div class="settings-group-label">Publications</div>
-
-  <!-- Repliée tant que "Publications réseaux" est OFF : seule la ligne du
-       switch reste visible (voir syncSocialUI). -->
-  <div class="field-group" id="social-frequency-field-group" style="margin-top:8px;display:none;">
-    <div class="field-label">Publications par semaine</div>
-    <!-- Chips compacts (pas la grosse barre .planning-view-toggle en pleine
-         largeur) : on réutilise .planning-view-toggle-btn pour les couleurs/
-         l'état actif, mais chaque bouton garde sa largeur naturelle au lieu
-         de se répartir en flex:1 sur toute la ligne (voir
-         renderSocialFrequencyChips). -->
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;" id="social-frequency-chips"></div>
-  </div>
 
   <!-- Cases à cocher Instagram/Facebook/LinkedIn (plusieurs possibles,
        Instagram cochée par défaut — voir SOCIAL_PLATFORMS). -->
@@ -25375,10 +25395,10 @@ function syncSocialUI() {
   const statusLabel = document.getElementById("social-status-label");
   if (statusLabel) statusLabel.textContent = socialEnabled ? "Activé" : "Off";
 
-  const frequencyGroup = document.getElementById("social-frequency-field-group");
-  if (frequencyGroup) frequencyGroup.style.display = socialEnabled ? "block" : "none";
+  const frequencyRow = document.getElementById("social-frequency-row");
+  if (frequencyRow) frequencyRow.style.display = socialEnabled ? "flex" : "none";
+  renderSocialFrequencyRowDisplay();
 
-  renderSocialFrequencyChips();
   renderSocialLengthChips();
 
   // Ne touche jamais la valeur si le champ a le focus (évite d'écraser une
@@ -25403,14 +25423,64 @@ function syncSocialUI() {
       if (removeLogoBtn) removeLogoBtn.style.display = "none";
     }
   }
+
+  // Libellé du bouton d'upload ("Choisir un logo" / "Ajouter un autre logo")
+  // — pas touché pendant un envoi en cours ("⏳ Envoi...", voir
+  // handleSocialLogoSelected), exactement comme le textarea plus haut n'est
+  // pas écrasé pendant la frappe.
+  const uploadBtn = document.getElementById("social-logo-upload-btn");
+  if (uploadBtn && !uploadBtn.disabled) {
+    uploadBtn.innerHTML = socialLogoUploadButtonLabel();
+  }
 }
 
-function renderSocialFrequencyChips() {
-  const wrap = document.getElementById("social-frequency-chips");
-  if (!wrap) return;
-  wrap.innerHTML = SOCIAL_FREQUENCY_OPTIONS.map(n => `
-    <button type="button" class="planning-view-toggle-btn${n === socialFrequency ? " active" : ""}" style="flex:0 0 auto;padding:7px 14px;border-radius:10px;" onclick="selectSocialFrequency(${n})">${n}</button>
+// Juste l'affichage de la valeur courante sur la ligne (pas la popup elle-
+// même) — appelé par syncSocialUI à chaque changement d'état.
+function renderSocialFrequencyRowDisplay() {
+  const display = document.getElementById("social-frequency-row-display");
+  if (display) display.textContent = socialFrequency + " / semaine";
+}
+
+// Popup de choix de la fréquence (même patron que
+// openNotifyOffsetModal/renderOffsetModeList, sans la partie "wheel" : ici
+// une simple liste de 5 valeurs fixes). La sélection dans la liste est
+// provisoire (socialFrequencyModalValue) tant que "Valider" n'a pas été
+// cliqué — "Annuler" referme sans rien changer, comme pour Rappels/RDV.
+let socialFrequencyModalValue = null;
+
+function openSocialFrequencyModal() {
+  socialFrequencyModalValue = socialFrequency;
+  renderSocialFrequencyModalList();
+  const modal = document.getElementById("social-frequency-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeSocialFrequencyModal() {
+  const modal = document.getElementById("social-frequency-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function renderSocialFrequencyModalList() {
+  const container = document.getElementById("social-frequency-mode-list");
+  if (!container) return;
+  container.innerHTML = SOCIAL_FREQUENCY_OPTIONS.map(n => `
+    <button type="button" class="notify-offset-mode-row${n === socialFrequencyModalValue ? " active" : ""}" onclick="selectSocialFrequencyModalValue(${n})">
+      <span>${n} / semaine</span>
+      <span class="notify-offset-mode-check">✓</span>
+    </button>
   `).join("");
+}
+
+function selectSocialFrequencyModalValue(n) {
+  socialFrequencyModalValue = n;
+  renderSocialFrequencyModalList();
+}
+
+function confirmSocialFrequency() {
+  socialFrequency = socialFrequencyModalValue;
+  renderSocialFrequencyRowDisplay();
+  saveSocialSettings();
+  closeSocialFrequencyModal();
 }
 
 function renderSocialLengthChips() {
@@ -25424,12 +25494,6 @@ function renderSocialLengthChips() {
 function setSocialEnabled(enabled) {
   socialEnabled = enabled;
   syncSocialUI();
-  saveSocialSettings();
-}
-
-function selectSocialFrequency(n) {
-  socialFrequency = n;
-  renderSocialFrequencyChips();
   saveSocialSettings();
 }
 
@@ -25457,13 +25521,20 @@ function flushSocialContextIfDirty() {
 // profiles (saveSocialSettings) pour que le logo reste choisi d'une session
 // à l'autre, mais c'est bien logo_url (renvoyé par CE endpoint) qui est
 // envoyé à /social/generate (voir requestSocialPosts), pas une URL Supabase.
+// "Choisir un logo" tant qu'aucun logo n'est encore défini, "Ajouter un
+// autre logo" une fois qu'un logo existe déjà (demande explicite) — centralisé
+// ici pour que syncSocialUI() ET handleSocialLogoSelected() (état "⏳ Envoi...")
+// restent toujours d'accord sur le libellé à afficher.
+function socialLogoUploadButtonLabel() {
+  return socialLogoUrl ? "Ajouter un autre logo" : "Choisir un logo";
+}
+
 async function handleSocialLogoSelected(input) {
   const file = input.files && input.files[0];
   input.value = "";
   if (!file || !currentUser || !currentUser.id) return;
 
   const btn = document.getElementById("social-logo-upload-btn");
-  const originalLabel = btn ? btn.innerHTML : "";
   if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Envoi..."; }
 
   try {
@@ -25491,7 +25562,7 @@ async function handleSocialLogoSelected(input) {
     console.error("Erreur upload logo publications:", e);
     showToast("Impossible d'envoyer le logo", "error");
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = originalLabel; }
+    if (btn) { btn.disabled = false; btn.innerHTML = socialLogoUploadButtonLabel(); }
   }
 }
 
@@ -26925,6 +26996,7 @@ const CLARITY_MODAL_IDS = [
   "writing-style-editor-modal",
   "first-schedule-notice-modal", "notify-time-modal", "add-to-home-sheet",
   "notify-offset-modal", "appointment-notify-modal", "mic-permission-info-sheet", "gmail-connect-consent-modal",
+  "social-frequency-modal",
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal", "relance-after-mail-modal",
   "notify-help-sheet",
