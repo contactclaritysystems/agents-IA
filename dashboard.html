@@ -25755,7 +25755,13 @@ async function shareSocialImage() {
         try {
           const response = await fetch(socialSharedImageUrl);
           const blob = await response.blob();
-          const fileName = (socialSharedImageUrl.split("/").pop() || "publication.jpg").split("?")[0];
+          // L'image générée arrive en data: URL (base64 inline), pas en
+          // vraie URL hébergée : découper sur "/" comme pour un lien classique
+          // donnerait un nom absurde (le base64 contient plein de "/"). On
+          // dérive l'extension du type MIME dans ce cas.
+          const fileName = isDataUrl
+            ? "publication." + ((socialSharedImageUrl.match(/^data:image\/(\w+);/) || [, "png"])[1])
+            : (socialSharedImageUrl.split("/").pop() || "publication.jpg").split("?")[0];
           const file = new File([blob], fileName, { type: blob.type || "image/jpeg" });
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
