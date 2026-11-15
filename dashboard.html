@@ -6535,6 +6535,29 @@ body.qa-reorder-active {
   display: none !important;
 }
 
+/* Sur PC uniquement (pas sur mobile) : le menu déroulant "Thème" est trop
+   long en pleine largeur — on le resserre et on le centre à côté de son
+   libellé, plutôt que de le laisser occuper toute la ligne en dessous. */
+@media (min-width: 901px) {
+  #social-theme-field-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  #social-theme-field-group .field-label {
+    margin: 0;
+    flex: 0 0 auto;
+  }
+  #social-theme-field-group #social-generate-theme-select,
+  #social-theme-field-group #social-generate-theme-custom-input {
+    flex: 0 0 auto;
+    width: 220px;
+    margin-top: 0;
+  }
+}
+
 #main-agents .mobile-agent-top {
   justify-content: center !important;
 }
@@ -10407,7 +10430,7 @@ body[data-theme="light"]::after {
        #notify-time-modal (.mail-choice-backdrop + .mail-choice-box). Contenu
        identique à l'ancien bloc inline (chips Lun..Dim + un champ heure par
        jour coché) — seule la présentation change, logique JS inchangée
-       (renderSocialDaysChips/renderSocialDaysTimesList/toggleSocialDay/
+       (renderSocialDaysList/toggleSocialDay/
        updateSocialDayTime). Tout est déjà sauvegardé en live (localStorage)
        à chaque coche/heure modifiée, donc un seul bouton "Fermer" suffit
        (pas de Valider/Annuler). -->
@@ -10417,8 +10440,7 @@ body[data-theme="light"]::after {
       <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Jours de publication</div>
       <div class="mail-choice-subtitle" style="font-size:12px;">Choisissez les jours, et l'heure pour chacun.</div>
 
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;" id="social-days-chips"></div>
-      <div style="display:none;flex-direction:column;gap:8px;margin-top:10px;" id="social-days-times-list"></div>
+      <div style="display:flex;flex-direction:column;margin-top:8px;" id="social-days-list"></div>
 
       <button class="sheet-btn" type="button" onclick="closeSocialDaysModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
         Fermer
@@ -10505,7 +10527,6 @@ body[data-theme="light"]::after {
     <div class="mail-choice-backdrop" onclick="closeSocialContextModal()"></div>
     <div class="mail-choice-box" style="max-width:340px;padding:16px;">
       <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Société</div>
-      <div class="mail-choice-subtitle" style="font-size:12px;">De quoi Clarity doit parler, et votre logo.</div>
 
       <div class="field-group" style="margin-top:12px;">
         <div class="field-label">De quoi Clarity doit parler ?</div>
@@ -10513,19 +10534,22 @@ body[data-theme="light"]::after {
       </div>
 
       <div class="field-group" style="margin-top:10px;">
-        <div class="field-label">Logo (optionnel)</div>
-        <!-- Logo à gauche, boutons empilés à droite sur la même ligne : voir
-             removeSocialLogo/handleSocialLogoSelected/syncSocialUI pour
-             l'affichage de la prévisualisation et du bouton "Retirer le
-             logo". -->
+        <div class="field-label">Logo</div>
+        <div style="font-size:11px;color:var(--clarity-text-tertiary);margin-top:2px;">Idéalement un logo sans fond (PNG transparent)</div>
+        <!-- Logo à gauche (avec une petite croix en haut à droite pour le
+             retirer, voir removeSocialLogo), bouton d'upload à droite : voir
+             handleSocialLogoSelected/syncSocialUI pour l'affichage de la
+             prévisualisation. -->
         <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
-          <div id="social-logo-preview-wrap" style="display:none;flex:0 0 auto;">
+          <div id="social-logo-preview-wrap" style="display:none;flex:0 0 auto;position:relative;">
             <img id="social-logo-preview" src="" alt="Logo" style="width:64px; height:64px; object-fit:cover; border-radius:14px; border:1px solid var(--clarity-border); display:block;" />
+            <button type="button" id="social-logo-remove-btn" class="icon-square-btn" style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;min-width:22px;border-radius:50%;padding:0;" onclick="removeSocialLogo()" aria-label="Retirer le logo" title="Retirer le logo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg>
+            </button>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
             <input type="file" id="social-logo-input" accept="image/*" style="display:none;" onchange="handleSocialLogoSelected(this)" />
             <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
-            <button class="sheet-btn" type="button" id="social-logo-remove-btn" style="justify-content:center;display:none;" onclick="removeSocialLogo()">Retirer le logo</button>
           </div>
         </div>
       </div>
@@ -10536,9 +10560,7 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
-  <div class="settings-group-label" style="margin-top:14px;">Générer</div>
-
-  <div class="field-group" style="margin-top:8px;">
+  <div class="field-group" id="social-theme-field-group" style="margin-top:14px;">
     <div class="field-label">Thème (optionnel)</div>
     <!-- Menu déroulant (mêmes thèmes que ceux proposés par le backend) + un
          champ texte qui n'apparaît que pour "Autre (précisez)" (voir
@@ -25731,8 +25753,7 @@ function syncSocialUI() {
 
   const daysRow = document.getElementById("social-days-row");
   if (daysRow) daysRow.style.display = socialEnabled ? "flex" : "none";
-  renderSocialDaysChips();
-  renderSocialDaysTimesList();
+  renderSocialDaysList();
   renderSocialDaysRowDisplay();
 
   renderSocialLengthChips();
@@ -25815,12 +25836,27 @@ function saveSocialScheduleDays() {
   saveSocialSettings();
 }
 
-function renderSocialDaysChips() {
-  const wrap = document.getElementById("social-days-chips");
+// Une seule liste, un jour par ligne (case à cocher + heure) : remplace
+// l'ancien duo chips + liste d'heures séparée, qui répétait chaque jour
+// coché deux fois (une fois en chip, une fois en ligne d'heure). Un jour
+// non coché garde son champ heure visible mais désactivé et grisé, plutôt
+// que de disparaître, pour ne pas faire sauter la mise en page à chaque
+// coche.
+function renderSocialDaysList() {
+  const wrap = document.getElementById("social-days-list");
   if (!wrap) return;
-  wrap.innerHTML = SOCIAL_DAYS.map(d => `
-    <button type="button" class="planning-view-toggle-btn${socialScheduleDays[d.key] !== undefined ? " active" : ""}" style="flex:0 0 auto;padding:7px 14px;border-radius:10px;" onclick="toggleSocialDay('${d.key}')">${d.label}</button>
-  `).join("");
+  wrap.innerHTML = SOCIAL_DAYS.map((d, i) => {
+    const checked = socialScheduleDays[d.key] !== undefined;
+    const time = checked ? socialScheduleDays[d.key] : SOCIAL_DEFAULT_TIME;
+    const border = i < SOCIAL_DAYS.length - 1 ? "border-bottom:1px solid var(--clarity-border);" : "";
+    return `
+      <label style="display:flex;align-items:center;gap:10px;padding:9px 0;${border}${checked ? "" : "opacity:.45;"}">
+        <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleSocialDay('${d.key}')" />
+        <span style="flex:1;font-size:13px;font-weight:650;color:var(--clarity-text);">${d.label}</span>
+        <input type="time" class="field-input" style="width:auto;min-height:0;height:32px;padding:4px 8px;font-size:12.5px;" value="${escapeHtmlForPrint(time)}" ${checked ? "" : "disabled"} onchange="updateSocialDayTime('${d.key}', this.value)" />
+      </label>
+    `;
+  }).join("");
 }
 
 // Résumé affiché dans la ligne "Jours de publication" (settings-row qui
@@ -25833,8 +25869,7 @@ function renderSocialDaysRowDisplay() {
 }
 
 function openSocialDaysModal() {
-  renderSocialDaysChips();
-  renderSocialDaysTimesList();
+  renderSocialDaysList();
   const modal = document.getElementById("social-days-modal");
   if (modal) modal.style.display = "flex";
 }
@@ -25916,35 +25951,13 @@ function closeSocialContextModal() {
   if (modal) modal.style.display = "none";
 }
 
-// Liste compacte, sous les chips, UNIQUEMENT pour les jours cochés (pas un
-// champ heure par jour non coché) — chaque jour coché garde son propre
-// champ heure, par défaut SOCIAL_DEFAULT_TIME.
-function renderSocialDaysTimesList() {
-  const wrap = document.getElementById("social-days-times-list");
-  if (!wrap) return;
-  const checkedDays = SOCIAL_DAYS.filter(d => socialScheduleDays[d.key] !== undefined);
-  if (checkedDays.length === 0) {
-    wrap.style.display = "none";
-    wrap.innerHTML = "";
-    return;
-  }
-  wrap.style.display = "flex";
-  wrap.innerHTML = checkedDays.map(d => `
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:12.5px;font-weight:650;color:var(--clarity-text);width:34px;">${d.label}</span>
-      <input type="time" class="field-input" style="width:auto;min-height:0;height:34px;padding:4px 8px;font-size:12.5px;" value="${escapeHtmlForPrint(socialScheduleDays[d.key])}" onchange="updateSocialDayTime('${d.key}', this.value)" />
-    </div>
-  `).join("");
-}
-
 function toggleSocialDay(key) {
   if (socialScheduleDays[key] !== undefined) {
     delete socialScheduleDays[key];
   } else {
     socialScheduleDays[key] = SOCIAL_DEFAULT_TIME;
   }
-  renderSocialDaysChips();
-  renderSocialDaysTimesList();
+  renderSocialDaysList();
   renderSocialDaysRowDisplay();
   saveSocialScheduleDays();
 }
