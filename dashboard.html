@@ -10423,24 +10423,29 @@ body[data-theme="light"]::after {
 
   <div class="field-group" style="margin-top:8px;">
     <div class="field-label">Thème (optionnel)</div>
-    <!-- Remplace l'ancien champ texte libre par un menu déroulant (mêmes
-         thèmes que ceux proposés par le backend) + un champ texte qui
-         n'apparaît que pour "Autre (précisez)" (voir
+    <!-- Menu déroulant (mêmes thèmes que ceux proposés par le backend) + un
+         champ texte qui n'apparaît que pour "Autre (précisez)" (voir
          syncSocialThemeCustomInputVisibility). Le payload envoyé à
          /social/generate reste le même champ "theme" (voir
          requestSocialPosts) : valeur du menu, ou le texte du champ
-         "précisez" quand le menu est sur "other". -->
-    <select class="field-input" id="social-generate-theme-select" onchange="syncSocialThemeCustomInputVisibility()">
+         "précisez" quand le menu est sur "other". Le thème choisi est en
+         plus sauvegardé dans Supabase (profiles.social_theme, voir
+         saveSocialTheme/loadSocialSettings) pour être rechargé au prochain
+         chargement de la page. -->
+    <select class="field-input" id="social-generate-theme-select" onchange="handleSocialThemeSelectChange()">
       <option value="">Aucun</option>
-      <option value="conseil_client">Conseil client</option>
-      <option value="promotion">Promotion / offre</option>
-      <option value="nouveaute">Nouveauté</option>
-      <option value="temoignage">Témoignage / résultat</option>
+      <option value="tester_produit">Faire tester le produit / service</option>
+      <option value="gagner_abonnes">Gagner des abonnés</option>
+      <option value="plus_commentaires">Avoir plus de commentaires</option>
+      <option value="messages_prives">Obtenir des messages privés</option>
+      <option value="nouveaute">Annoncer une nouveauté</option>
+      <option value="resultat_client">Montrer un résultat client</option>
+      <option value="conseil_astuce">Conseil / astuce utile</option>
       <option value="coulisses">Coulisses / quotidien</option>
-      <option value="astuce_productivite">Astuce productivité</option>
+      <option value="offre_promo">Offre limitée / promo</option>
       <option value="other">Autre (précisez)</option>
     </select>
-    <input class="field-input" type="text" id="social-generate-theme-custom-input" placeholder="Précisez le thème…" style="margin-top:8px;display:none;" />
+    <input class="field-input" type="text" id="social-generate-theme-custom-input" placeholder="Précisez le thème…" style="margin-top:8px;display:none;" oninput="markSocialThemeCustomDirty()" onblur="flushSocialThemeCustomIfDirty()" />
   </div>
 
   <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:10px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
@@ -25347,6 +25352,14 @@ let socialContext = "";
 let socialLogoUrl = null;
 let socialContextDirty = false;
 
+// Dernier thème choisi dans le menu déroulant "Thème (optionnel)" (section
+// Générer) — valeur finale envoyée à /social/generate (slug prédéfini, ou
+// texte libre si "Autre (précisez)"), persistée dans Supabase
+// (profiles.social_theme) et rechargée au chargement de la page pour que
+// l'utilisateur n'ait pas à le ressaisir à chaque fois (voir
+// loadSocialSettings/saveSocialSettings/applySocialThemeToUI).
+let socialTheme = "";
+
 // Jours de publication cochés + heure par jour, ex. { mon: "12:00", wed:
 // "09:30" } — remplace l'ancienne fréquence 1/2/3/5/7 en popup (demande
 // explicite : jours + heure par jour, visuel léger). Pas encore de colonne
@@ -25407,7 +25420,7 @@ async function loadSocialSettings() {
   try {
     const { data, error } = await supabaseClient
       .from("profiles")
-      .select("social_enabled, social_frequency, social_length, social_context, social_logo_url")
+      .select("social_enabled, social_frequency, social_length, social_context, social_logo_url, social_theme")
       .eq("id", currentUser.id)
       .maybeSingle();
 
@@ -25419,6 +25432,7 @@ async function loadSocialSettings() {
       socialLength = data.social_length || "moyen";
       socialContext = data.social_context || "";
       socialLogoUrl = data.social_logo_url || null;
+      socialTheme = data.social_theme || "";
     }
   } catch (e) {
     console.error("Erreur réseau publications automatiques:", e);
@@ -25427,6 +25441,18 @@ async function loadSocialSettings() {
   syncSocialUI();
 }
 
+// Valeurs connues du menu "Thème (optionnel)" (hors "" et "other") : si
+// socialTheme (rechargé depuis Supabase) correspond à une de ces valeurs,
+// on sélectionne l'option correspondante ; sinon (texte libre d'un ancien
+// "Autre") on bascule le menu sur "other" et on remplit le champ "précisez"
+// avec ce texte (voir applySocialThemeToUI).
+const SOCIAL_THEME_KNOWN_VALUES = [
+  "tester_produit", "gagner_abonnes", "plus_commentaires", "messages_prives",
+  "nouveaute", "resultat_client", "conseil_astuce", "coulisses", "offre_promo"
+];
+
+let socialThemeCustomDirty = false;
+
 // Affiche le champ "Précisez le thème…" uniquement quand le menu déroulant
 // "Thème (optionnel)" est sur "Autre (précisez)" (option value="other").
 function syncSocialThemeCustomInputVisibility() {
@@ -25434,6 +25460,59 @@ function syncSocialThemeCustomInputVisibility() {
   const customInput = document.getElementById("social-generate-theme-custom-input");
   if (!select || !customInput) return;
   customInput.style.display = select.value === "other" ? "block" : "none";
+}
+
+// Reflète socialTheme (valeur rechargée depuis Supabase, ou dernière valeur
+// choisie) dans le menu + le champ "précisez" — appelé après chargement
+// (loadSocialSettings) et par syncSocialUI.
+function applySocialThemeToUI() {
+  const select = document.getElementById("social-generate-theme-select");
+  const customInput = document.getElementById("social-generate-theme-custom-input");
+  // Ne touche jamais le champ "précisez" s'il a le focus (même garde que le
+  // textarea "Contexte") : évite d'écraser une frappe en cours si
+  // syncSocialUI() est rappelée entre-temps.
+  const customInputHasFocus = customInput && document.activeElement === customInput;
+  if (!select) return;
+  if (socialTheme === "" || SOCIAL_THEME_KNOWN_VALUES.includes(socialTheme)) {
+    select.value = socialTheme;
+    if (customInput && !customInputHasFocus) customInput.value = "";
+  } else {
+    select.value = "other";
+    if (customInput && !customInputHasFocus) customInput.value = socialTheme;
+  }
+  syncSocialThemeCustomInputVisibility();
+}
+
+// Appelé au changement du menu déroulant. Pour une valeur prédéfinie (y
+// compris "Aucun"), socialTheme = la valeur du menu, sauvegardée tout de
+// suite. Pour "Autre (précisez)", on ne sauvegarde rien ici (le champ texte
+// est vide à ce stade) — c'est flushSocialThemeCustomIfDirty qui sauvegarde
+// une fois l'utilisateur sorti du champ texte.
+function handleSocialThemeSelectChange() {
+  const select = document.getElementById("social-generate-theme-select");
+  syncSocialThemeCustomInputVisibility();
+  if (!select) return;
+  if (select.value !== "other") {
+    socialTheme = select.value;
+    saveSocialSettings();
+  }
+}
+
+function markSocialThemeCustomDirty() {
+  socialThemeCustomDirty = true;
+}
+
+// Même patron que flushSocialContextIfDirty : on ne sauvegarde le texte
+// libre d'"Autre (précisez)" qu'à la sortie du champ (onblur), pas à chaque
+// frappe, en passant par le même saveSocialSettings() que les autres
+// réglages "Publications réseaux" (socialTheme fait désormais partie de son
+// upsert, voir saveSocialSettings).
+function flushSocialThemeCustomIfDirty() {
+  if (!socialThemeCustomDirty) return;
+  const customInput = document.getElementById("social-generate-theme-custom-input");
+  socialTheme = customInput ? customInput.value.trim() : socialTheme;
+  socialThemeCustomDirty = false;
+  saveSocialSettings();
 }
 
 function syncSocialUI() {
@@ -25450,6 +25529,7 @@ function syncSocialUI() {
   renderSocialDaysRowDisplay();
 
   renderSocialLengthChips();
+  applySocialThemeToUI();
 
   // Ne touche jamais la valeur si le champ a le focus (évite d'écraser une
   // frappe en cours si syncSocialUI() est rappelée entre-temps, ex : juste
@@ -25697,6 +25777,7 @@ async function saveSocialSettings() {
         social_length: socialLength,
         social_context: socialContext,
         social_logo_url: socialLogoUrl,
+        social_theme: socialTheme,
         updated_at: new Date().toISOString()
       }, { onConflict: "id" });
 
