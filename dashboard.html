@@ -10423,7 +10423,24 @@ body[data-theme="light"]::after {
 
   <div class="field-group" style="margin-top:8px;">
     <div class="field-label">Thème (optionnel)</div>
-    <input class="field-input" type="text" id="social-generate-theme-input" placeholder="ex. promotion, nouveauté, conseil client…" />
+    <!-- Remplace l'ancien champ texte libre par un menu déroulant (mêmes
+         thèmes que ceux proposés par le backend) + un champ texte qui
+         n'apparaît que pour "Autre (précisez)" (voir
+         syncSocialThemeCustomInputVisibility). Le payload envoyé à
+         /social/generate reste le même champ "theme" (voir
+         requestSocialPosts) : valeur du menu, ou le texte du champ
+         "précisez" quand le menu est sur "other". -->
+    <select class="field-input" id="social-generate-theme-select" onchange="syncSocialThemeCustomInputVisibility()">
+      <option value="">Aucun</option>
+      <option value="conseil_client">Conseil client</option>
+      <option value="promotion">Promotion / offre</option>
+      <option value="nouveaute">Nouveauté</option>
+      <option value="temoignage">Témoignage / résultat</option>
+      <option value="coulisses">Coulisses / quotidien</option>
+      <option value="astuce_productivite">Astuce productivité</option>
+      <option value="other">Autre (précisez)</option>
+    </select>
+    <input class="field-input" type="text" id="social-generate-theme-custom-input" placeholder="Précisez le thème…" style="margin-top:8px;display:none;" />
   </div>
 
   <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:10px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
@@ -25410,6 +25427,15 @@ async function loadSocialSettings() {
   syncSocialUI();
 }
 
+// Affiche le champ "Précisez le thème…" uniquement quand le menu déroulant
+// "Thème (optionnel)" est sur "Autre (précisez)" (option value="other").
+function syncSocialThemeCustomInputVisibility() {
+  const select = document.getElementById("social-generate-theme-select");
+  const customInput = document.getElementById("social-generate-theme-custom-input");
+  if (!select || !customInput) return;
+  customInput.style.display = select.value === "other" ? "block" : "none";
+}
+
 function syncSocialUI() {
   const toggle = document.getElementById("social-toggle-switch");
   if (toggle) toggle.classList.toggle("active", socialEnabled);
@@ -25811,8 +25837,17 @@ async function requestSocialPosts(platforms) {
   renderSocialGeneratedResults();
 
   try {
-    const themeInput = document.getElementById("social-generate-theme-input");
-    const theme = themeInput ? themeInput.value.trim() : "";
+    // Thème : valeur du menu déroulant, sauf pour "other" où l'on envoie le
+    // texte libre du champ "Précisez le thème…" à la place (voir
+    // syncSocialThemeCustomInputVisibility pour l'affichage conditionnel de
+    // ce champ). Le payload envoyé au backend garde le même nom "theme".
+    const themeSelect = document.getElementById("social-generate-theme-select");
+    const themeSelectValue = themeSelect ? themeSelect.value : "";
+    let theme = themeSelectValue;
+    if (themeSelectValue === "other") {
+      const themeCustomInput = document.getElementById("social-generate-theme-custom-input");
+      theme = themeCustomInput ? themeCustomInput.value.trim() : "";
+    }
 
     // "Avec smileys" : toujours envoyé (contrairement au thème, optionnel),
     // activé par défaut — reflète l'état réel de la case au moment du clic,
