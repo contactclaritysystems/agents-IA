@@ -26120,7 +26120,7 @@ function socialSharedImageHtml() {
   return `
     <div class="field-group" id="social-shared-image-card">
       <div class="field-label">🖼️ Image générée</div>
-      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:320px; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
+      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:360px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin:0 auto;" />
       <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="shareSocialImage()">📤 Partager</button>
     </div>
   `;
