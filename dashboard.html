@@ -6536,25 +6536,30 @@ body.qa-reorder-active {
 }
 
 /* Sur PC uniquement (pas sur mobile) : le menu déroulant "Thème" est trop
-   long en pleine largeur — on le resserre et on le centre à côté de son
-   libellé, plutôt que de le laisser occuper toute la ligne en dessous. */
+   long en pleine largeur — on le resserre et on le met sur la même ligne
+   que son libellé. Grille à 3 colonnes (gauche/centre/droite) plutôt qu'un
+   simple flex centré : le libellé reste casé à gauche tandis que le menu
+   reste vraiment centré sur la ligne, indépendamment de la largeur du
+   libellé. */
 @media (min-width: 901px) {
   #social-theme-field-group {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: center;
     gap: 12px;
   }
   #social-theme-field-group .field-label {
     margin: 0;
-    flex: 0 0 auto;
+    text-align: left;
+    grid-column: 1;
+  }
+  #social-theme-field-group #social-theme-select-wrap {
+    grid-column: 2;
+    width: 220px;
   }
   #social-theme-field-group #social-generate-theme-select,
   #social-theme-field-group #social-generate-theme-custom-input {
-    flex: 0 0 auto;
-    width: 220px;
-    margin-top: 0;
+    width: 100%;
   }
 }
 
@@ -10530,7 +10535,7 @@ body[data-theme="light"]::after {
 
       <div class="field-group" style="margin-top:12px;">
         <div class="field-label">De quoi Clarity doit parler ?</div>
-        <textarea class="field-input" id="social-context-input" rows="4" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
+        <textarea class="field-input" id="social-context-input" rows="8" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
       </div>
 
       <div class="field-group" style="margin-top:10px;">
@@ -10571,20 +10576,22 @@ body[data-theme="light"]::after {
          plus sauvegardé dans Supabase (profiles.social_theme, voir
          saveSocialTheme/loadSocialSettings) pour être rechargé au prochain
          chargement de la page. -->
-    <select class="field-input" id="social-generate-theme-select" onchange="handleSocialThemeSelectChange()">
-      <option value="">Aucun</option>
-      <option value="tester_produit">Faire tester le produit / service</option>
-      <option value="gagner_abonnes">Gagner des abonnés</option>
-      <option value="plus_commentaires">Avoir plus de commentaires</option>
-      <option value="messages_prives">Obtenir des messages privés</option>
-      <option value="nouveaute">Annoncer une nouveauté</option>
-      <option value="resultat_client">Montrer un résultat client</option>
-      <option value="conseil_astuce">Conseil / astuce utile</option>
-      <option value="coulisses">Coulisses / quotidien</option>
-      <option value="offre_promo">Offre limitée / promo</option>
-      <option value="other">Autre (précisez)</option>
-    </select>
-    <input class="field-input" type="text" id="social-generate-theme-custom-input" placeholder="Précisez le thème…" style="margin-top:8px;display:none;" oninput="markSocialThemeCustomDirty()" onblur="flushSocialThemeCustomIfDirty()" />
+    <div id="social-theme-select-wrap">
+      <select class="field-input" id="social-generate-theme-select" onchange="handleSocialThemeSelectChange()">
+        <option value="">Aucun</option>
+        <option value="tester_produit">Faire tester le produit / service</option>
+        <option value="gagner_abonnes">Gagner des abonnés</option>
+        <option value="plus_commentaires">Avoir plus de commentaires</option>
+        <option value="messages_prives">Obtenir des messages privés</option>
+        <option value="nouveaute">Annoncer une nouveauté</option>
+        <option value="resultat_client">Montrer un résultat client</option>
+        <option value="conseil_astuce">Conseil / astuce utile</option>
+        <option value="coulisses">Coulisses / quotidien</option>
+        <option value="offre_promo">Offre limitée / promo</option>
+        <option value="other">Autre (précisez)</option>
+      </select>
+      <input class="field-input" type="text" id="social-generate-theme-custom-input" placeholder="Précisez le thème…" style="margin-top:8px;display:none;" oninput="markSocialThemeCustomDirty()" onblur="flushSocialThemeCustomIfDirty()" />
+    </div>
   </div>
 
   <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:10px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
@@ -25518,7 +25525,7 @@ const SOCIAL_DAYS = [
   { key: "sat", label: "Sam" },
   { key: "sun", label: "Dim" }
 ];
-const SOCIAL_DEFAULT_TIME = "12:00";
+const SOCIAL_DEFAULT_TIME = "08:00";
 
 const SOCIAL_LENGTH_OPTIONS = [
   { key: "court", label: "Court" },
