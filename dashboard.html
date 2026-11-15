@@ -892,6 +892,29 @@ select.field-input {
   width: fit-content;
 }
 
+/* Bouton carré icône seule (copier / partager…) — même langage visuel que
+   .sheet-btn (bordure/fond/couleur identiques) mais compact et sans texte,
+   pour les actions universellement reconnaissables par leur seul pictogramme. */
+.icon-square-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  flex: 0 0 auto;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(var(--clarity-glass-rgb),.66);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.icon-square-btn:hover { background: rgba(var(--clarity-glass-rgb),.92); }
+.icon-square-btn:disabled { opacity: .5; cursor: default; }
+.icon-square-btn svg { width: 17px; height: 17px; display: block; }
+
 .sheet-btn:hover {
   background: var(--clarity-surface);
   border-color: var(--line-strong);
@@ -26334,9 +26357,11 @@ function socialResultCardHtml(platformConfig) {
       ${totalGenerated > 1 ? "" : `<div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>`}
       <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="sheet-btn" type="button" style="flex:1;justify-content:center;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
-        <button class="sheet-btn" type="button" style="flex:1;justify-content:center;" onclick="copySocialPostText('${key}')">📋 Copier le texte</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+        <button class="sheet-btn" type="button" style="padding:7px 12px;font-size:12.5px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
+        <button class="icon-square-btn" type="button" onclick="copySocialPostText('${key}')" aria-label="Copier le texte" title="Copier le texte">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
       </div>
     </div>
   `;
@@ -26361,9 +26386,13 @@ function socialSharedImageHtml() {
 
   return `
     <div class="field-group" id="social-shared-image-card">
-      <div class="field-label">🖼️ Image générée</div>
-      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:360px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin:0 auto;" />
-      <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="shareSocialImage()">📤 Partager</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="field-label" style="margin:0;">🖼️ Image générée</div>
+        <button type="button" class="icon-square-btn" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
+        </button>
+      </div>
+      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:360px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin:8px auto 0;" />
     </div>
   `;
 }
@@ -26377,14 +26406,16 @@ function socialSharedImageHtml() {
 // un commentaire déjà en cours de frappe.
 function socialFeedbackHtml() {
   return `
-    <div class="field-group" id="social-feedback-card">
-      <div class="field-label">Votre avis sur ce post</div>
-      <div style="display:flex;gap:8px;margin-top:6px;">
-        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === true ? " active" : ""}" id="social-feedback-like-btn" style="flex:1;justify-content:center;" onclick="toggleSocialFeedbackLiked(true)">👍 J'aime</button>
-        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === false ? " active" : ""}" id="social-feedback-dislike-btn" style="flex:1;justify-content:center;" onclick="toggleSocialFeedbackLiked(false)">👎 Je n'aime pas</button>
+    <div class="field-group" id="social-feedback-card" style="padding:10px 12px;">
+      <div class="field-label" style="font-size:11.5px;margin-bottom:6px;">Votre avis sur ce post</div>
+      <div style="display:flex;gap:6px;">
+        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === true ? " active" : ""}" id="social-feedback-like-btn" style="flex:1;justify-content:center;padding:6px 8px;font-size:12px;" onclick="toggleSocialFeedbackLiked(true)" aria-label="J'aime" title="J'aime">👍</button>
+        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === false ? " active" : ""}" id="social-feedback-dislike-btn" style="flex:1;justify-content:center;padding:6px 8px;font-size:12px;" onclick="toggleSocialFeedbackLiked(false)" aria-label="Je n'aime pas" title="Je n'aime pas">👎</button>
+        <input class="field-input" type="text" id="social-feedback-comment-input" placeholder="Un commentaire ?" style="flex:2;min-height:0;padding:6px 10px;font-size:12px;" />
+        <button type="button" class="icon-square-btn" id="social-feedback-send-btn" style="width:34px;height:34px;" onclick="sendSocialFeedback()" aria-label="Envoyer mon avis" title="Envoyer mon avis">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+        </button>
       </div>
-      <input class="field-input" type="text" id="social-feedback-comment-input" placeholder="Qu'est-ce que tu aimes / n'aimes pas ?" style="margin-top:10px;" />
-      <button type="button" class="sheet-btn" id="social-feedback-send-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="sendSocialFeedback()">Envoyer mon avis</button>
     </div>
   `;
 }
