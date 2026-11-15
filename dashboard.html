@@ -25355,9 +25355,11 @@ let socialContextDirty = false;
 // Dernier thème choisi dans le menu déroulant "Thème (optionnel)" (section
 // Générer) — valeur finale envoyée à /social/generate (slug prédéfini, ou
 // texte libre si "Autre (précisez)"), persistée dans Supabase
-// (profiles.social_theme) et rechargée au chargement de la page pour que
+// (profiles.social_theme, colonne isolée du reste des réglages "Publications
+// réseaux" — voir loadSocialTheme/saveSocialTheme) ET dupliquée en
+// localStorage par sécurité, et rechargée au chargement de la page pour que
 // l'utilisateur n'ait pas à le ressaisir à chaque fois (voir
-// loadSocialSettings/saveSocialSettings/applySocialThemeToUI).
+// applySocialThemeToUI).
 let socialTheme = "";
 
 // Jours de publication cochés + heure par jour, ex. { mon: "12:00", wed:
@@ -25420,7 +25422,7 @@ async function loadSocialSettings() {
   try {
     const { data, error } = await supabaseClient
       .from("profiles")
-      .select("social_enabled, social_frequency, social_length, social_context, social_logo_url, social_theme")
+      .select("social_enabled, social_frequency, social_length, social_context, social_logo_url")
       .eq("id", currentUser.id)
       .maybeSingle();
 
@@ -25432,11 +25434,17 @@ async function loadSocialSettings() {
       socialLength = data.social_length || "moyen";
       socialContext = data.social_context || "";
       socialLogoUrl = data.social_logo_url || null;
-      socialTheme = data.social_theme || "";
     }
   } catch (e) {
     console.error("Erreur réseau publications automatiques:", e);
   }
+  // socialTheme est chargé à PART du reste (requête isolée, voir
+  // loadSocialTheme) : une colonne social_theme absente ou mal nommée côté
+  // Supabase ne doit jamais faire échouer la requête ci-dessus et donc
+  // effacer tous les autres réglages (switch, réseaux, longueur, smileys,
+  // contexte, logo) — c'est exactement ce qui s'est passé la première fois
+  // que social_theme a été ajouté à cette même requête groupée.
+  await loadSocialTheme();
   loadSocialScheduleDays();
   syncSocialUI();
 }
@@ -25494,7 +25502,7 @@ function handleSocialThemeSelectChange() {
   if (!select) return;
   if (select.value !== "other") {
     socialTheme = select.value;
-    saveSocialSettings();
+    saveSocialTheme();
   }
 }
 
@@ -25504,15 +25512,91 @@ function markSocialThemeCustomDirty() {
 
 // Même patron que flushSocialContextIfDirty : on ne sauvegarde le texte
 // libre d'"Autre (précisez)" qu'à la sortie du champ (onblur), pas à chaque
-// frappe, en passant par le même saveSocialSettings() que les autres
-// réglages "Publications réseaux" (socialTheme fait désormais partie de son
-// upsert, voir saveSocialSettings).
+// frappe.
 function flushSocialThemeCustomIfDirty() {
   if (!socialThemeCustomDirty) return;
   const customInput = document.getElementById("social-generate-theme-custom-input");
   socialTheme = customInput ? customInput.value.trim() : socialTheme;
   socialThemeCustomDirty = false;
-  saveSocialSettings();
+  saveSocialTheme();
+}
+
+// ─── Persistance de social_theme, ISOLÉE du reste de saveSocialSettings/
+// loadSocialSettings ─────────────────────────────────────────────────────
+// Volontairement une requête Supabase séparée (select ET upsert), jamais
+// mélangée aux autres colonnes de "profiles" : si social_theme n'existe pas
+// (ou plus) côté base, SEULE cette requête doit échouer — pas question
+// qu'elle fasse échouer la même requête groupée que social_enabled /
+// social_frequency / social_length / social_context / social_logo_url et
+// efface tous ces réglages au passage (c'est exactement ce qui s'est
+// produit la première fois que social_theme a été ajouté à cette requête
+// groupée). En plus de Supabase, le thème est toujours dupliqué en
+// localStorage (même patron que socialScheduleDays) : en cas de souci
+// Supabase, le dernier thème choisi reste quand même mémorisé localement.
+function socialThemeStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "social_theme_" + email;
+}
+
+function loadSocialThemeFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(socialThemeStorageKey());
+    if (typeof raw === "string") socialTheme = raw;
+  } catch (e) {
+    console.error("Erreur lecture locale du thème publications:", e);
+  }
+}
+
+function saveSocialThemeToLocalStorage() {
+  try {
+    localStorage.setItem(socialThemeStorageKey(), socialTheme);
+  } catch (e) {
+    console.error("Erreur sauvegarde locale du thème publications:", e);
+  }
+}
+
+async function loadSocialTheme() {
+  if (!currentUser || !currentUser.id) return;
+  // Valeur locale d'abord (toujours disponible instantanément), Supabase
+  // ensuite si possible — Supabase fait foi quand la requête réussit.
+  loadSocialThemeFromLocalStorage();
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("social_theme")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.error("Erreur chargement thème publications (Supabase) :", error);
+    } else if (data && typeof data.social_theme === "string") {
+      socialTheme = data.social_theme;
+    }
+  } catch (e) {
+    console.error("Erreur réseau chargement thème publications:", e);
+  }
+}
+
+async function saveSocialTheme() {
+  saveSocialThemeToLocalStorage();
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { error } = await supabaseClient
+      .from("profiles")
+      .upsert({
+        id: currentUser.id,
+        social_theme: socialTheme,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
+    if (error) {
+      // Pas de toast ici volontairement : le thème est déjà en sécurité en
+      // localStorage (ci-dessus), donc un souci Supabase sur cette seule
+      // colonne ne doit pas alarmer l'utilisateur ni ressembler à un échec
+      // de sauvegarde des réglages "Publications réseaux".
+      console.error("Erreur sauvegarde thème publications (Supabase) :", error);
+    }
+  } catch (e) {
+    console.error("Erreur réseau sauvegarde thème publications:", e);
+  }
 }
 
 function syncSocialUI() {
@@ -25777,7 +25861,6 @@ async function saveSocialSettings() {
         social_length: socialLength,
         social_context: socialContext,
         social_logo_url: socialLogoUrl,
-        social_theme: socialTheme,
         updated_at: new Date().toISOString()
       }, { onConflict: "id" });
 
