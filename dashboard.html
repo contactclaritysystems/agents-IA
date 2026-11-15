@@ -9733,6 +9733,54 @@ body[data-theme="light"]::after {
   flex-shrink: 0;
 }
 
+/* ─── "Compte" (Messagerie/Profil/Abonnement) en 3 cartes carrées sur une
+     seule ligne plutôt qu'en rangées empilées (demande explicite : la page
+     Réglages contenait "trop de lignes"). Mêmes ids/handlers/classes de
+     couleur d'icône (.settings-row-icon-*) et .settings-row-value (pour le
+     style "needs-attention" du profil) que les rangées qu'elles
+     remplacent — seule la mise en page change. Grid à 3 colonnes fixes
+     (pas de passage à 1 colonne sur mobile, contrairement à .status-row) :
+     ces 3 cartes doivent rester côte à côte même sur petit écran. ─── */
+#main-settings .settings-square-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+#main-settings .settings-square-card {
+  background: rgba(var(--clarity-glass-rgb),.78);
+  border: 1px solid var(--clarity-border);
+  border-radius: 18px;
+  box-shadow: var(--clarity-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  padding: 14px 6px;
+  cursor: pointer;
+}
+
+#main-settings .settings-square-card .settings-row-icon {
+  margin: 0 auto;
+}
+
+#main-settings .settings-square-card .settings-row-title {
+  flex: 0 0 auto;
+  font-size: 12.5px;
+  text-align: center;
+  white-space: normal;
+}
+
+#main-settings .settings-square-card .settings-row-value {
+  flex: 0 0 auto;
+  font-size: 11px;
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+}
+
 /* ─── SÉLECTEUR D'HEURE À BANDES DÉROULANTES (générique : Brief du jour,
      Mots du jour, Rappels, Rendez-vous — toutes ces popups partagent ces
      classes) ─── */
@@ -10080,24 +10128,24 @@ body[data-theme="light"]::after {
  <div class="settings-page-block">
 
   <div class="settings-group-label">Compte</div>
-  <div class="settings-group">
-    <div class="settings-row" id="gmail-mobile-card" onclick="handleGmailMobileCard()">
+  <!-- 3 cartes carrées sur une seule ligne (plus des rangées empilées) :
+       mêmes ids/handlers/classes d'icône et de valeur que les rangées
+       d'origine, voir le commentaire CSS sur .settings-square-cards. -->
+  <div class="settings-square-cards">
+    <div class="settings-square-card" id="gmail-mobile-card" onclick="handleGmailMobileCard()">
       <span class="settings-row-icon settings-row-icon-blue">📧</span>
       <div class="settings-row-title">Messagerie</div>
       <span class="settings-row-value" id="gmail-status-label">Non connecté</span>
-      <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" id="profil-stat-card" onclick="handleProfilMobileCard()">
+    <div class="settings-square-card" id="profil-stat-card" onclick="handleProfilMobileCard()">
       <span class="settings-row-icon settings-row-icon-yellow">👤</span>
       <div class="settings-row-title">Profil</div>
       <span class="settings-row-value" id="profil-status-label">À compléter</span>
-      <span class="settings-row-chevron">›</span>
     </div>
-    <div class="settings-row" onclick="openPricingPage()">
+    <div class="settings-square-card" onclick="openPricingPage()">
       <span class="settings-row-icon settings-row-icon-purple">💳</span>
       <div class="settings-row-title">Abonnement</div>
       <span class="settings-row-value" id="subscription-status-label">Voir</span>
-      <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
