@@ -7401,6 +7401,20 @@ body[data-theme="azur"] .loader-halo {
     display: flex !important;
   }
 
+  /* Même recadrage desktop que les autres sous-pages ci-dessus
+     (writing-styles, mobile-integrations, gmail-section…) : la sous-page
+     "Publications réseaux" en avait été oubliée, ce qui la laissait bien
+     plus large que le reste du site une fois ouverte (ses lignes utilisant
+     toute la largeur de #social-mobile-section au lieu d'être recadrées à
+     620px comme partout ailleurs). */
+  #social-mobile-section > .settings-group,
+  #social-mobile-section > .field-group,
+  #social-mobile-section > #social-generated-results-list {
+    max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   #main-settings .settings-topbar {
     position: relative !important;
     flex-direction: row !important;
