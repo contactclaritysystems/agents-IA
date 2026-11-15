@@ -10355,67 +10355,113 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
-  <!-- Mise en page en 3 blocs clairs, chacun avec son titre
-       (.settings-group-label, même composant que "Compte"/"Contenu" dans
-       la liste principale de Réglages) et son propre rythme d'espacement :
-       1. Publications (fréquence, réseaux, longueur, smileys)
-       2. Société (de quoi parler + logo)
-       3. Générer (thème + bouton + résultats)
-       Tous les ids/handlers sont inchangés — seul l'agencement bouge.
-       Espacements resserrés par rapport aux autres sous-pages (demande
-       explicite : cette page faisait "trop chargé") — .settings-group-label
-       garde son style (taille/couleur/majuscules) mais avec un margin-top
-       réduit ici via l'inline style, et les field-group passent de 14px
-       à 10px d'écart. -->
-
-  <div class="settings-group-label">Publications</div>
-
-  <!-- Cases à cocher Instagram/Facebook/LinkedIn (plusieurs possibles,
-       Instagram cochée par défaut — voir SOCIAL_PLATFORMS). -->
-  <div class="field-group" style="margin-top:10px;">
-    <div class="field-label">Réseaux</div>
-    <div class="settings-group" id="social-platforms-checklist" style="margin-top:8px;"></div>
-  </div>
-
-  <div class="field-group" style="margin-top:10px;">
-    <div class="field-label">Longueur du texte</div>
-    <div class="planning-view-toggle" id="social-length-chips"></div>
-  </div>
-
-  <!-- "Avec smileys" : envoyé dans le body ("with_emojis") à chaque Générer
-       ET chaque Régénérer (voir requestSocialPosts) — activé par défaut. -->
-  <div class="field-group" style="margin-top:10px;">
-    <div class="settings-group" id="social-with-emojis-group">
-      <label class="settings-row" style="cursor:pointer;" for="social-with-emojis-checkbox">
-        <span class="settings-row-icon settings-row-icon-yellow">😀</span>
-        <div class="settings-row-title">Avec smileys</div>
-        <input type="checkbox" id="social-with-emojis-checkbox" checked onchange="saveSocialWithEmojisPref(this.checked)" />
-      </label>
+  <!-- Demande explicite (cette page faisait "trop chargé", trop de texte et
+       de gros boutons visibles d'un coup) : Réseaux / Longueur du texte /
+       Société (contexte + logo) passent derrière une ligne cliquable +
+       popup, EXACT même patron que "Jours de publication" ci-dessus
+       (.mail-choice-backdrop + .mail-choice-box). Le contenu et les
+       fonctions JS existantes (renderSocialPlatformChecklist,
+       renderSocialLengthChips, le textarea contexte, le logo) ne changent
+       PAS — seuls leurs conteneurs sont déplacés dans une popup, et un
+       petit résumé par ligne est ajouté (voir renderSocialPlatformsRowDisplay/
+       renderSocialLengthRowDisplay/renderSocialContextRowDisplay). "Avec
+       smileys" reste une ligne directe (c'était déjà un simple switch, pas
+       besoin de popup pour une seule case à cocher). -->
+  <div class="settings-group" style="margin-top:12px;">
+    <div class="settings-row" id="social-platforms-row" onclick="openSocialPlatformsModal()">
+      <span class="settings-row-icon settings-row-icon-blue">📱</span>
+      <div class="settings-row-title">Réseaux</div>
+      <span class="settings-row-value" id="social-platforms-row-display">Aucun</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <div class="settings-row" id="social-length-row" onclick="openSocialLengthModal()">
+      <span class="settings-row-icon settings-row-icon-green">✏️</span>
+      <div class="settings-row-title">Longueur du texte</div>
+      <span class="settings-row-value" id="social-length-row-display">Moyen</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <!-- "Avec smileys" : envoyé dans le body ("with_emojis") à chaque
+         Générer ET chaque Régénérer (voir requestSocialPosts) — activé par
+         défaut. -->
+    <label class="settings-row" style="cursor:pointer;" for="social-with-emojis-checkbox">
+      <span class="settings-row-icon settings-row-icon-yellow">😀</span>
+      <div class="settings-row-title">Avec smileys</div>
+      <input type="checkbox" id="social-with-emojis-checkbox" checked onchange="saveSocialWithEmojisPref(this.checked)" />
+    </label>
+    <div class="settings-row" id="social-context-row" onclick="openSocialContextModal()">
+      <span class="settings-row-icon settings-row-icon-amber">🏢</span>
+      <div class="settings-row-title">Société</div>
+      <span class="settings-row-value" id="social-context-row-display">Non renseigné</span>
+      <span class="settings-row-chevron">›</span>
     </div>
   </div>
 
-  <div class="settings-group-label" style="margin-top:14px;">Société</div>
-
-  <div class="field-group" style="margin-top:8px;">
-    <div class="field-label">De quoi Clarity doit parler ?</div>
-    <textarea class="field-input" id="social-context-input" rows="4" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
+  <!-- Popup "Réseaux" : contenu inchangé (renderSocialPlatformChecklist,
+       cases à cocher appliquées en live), juste déplacé ici. -->
+  <div id="social-platforms-modal" style="display:none;">
+    <div class="mail-choice-backdrop" onclick="closeSocialPlatformsModal()"></div>
+    <div class="mail-choice-box" style="max-width:320px;padding:16px;">
+      <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Réseaux</div>
+      <div class="mail-choice-subtitle" style="font-size:12px;">Sur quels réseaux publier ?</div>
+      <div class="settings-group" id="social-platforms-checklist" style="margin-top:12px;"></div>
+      <button class="sheet-btn" type="button" onclick="closeSocialPlatformsModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
+        Fermer
+      </button>
+    </div>
   </div>
 
-  <div class="field-group" style="margin-top:10px;">
-    <div class="field-label">Logo (optionnel)</div>
-    <!-- Logo à gauche, boutons empilés à droite sur la même ligne (plus de
-         boutons centrés en dessous) : voir removeSocialLogo/
-         handleSocialLogoSelected/syncSocialUI pour l'affichage de la
-         prévisualisation et du bouton "Retirer le logo". -->
-    <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
-      <div id="social-logo-preview-wrap" style="display:none;flex:0 0 auto;">
-        <img id="social-logo-preview" src="" alt="Logo" style="width:64px; height:64px; object-fit:cover; border-radius:14px; border:1px solid var(--clarity-border); display:block;" />
+  <!-- Popup "Longueur du texte" : contenu inchangé (renderSocialLengthChips,
+       sélection appliquée en live), juste déplacé ici. -->
+  <div id="social-length-modal" style="display:none;">
+    <div class="mail-choice-backdrop" onclick="closeSocialLengthModal()"></div>
+    <div class="mail-choice-box" style="max-width:320px;padding:16px;">
+      <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Longueur du texte</div>
+      <div class="mail-choice-subtitle" style="font-size:12px;">Court, moyen ou long ?</div>
+      <div class="planning-view-toggle" id="social-length-chips" style="margin-top:12px;"></div>
+      <button class="sheet-btn" type="button" onclick="closeSocialLengthModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
+        Fermer
+      </button>
+    </div>
+  </div>
+
+  <!-- Popup "Société" : regroupe le contexte ET le logo (les 2 blocs les
+       plus lourds visuellement de l'ancienne page) — contenu et handlers
+       inchangés (markSocialContextDirty/flushSocialContextIfDirty,
+       handleSocialLogoSelected/removeSocialLogo), juste déplacés ici.
+       closeSocialContextModal() force un flush du contexte au cas où
+       (sécurité, le blur du textarea le fait déjà en pratique). -->
+  <div id="social-context-modal" style="display:none;">
+    <div class="mail-choice-backdrop" onclick="closeSocialContextModal()"></div>
+    <div class="mail-choice-box" style="max-width:340px;padding:16px;">
+      <div class="mail-choice-title" style="font-size:16px;margin-bottom:2px;">Société</div>
+      <div class="mail-choice-subtitle" style="font-size:12px;">De quoi Clarity doit parler, et votre logo.</div>
+
+      <div class="field-group" style="margin-top:12px;">
+        <div class="field-label">De quoi Clarity doit parler ?</div>
+        <textarea class="field-input" id="social-context-input" rows="4" placeholder="Décrivez votre activité, vos services, votre clientèle, le style souhaité…" oninput="markSocialContextDirty()" onblur="flushSocialContextIfDirty()"></textarea>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
-        <input type="file" id="social-logo-input" accept="image/*" style="display:none;" onchange="handleSocialLogoSelected(this)" />
-        <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
-        <button class="sheet-btn" type="button" id="social-logo-remove-btn" style="justify-content:center;display:none;" onclick="removeSocialLogo()">Retirer le logo</button>
+
+      <div class="field-group" style="margin-top:10px;">
+        <div class="field-label">Logo (optionnel)</div>
+        <!-- Logo à gauche, boutons empilés à droite sur la même ligne : voir
+             removeSocialLogo/handleSocialLogoSelected/syncSocialUI pour
+             l'affichage de la prévisualisation et du bouton "Retirer le
+             logo". -->
+        <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+          <div id="social-logo-preview-wrap" style="display:none;flex:0 0 auto;">
+            <img id="social-logo-preview" src="" alt="Logo" style="width:64px; height:64px; object-fit:cover; border-radius:14px; border:1px solid var(--clarity-border); display:block;" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;">
+            <input type="file" id="social-logo-input" accept="image/*" style="display:none;" onchange="handleSocialLogoSelected(this)" />
+            <button class="sheet-btn" type="button" id="social-logo-upload-btn" style="justify-content:center;" onclick="document.getElementById('social-logo-input').click()">Choisir un logo</button>
+            <button class="sheet-btn" type="button" id="social-logo-remove-btn" style="justify-content:center;display:none;" onclick="removeSocialLogo()">Retirer le logo</button>
+          </div>
+        </div>
       </div>
+
+      <button class="sheet-btn" type="button" onclick="closeSocialContextModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
+        Fermer
+      </button>
     </div>
   </div>
 
@@ -25400,6 +25446,12 @@ function openSocialSubpage() {
   // appel réseau supplémentaire.
   if (typeof renderSocialPlatformChecklist === "function") renderSocialPlatformChecklist();
   if (typeof renderSocialGeneratedResults === "function") renderSocialGeneratedResults();
+  // Résumés des lignes "Réseaux" / "Longueur du texte" / "Société" (popups) :
+  // rafraîchis à chaque ouverture de la sous-page, au cas où l'état aurait
+  // changé pendant qu'elle était fermée.
+  if (typeof renderSocialPlatformsRowDisplay === "function") renderSocialPlatformsRowDisplay();
+  if (typeof renderSocialLengthRowDisplay === "function") renderSocialLengthRowDisplay();
+  if (typeof renderSocialContextRowDisplay === "function") renderSocialContextRowDisplay();
 }
 
 function closeSocialSubpage() {
@@ -25613,6 +25665,8 @@ function syncSocialUI() {
   renderSocialDaysRowDisplay();
 
   renderSocialLengthChips();
+  renderSocialLengthRowDisplay();
+  renderSocialPlatformsRowDisplay();
   applySocialThemeToUI();
 
   // Ne touche jamais la valeur si le champ a le focus (évite d'écraser une
@@ -25646,6 +25700,8 @@ function syncSocialUI() {
   if (uploadBtn && !uploadBtn.disabled) {
     uploadBtn.innerHTML = socialLogoUploadButtonLabel();
   }
+
+  renderSocialContextRowDisplay();
 }
 
 // Namespace par email (même pattern que socialPlatformsStorageKey /
@@ -25717,6 +25773,78 @@ function closeSocialDaysModal() {
   if (modal) modal.style.display = "none";
 }
 
+// ─── Popup "Réseaux" ────────────────────────────────────────────────────
+function renderSocialPlatformsRowDisplay() {
+  const display = document.getElementById("social-platforms-row-display");
+  if (!display) return;
+  const selected = SOCIAL_PLATFORMS.filter(p => socialSelectedPlatforms.has(p.key));
+  display.textContent = selected.length === 0 ? "Aucun" : selected.map(p => p.label).join(", ");
+}
+
+function openSocialPlatformsModal() {
+  renderSocialPlatformChecklist();
+  const modal = document.getElementById("social-platforms-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeSocialPlatformsModal() {
+  const modal = document.getElementById("social-platforms-modal");
+  if (modal) modal.style.display = "none";
+}
+
+// ─── Popup "Longueur du texte" ──────────────────────────────────────────
+function renderSocialLengthRowDisplay() {
+  const display = document.getElementById("social-length-row-display");
+  if (!display) return;
+  const option = SOCIAL_LENGTH_OPTIONS.find(o => o.key === socialLength);
+  display.textContent = option ? option.label : "Moyen";
+}
+
+function openSocialLengthModal() {
+  renderSocialLengthChips();
+  const modal = document.getElementById("social-length-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeSocialLengthModal() {
+  const modal = document.getElementById("social-length-modal");
+  if (modal) modal.style.display = "none";
+}
+
+// ─── Popup "Société" (contexte + logo) ──────────────────────────────────
+// Résumé : début du texte de contexte (tronqué), + mention "Logo ajouté" si
+// un logo est présent — sinon "Non renseigné".
+function renderSocialContextRowDisplay() {
+  const display = document.getElementById("social-context-row-display");
+  if (!display) return;
+  const trimmed = (socialContext || "").trim();
+  let text;
+  if (trimmed) {
+    text = trimmed.length > 28 ? trimmed.slice(0, 28) + "…" : trimmed;
+    if (socialLogoUrl) text += " · Logo";
+  } else {
+    text = socialLogoUrl ? "Logo ajouté" : "Non renseigné";
+  }
+  display.textContent = text;
+}
+
+function openSocialContextModal() {
+  const modal = document.getElementById("social-context-modal");
+  if (modal) modal.style.display = "flex";
+  // Reflète la valeur en mémoire à l'ouverture (au cas où elle aurait été
+  // mise à jour ailleurs pendant que la popup était fermée).
+  const textarea = document.getElementById("social-context-input");
+  if (textarea && document.activeElement !== textarea) textarea.value = socialContext;
+}
+
+function closeSocialContextModal() {
+  // Sécurité : force la sauvegarde si l'utilisateur ferme juste après avoir
+  // tapé, au cas où le onblur du textarea n'aurait pas encore eu lieu.
+  flushSocialContextIfDirty();
+  const modal = document.getElementById("social-context-modal");
+  if (modal) modal.style.display = "none";
+}
+
 // Liste compacte, sous les chips, UNIQUEMENT pour les jours cochés (pas un
 // champ heure par jour non coché) — chaque jour coché garde son propre
 // champ heure, par défaut SOCIAL_DEFAULT_TIME.
@@ -25773,6 +25901,7 @@ function setSocialEnabled(enabled) {
 function selectSocialLength(key) {
   socialLength = key;
   renderSocialLengthChips();
+  renderSocialLengthRowDisplay();
   saveSocialSettings();
 }
 
@@ -25785,6 +25914,7 @@ function flushSocialContextIfDirty() {
   const textarea = document.getElementById("social-context-input");
   socialContext = textarea ? textarea.value : socialContext;
   socialContextDirty = false;
+  renderSocialContextRowDisplay();
   saveSocialSettings();
 }
 
@@ -25981,6 +26111,7 @@ function renderSocialPlatformChecklist() {
 function toggleSocialPlatform(key, checked) {
   if (checked) socialSelectedPlatforms.add(key);
   else socialSelectedPlatforms.delete(key);
+  renderSocialPlatformsRowDisplay();
   saveSocialSelectedPlatforms();
 }
 
@@ -26085,20 +26216,54 @@ function renderSocialGenerateButtonState() {
   btn.innerHTML = generating ? "⏳ Génération..." : "✨ Générer";
 }
 
-// Reconstruit la liste des cartes de résultat, une par réseau ayant déjà un
-// post généré (ordre fixe = ordre de SOCIAL_PLATFORMS, pas l'ordre de
-// réponse du backend).
+// Réseau actuellement affiché dans le bloc de résultat (voir
+// renderSocialGeneratedResults/selectSocialResultTab) — demande explicite
+// ("page trop chargée") : au lieu d'empiler une carte par réseau coché, on
+// n'affiche qu'un seul résultat à la fois, avec de petits onglets
+// Instagram/Facebook/LinkedIn pour basculer entre eux.
+let socialActiveResultTab = null;
+
+// Reconstruit le bloc de résultat : onglets (un par réseau ayant déjà un
+// post généré, ordre fixe = ordre de SOCIAL_PLATFORMS) + la carte du seul
+// onglet actif + l'image partagée + le feedback. Pas d'onglets du tout s'il
+// n'y a qu'un seul réseau généré (inutile).
 function renderSocialGeneratedResults() {
   const wrap = document.getElementById("social-generated-results-list");
   if (!wrap) return;
 
   const platformsWithPosts = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]);
-  // Le bloc de feedback ("J'aime / Je n'aime pas") n'a de sens que s'il y a
-  // au moins un résultat généré à juger — pas affiché avant la première
-  // génération.
-  wrap.innerHTML = platformsWithPosts.map(p => socialResultCardHtml(p)).join("")
+  if (platformsWithPosts.length === 0) {
+    socialActiveResultTab = null;
+    wrap.innerHTML = "";
+    return;
+  }
+
+  // Si l'onglet actif n'existe plus (ou qu'aucun n'est encore choisi), on
+  // retombe sur le premier réseau disponible plutôt que de n'afficher rien.
+  if (!platformsWithPosts.some(p => p.key === socialActiveResultTab)) {
+    socialActiveResultTab = platformsWithPosts[0].key;
+  }
+  const activeConfig = platformsWithPosts.find(p => p.key === socialActiveResultTab);
+
+  wrap.innerHTML = (platformsWithPosts.length > 1 ? socialResultTabsHtml(platformsWithPosts) : "")
+    + socialResultCardHtml(activeConfig)
     + socialSharedImageHtml()
-    + (platformsWithPosts.length > 0 ? socialFeedbackHtml() : "");
+    + socialFeedbackHtml();
+}
+
+function socialResultTabsHtml(platformsWithPosts) {
+  return `
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      ${platformsWithPosts.map(p => `
+        <button type="button" class="planning-view-toggle-btn${p.key === socialActiveResultTab ? " active" : ""}" style="flex:1;justify-content:center;" onclick="selectSocialResultTab('${p.key}')">${p.icon} ${p.label}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function selectSocialResultTab(key) {
+  socialActiveResultTab = key;
+  renderSocialGeneratedResults();
 }
 
 function socialResultCardHtml(platformConfig) {
@@ -26110,10 +26275,15 @@ function socialResultCardHtml(platformConfig) {
   // Régénérer / Copier côte à côte (même pattern que "Annuler" / "Créer et
   // utiliser" dans l'éditeur de style d'écriture, ou "Oui" / "Non" dans le
   // bilan d'essai) — au lieu d'un bouton pleine largeur sous l'autre, qui
-  // faisait prendre toute la page aux cartes de résultat.
+  // faisait prendre toute la page aux cartes de résultat. Le label
+  // réseau/icône n'est plus répété ici (déjà porté par l'onglet actif quand
+  // il y en a plusieurs) sauf s'il n'y a qu'un seul réseau généré (pas
+  // d'onglets dans ce cas, donc on garde le label pour ne pas perdre ce
+  // repère visuel).
+  const totalGenerated = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]).length;
   return `
     <div class="field-group" id="social-result-card-${key}">
-      <div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>
+      ${totalGenerated > 1 ? "" : `<div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>`}
       <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
@@ -27380,7 +27550,8 @@ const CLARITY_MODAL_IDS = [
   "quick-task-modal", "compte-rendu-modal", "cr-result-modal",
   "rewrite-sheet-modal", "relance-after-mail-modal",
   "notify-help-sheet",
-  "targeted-demo-menu-modal", "targeted-demo-end-modal", "social-days-modal"
+  "targeted-demo-menu-modal", "targeted-demo-end-modal", "social-days-modal",
+  "social-platforms-modal", "social-length-modal", "social-context-modal"
 ];
 
 let clarityScrollLockY = 0;
