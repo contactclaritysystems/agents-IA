@@ -25885,6 +25885,7 @@ async function saveSocialSettings() {
 // Instagram cochée par défaut.
 const SOCIAL_GENERATE_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/generate";
 const SOCIAL_LOGO_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/logo";
+const SOCIAL_FEEDBACK_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/feedback";
 
 const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: "📷", color: "violet" },
@@ -25895,6 +25896,17 @@ const SOCIAL_PLATFORMS = [
 let socialSelectedPlatforms = new Set(["instagram"]);
 let socialGeneratingPlatforms = new Set(); // réseaux dont la génération/régénération est en cours
 let socialGeneratedPosts = {}; // { instagram: {platform,caption,image_url,hashtags}, ... }
+
+// Thème effectivement utilisé lors de la dernière génération réussie, pour
+// accompagner le feedback "J'aime / Je n'aime pas" (voir requestSocialPosts/
+// sendSocialFeedback) — pas forcément la valeur actuelle du menu déroulant,
+// qui peut avoir changé depuis.
+let socialLastUsedTheme = "";
+
+// Sélection en cours dans le petit bloc de feedback sous les résultats
+// générés : true = "J'aime", false = "Je n'aime pas", null = rien choisi
+// pour l'instant (voir socialFeedbackHtml/toggleSocialFeedbackLiked).
+let socialFeedbackLiked = null;
 
 // Namespace avec l'email de l'utilisateur connecté (même pattern que
 // targetedDemoStorageKey) pour éviter qu'un autre compte, dans le même
@@ -26044,6 +26056,13 @@ async function requestSocialPosts(platforms) {
     data.posts.forEach(post => {
       if (post && post.platform) socialGeneratedPosts[post.platform] = post;
     });
+
+    // Mémorise le thème réellement utilisé pour CETTE génération réussie —
+    // c'est cette valeur (pas celle, éventuellement différente, affichée
+    // dans le menu au moment où l'utilisateur donne son avis) qui doit
+    // accompagner le feedback "J'aime / Je n'aime pas" envoyé plus bas sur
+    // le bloc de résultats (voir sendSocialFeedback).
+    socialLastUsedTheme = theme;
   } catch (e) {
     console.error("Erreur génération posts:", e);
     showToast("Impossible de générer le post pour le moment", "error");
@@ -26074,7 +26093,12 @@ function renderSocialGeneratedResults() {
   if (!wrap) return;
 
   const platformsWithPosts = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]);
-  wrap.innerHTML = platformsWithPosts.map(p => socialResultCardHtml(p)).join("") + socialSharedImageHtml();
+  // Le bloc de feedback ("J'aime / Je n'aime pas") n'a de sens que s'il y a
+  // au moins un résultat généré à juger — pas affiché avant la première
+  // génération.
+  wrap.innerHTML = platformsWithPosts.map(p => socialResultCardHtml(p)).join("")
+    + socialSharedImageHtml()
+    + (platformsWithPosts.length > 0 ? socialFeedbackHtml() : "");
 }
 
 function socialResultCardHtml(platformConfig) {
@@ -26124,6 +26148,81 @@ function socialSharedImageHtml() {
       <button type="button" class="sheet-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="shareSocialImage()">📤 Partager</button>
     </div>
   `;
+}
+
+// Petit bloc "J'aime / Je n'aime pas" affiché sous les résultats générés
+// (voir renderSocialGeneratedResults). "J'aime"/"Je n'aime pas" réutilisent
+// .planning-view-toggle-btn (même composant que les chips Longueur du
+// texte/Jours de publication) pour l'état "actif" visuel ; le commentaire
+// est optionnel. toggleSocialFeedbackLiked() ne touche QUE les classes des
+// deux boutons (pas de re-render complet du bloc), pour ne jamais effacer
+// un commentaire déjà en cours de frappe.
+function socialFeedbackHtml() {
+  return `
+    <div class="field-group" id="social-feedback-card">
+      <div class="field-label">Votre avis sur ce post</div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === true ? " active" : ""}" id="social-feedback-like-btn" style="flex:1;justify-content:center;" onclick="toggleSocialFeedbackLiked(true)">👍 J'aime</button>
+        <button type="button" class="planning-view-toggle-btn${socialFeedbackLiked === false ? " active" : ""}" id="social-feedback-dislike-btn" style="flex:1;justify-content:center;" onclick="toggleSocialFeedbackLiked(false)">👎 Je n'aime pas</button>
+      </div>
+      <input class="field-input" type="text" id="social-feedback-comment-input" placeholder="Qu'est-ce que tu aimes / n'aimes pas ?" style="margin-top:10px;" />
+      <button type="button" class="sheet-btn" id="social-feedback-send-btn" style="width:100%;justify-content:center;margin-top:10px;" onclick="sendSocialFeedback()">Envoyer mon avis</button>
+    </div>
+  `;
+}
+
+function toggleSocialFeedbackLiked(liked) {
+  socialFeedbackLiked = liked;
+  const likeBtn = document.getElementById("social-feedback-like-btn");
+  const dislikeBtn = document.getElementById("social-feedback-dislike-btn");
+  if (likeBtn) likeBtn.classList.toggle("active", liked === true);
+  if (dislikeBtn) dislikeBtn.classList.toggle("active", liked === false);
+}
+
+async function sendSocialFeedback() {
+  if (socialFeedbackLiked === null) {
+    showToast("Choisissez « J'aime » ou « Je n'aime pas »", "error");
+    return;
+  }
+  if (!currentUser || !currentUser.id) return;
+
+  const commentInput = document.getElementById("social-feedback-comment-input");
+  const comment = commentInput ? commentInput.value.trim() : "";
+  const sendBtn = document.getElementById("social-feedback-send-btn");
+  if (sendBtn) sendBtn.disabled = true;
+
+  try {
+    const resp = await fetch(SOCIAL_FEEDBACK_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: currentUser.id,
+        theme: socialLastUsedTheme || "",
+        liked: socialFeedbackLiked,
+        comment: comment
+      })
+    });
+
+    if (!resp.ok) {
+      throw new Error("Réponse invalide (" + resp.status + ")");
+    }
+
+    showToast("Merci, c'est noté");
+
+    // Réinitialise le petit bloc pour un éventuel nouvel avis (ex. après un
+    // "Régénérer") plutôt que de garder la sélection/le commentaire précédents.
+    socialFeedbackLiked = null;
+    if (commentInput) commentInput.value = "";
+    const likeBtn = document.getElementById("social-feedback-like-btn");
+    const dislikeBtn = document.getElementById("social-feedback-dislike-btn");
+    if (likeBtn) likeBtn.classList.remove("active");
+    if (dislikeBtn) dislikeBtn.classList.remove("active");
+  } catch (e) {
+    console.error("Erreur envoi avis publication:", e);
+    showToast("Impossible d'envoyer votre avis pour le moment", "error");
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
 }
 
 // Feuille de partage native (même patron que shareCrPhoto) : partage le
