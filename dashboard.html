@@ -7402,14 +7402,23 @@ body[data-theme="azur"] .loader-halo {
   }
 
   /* Même recadrage desktop que les autres sous-pages ci-dessus
-     (writing-styles, mobile-integrations, gmail-section…) : la sous-page
-     "Publications réseaux" en avait été oubliée, ce qui la laissait bien
-     plus large que le reste du site une fois ouverte (ses lignes utilisant
-     toute la largeur de #social-mobile-section au lieu d'être recadrées à
-     620px comme partout ailleurs). */
-  #social-mobile-section > .settings-group,
-  #social-mobile-section > .field-group,
-  #social-mobile-section > #social-generated-results-list {
+     (writing-styles, mobile-integrations, gmail-section…) : Profil,
+     Notifications, Préférences, Application et Publications réseaux en
+     avaient été oubliées, ce qui les laissait bien plus larges que le
+     reste du site une fois ouvertes (en-tête, sous-titre/intro et lignes
+     utilisant toute la largeur de la sous-page au lieu d'être recadrés à
+     620px comme partout ailleurs). On recadre directement TOUS les
+     enfants directs de chaque sous-page (en-tête compris) plutôt qu'une
+     liste de classes au cas par cas : les popups qu'elles contiennent
+     aussi en enfant direct (ex. #notify-time-modal) sont des conteneurs
+     vides tant qu'ils sont fermés (leur backdrop/boîte sont positionnés
+     en fixed indépendamment du parent), donc ce recadrage ne les affecte
+     pas visuellement. */
+  #profil-mobile-section > *,
+  #notifications-mobile-section > *,
+  #preferences-mobile-section > *,
+  #application-mobile-section > *,
+  #social-mobile-section > * {
     max-width: 620px !important;
     margin-left: auto !important;
     margin-right: auto !important;
