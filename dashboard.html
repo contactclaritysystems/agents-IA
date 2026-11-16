@@ -25620,7 +25620,12 @@ async function loadSocialSettings() {
   // contexte, logo) — c'est exactement ce qui s'est passé la première fois
   // que social_theme a été ajouté à cette même requête groupée.
   await loadSocialTheme();
+  // Même principe que le thème : jours + heure par jour chargés à PART
+  // (requête isolée sur social_schedule_days), jamais mélangés à la
+  // requête groupée ci-dessus — une colonne absente ou mal nommée ne doit
+  // jamais effacer les autres réglages déjà sauvegardés.
   loadSocialScheduleDays();
+  await loadSocialScheduleDaysFromSupabase();
   syncSocialUI();
 }
 
@@ -25864,6 +25869,66 @@ function saveSocialScheduleDays() {
   // ferait déjà aujourd'hui.
   socialFrequency = Object.keys(socialScheduleDays).length;
   saveSocialSettings();
+  // Sauvegarde Supabase (colonne social_schedule_days, requête isolée — voir
+  // le commentaire sur loadSocialSettings) : appelée à chaque coche/heure
+  // modifiée, donc déjà à jour en base bien avant que l'utilisateur ne
+  // clique sur "Fermer".
+  saveSocialScheduleDaysToSupabase();
+}
+
+// Valide la forme d'une valeur jours/heure rechargée (objet simple
+// {clé de jour connue: "HH:MM"}, jamais un tableau ni autre chose) — même
+// garde que loadSocialScheduleDays (localStorage) ci-dessus, réutilisée
+// pour la valeur venant de Supabase.
+function parseSocialScheduleDaysValue(raw) {
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const valid = {};
+  Object.keys(parsed).forEach(key => {
+    const isKnownDay = SOCIAL_DAYS.some(d => d.key === key);
+    const isValidTime = typeof parsed[key] === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(parsed[key]);
+    if (isKnownDay && isValidTime) valid[key] = parsed[key];
+  });
+  return valid;
+}
+
+async function loadSocialScheduleDaysFromSupabase() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("social_schedule_days")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.error("Erreur chargement jours de publication (Supabase) :", error);
+    } else if (data && data.social_schedule_days) {
+      const valid = parseSocialScheduleDaysValue(data.social_schedule_days);
+      if (valid) socialScheduleDays = valid;
+    }
+  } catch (e) {
+    console.error("Erreur réseau chargement jours de publication:", e);
+  }
+}
+
+async function saveSocialScheduleDaysToSupabase() {
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { error } = await supabaseClient
+      .from("profiles")
+      .upsert({
+        id: currentUser.id,
+        social_schedule_days: socialScheduleDays,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
+    if (error) {
+      // Pas de toast ici volontairement : déjà en sécurité en localStorage
+      // (ci-dessus), même principe que saveSocialTheme.
+      console.error("Erreur sauvegarde jours de publication (Supabase) :", error);
+    }
+  } catch (e) {
+    console.error("Erreur réseau sauvegarde jours de publication:", e);
+  }
 }
 
 // Une seule liste, un jour par ligne (case à cocher + heure) : remplace
