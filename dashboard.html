@@ -915,6 +915,40 @@ select.field-input {
 .icon-square-btn:disabled { opacity: .5; cursor: default; }
 .icon-square-btn svg { width: 17px; height: 17px; display: block; }
 
+/* Même cas que ".cr-checklist-label"/".rewrite-choice-btn" plus haut dans ce
+   fichier (voir ces commentaires) : var(--text)/var(--clarity-text) ne
+   s'applique pas de façon fiable en thème sombre pour du contenu généré
+   dynamiquement (innerHTML, ex. les cartes de résultats "Publications
+   réseaux") — le bouton devenait quasi invisible (fond et icône presque de
+   la même teinte très sombre). On force donc la valeur RÉELLE du thème
+   sombre directement, en ne touchant QUE ce thème. */
+body[data-theme="dark"] .icon-square-btn {
+  color: #f2f3f5;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+}
+body[data-theme="dark"] .icon-square-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Variante utilisée pour les boutons superposés directement SUR une photo
+   (image générée) : le fond dépend du contenu de la photo, pas du thème, donc
+   on fixe un fond sombre + icône blanche constants dans les 3 thèmes plutôt
+   que de réutiliser les couleurs "verre" habituelles (qui peuvent se fondre
+   dans une photo claire). */
+.icon-square-btn.icon-square-btn-overlay {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3);
+}
+.icon-square-btn.icon-square-btn-overlay:hover { background: rgba(0,0,0,.72); }
+.icon-square-btn.icon-square-btn-overlay svg { width: 15px; height: 15px; }
+
 .sheet-btn:hover {
   background: var(--clarity-surface);
   border-color: var(--line-strong);
@@ -26580,17 +26614,23 @@ function socialResultCardHtml(platformConfig) {
   // d'onglets dans ce cas, donc on garde le label pour ne pas perdre ce
   // repère visuel).
   const totalGenerated = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]).length;
+  // Bouton "Copier le texte" déplacé juste à côté du texte, en haut à droite
+  // (même emplacement que le bouton "Copier le 1er commentaire", voir
+  // socialFirstCommentHtml) — au lieu d'être groupé avec "Régénérer" tout en
+  // bas de la carte, loin du texte qu'il copie.
   return `
     <div class="field-group" id="social-result-card-${key}">
-      ${totalGenerated > 1 ? "" : `<div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>`}
-      <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="field-label" style="margin:0;">${totalGenerated > 1 ? "" : `${platformConfig.icon} ${platformConfig.label}`}</div>
+        <button class="icon-square-btn" type="button" onclick="copySocialPostText('${key}')" aria-label="Copier le texte" title="Copier le texte">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+      <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5; margin-top:6px;">${escapeHtmlForPrint(post.caption || "")}</div>
       ${socialFirstCommentHtml(post, key)}
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
         <button class="sheet-btn" type="button" style="padding:7px 12px;font-size:12.5px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
-        <button class="icon-square-btn" type="button" onclick="copySocialPostText('${key}')" aria-label="Copier le texte" title="Copier le texte">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-        </button>
       </div>
     </div>
   `;
@@ -26613,20 +26653,25 @@ function socialSharedImageHtml() {
   }
   socialSharedImageUrl = postWithImage.image_url;
 
+  // Enregistrer/Partager superposés en haut à droite DE LA PHOTO elle-même
+  // (comme la croix sur le logo dans Société) plutôt qu'au-dessus dans une
+  // ligne séparée — .icon-square-btn-overlay garde un fond sombre + icône
+  // blanche constants (indépendants du thème) pour rester lisibles sur
+  // n'importe quelle photo.
   return `
     <div class="field-group" id="social-shared-image-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div class="field-label" style="margin:0;">🖼️ Image générée</div>
-        <div style="display:flex;gap:8px;flex:0 0 auto;">
-          <button type="button" class="icon-square-btn" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
+      <div class="field-label" style="margin:0 0 8px;">🖼️ Image générée</div>
+      <div style="position:relative; max-width:360px; margin:0 auto;">
+        <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
+        <div style="position:absolute; top:8px; right:8px; display:flex; gap:6px;">
+          <button type="button" class="icon-square-btn icon-square-btn-overlay" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 19h14"></path></svg>
           </button>
-          <button type="button" class="icon-square-btn" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
+          <button type="button" class="icon-square-btn icon-square-btn-overlay" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
           </button>
         </div>
       </div>
-      <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:360px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin:8px auto 0;" />
     </div>
   `;
 }
