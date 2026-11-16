@@ -10661,12 +10661,12 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
-  <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:10px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
+  <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:22px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
 
   <!-- Résultats : une carte par réseau coché (voir renderSocialGeneratedResults/
        socialResultCardHtml) — image si image_url présent, caption, hashtags,
        Régénérer + Copier côte à côte par carte. -->
-  <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:10px;margin-top:14px;"></div>
+  <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:10px;margin-top:22px;"></div>
 </div>
 
   <!-- GMAIL -->
@@ -26608,12 +26608,13 @@ function socialResultCardHtml(platformConfig) {
   // Régénérer / Copier côte à côte (même pattern que "Annuler" / "Créer et
   // utiliser" dans l'éditeur de style d'écriture, ou "Oui" / "Non" dans le
   // bilan d'essai) — au lieu d'un bouton pleine largeur sous l'autre, qui
-  // faisait prendre toute la page aux cartes de résultat. Le label
-  // réseau/icône n'est plus répété ici (déjà porté par l'onglet actif quand
-  // il y en a plusieurs) sauf s'il n'y a qu'un seul réseau généré (pas
-  // d'onglets dans ce cas, donc on garde le label pour ne pas perdre ce
-  // repère visuel).
+  // faisait prendre toute la page aux cartes de résultat. Le label indique
+  // toujours "📝 Post" (demande explicite : un mot pour dire que c'est le
+  // post, pas juste le réseau) — complété par le réseau/icône seulement
+  // quand il n'y a qu'un seul réseau généré (pas d'onglets dans ce cas, donc
+  // on garde ce repère visuel en plus).
   const totalGenerated = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]).length;
+  const postLabel = totalGenerated > 1 ? "📝 Post" : `📝 Post · ${platformConfig.icon} ${platformConfig.label}`;
   // Bouton "Copier le texte" déplacé juste à côté du texte, en haut à droite
   // (même emplacement que le bouton "Copier le 1er commentaire", voir
   // socialFirstCommentHtml) — au lieu d'être groupé avec "Régénérer" tout en
@@ -26621,7 +26622,7 @@ function socialResultCardHtml(platformConfig) {
   return `
     <div class="field-group" id="social-result-card-${key}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div class="field-label" style="margin:0;">${totalGenerated > 1 ? "" : `${platformConfig.icon} ${platformConfig.label}`}</div>
+        <div class="field-label" style="margin:0;">${postLabel}</div>
         <button class="icon-square-btn" type="button" onclick="copySocialPostText('${key}')" aria-label="Copier le texte" title="Copier le texte">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
         </button>
@@ -26658,8 +26659,11 @@ function socialSharedImageHtml() {
   // ligne séparée — .icon-square-btn-overlay garde un fond sombre + icône
   // blanche constants (indépendants du thème) pour rester lisibles sur
   // n'importe quelle photo.
+  // margin-top supplémentaire (en plus du gap:10px de la liste de résultats,
+  // voir #social-generated-results-list) : espace demandé explicitement
+  // entre le bouton "Régénérer" de la carte précédente et "Image générée".
   return `
-    <div class="field-group" id="social-shared-image-card">
+    <div class="field-group" id="social-shared-image-card" style="margin-top:10px;">
       <div class="field-label" style="margin:0 0 8px;">🖼️ Image générée</div>
       <div style="position:relative; max-width:360px; margin:0 auto;">
         <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
@@ -26877,7 +26881,7 @@ function socialFirstCommentHtml(post, key) {
   const text = (post && post.first_comment) ? String(post.first_comment).trim() : "";
   if (!text) return "";
   return `
-    <div style="margin-top:12px;">
+    <div style="margin-top:22px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div class="field-label" style="margin:0;">💬 1er commentaire</div>
         <button type="button" class="icon-square-btn" onclick="copySocialFirstComment('${key}')" aria-label="Copier le 1er commentaire" title="Copier le 1er commentaire">
