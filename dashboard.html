@@ -26464,6 +26464,7 @@ function socialResultCardHtml(platformConfig) {
     <div class="field-group" id="social-result-card-${key}">
       ${totalGenerated > 1 ? "" : `<div class="field-label">${platformConfig.icon} ${platformConfig.label}</div>`}
       <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5;">${escapeHtmlForPrint(post.caption || "")}</div>
+      ${socialFirstCommentHtml(post, key)}
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
         <button class="sheet-btn" type="button" style="padding:7px 12px;font-size:12.5px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
@@ -26496,9 +26497,14 @@ function socialSharedImageHtml() {
     <div class="field-group" id="social-shared-image-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div class="field-label" style="margin:0;">🖼️ Image générée</div>
-        <button type="button" class="icon-square-btn" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
-        </button>
+        <div style="display:flex;gap:8px;flex:0 0 auto;">
+          <button type="button" class="icon-square-btn" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 19h14"></path></svg>
+          </button>
+          <button type="button" class="icon-square-btn" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"></path></svg>
+          </button>
+        </div>
       </div>
       <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; max-width:360px; border-radius:16px; border:1px solid var(--clarity-border); display:block; margin:8px auto 0;" />
     </div>
@@ -26582,6 +26588,36 @@ async function sendSocialFeedback() {
   }
 }
 
+// "Enregistrer l'image" : même patron que downloadCrPhoto — téléchargement
+// direct via un blob/lien, sauf sur iOS où Safari ignore l'attribut
+// "download" (limitation WebKit connue) : on bascule alors sur la feuille
+// de partage native (shareSocialImage, juste en dessous), qui propose déjà
+// "Enregistrer l'image" dans ses options.
+async function downloadSocialImage() {
+  if (!socialSharedImageUrl) return;
+  if (isIOSDevice()) {
+    return shareSocialImage();
+  }
+  try {
+    const response = await fetch(socialSharedImageUrl);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const isDataUrl = socialSharedImageUrl.indexOf("data:") === 0;
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = isDataUrl
+      ? "publication." + ((socialSharedImageUrl.match(/^data:image\/(\w+);/) || [, "png"])[1])
+      : (socialSharedImageUrl.split("/").pop() || "publication.jpg").split("?")[0];
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
+  } catch (e) {
+    console.error("Téléchargement image publication impossible :", e);
+    showToast("Impossible d'enregistrer l'image", "error");
+  }
+}
+
 // Feuille de partage native (même patron que shareCrPhoto) : partage le
 // fichier image quand le navigateur le permet (l'utilisateur retrouve aussi
 // "Enregistrer l'image" en plus des apps), sinon partage le lien, puis en
@@ -26660,6 +26696,41 @@ async function copySocialPostText(platform) {
   try {
     await navigator.clipboard.writeText(fullText);
     showToast("Texte copié");
+  } catch (e) {
+    showToast("Impossible de copier automatiquement", "error");
+  }
+}
+
+// Bloc "1er commentaire" optionnel : certains réseaux (ex. Instagram) sont
+// souvent publiés avec les hashtags/CTA mis dans le PREMIER COMMENTAIRE
+// plutôt que dans la légende elle-même. Le backend ne génère pas encore ce
+// champ (/social/generate ne renvoie pas encore post.first_comment) : ce
+// bloc ne s'affiche donc pour l'instant que si cette clé est présente et
+// non vide, prêt à accueillir la génération dès qu'elle existera côté
+// backend (voir le message pour Grok).
+function socialFirstCommentHtml(post, key) {
+  const text = (post && post.first_comment) ? String(post.first_comment).trim() : "";
+  if (!text) return "";
+  return `
+    <div style="margin-top:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="field-label" style="margin:0;">💬 1er commentaire</div>
+        <button type="button" class="icon-square-btn" onclick="copySocialFirstComment('${key}')" aria-label="Copier le 1er commentaire" title="Copier le 1er commentaire">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+      <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:60px; max-height:160px; overflow-y:auto; line-height:1.5; margin-top:6px;">${escapeHtmlForPrint(text)}</div>
+    </div>
+  `;
+}
+
+async function copySocialFirstComment(platform) {
+  const post = socialGeneratedPosts[platform];
+  const text = (post && post.first_comment) ? String(post.first_comment).trim() : "";
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("1er commentaire copié");
   } catch (e) {
     showToast("Impossible de copier automatiquement", "error");
   }
