@@ -10582,6 +10582,16 @@ body[data-theme="light"]::after {
         </div>
       </div>
 
+      <!-- Site web de la société, ajouté au 1er commentaire côté backend
+           (/social/generate) — colonne profiles.website déjà existante,
+           persistée via une requête isolée (voir loadSocialWebsite/
+           saveSocialWebsite). Même patron que le textarea ci-dessus
+           (markSocialWebsiteDirty/flushSocialWebsiteIfDirty). -->
+      <div class="field-group" style="margin-top:10px;">
+        <div class="field-label">Site web</div>
+        <input class="field-input" type="text" id="social-website-input" placeholder="https://..." oninput="markSocialWebsiteDirty()" onblur="flushSocialWebsiteIfDirty()" />
+      </div>
+
       <button class="sheet-btn" type="button" onclick="closeSocialContextModal()" style="width:100%;justify-content:center;margin-top:14px;padding:9px;">
         Fermer
       </button>
@@ -25531,6 +25541,16 @@ let socialContextDirty = false;
 // applySocialThemeToUI).
 let socialTheme = "";
 
+// Adresse du site web de la société, ajoutée au 1er commentaire côté
+// backend (/social/generate) — persistée dans Supabase (profiles.website,
+// colonne EXISTANTE déjà consommée par le backend, voir le message
+// d'Anthony) via une requête ISOLÉE du reste de loadSocialSettings/
+// saveSocialSettings (même raison que socialTheme plus haut : une colonne
+// absente ou mal nommée ne doit jamais faire échouer la requête groupée et
+// effacer les autres réglages).
+let socialWebsite = "";
+let socialWebsiteDirty = false;
+
 // Jours de publication cochés + heure par jour, ex. { mon: "12:00", wed:
 // "09:30" } — remplace l'ancienne fréquence 1/2/3/5/7 en popup (demande
 // explicite : jours + heure par jour, visuel léger). Pas encore de colonne
@@ -25584,6 +25604,7 @@ function closeSocialSubpage() {
   // onblur du champ texte avant de démonter la vue : on force la
   // sauvegarde d'une frappe en cours plutôt que de la perdre.
   flushSocialContextIfDirty();
+  flushSocialWebsiteIfDirty();
   section.classList.remove("open");
   document.querySelectorAll(
     "#main-settings .settings-page-block"
@@ -25626,6 +25647,10 @@ async function loadSocialSettings() {
   // jamais effacer les autres réglages déjà sauvegardés.
   loadSocialScheduleDays();
   await loadSocialScheduleDaysFromSupabase();
+  // Même principe : site web chargé à PART (requête isolée sur la colonne
+  // website, déjà existante côté backend) — jamais mélangé à la requête
+  // groupée ci-dessus.
+  await loadSocialWebsite();
   syncSocialUI();
 }
 
@@ -25779,6 +25804,92 @@ async function saveSocialTheme() {
   }
 }
 
+// ─── Persistance de website (champ "Site web"), ISOLÉE du reste de
+// saveSocialSettings/loadSocialSettings ───────────────────────────────────
+// Même principe que social_theme ci-dessus : requête Supabase séparée
+// (select ET upsert), jamais mélangée aux autres colonnes de "profiles".
+// Colonne `website` déjà existante côté backend (confirmé par Anthony),
+// déjà consommée par /social/generate pour le 1er commentaire — ici on se
+// contente de la lire/écrire. Dupliquée en localStorage par sécurité, comme
+// le thème.
+function socialWebsiteStorageKey() {
+  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
+  return "social_website_" + email;
+}
+
+function loadSocialWebsiteFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(socialWebsiteStorageKey());
+    if (typeof raw === "string") socialWebsite = raw;
+  } catch (e) {
+    console.error("Erreur lecture locale du site web:", e);
+  }
+}
+
+function saveSocialWebsiteToLocalStorage() {
+  try {
+    localStorage.setItem(socialWebsiteStorageKey(), socialWebsite);
+  } catch (e) {
+    console.error("Erreur sauvegarde locale du site web:", e);
+  }
+}
+
+async function loadSocialWebsite() {
+  if (!currentUser || !currentUser.id) return;
+  loadSocialWebsiteFromLocalStorage();
+  try {
+    const { data, error } = await supabaseClient
+      .from("profiles")
+      .select("website")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+    if (error) {
+      console.error("Erreur chargement site web (Supabase) :", error);
+    } else if (data && typeof data.website === "string") {
+      socialWebsite = data.website;
+    }
+  } catch (e) {
+    console.error("Erreur réseau chargement site web:", e);
+  }
+}
+
+async function saveSocialWebsite() {
+  saveSocialWebsiteToLocalStorage();
+  if (!currentUser || !currentUser.id) return;
+  try {
+    const { error } = await supabaseClient
+      .from("profiles")
+      .upsert({
+        id: currentUser.id,
+        website: socialWebsite,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
+    if (error) {
+      // Pas de toast ici volontairement : le site web est déjà en sécurité en
+      // localStorage (ci-dessus), même raison que pour le thème.
+      console.error("Erreur sauvegarde site web (Supabase) :", error);
+    }
+  } catch (e) {
+    console.error("Erreur réseau sauvegarde site web:", e);
+  }
+}
+
+// ─── Champ "Site web" (dans la popup "Société") ─────────────────────────
+// Même patron que markSocialContextDirty/flushSocialContextIfDirty pour le
+// textarea de contexte : sauvegarde à la sortie du champ (onblur), pas à
+// chaque frappe.
+function markSocialWebsiteDirty() {
+  socialWebsiteDirty = true;
+}
+
+function flushSocialWebsiteIfDirty() {
+  if (!socialWebsiteDirty) return;
+  const input = document.getElementById("social-website-input");
+  socialWebsite = input ? input.value.trim() : socialWebsite;
+  socialWebsiteDirty = false;
+  saveSocialWebsite();
+}
+
 function syncSocialUI() {
   const toggle = document.getElementById("social-toggle-switch");
   if (toggle) toggle.classList.toggle("active", socialEnabled);
@@ -25802,6 +25913,11 @@ function syncSocialUI() {
   const textarea = document.getElementById("social-context-input");
   if (textarea && document.activeElement !== textarea) {
     textarea.value = socialContext;
+  }
+
+  const websiteInput = document.getElementById("social-website-input");
+  if (websiteInput && document.activeElement !== websiteInput) {
+    websiteInput.value = socialWebsite;
   }
 
   const previewWrap = document.getElementById("social-logo-preview-wrap");
@@ -26036,12 +26152,16 @@ function openSocialContextModal() {
   // mise à jour ailleurs pendant que la popup était fermée).
   const textarea = document.getElementById("social-context-input");
   if (textarea && document.activeElement !== textarea) textarea.value = socialContext;
+  const websiteInput = document.getElementById("social-website-input");
+  if (websiteInput && document.activeElement !== websiteInput) websiteInput.value = socialWebsite;
 }
 
 function closeSocialContextModal() {
   // Sécurité : force la sauvegarde si l'utilisateur ferme juste après avoir
-  // tapé, au cas où le onblur du textarea n'aurait pas encore eu lieu.
+  // tapé, au cas où le onblur du textarea (ou du champ "Site web") n'aurait
+  // pas encore eu lieu.
   flushSocialContextIfDirty();
+  flushSocialWebsiteIfDirty();
   const modal = document.getElementById("social-context-modal");
   if (modal) modal.style.display = "none";
 }
