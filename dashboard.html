@@ -4943,13 +4943,21 @@ textarea.field-input {
    que les .tag/.agent-status existants, donc déjà valides dans les 5 thèmes.
    Sélecteur à 2 classes : l'emporte sur .info-box seul peu importe l'ordre
    dans la feuille de style. */
+/* Liseré gauche plein (couleur pleine, pas la version "dim" du fond) en
+   plus du fond teinté : demande explicite car le rouge (comme le vert)
+   n'était pas assez voyant en thème sombre — surtout à cause du fond très
+   subtil (opacité ~12%), pas d'un problème de couleur en soi. Un bord épais
+   et saturé règle ça sans toucher aux tokens --clarity-success-*/-danger-*
+   partagés avec le reste du site (tags, badges...). */
 .info-box.success {
   background: var(--clarity-success-bg);
   border-color: var(--clarity-success-border);
+  border-left: 4px solid var(--clarity-success);
 }
 .info-box.danger {
   background: var(--clarity-danger-bg);
   border-color: var(--clarity-danger-border);
+  border-left: 4px solid var(--clarity-danger);
 }
 
 /* ---------- POPUPS ---------- */
@@ -10785,7 +10793,7 @@ body[data-theme="light"]::after {
     </div>
     <p class="settings-subpage-intro">Lecture : 3 minutes. À relire avant de publier.</p>
 
-    <div class="info-box" style="margin-top:12px;padding:16px 18px;line-height:1.75;">
+    <div class="info-box" style="margin-top:12px;padding:18px 20px;font-size:15px;line-height:1.8;">
       <span class="info-icon">🧠</span>
       <div>
         <strong>Le principe, en 30 secondes</strong><br/><br/>
@@ -26534,44 +26542,44 @@ function socialAdviceNetworkHtml(net) {
   }).join("");
 
   return `
-    <p style="font-size:13.5px;color:var(--clarity-text-secondary);line-height:1.55;margin:0 0 20px;">${escapeHtmlForPrint(net.intro)}</p>
+    <p style="font-size:15px;color:var(--clarity-text-secondary);line-height:1.65;margin:0 0 22px;">${escapeHtmlForPrint(net.intro)}</p>
 
-    <div class="info-box success" style="padding:16px 18px;">
+    <div class="info-box success" style="padding:18px 20px;font-size:15px;">
       <span class="info-icon">✅</span>
       <div>
         <strong>Il aime</strong>
-        <ul style="margin:8px 0 0;padding-left:18px;">
-          ${net.aime.map(t => `<li style="margin-bottom:7px;line-height:1.5;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        <ul style="margin:10px 0 0;padding-left:20px;">
+          ${net.aime.map(t => `<li style="margin-bottom:10px;line-height:1.6;">${escapeHtmlForPrint(t)}</li>`).join("")}
         </ul>
       </div>
     </div>
 
-    <div class="info-box danger" style="padding:16px 18px;margin-top:14px;">
+    <div class="info-box danger" style="padding:18px 20px;margin-top:16px;font-size:15px;">
       <span class="info-icon">❌</span>
       <div>
         <strong>Il n'aime pas</strong>
-        <ul style="margin:8px 0 0;padding-left:18px;">
-          ${net.naime.map(t => `<li style="margin-bottom:7px;line-height:1.5;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        <ul style="margin:10px 0 0;padding-left:20px;">
+          ${net.naime.map(t => `<li style="margin-bottom:10px;line-height:1.6;">${escapeHtmlForPrint(t)}</li>`).join("")}
         </ul>
       </div>
     </div>
 
-    <div class="info-box" style="padding:16px 18px;margin-top:14px;">
+    <div class="info-box" style="padding:18px 20px;margin-top:16px;font-size:15px;">
       <span class="info-icon">💡</span>
       <div><strong>Ton lien</strong> : ${escapeHtmlForPrint(net.lien)}</div>
     </div>
 
-    <div class="field-label" style="margin-top:28px;">🕐 Quand publier ?</div>
-    <div style="margin-top:12px;">${scheduleRows}</div>
-    <div style="font-size:11.5px;color:var(--clarity-text-tertiary);margin-top:8px;">⭐ = meilleurs jours  ·  😴 = jours plus calmes</div>
+    <div class="field-label" style="margin-top:30px;font-size:13px;">🕐 Quand publier ?</div>
+    <div style="margin-top:14px;font-size:14.5px;">${scheduleRows}</div>
+    <div style="font-size:12px;color:var(--clarity-text-tertiary);margin-top:10px;">⭐ = meilleurs jours  ·  😴 = jours plus calmes</div>
 
-    <div class="info-box" style="padding:16px 18px;margin-top:22px;">
+    <div class="info-box" style="padding:18px 20px;margin-top:24px;font-size:15px;">
       <div>
         <strong>3 règles simples</strong>
-        <ul style="margin:8px 0 0;padding-left:18px;">
-          <li style="margin-bottom:7px;line-height:1.5;">Publie au début du créneau, pas à la fin, pour profiter de toute l'heure de pointe.</li>
-          <li style="margin-bottom:7px;line-height:1.5;">Tes clients sont artisans ? Vise 7h-8h (avant le chantier), 12h-13h (la pause) ou 18h-20h (le retour).</li>
-          <li style="line-height:1.5;">Tes statistiques valent plus que ce tableau. Au bout d'un mois, regarde quand tes posts marchent le mieux et adapte-toi.</li>
+        <ul style="margin:10px 0 0;padding-left:20px;">
+          <li style="margin-bottom:10px;line-height:1.6;">Publie au début du créneau, pas à la fin, pour profiter de toute l'heure de pointe.</li>
+          <li style="margin-bottom:10px;line-height:1.6;">Tes clients sont artisans ? Vise 7h-8h (avant le chantier), 12h-13h (la pause) ou 18h-20h (le retour).</li>
+          <li style="line-height:1.6;">Tes statistiques valent plus que ce tableau. Au bout d'un mois, regarde quand tes posts marchent le mieux et adapte-toi.</li>
         </ul>
       </div>
     </div>
@@ -26582,17 +26590,17 @@ function socialAdviceNetworkHtml(net) {
 // non sauvegardées, demande explicite) et les 5 erreurs.
 function socialAdviceRoutineHtml() {
   const freqRows = SOCIAL_ADVICE_POST_FREQUENCY.map(f => `
-    <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:4px;">
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:12px 14px;margin-bottom:6px;font-size:14.5px;">
       <span>${f.icon} ${escapeHtmlForPrint(f.label)}</span>
       <span style="color:var(--clarity-text-secondary);">${escapeHtmlForPrint(f.rythme)}</span>
     </div>
   `).join("");
 
   const groups = SOCIAL_ADVICE_ROUTINE_GROUPS.map(g => `
-    <div class="field-group" style="margin-top:18px;">
-      <div class="field-label">${escapeHtmlForPrint(g.title)}</div>
+    <div class="field-group" style="margin-top:20px;">
+      <div class="field-label" style="font-size:13px;">${escapeHtmlForPrint(g.title)}</div>
       ${g.items.map(it => `
-        <label style="display:flex;align-items:flex-start;gap:9px;padding:8px 0;font-size:13.5px;line-height:1.45;cursor:pointer;">
+        <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;font-size:15px;line-height:1.55;cursor:pointer;">
           <input type="checkbox" style="margin-top:3px;" />
           <span>${escapeHtmlForPrint(it)}</span>
         </label>
@@ -26600,18 +26608,18 @@ function socialAdviceRoutineHtml() {
     </div>
   `).join("");
 
-  const mistakes = SOCIAL_ADVICE_MISTAKES.map(m => `<li style="margin-bottom:9px;line-height:1.5;">${escapeHtmlForPrint(m)}</li>`).join("");
+  const mistakes = SOCIAL_ADVICE_MISTAKES.map(m => `<li style="margin-bottom:11px;line-height:1.6;">${escapeHtmlForPrint(m)}</li>`).join("");
 
   return `
-    <div class="field-label">📅 Combien de posts par semaine ?</div>
-    <div style="margin-top:10px;">${freqRows}</div>
-    <div style="font-size:12.5px;color:var(--clarity-text-secondary);line-height:1.5;margin-top:10px;">👉 La régularité bat la quantité. Mieux vaut 3 posts chaque semaine que 10 posts une fois par mois.</div>
+    <div class="field-label" style="font-size:13px;">📅 Combien de posts par semaine ?</div>
+    <div style="margin-top:12px;">${freqRows}</div>
+    <div style="font-size:13.5px;color:var(--clarity-text-secondary);line-height:1.55;margin-top:12px;">👉 La régularité bat la quantité. Mieux vaut 3 posts chaque semaine que 10 posts une fois par mois.</div>
 
-    <div class="field-label" style="margin-top:28px;">✅ Ta routine à chaque publication</div>
+    <div class="field-label" style="margin-top:30px;font-size:13px;">✅ Ta routine à chaque publication</div>
     ${groups}
 
-    <div class="field-label" style="margin-top:28px;">🚫 Les 5 erreurs qui tuent un post</div>
-    <ol style="margin:10px 0 0;padding-left:20px;font-size:13.5px;">${mistakes}</ol>
+    <div class="field-label" style="margin-top:30px;font-size:13px;">🚫 Les 5 erreurs qui tuent un post</div>
+    <ol style="margin:12px 0 0;padding-left:20px;font-size:15px;">${mistakes}</ol>
   `;
 }
 
