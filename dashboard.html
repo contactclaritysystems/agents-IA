@@ -949,6 +949,37 @@ body[data-theme="dark"] .icon-square-btn:hover {
 .icon-square-btn.icon-square-btn-overlay:hover { background: rgba(0,0,0,.72); }
 .icon-square-btn.icon-square-btn-overlay svg { width: 15px; height: 15px; }
 
+/* Petit indicateur "ça tourne" pendant la génération d'un post (voir
+   #social-generating-status / startSocialGeneratingStatus) — même logique
+   de spécificité body[data-theme="dark"] que .icon-square-btn plus haut :
+   var(--clarity-border)/var(--clarity-primary) restent fiables ici car ce
+   bloc est dans le HTML statique de la page (pas du contenu injecté), donc
+   pas besoin d'un correctif sombre séparé. */
+.social-generating-spinner {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--clarity-border);
+  border-top-color: var(--clarity-primary);
+  animation: social-generating-spin .8s linear infinite;
+}
+@keyframes social-generating-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Demande explicite : sur mobile, "Enregistrer l'image" et "Partager" font
+   la même chose (la feuille de partage native propose déjà "Enregistrer
+   l'image" parmi ses options) — on ne garde que "Partager" sur petit écran.
+   Même seuil que les media queries mobile existantes ailleurs dans ce
+   fichier (max-width: 600px). Sur desktop, pas de feuille de partage
+   équivalente : les deux boutons restent utiles, donc inchangés. */
+@media (max-width: 600px) {
+  #social-image-download-btn {
+    display: none;
+  }
+}
+
 .sheet-btn:hover {
   background: var(--clarity-surface);
   border-color: var(--line-strong);
@@ -4900,6 +4931,20 @@ textarea.field-input {
   color: var(--clarity-text-secondary);
 }
 
+/* Variantes "Il aime" / "Il n'aime pas" de la page Conseils & Algorithmes
+   (#social-advice-page) : mêmes tokens --clarity-success-*/--clarity-danger-*
+   que les .tag/.agent-status existants, donc déjà valides dans les 5 thèmes.
+   Sélecteur à 2 classes : l'emporte sur .info-box seul peu importe l'ordre
+   dans la feuille de style. */
+.info-box.success {
+  background: var(--clarity-success-bg);
+  border-color: var(--clarity-success-border);
+}
+.info-box.danger {
+  background: var(--clarity-danger-bg);
+  border-color: var(--clarity-danger-border);
+}
+
 /* ---------- POPUPS ---------- */
 
 .mail-choice-backdrop {
@@ -7454,6 +7499,16 @@ body[data-theme="azur"] .loader-halo {
   #application-mobile-section > *,
   #social-mobile-section > * {
     max-width: 620px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  /* La page "Conseils & Algorithmes" demande explicitement 900px (plus large
+     que le recadrage générique à 620px ci-dessus). Sélecteur à 2 ID : plus
+     spécifique que "#social-mobile-section > *" (1 ID + universel), donc
+     l'emporte toujours, peu importe l'ordre dans la feuille de style. */
+  #social-mobile-section > #social-advice-page {
+    max-width: 900px !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
@@ -10457,6 +10512,12 @@ body[data-theme="light"]::after {
      manuel — réglages + génération à la demande). Même patron que les
      autres sous-pages Réglages. -->
 <div id="social-mobile-section">
+  <!-- Vue normale des réglages "Publications réseaux" — regroupée dans ce
+       conteneur pour pouvoir la cacher/afficher en même temps que
+       #social-advice-page (voir openSocialAdvicePage/closeSocialAdvicePage),
+       sans dupliquer toute la mécanique CSS des "-mobile-section" (qui vit
+       déjà au niveau de #social-mobile-section lui-même). -->
+  <div id="social-settings-main-view">
   <div class="mobile-subpage-header">
     <button class="sheet-btn" type="button" onclick="closeSocialSubpage()">← Retour</button>
     <div class="section-title">Publications réseaux</div>
@@ -10547,6 +10608,15 @@ body[data-theme="light"]::after {
       <span class="settings-row-icon settings-row-icon-amber">🏢</span>
       <div class="settings-row-title">Société</div>
       <span class="settings-row-value" id="social-context-row-display">Non renseigné</span>
+      <span class="settings-row-chevron">›</span>
+    </div>
+    <!-- Conseils de publication + explication de l'algorithme : page plein
+         écran dédiée (#social-advice-page, plus bas), PAS une popup — demande
+         explicite. Contenu 100% statique (texte fourni par Anthony, intégré
+         tel quel), aucun appel réseau. -->
+    <div class="settings-row" id="social-advice-row" onclick="openSocialAdvicePage()">
+      <span class="settings-row-icon settings-row-icon-blue">💡</span>
+      <div class="settings-row-title">Conseils</div>
       <span class="settings-row-chevron">›</span>
     </div>
   </div>
@@ -10661,13 +10731,68 @@ body[data-theme="light"]::after {
     </div>
   </div>
 
-  <button class="sheet-btn" type="button" id="social-generate-btn" style="display:flex;justify-content:center;margin:22px auto 0;max-width:280px;" onclick="generateSocialPosts()">✨ Générer</button>
+  <!-- Un seul bouton "Générer" tant qu'aucun post n'existe. Une fois au
+       moins un post généré, "Générer" devient "🔁 Tout régénérer" (même
+       action : relance pour tous les réseaux cochés) et un second bouton
+       "🔂 Régénérer <réseau actif>" apparaît à côté pour ne relancer QUE le
+       réseau actuellement affiché (celui sélectionné via les onglets
+       Instagram/Facebook/LinkedIn, voir selectSocialResultTab) — voir
+       renderSocialGenerateButtonState. -->
+  <div style="display:flex;gap:8px;justify-content:center;margin:22px auto 0;max-width:360px;">
+    <button class="sheet-btn" type="button" id="social-generate-btn" style="flex:1;justify-content:center;" onclick="generateSocialPosts()">✨ Générer</button>
+    <button class="sheet-btn" type="button" id="social-regenerate-one-btn" style="flex:1;justify-content:center;display:none;" onclick="regenerateActiveSocialPost()">🔂 Régénérer</button>
+  </div>
+
+  <!-- Indicateur visuel pendant la génération (spinner qui tourne + message
+       qui change) : demande explicite — l'ancien état (juste le texte du
+       bouton "⏳ Génération...") ne suffisait pas à rassurer que la page
+       n'avait pas buggé, surtout lors de la toute première génération (pas
+       encore de carte affichée à ce moment-là). Géré par
+       startSocialGeneratingStatus/stopSocialGeneratingStatus, appelées
+       depuis renderSocialGenerateButtonState. -->
+  <div id="social-generating-status" style="display:none;align-items:center;justify-content:center;gap:8px;margin-top:12px;">
+    <span class="social-generating-spinner"></span>
+    <span id="social-generating-message" style="font-size:12.5px;color:var(--clarity-text-secondary);">Clarity rédige votre publication…</span>
+  </div>
 
   <!-- Résultats : une carte par réseau coché (voir renderSocialGeneratedResults/
-       socialResultCardHtml) — image si image_url présent, caption, hashtags,
-       Régénérer + Copier côte à côte par carte. -->
+       socialResultCardHtml) — image si image_url présent, caption, hashtags
+       par carte. -->
   <div id="social-generated-results-list" style="display:flex;flex-direction:column;gap:10px;margin-top:22px;"></div>
-</div>
+  </div>
+  <!-- /#social-settings-main-view -->
+
+  <!-- Page "Conseils & Algorithmes" : contenu 100% statique (texte fourni
+       par Anthony, intégré tel quel — aucune reformulation, aucun emoji
+       retiré), aucun appel Supabase/Make. Cachée par défaut, affichée par
+       openSocialAdvicePage() qui cache #social-settings-main-view en même
+       temps (un seul des deux visible à la fois, à l'intérieur du même
+       panneau plein écran #social-mobile-section). Largeur limitée à 900px
+       (voir la règle CSS #social-mobile-section > #social-advice-page, qui
+       doit l'emporter sur le recadrage desktop générique à 620px des autres
+       enfants directs de #social-mobile-section). -->
+  <div id="social-advice-page" style="display:none;">
+    <div class="mobile-subpage-header">
+      <button class="sheet-btn" type="button" onclick="closeSocialAdvicePage()">← Retour</button>
+      <div class="section-title">Conseils & Algorithmes</div>
+    </div>
+    <p class="settings-subpage-intro">Lecture : 3 minutes. À relire avant de publier.</p>
+
+    <div class="info-box" style="margin-top:4px;">
+      <span class="info-icon">🧠</span>
+      <div>
+        <strong>Le principe, en 30 secondes</strong><br/>
+        Sur les 3 réseaux, c'est le même mécanisme :<br/>
+        1. Ton post est d'abord montré à un petit groupe de personnes.<br/>
+        2. Le réseau observe la 1<sup>re</sup> heure : est-ce qu'on s'arrête, est-ce qu'on lit, est-ce qu'on réagit ?<br/>
+        3. Si oui, il le montre à beaucoup plus de monde. Si non, il l'enterre.<br/><br/>
+        👉 Ton objectif : arrêter le scroll en 2 secondes, puis faire réagir pendant la 1<sup>re</sup> heure.
+      </div>
+    </div>
+
+    <div id="social-advice-tabs" style="display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;"></div>
+    <div id="social-advice-tab-content" style="margin-top:14px;"></div>
+  </div>
 
   <!-- GMAIL -->
   <div class="gmail-section" id="gmail-connect-section">
@@ -25623,6 +25748,10 @@ function openSocialSubpage() {
   // appel réseau supplémentaire.
   if (typeof renderSocialPlatformChecklist === "function") renderSocialPlatformChecklist();
   if (typeof renderSocialGeneratedResults === "function") renderSocialGeneratedResults();
+  // Ordre important ici aussi (voir requestSocialPosts) : le libellé
+  // "🔂 Régénérer <réseau>" dépend de socialActiveResultTab, fixé par
+  // renderSocialGeneratedResults() juste au-dessus.
+  if (typeof renderSocialGenerateButtonState === "function") renderSocialGenerateButtonState();
   // Résumés des lignes "Réseaux" / "Longueur du texte" / "Société" (popups) :
   // rafraîchis à chaque ouverture de la sous-page, au cas où l'état aurait
   // changé pendant qu'elle était fermée.
@@ -26200,6 +26329,277 @@ function closeSocialContextModal() {
   if (modal) modal.style.display = "none";
 }
 
+// ─── Page "Conseils & Algorithmes" ───────────────────────────────────────
+// Contenu 100% statique (texte fourni par Anthony, intégré tel quel) : pas
+// d'appel réseau, pas de colonne Supabase, rien à transmettre au backend.
+// Un seul panneau plein écran (#social-mobile-section, déjà existant) : on
+// bascule juste entre #social-settings-main-view et #social-advice-page à
+// l'intérieur, plutôt que de dupliquer toute la mécanique CSS des
+// "-mobile-section" pour une page de plus.
+
+// Libellés longs (avec ⭐/😴) utilisés à la fois comme étiquette de ligne et
+// comme repère visuel — le "⭐"/"😴" fait partie du texte fourni, pas une
+// décoration ajoutée. jsDay suit new Date().getDay() (0 = dimanche) pour la
+// mise en avant automatique du jour courant.
+const SOCIAL_ADVICE_DAYS = [
+  { key: "mon", label: "Lundi", jsDay: 1 },
+  { key: "tue", label: "Mardi ⭐", jsDay: 2 },
+  { key: "wed", label: "Mercredi ⭐", jsDay: 3 },
+  { key: "thu", label: "Jeudi ⭐", jsDay: 4 },
+  { key: "fri", label: "Vendredi", jsDay: 5 },
+  { key: "sat", label: "Samedi 😴", jsDay: 6 },
+  { key: "sun", label: "Dimanche 😴", jsDay: 0 }
+];
+
+const SOCIAL_ADVICE_NETWORKS = {
+  instagram: {
+    intro: "Ce qui compte le plus : l'image. Le texte est en dessous, et peu de gens le lisent.",
+    aime: [
+      "Les carrousels (5 à 7 images) : ils font plus de vues et plus d'enregistrements qu'une image seule.",
+      "Les posts qu'on envoie à un ami en message privé : c'est le signal n°1 pour toucher de nouvelles personnes.",
+      "Les posts qu'on enregistre (astuces, listes, méthodes).",
+      "Une 1re image claire, avec 7 mots maximum dessus."
+    ],
+    naime: [
+      "Les images chargées de texte ou floues.",
+      "Les visuels de banque d'images ou d'IA trop « lisses ».",
+      "Plus de 5 hashtags."
+    ],
+    lien: "uniquement dans ta bio. Il n'est pas cliquable dans le post ni dans les commentaires.",
+    schedule: {
+      mon: "12h-13h · 17h-20h", tue: "12h-13h · 18h-20h", wed: "12h-13h · 18h",
+      thu: "7h-10h · 12h-14h", fri: "7h-8h · 14h-16h", sat: "9h-12h", sun: "18h-20h"
+    }
+  },
+  linkedin: {
+    intro: "Ce qui compte le plus : les 2 premières lignes. Le texte passe avant l'image.",
+    aime: [
+      "Le temps de lecture : un texte aéré, avec des phrases courtes.",
+      "Les vrais commentaires (plusieurs phrases), bien plus que les likes.",
+      "Les enregistrements et les partages en message privé.",
+      "Le concret : ton expérience, un chiffre, un avant/après."
+    ],
+    naime: [
+      "Les liens externes dans le post.",
+      "Les textes génériques qui sentent l'IA.",
+      "Les commentaires vides (« Top ! », « Bravo 👏 »).",
+      "Les groupes d'entraide qui likent tout automatiquement."
+    ],
+    lien: "plutôt en message privé, aux personnes qui le demandent en commentaire.",
+    schedule: {
+      mon: "9h-12h", tue: "8h-12h", wed: "8h-12h",
+      thu: "8h-11h", fri: "8h-11h", sat: "À éviter", sun: "À éviter"
+    }
+  },
+  facebook: {
+    intro: "Ce qui compte le plus : la 1re phrase, puis la discussion.",
+    aime: [
+      "Les commentaires et les échanges entre les gens.",
+      "Les partages en privé (Messenger).",
+      "Un ton conversationnel, comme si tu parlais à un voisin.",
+      "Les groupes locaux : beaucoup plus de portée qu'une page."
+    ],
+    naime: [
+      "Les liens dans le texte du post.",
+      "Les phrases du type « Like si… », « Tague un ami », « Commente OUI » : elles sont détectées et ton post est freiné.",
+      "Les posts recyclés ou copiés-collés."
+    ],
+    lien: "dans un commentaire épinglé, 20 à 30 minutes après la publication.",
+    schedule: {
+      mon: "12h-13h", tue: "12h-14h · 18h-20h", wed: "12h-14h · 18h-20h",
+      thu: "12h-14h · 20h", fri: "12h-13h", sat: "9h-11h", sun: "À éviter"
+    }
+  }
+};
+
+const SOCIAL_ADVICE_POST_FREQUENCY = [
+  { icon: "📸", label: "Instagram", rythme: "3 à 5 posts" },
+  { icon: "💼", label: "LinkedIn", rythme: "2 à 4 posts" },
+  { icon: "👍", label: "Facebook", rythme: "3 à 5 posts" }
+];
+
+const SOCIAL_ADVICE_ROUTINE_GROUPS = [
+  {
+    title: "Avant de publier",
+    items: [
+      "Mon accroche tient en 1 ligne et parle du problème de mon client.",
+      "Mon image se comprend en une demi-seconde.",
+      "Aucun lien dans le texte.",
+      "Je finis par une seule question ou une seule action."
+    ]
+  },
+  {
+    title: "Juste après (la 1re heure, la plus importante)",
+    items: [
+      "Je reste disponible 30 à 60 minutes.",
+      "Je publie mon 1er commentaire (un bonus + une question).",
+      "Je réponds à chaque commentaire avec une vraie phrase.",
+      "Je commente 3 à 5 posts d'autres personnes de mon secteur."
+    ]
+  },
+  {
+    title: "Le lendemain",
+    items: [
+      "J'envoie le lien en privé à chaque personne qui l'a demandé.",
+      "Je note ce qui a bien marché (accroche, image, horaire)."
+    ]
+  }
+];
+
+const SOCIAL_ADVICE_MISTAKES = [
+  "Commencer par « Bonjour à tous » ou par la présentation de ton entreprise.",
+  "Mettre un lien dans le texte.",
+  "Publier puis disparaître.",
+  "Écrire le même texte sur les 3 réseaux.",
+  "Copier-coller un texte d'IA sans y ajouter ton vécu, tes chiffres ou ton métier."
+];
+
+const SOCIAL_ADVICE_TABS = [
+  { key: "instagram", icon: "📸", label: "Instagram" },
+  { key: "linkedin", icon: "💼", label: "LinkedIn" },
+  { key: "facebook", icon: "👍", label: "Facebook" },
+  { key: "routine", icon: "✅", label: "Routine" }
+];
+
+let socialAdviceActiveTab = "instagram";
+
+function openSocialAdvicePage() {
+  const mainView = document.getElementById("social-settings-main-view");
+  const page = document.getElementById("social-advice-page");
+  if (mainView) mainView.style.display = "none";
+  if (page) page.style.display = "block";
+  renderSocialAdviceTabs();
+  renderSocialAdviceTabContent();
+}
+
+function closeSocialAdvicePage() {
+  const mainView = document.getElementById("social-settings-main-view");
+  const page = document.getElementById("social-advice-page");
+  if (page) page.style.display = "none";
+  if (mainView) mainView.style.display = "block";
+}
+
+function renderSocialAdviceTabs() {
+  const wrap = document.getElementById("social-advice-tabs");
+  if (!wrap) return;
+  wrap.innerHTML = SOCIAL_ADVICE_TABS.map(t => `
+    <button type="button" class="planning-view-toggle-btn${t.key === socialAdviceActiveTab ? " active" : ""}" style="flex:1;justify-content:center;min-width:130px;" onclick="selectSocialAdviceTab('${t.key}')">${t.icon} ${t.label}</button>
+  `).join("");
+}
+
+function selectSocialAdviceTab(key) {
+  socialAdviceActiveTab = key;
+  renderSocialAdviceTabs();
+  renderSocialAdviceTabContent();
+}
+
+function renderSocialAdviceTabContent() {
+  const wrap = document.getElementById("social-advice-tab-content");
+  if (!wrap) return;
+  wrap.innerHTML = socialAdviceActiveTab === "routine"
+    ? socialAdviceRoutineHtml()
+    : socialAdviceNetworkHtml(SOCIAL_ADVICE_NETWORKS[socialAdviceActiveTab]);
+}
+
+// Carte réseau : Il aime (vert) / Il n'aime pas (rouge) / Ton lien, puis les
+// horaires jour par jour EN LISTE VERTICALE (pas de tableau horizontal sur
+// mobile — demande explicite), avec le jour courant mis en avant
+// automatiquement via new Date().getDay().
+function socialAdviceNetworkHtml(net) {
+  if (!net) return "";
+  const todayJsDay = new Date().getDay();
+  const scheduleRows = SOCIAL_ADVICE_DAYS.map(d => {
+    const isToday = d.jsDay === todayJsDay;
+    return `
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;${isToday ? "background:var(--clarity-accent-dim);font-weight:700;" : ""}">
+        <span>${escapeHtmlForPrint(d.label)}</span>
+        <span>${escapeHtmlForPrint(net.schedule[d.key] || "")}</span>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <p style="font-size:13px;color:var(--clarity-text-secondary);margin:0 0 12px;">${escapeHtmlForPrint(net.intro)}</p>
+
+    <div class="info-box success">
+      <span class="info-icon">✅</span>
+      <div>
+        <strong>Il aime</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+          ${net.aime.map(t => `<li style="margin-bottom:4px;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-box danger" style="margin-top:10px;">
+      <span class="info-icon">❌</span>
+      <div>
+        <strong>Il n'aime pas</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+          ${net.naime.map(t => `<li style="margin-bottom:4px;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-box" style="margin-top:10px;">
+      <span class="info-icon">💡</span>
+      <div><strong>Ton lien</strong> : ${escapeHtmlForPrint(net.lien)}</div>
+    </div>
+
+    <div class="field-label" style="margin-top:18px;">🕐 Quand publier ?</div>
+    <div style="margin-top:6px;">${scheduleRows}</div>
+    <div style="font-size:11.5px;color:var(--clarity-text-tertiary);margin-top:6px;">⭐ = meilleurs jours  ·  😴 = jours plus calmes</div>
+
+    <div class="info-box" style="margin-top:14px;">
+      <div>
+        <strong>3 règles simples</strong>
+        <ul style="margin:6px 0 0;padding-left:18px;">
+          <li style="margin-bottom:4px;">Publie au début du créneau, pas à la fin, pour profiter de toute l'heure de pointe.</li>
+          <li style="margin-bottom:4px;">Tes clients sont artisans ? Vise 7h-8h (avant le chantier), 12h-13h (la pause) ou 18h-20h (le retour).</li>
+          <li>Tes statistiques valent plus que ce tableau. Au bout d'un mois, regarde quand tes posts marchent le mieux et adapte-toi.</li>
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+// Onglet Routine : combien de posts, routine (cases à cocher décoratives —
+// non sauvegardées, demande explicite) et les 5 erreurs.
+function socialAdviceRoutineHtml() {
+  const freqRows = SOCIAL_ADVICE_POST_FREQUENCY.map(f => `
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;">
+      <span>${f.icon} ${escapeHtmlForPrint(f.label)}</span>
+      <span style="color:var(--clarity-text-secondary);">${escapeHtmlForPrint(f.rythme)}</span>
+    </div>
+  `).join("");
+
+  const groups = SOCIAL_ADVICE_ROUTINE_GROUPS.map(g => `
+    <div class="field-group" style="margin-top:12px;">
+      <div class="field-label">${escapeHtmlForPrint(g.title)}</div>
+      ${g.items.map(it => `
+        <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+          <input type="checkbox" style="margin-top:3px;" />
+          <span>${escapeHtmlForPrint(it)}</span>
+        </label>
+      `).join("")}
+    </div>
+  `).join("");
+
+  const mistakes = SOCIAL_ADVICE_MISTAKES.map(m => `<li style="margin-bottom:6px;">${escapeHtmlForPrint(m)}</li>`).join("");
+
+  return `
+    <div class="field-label">📅 Combien de posts par semaine ?</div>
+    <div style="margin-top:6px;">${freqRows}</div>
+    <div style="font-size:12.5px;color:var(--clarity-text-secondary);margin-top:8px;">👉 La régularité bat la quantité. Mieux vaut 3 posts chaque semaine que 10 posts une fois par mois.</div>
+
+    <div class="field-label" style="margin-top:20px;">✅ Ta routine à chaque publication</div>
+    ${groups}
+
+    <div class="field-label" style="margin-top:20px;">🚫 Les 5 erreurs qui tuent un post</div>
+    <ol style="margin:8px 0 0;padding-left:20px;font-size:13px;">${mistakes}</ol>
+  `;
+}
+
 function toggleSocialDay(key) {
   if (socialScheduleDays[key] !== undefined) {
     delete socialScheduleDays[key];
@@ -26459,16 +26859,10 @@ async function generateSocialPosts() {
   await requestSocialPosts(platforms);
 }
 
-// Bouton "Régénérer" d'une carte : relance le même appel pour CE réseau
-// uniquement — ne touche pas aux cartes déjà affichées pour les autres.
-async function regenerateSocialPost(platform) {
-  await requestSocialPosts([platform]);
-}
-
 async function requestSocialPosts(platforms) {
   if (!currentUser || !currentUser.id) return;
   // Anti double-clic : si un des réseaux demandés est déjà en cours de
-  // génération (via "Générer" ou un "Régénérer" de carte), on ignore ce
+  // génération (bouton "Générer" déjà cliqué), on ignore ce
   // nouvel appel plutôt que de le dupliquer.
   if (platforms.some(p => socialGeneratingPlatforms.has(p))) return;
 
@@ -26536,17 +26930,95 @@ async function requestSocialPosts(platforms) {
     // donnée à afficher à la place.
   } finally {
     platforms.forEach(p => socialGeneratingPlatforms.delete(p));
-    renderSocialGenerateButtonState();
+    // Ordre important : renderSocialGeneratedResults() peut fixer
+    // socialActiveResultTab (ex. première génération, onglet pas encore
+    // choisi) — renderSocialGenerateButtonState() doit tourner APRÈS pour
+    // afficher le bon nom de réseau sur "🔂 Régénérer <réseau>".
     renderSocialGeneratedResults();
+    renderSocialGenerateButtonState();
   }
 }
 
 function renderSocialGenerateButtonState() {
-  const btn = document.getElementById("social-generate-btn");
-  if (!btn) return;
   const generating = socialGeneratingPlatforms.size > 0;
-  btn.disabled = generating;
-  btn.innerHTML = generating ? "⏳ Génération..." : "✨ Générer";
+  // Nombre de réseaux déjà générés : avec 0, on garde le bouton "Générer"
+  // seul. Avec exactement 1, seul "Régénérer <réseau>" a du sens (un seul
+  // réseau coché/généré, "tout régénérer" ne changerait rien de plus) donc
+  // le bouton du haut est caché. Avec 2 ou plus, "Tout régénérer" réapparaît
+  // à côté de "Régénérer <réseau>".
+  const generatedCount = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]).length;
+  const hasAnyPost = generatedCount > 0;
+
+  const btn = document.getElementById("social-generate-btn");
+  if (btn) {
+    btn.disabled = generating;
+    btn.style.display = generatedCount === 1 ? "none" : "flex";
+    btn.innerHTML = generating ? "⏳ Génération..." : (generatedCount >= 2 ? "🔁 Tout régénérer" : "✨ Générer");
+  }
+
+  const oneBtn = document.getElementById("social-regenerate-one-btn");
+  if (oneBtn) {
+    oneBtn.style.display = hasAnyPost ? "flex" : "none";
+    oneBtn.disabled = generating;
+    const activeConfig = SOCIAL_PLATFORMS.find(p => p.key === socialActiveResultTab);
+    oneBtn.innerHTML = generating
+      ? "⏳ Génération..."
+      : (activeConfig ? `🔂 Régénérer ${activeConfig.icon} ${activeConfig.label}` : "🔂 Régénérer");
+  }
+
+  if (generating) {
+    startSocialGeneratingStatus();
+  } else {
+    stopSocialGeneratingStatus();
+  }
+}
+
+// Bouton "Régénérer <réseau>" : relance UNIQUEMENT le réseau actuellement
+// affiché (socialActiveResultTab, piloté par les onglets Instagram/Facebook/
+// LinkedIn — voir selectSocialResultTab), sans toucher aux autres cartes déjà
+// générées. Pendant d'immédiatement après "Générer"/"Tout régénérer", avant
+// qu'aucun post n'existe encore, socialActiveResultTab est encore null : le
+// bouton est alors caché (voir renderSocialGenerateButtonState), donc rien à
+// faire ici dans ce cas.
+async function regenerateActiveSocialPost() {
+  if (!socialActiveResultTab) return;
+  await requestSocialPosts([socialActiveResultTab]);
+}
+
+// Messages qui défilent pendant la génération — juste pour rassurer que la
+// page travaille (demande explicite), le contenu réel reste décidé par le
+// backend une fois la réponse reçue.
+const SOCIAL_GENERATING_MESSAGES = [
+  "Clarity rédige votre publication…",
+  "Choix des mots clés et des hashtags…",
+  "Mise en forme du texte…",
+  "Presque prêt…"
+];
+let socialGeneratingMessageInterval = null;
+let socialGeneratingMessageIndex = 0;
+
+function startSocialGeneratingStatus() {
+  const wrap = document.getElementById("social-generating-status");
+  const messageEl = document.getElementById("social-generating-message");
+  if (!wrap) return;
+  wrap.style.display = "flex";
+  if (socialGeneratingMessageInterval) return; // déjà en cours
+  socialGeneratingMessageIndex = 0;
+  if (messageEl) messageEl.textContent = SOCIAL_GENERATING_MESSAGES[0];
+  socialGeneratingMessageInterval = setInterval(() => {
+    socialGeneratingMessageIndex = (socialGeneratingMessageIndex + 1) % SOCIAL_GENERATING_MESSAGES.length;
+    const el = document.getElementById("social-generating-message");
+    if (el) el.textContent = SOCIAL_GENERATING_MESSAGES[socialGeneratingMessageIndex];
+  }, 1800);
+}
+
+function stopSocialGeneratingStatus() {
+  const wrap = document.getElementById("social-generating-status");
+  if (wrap) wrap.style.display = "none";
+  if (socialGeneratingMessageInterval) {
+    clearInterval(socialGeneratingMessageInterval);
+    socialGeneratingMessageInterval = null;
+  }
 }
 
 // Réseau actuellement affiché dans le bloc de résultat (voir
@@ -26597,28 +27069,29 @@ function socialResultTabsHtml(platformsWithPosts) {
 function selectSocialResultTab(key) {
   socialActiveResultTab = key;
   renderSocialGeneratedResults();
+  // Le bouton "🔂 Régénérer <réseau>" affiche le nom du réseau actif : il
+  // doit se mettre à jour dès qu'on change d'onglet, pas seulement après un
+  // Générer/Régénérer.
+  renderSocialGenerateButtonState();
 }
 
 function socialResultCardHtml(platformConfig) {
   const key = platformConfig.key;
   const post = socialGeneratedPosts[key];
-  const generating = socialGeneratingPlatforms.has(key);
   const hashtagsStr = socialPostHashtagsText(post);
 
-  // Régénérer / Copier côte à côte (même pattern que "Annuler" / "Créer et
-  // utiliser" dans l'éditeur de style d'écriture, ou "Oui" / "Non" dans le
-  // bilan d'essai) — au lieu d'un bouton pleine largeur sous l'autre, qui
-  // faisait prendre toute la page aux cartes de résultat. Le label indique
-  // toujours "📝 Post" (demande explicite : un mot pour dire que c'est le
-  // post, pas juste le réseau) — complété par le réseau/icône seulement
-  // quand il n'y a qu'un seul réseau généré (pas d'onglets dans ce cas, donc
-  // on garde ce repère visuel en plus).
+  // Le bouton "Régénérer" par carte a été retiré (demande explicite : il
+  // faisait doublon avec "Générer" en haut de page, qui relance déjà la
+  // génération pour tous les réseaux cochés — donc aussi celui-ci). Le
+  // label indique toujours "📝 Post" (demande explicite : un mot pour dire
+  // que c'est le post, pas juste le réseau) — complété par le réseau/icône
+  // seulement quand il n'y a qu'un seul réseau généré (pas d'onglets dans ce
+  // cas, donc on garde ce repère visuel en plus).
   const totalGenerated = SOCIAL_PLATFORMS.filter(p => socialGeneratedPosts[p.key]).length;
   const postLabel = totalGenerated > 1 ? "📝 Post" : `📝 Post · ${platformConfig.icon} ${platformConfig.label}`;
-  // Bouton "Copier le texte" déplacé juste à côté du texte, en haut à droite
-  // (même emplacement que le bouton "Copier le 1er commentaire", voir
-  // socialFirstCommentHtml) — au lieu d'être groupé avec "Régénérer" tout en
-  // bas de la carte, loin du texte qu'il copie.
+  // Bouton "Copier le texte" juste à côté du texte, en haut à droite (même
+  // emplacement que le bouton "Copier le 1er commentaire", voir
+  // socialFirstCommentHtml).
   return `
     <div class="field-group" id="social-result-card-${key}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -26630,9 +27103,6 @@ function socialResultCardHtml(platformConfig) {
       <div class="field-input" style="white-space:pre-wrap; height:auto; min-height:116px; max-height:280px; overflow-y:auto; line-height:1.5; margin-top:6px;">${escapeHtmlForPrint(post.caption || "")}</div>
       ${socialFirstCommentHtml(post, key)}
       <div style="margin-top:8px; font-size:13px; color:var(--clarity-text-tertiary);">${escapeHtmlForPrint(hashtagsStr)}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
-        <button class="sheet-btn" type="button" style="padding:7px 12px;font-size:12.5px;" onclick="regenerateSocialPost('${key}')" ${generating ? "disabled" : ""}>${generating ? "⏳ Génération..." : "🔁 Régénérer"}</button>
-      </div>
     </div>
   `;
 }
@@ -26668,7 +27138,7 @@ function socialSharedImageHtml() {
       <div style="position:relative; max-width:360px; margin:0 auto;">
         <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
         <div style="position:absolute; top:8px; right:8px; display:flex; gap:6px;">
-          <button type="button" class="icon-square-btn icon-square-btn-overlay" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
+          <button type="button" class="icon-square-btn icon-square-btn-overlay" id="social-image-download-btn" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 19h14"></path></svg>
           </button>
           <button type="button" class="icon-square-btn icon-square-btn-overlay" onclick="shareSocialImage()" aria-label="Partager" title="Partager">
