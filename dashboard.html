@@ -10611,15 +10611,6 @@ body[data-theme="light"]::after {
       <div class="settings-row-title">Avec smileys</div>
       <input type="checkbox" id="social-with-emojis-checkbox" checked onchange="saveSocialWithEmojisPref(this.checked)" />
     </label>
-    <!-- "Carrousel (3 images)" : envoyé dans le body ("carousel": true) à
-         chaque Générer ET chaque Régénérer (voir requestSocialPosts), géré
-         par le backend (confirmé par Grok) — non coché par défaut (1 seule
-         image), comme "Avec smileys" ci-dessus. -->
-    <label class="settings-row" style="cursor:pointer;" for="social-carousel-checkbox">
-      <span class="settings-row-icon settings-row-icon-violet">🖼️</span>
-      <div class="settings-row-title">Carrousel (3 images)</div>
-      <input type="checkbox" id="social-carousel-checkbox" onchange="saveSocialCarouselPref(this.checked)" />
-    </label>
     <div class="settings-row" id="social-context-row" onclick="openSocialContextModal()">
       <span class="settings-row-icon settings-row-icon-amber">🏢</span>
       <div class="settings-row-title">Société</div>
@@ -25799,7 +25790,6 @@ async function loadSocialSettings() {
   if (!currentUser || !currentUser.id) return;
   loadSocialSelectedPlatforms();
   loadSocialWithEmojisPref();
-  loadSocialCarouselPref();
   try {
     const { data, error } = await supabaseClient
       .from("profiles")
@@ -26859,34 +26849,6 @@ function saveSocialWithEmojisPref(checked) {
   }
 }
 
-// Même mécanique (localStorage namespacé par email) pour "Carrousel (3
-// images)" : décoché par défaut (1 seule image), rechargé au démarrage s'il
-// a été activé.
-function socialCarouselStorageKey() {
-  const email = (currentUser && currentUser.email) ? currentUser.email : "anon";
-  return "social_carousel_" + email;
-}
-
-function loadSocialCarouselPref() {
-  const checkbox = document.getElementById("social-carousel-checkbox");
-  if (!checkbox) return;
-  try {
-    const raw = localStorage.getItem(socialCarouselStorageKey());
-    if (raw === null) return; // rien sauvegardé -> garde le défaut décoché du HTML
-    checkbox.checked = raw === "true";
-  } catch (e) {
-    console.error("Erreur lecture préférence carrousel:", e);
-  }
-}
-
-function saveSocialCarouselPref(checked) {
-  try {
-    localStorage.setItem(socialCarouselStorageKey(), String(!!checked));
-  } catch (e) {
-    console.error("Erreur sauvegarde préférence carrousel:", e);
-  }
-}
-
 function renderSocialPlatformChecklist() {
   const wrap = document.getElementById("social-platforms-checklist");
   if (!wrap) return;
@@ -26947,15 +26909,7 @@ async function requestSocialPosts(platforms) {
     const withEmojisCheckbox = document.getElementById("social-with-emojis-checkbox");
     const withEmojis = withEmojisCheckbox ? withEmojisCheckbox.checked : true;
 
-    // "Carrousel (3 images)" : comme "Avec smileys", reflète l'état réel de
-    // la case au moment du clic (Générer, Tout régénérer ou Régénérer d'une
-    // carte) — décoché par défaut (1 seule image). Voir socialResultCardHtml
-    // pour l'affichage des 3 images quand result.carousel === true.
-    const carouselCheckbox = document.getElementById("social-carousel-checkbox");
-    const wantCarousel = carouselCheckbox ? carouselCheckbox.checked : false;
-
     const payload = { user_id: currentUser.id, platforms: platforms, with_emojis: withEmojis };
-    if (wantCarousel) payload.carousel = true;
     if (theme) payload.theme = theme;
     // Demande explicite : logo_url part TOUJOURS dans le body dès qu'un
     // logo a été choisi (socialLogoUrl, renvoyé par SOCIAL_LOGO_ENDPOINT),
@@ -27049,9 +27003,7 @@ async function pollSocialGenerateJob(jobId) {
   throw new Error("Délai de génération dépassé.");
 }
 
-// Un message par statut réel (plus de rotation factice). "generating_image"
-// couvre aussi bien une image seule qu'un carrousel — le backend ne
-// distingue pas les deux à ce niveau du statut.
+// Un message par statut réel (plus de rotation factice).
 const SOCIAL_GENERATE_STATUS_LABELS = {
   starting: "Clarity prépare la génération…",
   writing_text: "Clarity rédige votre publication…",
@@ -27220,51 +27172,17 @@ function socialResultCardHtml(platformConfig) {
 // "Partager", même pattern que crPhotoLightboxUrl pour shareCrPhoto().
 let socialSharedImageUrl = null;
 
-// Une seule image (ou un seul carrousel) est générée pour l'ensemble des
-// réseaux (pas une par réseau) : on l'affiche donc une seule fois, tout en
-// bas, après les cartes de publications — plutôt que de la répéter dans
-// chaque carte. On la récupère sur le premier post qui en a une (ils
-// partagent tous la même URL/les mêmes URLs).
-//
-// Carrousel (jusqu'à 3 images, confirmé par Grok) : quand post.carousel ===
-// true et post.image_urls contient plusieurs images, on les affiche toutes
-// en swipe horizontal (scroll-snap) au lieu d'une seule. Les boutons
-// Enregistrer/Partager restent sur la 1re image du carrousel seulement — le
-// téléchargement/partage multi-images n'a pas été demandé, voir
-// downloadSocialImage/shareSocialImage qui continuent à n'utiliser qu'une
-// seule URL (socialSharedImageUrl).
+// Une seule image est générée pour l'ensemble des réseaux (pas une par
+// réseau) : on l'affiche donc une seule fois, tout en bas, après les cartes
+// de publications — plutôt que de la répéter dans chaque carte. On la
+// récupère sur le premier post qui en a une (ils partagent tous la même URL).
 function socialSharedImageHtml() {
-  const postWithImage = Object.values(socialGeneratedPosts).find(
-    p => p && (p.image_url || (Array.isArray(p.image_urls) && p.image_urls.length))
-  );
+  const postWithImage = Object.values(socialGeneratedPosts).find(p => p && p.image_url);
   if (!postWithImage) {
     socialSharedImageUrl = null;
     return "";
   }
-
-  const isCarousel = postWithImage.carousel === true
-    && Array.isArray(postWithImage.image_urls)
-    && postWithImage.image_urls.length > 1;
-
-  const images = isCarousel
-    ? postWithImage.image_urls.slice(0, 3)
-    : [postWithImage.image_url || (Array.isArray(postWithImage.image_urls) ? postWithImage.image_urls[0] : null)].filter(Boolean);
-
-  if (!images.length) {
-    socialSharedImageUrl = null;
-    return "";
-  }
-  socialSharedImageUrl = images[0];
-
-  const label = isCarousel ? `🖼️ Carrousel généré (${images.length} images)` : "🖼️ Image générée";
-
-  const imagesHtml = isCarousel
-    ? `
-      <div style="display:flex; gap:8px; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;">
-        ${images.map((url, i) => `<img src="${escapeHtmlForPrint(url)}" alt="Image générée ${i + 1}/${images.length}" style="width:85%; flex:0 0 auto; scroll-snap-align:center; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />`).join("")}
-      </div>
-    `
-    : `<img src="${escapeHtmlForPrint(images[0])}" alt="Image générée" style="width:100%; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />`;
+  socialSharedImageUrl = postWithImage.image_url;
 
   // Enregistrer/Partager superposés en haut à droite DE LA PHOTO elle-même
   // (comme la croix sur le logo dans Société) plutôt qu'au-dessus dans une
@@ -27276,9 +27194,9 @@ function socialSharedImageHtml() {
   // entre le bouton "Régénérer" de la carte précédente et "Image générée".
   return `
     <div class="field-group" id="social-shared-image-card" style="margin-top:10px;">
-      <div class="field-label" style="margin:0 0 8px;">${label}</div>
+      <div class="field-label" style="margin:0 0 8px;">🖼️ Image générée</div>
       <div style="position:relative; max-width:360px; margin:0 auto;">
-        ${imagesHtml}
+        <img src="${escapeHtmlForPrint(postWithImage.image_url)}" alt="Image générée" style="width:100%; border-radius:16px; border:1px solid var(--clarity-border); display:block;" />
         <div style="position:absolute; top:8px; right:8px; display:flex; gap:6px;">
           <button type="button" class="icon-square-btn icon-square-btn-overlay" id="social-image-download-btn" onclick="downloadSocialImage()" aria-label="Enregistrer l'image" title="Enregistrer l'image">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 19h14"></path></svg>
