@@ -1589,6 +1589,13 @@ body[data-theme="dark"] .icon-square-btn:hover {
    thème sombre (--clarity-text: #f2f3f5, --clarity-text-secondary:
    #9a9ea8, voir body[data-theme="dark"] plus haut) directement, en ne
    touchant QUE ce thème — les 3 autres restent inchangés. */
+/* Même bug que .cr-checklist-label/.rewrite-choice-btn ci-dessous : var(--text)
+   ne s'applique pas de façon fiable en thème sombre au <strong> injecté
+   dynamiquement dans .info-box (page Conseils & Algorithmes). */
+body[data-theme="dark"] .info-box strong {
+  color: #f2f3f5;
+}
+
 body[data-theme="dark"] .cr-checklist-label {
   color: #f2f3f5;
 }
@@ -10778,10 +10785,10 @@ body[data-theme="light"]::after {
     </div>
     <p class="settings-subpage-intro">Lecture : 3 minutes. À relire avant de publier.</p>
 
-    <div class="info-box" style="margin-top:4px;">
+    <div class="info-box" style="margin-top:12px;padding:16px 18px;line-height:1.75;">
       <span class="info-icon">🧠</span>
       <div>
-        <strong>Le principe, en 30 secondes</strong><br/>
+        <strong>Le principe, en 30 secondes</strong><br/><br/>
         Sur les 3 réseaux, c'est le même mécanisme :<br/>
         1. Ton post est d'abord montré à un petit groupe de personnes.<br/>
         2. Le réseau observe la 1<sup>re</sup> heure : est-ce qu'on s'arrête, est-ce qu'on lit, est-ce qu'on réagit ?<br/>
@@ -10790,8 +10797,8 @@ body[data-theme="light"]::after {
       </div>
     </div>
 
-    <div id="social-advice-tabs" style="display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;"></div>
-    <div id="social-advice-tab-content" style="margin-top:14px;"></div>
+    <div id="social-advice-tabs" style="display:flex;gap:8px;margin-top:24px;flex-wrap:wrap;"></div>
+    <div id="social-advice-tab-content" style="margin-top:22px;"></div>
   </div>
 </div>
 <!-- /#social-mobile-section — fermeture oubliée lors de l'ajout de
@@ -26513,10 +26520,13 @@ function renderSocialAdviceTabContent() {
 function socialAdviceNetworkHtml(net) {
   if (!net) return "";
   const todayJsDay = new Date().getDay();
+  // Lignes séparées par un vrai espacement (margin-bottom) plutôt que collées
+  // les unes aux autres : évite l'effet "bloc compact" signalé — seul le
+  // jour courant garde un fond (accent de marque, fixe dans les 3 thèmes).
   const scheduleRows = SOCIAL_ADVICE_DAYS.map(d => {
     const isToday = d.jsDay === todayJsDay;
     return `
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;${isToday ? "background:var(--clarity-accent-dim);font-weight:700;" : ""}">
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:4px;${isToday ? "background:var(--clarity-accent-dim);font-weight:700;" : ""}">
         <span>${escapeHtmlForPrint(d.label)}</span>
         <span>${escapeHtmlForPrint(net.schedule[d.key] || "")}</span>
       </div>
@@ -26524,44 +26534,44 @@ function socialAdviceNetworkHtml(net) {
   }).join("");
 
   return `
-    <p style="font-size:13px;color:var(--clarity-text-secondary);margin:0 0 12px;">${escapeHtmlForPrint(net.intro)}</p>
+    <p style="font-size:13.5px;color:var(--clarity-text-secondary);line-height:1.55;margin:0 0 20px;">${escapeHtmlForPrint(net.intro)}</p>
 
-    <div class="info-box success">
+    <div class="info-box success" style="padding:16px 18px;">
       <span class="info-icon">✅</span>
       <div>
         <strong>Il aime</strong>
-        <ul style="margin:6px 0 0;padding-left:18px;">
-          ${net.aime.map(t => `<li style="margin-bottom:4px;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        <ul style="margin:8px 0 0;padding-left:18px;">
+          ${net.aime.map(t => `<li style="margin-bottom:7px;line-height:1.5;">${escapeHtmlForPrint(t)}</li>`).join("")}
         </ul>
       </div>
     </div>
 
-    <div class="info-box danger" style="margin-top:10px;">
+    <div class="info-box danger" style="padding:16px 18px;margin-top:14px;">
       <span class="info-icon">❌</span>
       <div>
         <strong>Il n'aime pas</strong>
-        <ul style="margin:6px 0 0;padding-left:18px;">
-          ${net.naime.map(t => `<li style="margin-bottom:4px;">${escapeHtmlForPrint(t)}</li>`).join("")}
+        <ul style="margin:8px 0 0;padding-left:18px;">
+          ${net.naime.map(t => `<li style="margin-bottom:7px;line-height:1.5;">${escapeHtmlForPrint(t)}</li>`).join("")}
         </ul>
       </div>
     </div>
 
-    <div class="info-box" style="margin-top:10px;">
+    <div class="info-box" style="padding:16px 18px;margin-top:14px;">
       <span class="info-icon">💡</span>
       <div><strong>Ton lien</strong> : ${escapeHtmlForPrint(net.lien)}</div>
     </div>
 
-    <div class="field-label" style="margin-top:18px;">🕐 Quand publier ?</div>
-    <div style="margin-top:6px;">${scheduleRows}</div>
-    <div style="font-size:11.5px;color:var(--clarity-text-tertiary);margin-top:6px;">⭐ = meilleurs jours  ·  😴 = jours plus calmes</div>
+    <div class="field-label" style="margin-top:28px;">🕐 Quand publier ?</div>
+    <div style="margin-top:12px;">${scheduleRows}</div>
+    <div style="font-size:11.5px;color:var(--clarity-text-tertiary);margin-top:8px;">⭐ = meilleurs jours  ·  😴 = jours plus calmes</div>
 
-    <div class="info-box" style="margin-top:14px;">
+    <div class="info-box" style="padding:16px 18px;margin-top:22px;">
       <div>
         <strong>3 règles simples</strong>
-        <ul style="margin:6px 0 0;padding-left:18px;">
-          <li style="margin-bottom:4px;">Publie au début du créneau, pas à la fin, pour profiter de toute l'heure de pointe.</li>
-          <li style="margin-bottom:4px;">Tes clients sont artisans ? Vise 7h-8h (avant le chantier), 12h-13h (la pause) ou 18h-20h (le retour).</li>
-          <li>Tes statistiques valent plus que ce tableau. Au bout d'un mois, regarde quand tes posts marchent le mieux et adapte-toi.</li>
+        <ul style="margin:8px 0 0;padding-left:18px;">
+          <li style="margin-bottom:7px;line-height:1.5;">Publie au début du créneau, pas à la fin, pour profiter de toute l'heure de pointe.</li>
+          <li style="margin-bottom:7px;line-height:1.5;">Tes clients sont artisans ? Vise 7h-8h (avant le chantier), 12h-13h (la pause) ou 18h-20h (le retour).</li>
+          <li style="line-height:1.5;">Tes statistiques valent plus que ce tableau. Au bout d'un mois, regarde quand tes posts marchent le mieux et adapte-toi.</li>
         </ul>
       </div>
     </div>
@@ -26572,17 +26582,17 @@ function socialAdviceNetworkHtml(net) {
 // non sauvegardées, demande explicite) et les 5 erreurs.
 function socialAdviceRoutineHtml() {
   const freqRows = SOCIAL_ADVICE_POST_FREQUENCY.map(f => `
-    <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;">
+    <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;margin-bottom:4px;">
       <span>${f.icon} ${escapeHtmlForPrint(f.label)}</span>
       <span style="color:var(--clarity-text-secondary);">${escapeHtmlForPrint(f.rythme)}</span>
     </div>
   `).join("");
 
   const groups = SOCIAL_ADVICE_ROUTINE_GROUPS.map(g => `
-    <div class="field-group" style="margin-top:12px;">
+    <div class="field-group" style="margin-top:18px;">
       <div class="field-label">${escapeHtmlForPrint(g.title)}</div>
       ${g.items.map(it => `
-        <label style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;font-size:13px;cursor:pointer;">
+        <label style="display:flex;align-items:flex-start;gap:9px;padding:8px 0;font-size:13.5px;line-height:1.45;cursor:pointer;">
           <input type="checkbox" style="margin-top:3px;" />
           <span>${escapeHtmlForPrint(it)}</span>
         </label>
@@ -26590,18 +26600,18 @@ function socialAdviceRoutineHtml() {
     </div>
   `).join("");
 
-  const mistakes = SOCIAL_ADVICE_MISTAKES.map(m => `<li style="margin-bottom:6px;">${escapeHtmlForPrint(m)}</li>`).join("");
+  const mistakes = SOCIAL_ADVICE_MISTAKES.map(m => `<li style="margin-bottom:9px;line-height:1.5;">${escapeHtmlForPrint(m)}</li>`).join("");
 
   return `
     <div class="field-label">📅 Combien de posts par semaine ?</div>
-    <div style="margin-top:6px;">${freqRows}</div>
-    <div style="font-size:12.5px;color:var(--clarity-text-secondary);margin-top:8px;">👉 La régularité bat la quantité. Mieux vaut 3 posts chaque semaine que 10 posts une fois par mois.</div>
+    <div style="margin-top:10px;">${freqRows}</div>
+    <div style="font-size:12.5px;color:var(--clarity-text-secondary);line-height:1.5;margin-top:10px;">👉 La régularité bat la quantité. Mieux vaut 3 posts chaque semaine que 10 posts une fois par mois.</div>
 
-    <div class="field-label" style="margin-top:20px;">✅ Ta routine à chaque publication</div>
+    <div class="field-label" style="margin-top:28px;">✅ Ta routine à chaque publication</div>
     ${groups}
 
-    <div class="field-label" style="margin-top:20px;">🚫 Les 5 erreurs qui tuent un post</div>
-    <ol style="margin:8px 0 0;padding-left:20px;font-size:13px;">${mistakes}</ol>
+    <div class="field-label" style="margin-top:28px;">🚫 Les 5 erreurs qui tuent un post</div>
+    <ol style="margin:10px 0 0;padding-left:20px;font-size:13.5px;">${mistakes}</ol>
   `;
 }
 
@@ -26991,12 +27001,22 @@ async function regenerateActiveSocialPost() {
 }
 
 // Messages qui défilent pendant la génération — juste pour rassurer que la
-// page travaille (demande explicite), le contenu réel reste décidé par le
-// backend une fois la réponse reçue.
+// page travaille (demande explicite). Ordonnés pour suivre la progression
+// LOGIQUE la plus probable (texte d'abord, puis image), mais ce n'est PAS
+// une vraie synchronisation avec le backend : l'appel à SOCIAL_GENERATE_ENDPOINT
+// est une seule requête HTTP opaque (voir requestSocialPosts) qui renvoie le
+// texte ET l'image d'un coup — le frontend n'a aucune info sur l'étape
+// réellement en cours pendant l'attente. Pour un vrai suivi du rythme de
+// l'agent (texte → image, avec le vrai minutage de chaque étape), il
+// faudrait que le backend expose une progression (ex. endpoint de statut à
+// interroger, ou flux SSE) — voir le message transmis à Grok à ce sujet.
 const SOCIAL_GENERATING_MESSAGES = [
   "Clarity rédige votre publication…",
   "Choix des mots clés et des hashtags…",
   "Mise en forme du texte…",
+  "Création de l'image…",
+  "Composition du visuel…",
+  "Finitions de l'image…",
   "Presque prêt…"
 ];
 let socialGeneratingMessageInterval = null;
@@ -27014,7 +27034,7 @@ function startSocialGeneratingStatus() {
     socialGeneratingMessageIndex = (socialGeneratingMessageIndex + 1) % SOCIAL_GENERATING_MESSAGES.length;
     const el = document.getElementById("social-generating-message");
     if (el) el.textContent = SOCIAL_GENERATING_MESSAGES[socialGeneratingMessageIndex];
-  }, 1800);
+  }, 2000);
 }
 
 function stopSocialGeneratingStatus() {
