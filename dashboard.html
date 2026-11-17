@@ -10793,9 +10793,14 @@ body[data-theme="light"]::after {
     <div id="social-advice-tabs" style="display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;"></div>
     <div id="social-advice-tab-content" style="margin-top:14px;"></div>
   </div>
+</div>
+<!-- /#social-mobile-section — fermeture oubliée lors de l'ajout de
+     #social-settings-main-view/#social-advice-page ci-dessus, ce qui avait
+     piégé Gmail, Styles d'écriture et tout le reste des Réglages à
+     l'intérieur de la sous-page "Publications réseaux" (bug corrigé). -->
 
-  <!-- GMAIL -->
-  <div class="gmail-section" id="gmail-connect-section">
+<!-- GMAIL -->
+<div class="gmail-section" id="gmail-connect-section">
   <div>
     <div class="gmail-title">
       <span>📧</span> Connexion compte mail
