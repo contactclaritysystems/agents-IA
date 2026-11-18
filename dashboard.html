@@ -27120,7 +27120,7 @@ function renderSocialGeneratedResults() {
 
   wrap.innerHTML = (platformsWithPosts.length > 1 ? socialResultTabsHtml(platformsWithPosts) : "")
     + socialResultCardHtml(activeConfig)
-    + socialSharedImageHtml()
+    + socialSharedImageHtml(socialGeneratedPosts[activeConfig.key])
     + socialFeedbackHtml();
 }
 
@@ -27180,16 +27180,17 @@ function socialResultCardHtml(platformConfig) {
 // "Partager", même pattern que crPhotoLightboxUrl pour shareCrPhoto().
 let socialSharedImageUrl = null;
 
-// Une seule image est générée pour l'ensemble des réseaux (pas une par
-// réseau) : on l'affiche donc une seule fois, tout en bas, après les cartes
-// de publications — plutôt que de la répéter dans chaque carte. On la
-// récupère sur le premier post qui en a une (ils partagent tous la même URL).
-function socialSharedImageHtml() {
-  const postWithImage = Object.values(socialGeneratedPosts).find(p => p && p.image_url);
-  if (!postWithImage) {
+// Le backend génère maintenant une image différente par réseau (son propre
+// image_brief) : on affiche donc l'image du post actuellement actif (voir
+// socialActiveResultTab), pas la première trouvée toutes plateformes
+// confondues — sinon le même visuel restait affiché en changeant d'onglet,
+// même quand chaque réseau avait bien sa propre photo générée côté backend.
+function socialSharedImageHtml(post) {
+  if (!post || !post.image_url) {
     socialSharedImageUrl = null;
     return "";
   }
+  const postWithImage = post;
   socialSharedImageUrl = postWithImage.image_url;
 
   // Enregistrer/Partager superposés en haut à droite DE LA PHOTO elle-même
