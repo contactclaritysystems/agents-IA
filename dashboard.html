@@ -11153,6 +11153,9 @@ body[data-theme="light"]::after {
         <button type="button" class="quick-action-btn" id="quick-analyze-btn" onclick="openDocumentAttachmentSheet()" title="Analyser un document">
           <span class="quick-action-icon cyan">📄</span><span class="quick-action-label">Analyser</span>
         </button>
+        <button type="button" class="quick-action-btn" id="quick-social-btn" onclick="showSection('settings'); openSocialSubpage();" title="Publications reseaux">
+          <span class="quick-action-icon purple">📣</span><span class="quick-action-label">Publications</span>
+        </button>
       </div>
     </div>
 
@@ -18441,6 +18444,119 @@ function closePlanningScheduleSheet(isCancel = true) {
   }
 }
 
+// Conflit d'agenda : un RDV existe deja a la meme date+heure. 2 choix
+// presentes a l'utilisateur, jamais d'ecrasement silencieux :
+// - "Enregistrer quand meme" -> renvoie EXACTEMENT les memes infos avec
+//   confirm_conflict:true (le backend ne revérifie alors pas le conflit).
+// - "Changer le jour/l'heure" -> reouvre la sheet normale (meme logique
+//   que missing_date/missing_time), prefilie avec les infos deja connues.
+let pendingScheduleConflictData = null;
+let pendingScheduleConflictInstruction = "";
+
+function openPlanningConflictModal(data, instruction) {
+  pendingScheduleConflictData = data;
+  pendingScheduleConflictInstruction = instruction || "";
+
+  let modal = document.getElementById("planning-conflict-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "planning-conflict-modal";
+    modal.style.display = "none";
+    modal.innerHTML = `
+      <div class="mail-choice-backdrop" onclick="closePlanningConflictModal()"></div>
+      <div class="mail-choice-box">
+        <div class="mail-choice-title">Rendez-vous déjà pris</div>
+        <div class="mail-choice-subtitle" id="planning-conflict-message"></div>
+        <button class="save-btn" type="button" id="planning-conflict-anyway-btn" style="width:100%;margin-top:14px;">Enregistrer quand même</button>
+        <button class="sheet-btn" type="button" id="planning-conflict-change-btn" style="width:100%;justify-content:center;margin-top:8px;">Changer le jour/l'heure</button>
+        <button class="sheet-btn" type="button" onclick="closePlanningConflictModal()" style="width:100%;justify-content:center;margin-top:8px;">Annuler</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    document.getElementById("planning-conflict-anyway-btn").onclick = confirmScheduleConflictAnyway;
+    document.getElementById("planning-conflict-change-btn").onclick = function () {
+      closePlanningConflictModal(false);
+      openPlanningScheduleSheet(pendingScheduleConflictData, pendingScheduleConflictInstruction);
+    };
+  }
+
+  const msgEl = document.getElementById("planning-conflict-message");
+  if (msgEl) msgEl.textContent = (data && data.message) || "Ce créneau est déjà pris.";
+  modal.style.display = "block";
+}
+
+function closePlanningConflictModal(isCancel = true) {
+  const modal = document.getElementById("planning-conflict-modal");
+  if (modal) modal.style.display = "none";
+  if (isCancel) {
+    pendingClarifyAgent = null;
+    pendingScheduleConflictData = null;
+    if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+    if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+  }
+}
+
+async function confirmScheduleConflictAnyway() {
+  const data = pendingScheduleConflictData;
+  if (!data) { closePlanningConflictModal(false); return; }
+  const partial = data.partial || {};
+  closePlanningConflictModal(false);
+
+  let box = document.getElementById("orchestrator-dictation-box");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orchestrator-dictation-box";
+    box.classList.add("agent-progress-popup");
+    document.body.appendChild(box);
+  }
+  box.style.display = "";
+  box.style.opacity = "1";
+  if (typeof setDictationBoxState === "function") setDictationBoxState(box, "info");
+  box.innerHTML = "⏳ Enregistrement du rendez-vous…";
+
+  const payload = {
+    user_id: currentUser.id,
+    user_email: currentUser.email,
+    user_name: getUserDisplayName(),
+    instruction: pendingScheduleConflictInstruction || partial.title || "Rendez-vous",
+    request_id: window.currentRequestId,
+    conversation_history: formatConversationHistory(simpleAgentConversationHistory),
+    contact_name: partial.contact_name || null,
+    contact_id: partial.contact_id || null,
+    title: partial.title || null,
+    description: partial.description || null,
+    appointment_date: partial.appointment_date,
+    appointment_time: partial.appointment_time,
+    notify_minutes_before: partial.notify_minutes_before,
+    confirm_conflict: true
+  };
+
+  try {
+    const response = await fetch(PLANNING_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    box.style.display = "none";
+    box.innerHTML = "";
+    pendingClarifyAgent = null;
+    if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+    if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+    if (result && result.success) {
+      showToast(result.message || "Rendez-vous noté", "success");
+      return;
+    }
+    showToast((result && result.message) || "Impossible d'enregistrer le rendez-vous", "error");
+  } catch (e) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    if (typeof unlockAgentButtons === "function") unlockAgentButtons();
+    if (typeof resetOrchestratorMicButton === "function") resetOrchestratorMicButton();
+    showToast("Erreur réseau, réessayez", "error");
+  }
+}
+
 async function confirmPlanningSchedule() {
   const contact = document.getElementById("planning-sheet-contact").value.trim();
   const title = document.getElementById("planning-sheet-title").value.trim();
@@ -18522,13 +18638,18 @@ async function confirmPlanningSchedule() {
     // Toujours incomplet (ex : la date était bonne mais l'heure manque
     // encore) : on rouvre directement la même sheet avec les infos à jour,
     // plutôt qu'un toast d'erreur sec.
-    if (data.reason === "missing_date" || data.reason === "missing_time") {
+    if (data.reason === "missing_date" || data.reason === "missing_time" || data.reason === "date_ambiguous") {
       openPlanningScheduleSheet(data, pendingPlanningInstruction);
       return;
     }
 
     if (data.reason === "missing_contact") {
       openPlanningContactModal(data, pendingPlanningInstruction);
+      return;
+    }
+
+    if (data.reason === "schedule_conflict") {
+      openPlanningConflictModal(data, pendingPlanningInstruction);
       return;
     }
 
@@ -25778,6 +25899,10 @@ function openSocialSubpage() {
   if (typeof renderSocialPlatformsRowDisplay === "function") renderSocialPlatformsRowDisplay();
   if (typeof renderSocialLengthRowDisplay === "function") renderSocialLengthRowDisplay();
   if (typeof renderSocialContextRowDisplay === "function") renderSocialContextRowDisplay();
+  // Charge les posts du jour depuis le backend si rien n'est encore en
+  // memoire (cas du cron du matin, voir loadTodaySocialPostsIfEmpty) --
+  // asynchrone, ne bloque pas l'ouverture immediate de la sous-page.
+  if (typeof loadTodaySocialPostsIfEmpty === "function") loadTodaySocialPostsIfEmpty();
 }
 
 function closeSocialSubpage() {
@@ -26777,6 +26902,7 @@ const SOCIAL_GENERATE_ENDPOINT = "https://clarity-backend-me14.onrender.com/soci
 const SOCIAL_GENERATE_STATUS_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/generate/status";
 const SOCIAL_LOGO_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/logo";
 const SOCIAL_FEEDBACK_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/feedback";
+const SOCIAL_TODAY_ENDPOINT = "https://clarity-backend-me14.onrender.com/social/today";
 
 const SOCIAL_PLATFORMS = [
   { key: "instagram", label: "Instagram", icon: "📷", color: "violet" },
@@ -26787,6 +26913,29 @@ const SOCIAL_PLATFORMS = [
 let socialSelectedPlatforms = new Set(["instagram"]);
 let socialGeneratingPlatforms = new Set(); // réseaux dont la génération/régénération est en cours
 let socialGeneratedPosts = {}; // { instagram: {platform,caption,image_url,hashtags}, ... }
+
+// Ouverture de l'ecran Publications apres une generation automatique (cron
+// du matin) : les posts du jour ne sont alors PAS en memoire tant qu'aucune
+// generation manuelle n'a eu lieu dans cette session (socialGeneratedPosts
+// reste vide). On va chercher la derniere generation du jour en base, sans
+// jamais ecraser des posts deja presents en memoire (generation manuelle
+// faite entre-temps dans la meme session).
+async function loadTodaySocialPostsIfEmpty() {
+  if (!currentUser || !currentUser.id) return;
+  if (Object.keys(socialGeneratedPosts).length > 0) return;
+  try {
+    const resp = await fetch(SOCIAL_TODAY_ENDPOINT + "?user_id=" + encodeURIComponent(currentUser.id));
+    const data = await resp.json().catch(() => null);
+    if (!data || !data.success || !Array.isArray(data.posts) || data.posts.length === 0) return;
+    data.posts.forEach(post => {
+      if (post && post.platform) socialGeneratedPosts[post.platform] = post;
+    });
+    if (typeof renderSocialGeneratedResults === "function") renderSocialGeneratedResults();
+    if (typeof renderSocialGenerateButtonState === "function") renderSocialGenerateButtonState();
+  } catch (e) {
+    console.error("Erreur chargement publications du jour:", e);
+  }
+}
 
 // Thème effectivement utilisé lors de la dernière génération réussie, pour
 // accompagner le feedback "J'aime / Je n'aime pas" (voir requestSocialPosts/
@@ -32718,7 +32867,7 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
 
         if (
           effectiveAgent === "planning" &&
-          (data.reason === "missing_date" || data.reason === "missing_time")
+          (data.reason === "missing_date" || data.reason === "missing_time" || data.reason === "date_ambiguous")
         ) {
           hideOrRemoveBox(box);
           openPlanningScheduleSheet(data, instruction);
@@ -32729,6 +32878,13 @@ if (SIMPLE_AGENT_WEBHOOKS[data.agent]) {
         if (effectiveAgent === "planning" && data.reason === "missing_contact") {
           hideOrRemoveBox(box);
           openPlanningContactModal(data, instruction);
+          resetMicButton(true);
+          return;
+        }
+
+        if (effectiveAgent === "planning" && data.reason === "schedule_conflict") {
+          hideOrRemoveBox(box);
+          openPlanningConflictModal(data, instruction);
           resetMicButton(true);
           return;
         }
@@ -34026,7 +34182,7 @@ async function callSimpleAgent(
       // popup de clarification à champ texte libre.
       if (
         agentName === "planning" &&
-        (data.reason === "missing_date" || data.reason === "missing_time")
+        (data.reason === "missing_date" || data.reason === "missing_time" || data.reason === "date_ambiguous")
       ) {
         hideOrRemoveBox(box);
         document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
@@ -34044,6 +34200,19 @@ async function callSimpleAgent(
         hideOrRemoveBox(box);
         document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
         openPlanningContactModal(data, instruction);
+        unlockAgentButtons();
+        resetOrchestratorMicButton(true);
+        return;
+      }
+
+      // Conflit d'agenda (un RDV existe deja a la meme date+heure) : popup
+      // dediee avec 2 choix, jamais d'ecrasement silencieux (cf. Anthony :
+      // "Un rdv est important il ne dois pas y avoir d'erreur de la part
+      // de Clarity").
+      if (agentName === "planning" && data.reason === "schedule_conflict") {
+        hideOrRemoveBox(box);
+        document.querySelectorAll("#dictation-box, #orchestrator-dictation-box").forEach(hideOrRemoveBox);
+        openPlanningConflictModal(data, instruction);
         unlockAgentButtons();
         resetOrchestratorMicButton(true);
         return;
